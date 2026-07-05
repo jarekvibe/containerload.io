@@ -419,11 +419,12 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   if(!canvas) return;
 
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var COARSE  = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
-  // Auf Touch-Geraeten (Handy/Tablet) und bei reduzierter Bewegung: kein WebGL, SVG-Standbild
-  // bleibt stehen. KEIN reiner Breiten-Check mehr - der hat sonst auch schmale Desktop-Fenster
-  // (Zwei-Spalten-Hero unter 760px) faelschlich auf das Standbild gesetzt.
-  if(REDUCED || COARSE) return;
+  // Kein WebGL bei reduzierter Bewegung oder auf echten Handys (Akku/Performance) -> SVG-Standbild.
+  // Touch allein (pointer: coarse) schliesst sonst auch leistungsfaehige Tablets wie das iPad aus.
+  // Tablet/Desktop von Handy unterscheiden ueber die KLEINERE Viewport-Kante (orientierungs-
+  // unabhaengig): iPad-Hochformat >= 768, iPhone <= ~430. Schwelle 600 trennt beide sauber.
+  var MINSIDE = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  if(REDUCED || MINSIDE < 600) return;
 
   var TOTAL=14, OVERFLOW=3;
 
