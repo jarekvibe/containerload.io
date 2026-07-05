@@ -260,8 +260,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const line of lines) {
       const low = line.toLowerCase();
       let l = null, w = null, h = null;
-      const dim = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i);
-      if (dim) {
+      // Vier-Zahlen-Kette "N x L x B x H": erste Zahl ist die Anzahl (uebliche
+      // Anfrage-Schreibweise "5x 120x80x100"). Muss VOR dem 3er-Match laufen,
+      // sonst frisst der sich die ersten drei Zahlen. Erster Trenner bewusst
+      // NUR [x×*] ohne "/" – sonst wuerde "120/80/100" als 3er-Kette mit Anzahl gelesen.
+      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i);
+      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i);
+      if (dim4) {
+        l = toNum(dim4[2]);
+        w = toNum(dim4[4]);
+        h = toNum(dim4[6]);
+        const u = (dim4[7] || dim4[5] || dim4[3] || "").toLowerCase();
+        if (u === "m") {
+          l *= 100;
+          w *= 100;
+          h *= 100;
+        } else if (u === "mm") {
+          l /= 10;
+          w /= 10;
+          h /= 10;
+        }
+      } else if (dim) {
         l = toNum(dim[1]);
         w = toNum(dim[3]);
         h = toNum(dim[5]);
@@ -283,18 +302,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           break;
         }
       }
-      if (!dim && !pal) continue;
-      if (!dim && pal) {
+      if (!dim4 && !dim && !pal) continue;
+      if (!dim4 && !dim && pal) {
         l = pal.l;
         w = pal.w;
         h = 110;
       }
       let qty = 1;
-      const qm = line.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
-      if (qm) qty = parseInt(qm[1], 10);
-      else {
-        const lead = line.match(/^\s*(\d+)\b/);
-        if (lead && (!dim || line.indexOf(dim[0]) > 0)) qty = parseInt(lead[1], 10);
+      if (dim4) {
+        // Anzahl steht durch die Vier-Zahlen-Kette fest – qm/lead ueberspringen.
+        qty = parseInt(dim4[1], 10);
+      } else {
+        const qm = line.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
+        if (qm) qty = parseInt(qm[1], 10);
+        else {
+          const lead = line.match(/^\s*(\d+)\b/);
+          if (lead && (!dim || line.indexOf(dim[0]) > 0)) qty = parseInt(lead[1], 10);
+        }
       }
       if (!Number.isFinite(qty) || qty < 1) qty = 1;
       let weight = 0;
@@ -307,7 +331,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (/nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel/i.test(low)) stackable = false;
       let rotatable = true;
       if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
-      let name = line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "").replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
