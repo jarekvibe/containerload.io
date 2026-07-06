@@ -1065,9 +1065,129 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const container = st.co && +st.co.l ? { l: +st.co.l, w: +st.co.w, h: +st.co.h, payload: +st.co.p || defPay, door: _base.door, kind, gauge: _base.gauge } : { ..._base, kind };
     return { domain, preset, container, cargo, forceCentered };
   };
+  // V2-ENCODE-BEGIN
+  // Kompaktes Share-Link-Format v2 (?c=...) – Default-Elision statt JSON-Base64.
+  // STABILE Code-Tabelle: Codes NIEMALS umbelegen oder loeschen, nur NEUE Buchstaben ergaenzen.
+  // Grossbuchstaben = road-Domain. "z"/"Z" = Custom.
+  var V2_PRESET_CODES = {
+    "a": "20' GP", "b": "20' HC", "c": "40' GP", "d": "40' HC", "h": "45' HC",
+    "i": "20' Open Top", "j": "40' Open Top",
+    "m": "20' Flat Rack", "p": "40' Flat Rack",
+    "u": "20' Platform", "v": "40' Platform",
+    "z": "Custom",
+    "A": "Planensattel", "Z": "CustomRoad"
+  };
+  var V2_CODE_OF = (() => { var o = {}; Object.keys(V2_PRESET_CODES).forEach(k => { o[V2_PRESET_CODES[k]] = k; }); return o; })();
+  var V2_ROAD_CODES = { "A": 1, "Z": 1 };
+  var V2_EQ = { d: "dry", o: "opentop", f: "flatrack", p: "platform", r: "reefer" };
+  var V2_EQ_OF = { dry: "d", opentop: "o", flatrack: "f", platform: "p", reefer: "r" };
+  var V2_DEFAULT_NAME = "Packstück";
+  var v2num = (n) => {
+    var s = String(+n);
+    return /^[0-9]+(\.[0-9]+)?$/.test(s) ? s : "0";
+  };
+  // st = Output von planStateFrom (dm, pr, eq, fc, co, it) -> kompakter String (ohne "?c=").
+  // tables: { presets: PRESETS, vehicles: VEHICLES } – injiziert, damit die Funktion pur/testbar bleibt.
+  function compactEncode(st, tables) {
+    var road = st.dm === "road";
+    var table = road ? tables.vehicles : tables.presets;
+    var known = typeof st.pr === "string" && table[st.pr] && V2_CODE_OF[st.pr];
+    var code = known ? V2_CODE_OF[st.pr] : (road ? "Z" : "z");
+    var base = known ? table[st.pr] : null;
+    var s = code;
+    // eq nur, wenn es vom Preset-Default abweicht (road ist immer dry -> nie noetig)
+    var baseKind = base ? (base.kind || "dry") : "dry";
+    if (!road && st.eq && st.eq !== baseKind && V2_EQ_OF[st.eq]) s += "e" + V2_EQ_OF[st.eq];
+    if (st.fc === 1) s += "f";
+    // Custom-Geometrie nur, wenn Preset unbekannt ODER co von Preset-Werten abweicht
+    var co = st.co || {};
+    var coDiff = !base || +co.l !== base.l || +co.w !== base.w || +co.h !== base.h || +co.p !== base.payload;
+    if (coDiff && +co.l) s += "g" + v2num(co.l) + "x" + v2num(co.w) + "x" + v2num(co.h) + "x" + v2num(co.p);
+    var items = (st.it || []).map((r) => {
+      var t = v2num(r.l) + "x" + v2num(r.w) + "x" + v2num(r.h);
+      if (+r.wt) t += "w" + v2num(r.wt);
+      if (+r.q > 1) t += "q" + v2num(r.q);
+      if (r.s === 0) t += "s";
+      if (r.r === 0) t += "r";
+      if (typeof r.cl === "string" && /^#[0-9a-fA-F]{6}$/.test(r.cl)) t += "k" + r.cl.slice(1).toLowerCase();
+      if (typeof r.n === "string" && r.n !== V2_DEFAULT_NAME && r.n !== "") t += "n" + encodeURIComponent(r.n.slice(0, 40)).replace(/~/g, "%7E");
+      return t;
+    });
+    return s + "~" + items.join("~");
+  }
+  // Kompakter String -> st-Objekt im ?p=-Schema (danach IMMER durch decodePlanState schicken).
+  // Rueckgabe null bei jedem Parse-Problem – niemals werfen.
+  function compactDecode(str) {
+    try {
+      if (typeof str !== "string" || !str.length) return null;
+      var parts = str.split("~");
+      var head = parts[0];
+      var itemsRaw = parts.slice(1).filter(Boolean);
+      if (!head || !itemsRaw.length) return null;
+      var code = head[0];
+      var preset = V2_PRESET_CODES[code];
+      if (!preset) return null;
+      var road = !!V2_ROAD_CODES[code];
+      var st = { dm: road ? "road" : "sea", pr: preset === "CustomRoad" ? "Planensattel" : preset, fc: 0, it: [] };
+      var i = 1;
+      var readNum = () => {
+        var m = head.slice(i).match(/^[0-9]+(\.[0-9]+)?/);
+        if (!m) return null;
+        i += m[0].length;
+        return +m[0];
+      };
+      while (i < head.length) {
+        var tag = head[i]; i++;
+        if (tag === "e") { var eq = V2_EQ[head[i]]; i++; if (eq) st.eq = eq; }
+        else if (tag === "f") { st.fc = 1; }
+        else if (tag === "g") {
+          var l = readNum(); if (head[i] !== "x") return null; i++;
+          var w = readNum(); if (head[i] !== "x") return null; i++;
+          var h = readNum(); if (head[i] !== "x") return null; i++;
+          var p = readNum();
+          if (l == null || w == null || h == null || p == null) return null;
+          st.co = { l: l, w: w, h: h, p: p };
+        } else return null;
+      }
+      st.it = itemsRaw.map((raw) => {
+        var j = 0;
+        var rn = () => {
+          var m = raw.slice(j).match(/^[0-9]+(\.[0-9]+)?/);
+          if (!m) return null;
+          j += m[0].length;
+          return +m[0];
+        };
+        var l = rn(); if (raw[j] !== "x") return null; j++;
+        var w = rn(); if (raw[j] !== "x") return null; j++;
+        var h = rn();
+        if (l == null || w == null || h == null) return null;
+        var it = { n: V2_DEFAULT_NAME, l: l, w: w, h: h, wt: 0, q: 1, s: 1, r: 1 };
+        while (j < raw.length) {
+          var tg = raw[j]; j++;
+          if (tg === "w") { var v = rn(); if (v == null) return null; it.wt = v; }
+          else if (tg === "q") { var v2 = rn(); if (v2 == null) return null; it.q = v2; }
+          else if (tg === "s") it.s = 0;
+          else if (tg === "r") it.r = 0;
+          else if (tg === "k") { var hx = raw.slice(j, j + 6); if (!/^[0-9a-fA-F]{6}$/.test(hx)) return null; it.cl = "#" + hx.toLowerCase(); j += 6; }
+          else if (tg === "n") { it.n = decodeURIComponent(raw.slice(j)).slice(0, 40); j = raw.length; }
+          else return null;
+        }
+        return it;
+      });
+      if (st.it.some((x) => !x)) return null;
+      return st;
+    } catch (e) { return null; }
+  }
+  // V2-ENCODE-END
   var SHARED = (() => {
     try {
-      const p = new URLSearchParams(window.location.search).get("p");
+      const sp = new URLSearchParams(window.location.search);
+      const c = sp.get("c");
+      if (c) {
+        const st2 = compactDecode(c);
+        return st2 ? decodePlanState(st2) : null;
+      }
+      const p = sp.get("p");
       if (!p) return null;
       const st = JSON.parse(decodeURIComponent(escape(window.atob(p.replace(/-/g, "+").replace(/_/g, "/")))));
       return decodePlanState(st);
@@ -1076,10 +1196,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
   })();
   var encodePlanURL = (preset, container, cargo, forceCentered, domain) => {
-    const b = window.btoa(unescape(encodeURIComponent(JSON.stringify(planStateFrom(preset, container, cargo, forceCentered, domain))))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    // Site liegt im Domain-Root (auch Deploy Previews). Der fruehere pathname-Replace
-    // wuerde bei /app (ohne Dateiname) nur zufaellig funktionieren – fest auf /share.
-    return window.location.origin + "/share?p=" + b;
+    // v2-Emit (?c= mit Default-Elision); ?p=-DEKODIEREN bleibt fuer immer erhalten (alte
+    // Links/gedruckte QR-Codes), nur das Erzeugen wechselt.
+    const s = compactEncode(planStateFrom(preset, container, cargo, forceCentered, domain), { presets: PRESETS, vehicles: VEHICLES });
+    // Site liegt im Domain-Root (auch Deploy Previews) – fest auf /share (Clean URLs).
+    return window.location.origin + "/share?c=" + s;
   };
   // localStorage-Persistenz fuer "Meine Plaene" – nur lokal im Browser. Alles defensiv: Safari-
   // Privatmodus / Quota koennen werfen; kaputte Eintraege werden uebersprungen; max. 50 Plaene.
