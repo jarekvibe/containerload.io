@@ -87,6 +87,43 @@ details[open] .faq-plus{transform:rotate(45deg)}
 .faq-plus{transition:.2s;color:var(--accent)}
 .dotline{stroke:rgba(47,155,255,.4);stroke-width:1.4;stroke-dasharray:4 4;fill:none}
 .demo-frame{border:1px solid var(--line2);border-radius:16px;overflow:hidden;background:#0a0d12;box-shadow:0 40px 120px -40px rgba(0,0,0,.9),0 0 0 1px rgba(47,155,255,.08)}
+/* ===== Tool-Showcase (ersetzt die iframe-Demo) ===== */
+.sc-grid{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:900px){.sc-grid{grid-template-columns:1fr}}
+.sc-vig{background:rgba(12,17,26,.7);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(8px);overflow:hidden;display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
+.sc-vig:hover{border-color:rgba(47,155,255,.45);transform:translateY(-3px)}
+.sc-visual{height:230px;position:relative;background:radial-gradient(120% 100% at 50% 0%,rgba(47,155,255,.07),transparent 60%),#0a0e15;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sc-vig-body{padding:18px 20px 20px}
+.sc-vig-h{margin:0;font-size:18px;font-weight:700}
+.sc-vig-p{margin:7px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.sc-tag{position:absolute;top:12px;left:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line2);border-radius:7px;padding:4px 8px;background:rgba(10,15,24,.7);z-index:3}
+/* Vignette 1 · Eingabe */
+.sc-form{width:82%;display:flex;flex-direction:column;gap:8px}
+.sc-fm-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:10px;background:var(--card2);padding:9px 12px}
+.sc-ic{width:16px;height:16px;border-radius:4px;flex:none}
+.sc-nm{font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-dims{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
+.sc-qty{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--teal)}
+.sc-paste{border:1px dashed var(--line2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
+.sc-paste b{color:var(--accent);font-weight:600}
+/* Vignette 2 · 3D-Pille */
+.sc-pill{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 10px;border-radius:9px;background:rgba(12,19,32,.85);border:1px solid var(--line2);color:var(--dim);white-space:nowrap;z-index:3}
+.sc-pill-d{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
+/* Vignette 3 · Teilen & PDF */
+.sc-share{width:82%;display:flex;flex-direction:column;gap:10px;align-items:center}
+.sc-chip{display:flex;align-items:center;gap:8px;border:1px solid rgba(47,155,255,.4);background:rgba(47,155,255,.07);border-radius:10px;padding:8px 13px;font-family:var(--mono);font-size:10.5px;color:var(--text);max-width:100%}
+.sc-lk{color:var(--accent)}
+.sc-pdf{display:flex;gap:12px;border:1px solid var(--line2);border-radius:12px;background:#fff;color:#0b1320;padding:12px 14px;width:100%;box-shadow:0 14px 40px -14px rgba(0,0,0,.8)}
+.sc-pdf-txt{flex:1;min-width:0}
+.sc-pdf-h{font-weight:800;font-size:11.5px;letter-spacing:-.01em}
+.sc-l{height:5px;border-radius:3px;background:#dbe2ec;margin-top:6px}
+.sc-l.s{width:70%}.sc-l.xs{width:45%}
+.sc-pdf-meta{margin-top:8px;font-family:var(--mono);font-size:8px;color:#8b96a6;letter-spacing:.06em;text-transform:uppercase}
+.sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:6px}
+.sc-qr i{background:#0b1320;border-radius:1px}
+.sc-qr i.o{background:transparent}
+/* CTA-Zeile */
+.sc-cta{margin-top:36px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
 .chatmsg{opacity:0;transform:translateY(8px);transition:.4s}
 .chatmsg.in{opacity:1;transform:none}
 ::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:#080c12}::-webkit-scrollbar-thumb{background:#243042;border-radius:6px}
@@ -177,7 +214,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
       </p>
       <div class="mt-8 flex flex-wrap gap-3 justify-center lg:justify-start">
         <a data-i18n="hero_cta1" href="/app" class="btn btn-primary text-[15px] px-6 py-3.5">Tool öffnen – kostenlos</a>
-        <a data-i18n="hero_cta2" href="#demo" class="btn btn-ghost text-[15px] px-6 py-3.5">Direkt ausprobieren <span style="color:var(--accent)">↓</span></a>
+        <a data-i18n="hero_cta2" href="#demo" class="btn btn-ghost text-[15px] px-6 py-3.5">Reinschauen <span style="color:var(--accent)">↓</span></a>
       </div>
       <div data-i18n="hero_trust" class="mt-7 flex items-center gap-5 justify-center lg:justify-start mono text-[12px]" style="color:var(--faint)">
         <span>✓ Ohne Account</span><span>✓ 0 € Setup</span><span>✓ ISO 668</span>
@@ -233,24 +270,83 @@ details[open] .faq-plus{transform:rotate(45deg)}
 
 </header>
 
-<!-- TOOL -->
-<section id="demo" class="relative z-10 max-w-7xl mx-auto px-5 pt-4 pb-16">
+<!-- TOOL SHOWCASE -->
+<section id="demo" class="relative z-10 max-w-7xl mx-auto px-5 pt-4 pb-20">
   <div class="reveal text-center max-w-2xl mx-auto mb-8">
     <div data-i18n="tool_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Der Rechner</div>
-    <h2 data-i18n="tool_h" class="font-extrabold text-[30px] md:text-[40px] tracking-tight">Probier’s direkt aus.</h2>
-    <p data-i18n="tool_p" class="mt-3 text-[15px]" style="color:var(--dim)">Maße eingeben, Container wählen, 3D drehen – kein Login, nichts zu installieren.</p>
+    <h2 data-i18n="tool_h" class="font-extrabold text-[30px] md:text-[40px] tracking-tight">Ein Blick ins Tool.</h2>
+    <p data-i18n="tool_p" class="mt-3 text-[15px]" style="color:var(--dim)">Eingeben, in 3D prüfen, weitergeben – das ist der ganze Workflow. Kein Login, nichts zu installieren.</p>
   </div>
-  <div class="reveal demo-frame">
-    <div class="flex items-center gap-2 px-4 py-2.5" style="background:#0c121b;border-bottom:1px solid var(--line)">
-      <span class="w-3 h-3 rounded-full" style="background:#ff5d6c"></span>
-      <span class="w-3 h-3 rounded-full" style="background:#ffb454"></span>
-      <span class="w-3 h-3 rounded-full" style="background:#37d39f"></span>
-      <span class="mono text-[11px] ml-3" style="color:var(--faint)">containerload.io</span>
-      <a data-i18n="tool_full" href="/app" class="ml-auto mono text-[11px]" style="color:var(--accent)">Vollbild öffnen ↗</a>
+
+  <div class="sc-grid">
+
+    <!-- 1 · Eingabe -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc1_tag">Eingabe</span>
+        <div class="sc-form">
+          <div class="sc-fm-row">
+            <span class="sc-ic" style="background:#2f9bff"></span>
+            <span class="sc-nm" data-i18n="sc1_row1">EUR-Palette</span>
+            <span class="sc-dims">120×80×105</span>
+            <span class="sc-qty">×22</span>
+          </div>
+          <div class="sc-fm-row">
+            <span class="sc-ic" style="background:#38e0c8"></span>
+            <span class="sc-nm" data-i18n="sc1_row2">Kiste Motorteile</span>
+            <span class="sc-dims">240×110×95</span>
+            <span class="sc-qty">×2</span>
+          </div>
+          <div class="sc-paste">⚡ <b>Excel / Text</b>&nbsp;<span data-i18n="sc1_paste">— Packliste einfach einfügen</span></div>
+        </div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc1_h">Maße rein, fertig.</h3>
+        <p class="sc-vig-p" data-i18n="sc1_p">Packstücke frei eingeben oder die Packliste direkt aus Excel einfügen – Anzahl, Maße, Gewicht. Alles in Zentimetern, deutsche Kommas inklusive.</p>
+      </div>
     </div>
-    <iframe src="/app" title="ContainerLoad" style="width:100%;height:760px;border:0;display:block;background:#070a0f" loading="lazy"></iframe>
+
+    <!-- 2 · 3D-Ergebnis -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc2_tag">3D-Ergebnis</span>
+        <svg id="sc-iso" viewBox="0 0 520 300" width="94%" style="max-height:90%" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="sc-pill"><span class="sc-pill-d"></span><span data-i18n="sc2_pill">Alles verladen · 91 % · 14,3 t</span></div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc2_h">Sehen statt schätzen.</h3>
+        <p class="sc-vig-p" data-i18n="sc2_p">Die beste Stauung erscheint live in 3D – drehen, zoomen, prüfen. Palettengenau bei einer Sorte, mit Suchalgorithmus bei gemischter Ladung.</p>
+      </div>
+    </div>
+
+    <!-- 3 · Teilen & PDF -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc3_tag">Teilen & PDF</span>
+        <div class="sc-share">
+          <div class="sc-chip">🔗 <span class="sc-lk">containerload.io/share?c=a~120…</span></div>
+          <div class="sc-pdf">
+            <div class="sc-pdf-txt">
+              <div class="sc-pdf-h" data-i18n="sc3_pdf_h">Ladevorschlag · 20′ GP</div>
+              <div class="sc-l"></div><div class="sc-l s"></div><div class="sc-l xs"></div>
+              <div class="sc-pdf-meta" data-i18n="sc3_pdf_meta">QR → interaktiver 3D-Plan</div>
+            </div>
+            <div class="sc-qr" id="sc-qr"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc3_h">Weitergeben, das ankommt.</h3>
+        <p class="sc-vig-p" data-i18n="sc3_p">Ladung als Link teilen – der Empfänger sieht sie sofort in 3D, ohne Login. Oder als PDF mit QR-Code, der jederzeit zurück zum Plan führt.</p>
+      </div>
+    </div>
   </div>
-  <p data-i18n="tool_cap" class="text-center mt-4 mono text-[11px]" style="color:var(--faint)">Läuft am besten am Desktop · auf dem Handy „Vollbild öffnen“ nutzen</p>
+
+  <div class="sc-cta reveal">
+    <a data-i18n="sc_cta_open" href="/app" class="btn btn-primary text-[15px] px-7 py-4">Tool kostenlos öffnen ↗</a>
+    <a href="#how" class="btn btn-ghost text-[15px] px-7 py-4"><span data-i18n="sc_cta_how">So funktioniert’s</span> <span style="color:var(--accent)">↓</span></a>
+  </div>
+  <p data-i18n="sc_cap" class="text-center mt-4 mono text-[11px]" style="color:var(--faint)">Kostenlos · ohne Account · direkt im Browser</p>
 </section>
 
 <!-- PACKLISTEN-IMPORT -->
@@ -374,7 +470,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Kein Excel. Kein Schätzen.<br>Nur der richtige Container.<br><span style="white-space:nowrap">Bremen, Deutschland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
     </div>
     <div><div data-i18n="footer_prod" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Produkt</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app" class="navlink">Tool öffnen</a><a data-i18n="nav_features" href="#features" class="navlink">Funktionen</a><a data-i18n="nav_how" href="#how" class="navlink">So funktioniert’s</a><a href="#faq" class="navlink">FAQ</a></div></div>
-    <div><div data-i18n="footer_res" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Ressourcen</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_demo" href="#demo" class="navlink">Live-Demo</a><a href="#faq" class="navlink">FAQ</a></div></div>
+    <div><div data-i18n="footer_res" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Ressourcen</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_demo" href="#demo" class="navlink">Vorschau</a><a href="#faq" class="navlink">FAQ</a></div></div>
     <div><div data-i18n="footer_legal" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Rechtliches</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_imp" href="/impressum" class="navlink">Impressum</a><a data-i18n="fl_priv" href="/datenschutz" class="navlink">Datenschutz</a><a data-i18n="fl_contact" href="mailto:info@containerload.io" class="navlink">Kontakt</a></div></div>
   </div>
   <div class="max-w-7xl mx-auto px-5 py-5 flex flex-col sm:flex-row items-center justify-between gap-2" style="border-top:1px solid var(--line);color:var(--faint)">
@@ -412,7 +508,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
 <script>
 (function(){
-  var EN={"nav_features": "Features", "nav_how": "How it works", "nav_open": "Open tool", "hero_badge": "<span class=\"live-dot\"></span> PALLET-EXACT · 3D VIEW", "hero_h1": "Every load.<br><span class=\"grad-text\">In the right container.</span>", "hero_sub": "3D loading, pallet-exact calculation and automatic container recommendation – in seconds, right in your browser. No Excel, no guessing.", "hero_cta1": "Open the tool – free", "hero_cta2": "Try it now <span style=\"color:var(--accent)\">↓</span>", "hero_trust": "<span>✓ No account</span><span>✓ €0 setup</span><span>✓ ISO 668</span>", "stat1d": "EUR pallets in a 20-ft, exact", "stat2d": "Loading in real time", "stat3d": "Packing algorithm for mixed loads", "stat4d": "setup, no install", "tool_ey": "The calculator", "tool_h": "Try it right here.", "tool_p": "Enter dimensions, pick a container, rotate in 3D – no login, nothing to install.", "tool_full": "Open fullscreen ↗", "tool_cap": "Runs best on desktop · on mobile use “Open fullscreen”", "feat_ey": "Features", "feat_h": "Everything you need to load.<br><span style=\"color:var(--dim)\">And nothing that just gets in the way.</span>", "f1_h": "Real-time 3D view", "f1_p": "Rotate, zoom, check. The items appear one by one in the container – with soft shadows and a calm auto-rotate. You instantly see how your load really sits.", "f2_h": "Exact pallet logic", "f2_p": "Detects rotated loading patterns too – so <b style=\"color:var(--text)\">11 EUR pallets fit instead of 9</b> in a 20-ft. Exactly the values from the forwarder tables.", "f3_h": "Smart container recommendation", "f3_p": "Not everything fits? The tool suggests the cheapest combination – <b style=\"color:var(--text)\">1× 45' + 1× 20'</b> instead of 2× 45'.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: stackable, non-stackable, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's max payload is built in – you're warned before you set off overloaded.", "how_ey": "How it works", "how_h": "Your load plan in three steps", "s1_h": "Container & cargo", "s1_p": "Pick a container or enter your own dimensions. Then the items with quantity, dimensions and weight – all in centimetres.", "s2_h": "Live calculation", "s2_p": "ContainerLoad computes the best stow in the background – pallet-exact for a single type, with a search algorithm for mixed loads.", "s3_h": "Result & plan", "s3_p": "You see usage, layers and weight – plus a clear recommendation if not everything fits. Along with the 3D plan to rotate.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "cta_h": "Plan your next load – now.", "cta_p": "In 30 seconds you know whether it fits and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Resources", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Live demo", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No typing, no reformatting.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
+  var EN={"nav_features": "Features", "nav_how": "How it works", "nav_open": "Open tool", "hero_badge": "<span class=\"live-dot\"></span> PALLET-EXACT · 3D VIEW", "hero_h1": "Every load.<br><span class=\"grad-text\">In the right container.</span>", "hero_sub": "3D loading, pallet-exact calculation and automatic container recommendation – in seconds, right in your browser. No Excel, no guessing.", "hero_cta1": "Open the tool – free", "hero_cta2": "Take a look <span style=\"color:var(--accent)\">↓</span>", "hero_trust": "<span>✓ No account</span><span>✓ €0 setup</span><span>✓ ISO 668</span>", "stat1d": "EUR pallets in a 20-ft, exact", "stat2d": "Loading in real time", "stat3d": "Packing algorithm for mixed loads", "stat4d": "setup, no install", "tool_ey": "The calculator", "tool_h": "A look inside the tool.", "tool_p": "Enter, check in 3D, share – that's the whole workflow. No login, nothing to install.", "tool_full": "Open fullscreen ↗", "tool_cap": "Runs best on desktop · on mobile use “Open fullscreen”", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "— paste your packing list", "sc1_h": "Dimensions in, done.", "sc1_p": "Enter items freely or paste your packing list straight from Excel – quantity, dimensions, weight. All in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "See it, don't guess it.", "sc2_p": "The best stow appears live in 3D – rotate, zoom, check. Pallet-exact for a single type, with a search algorithm for mixed loads.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share it so it lands.", "sc3_p": "Share the load as a link – the recipient sees it instantly in 3D, no login. Or as a PDF with a QR code that always leads back to the plan.", "sc_cta_open": "Open the tool – free ↗", "sc_cta_how": "How it works", "sc_cap": "Free · no account · right in your browser", "feat_ey": "Features", "feat_h": "Everything you need to load.<br><span style=\"color:var(--dim)\">And nothing that just gets in the way.</span>", "f1_h": "Real-time 3D view", "f1_p": "Rotate, zoom, check. The items appear one by one in the container – with soft shadows and a calm auto-rotate. You instantly see how your load really sits.", "f2_h": "Exact pallet logic", "f2_p": "Detects rotated loading patterns too – so <b style=\"color:var(--text)\">11 EUR pallets fit instead of 9</b> in a 20-ft. Exactly the values from the forwarder tables.", "f3_h": "Smart container recommendation", "f3_p": "Not everything fits? The tool suggests the cheapest combination – <b style=\"color:var(--text)\">1× 45' + 1× 20'</b> instead of 2× 45'.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: stackable, non-stackable, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's max payload is built in – you're warned before you set off overloaded.", "how_ey": "How it works", "how_h": "Your load plan in three steps", "s1_h": "Container & cargo", "s1_p": "Pick a container or enter your own dimensions. Then the items with quantity, dimensions and weight – all in centimetres.", "s2_h": "Live calculation", "s2_p": "ContainerLoad computes the best stow in the background – pallet-exact for a single type, with a search algorithm for mixed loads.", "s3_h": "Result & plan", "s3_p": "You see usage, layers and weight – plus a clear recommendation if not everything fits. Along with the 3D plan to rotate.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "cta_h": "Plan your next load – now.", "cta_p": "In 30 seconds you know whether it fits and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Resources", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Preview", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No typing, no reformatting.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
   var els=[].slice.call(document.querySelectorAll('[data-i18n]'));
   var DE={};
   els.forEach(function(el){var k=el.getAttribute('data-i18n'); if(DE[k]===undefined) DE[k]=el.innerHTML;});
@@ -738,6 +834,111 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     update(ct,elapsed);
     renderer.render(scene,camera);
     raf=requestAnimationFrame(loop);
+  }
+})();
+</script>
+<!-- Tool-Showcase: isometrischer Container (reines SVG, kein Three.js) -->
+<script>
+(function(){
+  var svg=document.getElementById('sc-iso'); if(!svg) return;
+  var NS='http://www.w3.org/2000/svg';
+  var VW=520, VH=300;
+  var C=0.866, Sn=0.5;                                   // cos/sin 30°
+  function proj(p){ return [ (p[0]-p[1])*C, (p[0]+p[1])*Sn - p[2] ]; }
+
+  // Container-Maße (angelehnt an 20' GP: ~5.9 × 2.4 × 2.4)
+  var L=5.9, W=2.4, H=2.4;
+  var corners=[[0,0,0],[L,0,0],[L,W,0],[0,W,0],[0,0,H],[L,0,H],[L,W,H],[0,W,H]];
+  var pc=corners.map(proj);
+  var xs=pc.map(function(p){return p[0];}), ys=pc.map(function(p){return p[1];});
+  var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+  var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+  var padX=44, padY=42;
+  var sc=Math.min((VW-2*padX)/(maxx-minx),(VH-2*padY)/(maxy-miny));
+  var ox=(VW-(maxx-minx)*sc)/2 - minx*sc;
+  var oy=(VH-(maxy-miny)*sc)/2 - miny*sc;
+  function P(w){ var q=proj(w); return [ox+q[0]*sc, oy+q[1]*sc]; }
+  function ptsOf(arr){ return arr.map(function(w){var p=P(w);return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' '); }
+  function poly(arr,fill,stroke,sw,op){
+    var el=document.createElementNS(NS,'polygon');
+    el.setAttribute('points',ptsOf(arr));
+    el.setAttribute('fill',fill||'none');
+    if(stroke){el.setAttribute('stroke',stroke);el.setAttribute('stroke-width',sw||1);el.setAttribute('stroke-linejoin','round');}
+    if(op!=null)el.setAttribute('opacity',op);
+    svg.appendChild(el); return el;
+  }
+  function line(a,b,stroke,sw){
+    var pa=P(a),pb=P(b), el=document.createElementNS(NS,'line');
+    el.setAttribute('x1',pa[0].toFixed(1));el.setAttribute('y1',pa[1].toFixed(1));
+    el.setAttribute('x2',pb[0].toFixed(1));el.setAttribute('y2',pb[1].toFixed(1));
+    el.setAttribute('stroke',stroke);el.setAttribute('stroke-width',sw||1);el.setAttribute('stroke-linecap','round');
+    svg.appendChild(el); return el;
+  }
+
+  // weicher Bodenschatten
+  var defs=document.createElementNS(NS,'defs');
+  var rg=document.createElementNS(NS,'radialGradient'); rg.setAttribute('id','sc-shg');
+  [['0%','.5'],['65%','.16'],['100%','0']].forEach(function(s){
+    var st=document.createElementNS(NS,'stop');
+    st.setAttribute('offset',s[0]); st.setAttribute('stop-color','#000'); st.setAttribute('stop-opacity',s[1]);
+    rg.appendChild(st);
+  });
+  defs.appendChild(rg); svg.appendChild(defs);
+  var fc=P([L/2,W/2,0]);
+  var sh=document.createElementNS(NS,'ellipse');
+  sh.setAttribute('cx',fc[0].toFixed(1)); sh.setAttribute('cy',(fc[1]+8).toFixed(1));
+  sh.setAttribute('rx',(Math.abs(P([L,W,0])[0]-P([0,0,0])[0])/2*1.02).toFixed(1));
+  sh.setAttribute('ry',(Math.abs(P([0,W,0])[1]-P([L,0,0])[1])/2*0.8+9).toFixed(1));
+  sh.setAttribute('fill','url(#sc-shg)'); svg.appendChild(sh);
+
+  var wire='rgba(120,170,230,.55)', wireDim='rgba(120,170,230,.20)';
+  // Boden + Gitter
+  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(47,155,255,.045)',wireDim,1);
+  for(var g=1;g<5;g++){ line([L*g/5,0,0],[L*g/5,W,0],wireDim,0.8); }
+  line([0,W/2,0],[L,W/2,0],wireDim,0.8);
+  // hintere Pfosten + hintere Deckenschienen (faint, hinter Ladung)
+  line([0,0,0],[0,0,H],wireDim,1.2);
+  line([L,0,0],[L,0,H],wireDim,1.2);
+  line([0,W,0],[0,W,H],wireDim,1.2);
+  line([0,0,H],[L,0,H],wireDim,1.2);
+  line([0,0,H],[0,W,H],wireDim,1.2);
+
+  // Ladung (Painter's Order: hinten-unten → vorne-oben)
+  var bl=1.30, bw=1.05, bh=0.98, gap=0.06, vgap=0.03, nx=4, ny=2;
+  var usedL=nx*bl+(nx-1)*gap, usedW=ny*bw+(ny-1)*gap;
+  var sx=(L-usedL)/2, sy=(W-usedW)/2;
+  var blue={top:'#5aacff',left:'#2f8fe6',right:'#2274c4'};
+  var teal={top:'#63e6d4',left:'#33cdb6',right:'#209f8e'};
+  var edge='rgba(4,16,31,.5)';
+  var boxes=[];
+  for(var lay=0;lay<2;lay++)
+    for(var ix=0;ix<nx;ix++)
+      for(var iy=0;iy<ny;iy++){
+        if(lay===1 && ix===nx-1) continue;               // vordere Spalte obere Lage weg → Treppenstufe
+        boxes.push({ix:ix,iy:iy,lay:lay});
+      }
+  boxes.sort(function(a,b){ return (a.ix+a.iy+a.lay)-(b.ix+b.iy+b.lay); });
+  boxes.forEach(function(b){
+    var x0=sx+b.ix*(bl+gap), y0=sy+b.iy*(bw+gap), z0=b.lay*(bh+vgap);
+    var x1=x0+bl, y1=y0+bw, z1=z0+bh;
+    var col=(b.lay===0)?blue:teal;
+    poly([[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]],col.right,edge,0.8); // rechte Fläche
+    poly([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],col.left, edge,0.8); // linke Fläche
+    poly([[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],col.top,  edge,0.8); // Deckel
+  });
+
+  // vorderer Rahmen (über der Ladung)
+  line([L,W,0],[L,W,H],wire,1.6);
+  line([L,0,H],[L,W,H],wire,1.4);
+  line([0,W,H],[L,W,H],wire,1.4);
+  line([L,0,0],[L,W,0],wire,1.3);
+  line([0,W,0],[L,W,0],wire,1.3);
+
+  // Deko-QR (statisches Muster, kein echter Code)
+  var q=document.getElementById('sc-qr');
+  if(q){
+    var pat='1111101101011010110010111110000000110101011101001101110100101011111';
+    for(var i=0;i<49;i++){var c=document.createElement('i'); if(pat[i%pat.length]==='0')c.className='o'; q.appendChild(c);}
   }
 })();
 </script>
