@@ -445,7 +445,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       var enc=encodeURIComponent(t);
       // URL-Laengen-Guard: ehrlicher Hinweis statt stillem Abschneiden.
       if(enc.length>6000){ if(impHint){ impHint.textContent = document.documentElement.lang==='en' ? EN.imp_toolong : 'Liste zu lang — bitte direkt im Tool über „Excel / Text“ einfügen.'; impHint.style.color='var(--warn, #ffb454)'; } return; }
-      window.location.href='app.html?q='+enc+(document.documentElement.lang==='en'?'&lang=en':'');
+      window.location.href='/app?q='+enc+(document.documentElement.lang==='en'?'&lang=en':'');
     });
   }
 })();
