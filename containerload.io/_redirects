@@ -1,0 +1,12 @@
+# Alte .html-Pfade -> saubere Pfade (301, force weil Dateien existieren)
+/index.html        /              301!
+/app.html          /app           301!
+/share.html        /share         301!
+/impressum.html    /impressum     301!
+/datenschutz.html  /datenschutz   301!
+
+# Saubere Pfade intern auf die Dateien mappen (200 = Rewrite, URL bleibt)
+/app           /app.html           200
+/share         /share.html         200
+/impressum     /impressum.html     200
+/datenschutz   /datenschutz.html   200
