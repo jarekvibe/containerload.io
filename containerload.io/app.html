@@ -804,9 +804,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   }
   var LANG = (() => {
     try {
-      // Vorrang: ?lang aus der URL. Netlifys Clean-URL-Rewrite (/app.html -> /app) kann den
-      // Query-String verwerfen; dann faellt die Sprache auf die im Browser gemerkte Wahl
-      // (localStorage.cl_lang, von der Landingpage gesetzt) zurueck, dann auf navigator.language.
+      // Vorrang: ?lang aus der URL. Clean URLs laufen jetzt ueber die explizite _redirects
+      // (Query-Strings bleiben dabei erhalten); der Fallback auf die im Browser gemerkte Wahl
+      // (localStorage.cl_lang, von der Landingpage gesetzt) und navigator.language bleibt trotzdem.
       var p = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase();
       if (p) return p.startsWith("en") ? "en" : "de";
       var stored = (window.localStorage.getItem("cl_lang") || "").toLowerCase();
@@ -1044,7 +1044,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return true;
     }
   })();
-  var homeHref = "index.html" + (LANG === "en" ? "?lang=en" : "");
+  var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
   var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable ? 1 : 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
@@ -1077,7 +1077,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   })();
   var encodePlanURL = (preset, container, cargo, forceCentered, domain) => {
     const b = window.btoa(unescape(encodeURIComponent(JSON.stringify(planStateFrom(preset, container, cargo, forceCentered, domain))))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
-    return window.location.origin + window.location.pathname.replace(/[^/]*$/, "share.html") + "?p=" + b;
+    // Site liegt im Domain-Root (auch Deploy Previews). Der fruehere pathname-Replace
+    // wuerde bei /app (ohne Dateiname) nur zufaellig funktionieren – fest auf /share.
+    return window.location.origin + "/share?p=" + b;
   };
   // localStorage-Persistenz fuer "Meine Plaene" – nur lokal im Browser. Alles defensiv: Safari-
   // Privatmodus / Quota koennen werfen; kaputte Eintraege werden uebersprungen; max. 50 Plaene.

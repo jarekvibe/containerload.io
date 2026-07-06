@@ -49,13 +49,13 @@
   <h1>Ein Ladeplan wurde<br>mit dir geteilt.</h1>
   <p>Du siehst gleich in 3D, wie die Ladung in den Container passt – interaktiv, ohne Login.</p>
   <div class="spin" id="spin"></div>
-  <a class="btn" id="go" href="app.html">Stauplan öffnen →</a>
+  <a class="btn" id="go" href="/app">Stauplan öffnen →</a>
   <div class="foot">containerload.io</div>
 </div>
 <script>
   (function () {
     var search = window.location.search || "";
-    var target = "app.html" + search;
+    var target = "/app" + search;
     var go = document.getElementById("go");
     if (go) go.setAttribute("href", target);
     // give the branded screen a brief moment, then forward into the tool
