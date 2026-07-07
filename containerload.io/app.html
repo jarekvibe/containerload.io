@@ -2065,7 +2065,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             const dw = doorOpen.w / 100, dh = doorOpen.h / 100;
             // (a) Oeffnungsrahmen door.w x door.h in Warn-Amber
             const apGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(dw, dh));
-            const ap = new THREE.LineSegments(apGeo, new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.9 }));
+            const ap = new THREE.LineSegments(apGeo, new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.55 }));
             ap.rotation.y = Math.PI / 2;
             ap.position.set(d.CL + 0.015, dh / 2, d.CW / 2);
             cg.add(ap);
@@ -2078,10 +2078,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             ghost.rotation.y = Math.PI / 2;
             ghost.position.set(d.CL + 0.03, gh / 2, d.CW / 2);   // leicht VOR der Tuer = "praesentiert, nicht geladen"
             cg.add(ghost);
-            const ghostEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(gw, gh)), new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.85 }));
+            // Ghost-Kante gestrichelt = "deine zu grosse Kiste" (vs. durchgezogener Oeffnungsrahmen = "das Loch").
+            const ghostEdge = new THREE.LineSegments(
+              new THREE.EdgesGeometry(new THREE.PlaneGeometry(gw, gh)),
+              new THREE.LineDashedMaterial({ color: 0xffb454, transparent: true, opacity: 0.95, dashSize: 0.12, gapSize: 0.08 })
+            );
             ghostEdge.rotation.y = Math.PI / 2;
             ghostEdge.position.copy(ghost.position);
+            ghostEdge.computeLineDistances();   // PFLICHT (r128), sonst rendert die Linie durchgezogen
             cg.add(ghostEdge);
+            // Ecken-Marker an den beiden oberen Ghost-Ecken (Klemmstellen am Ueberstand)
+            const markMat = new THREE.MeshBasicMaterial({ color: 0xffb454 });
+            const markGeo = new THREE.SphereGeometry(0.04, 10, 10);
+            [d.CW / 2 - gw / 2, d.CW / 2 + gw / 2].forEach((mz) => {
+              const mk = new THREE.Mesh(markGeo, markMat);
+              mk.position.set(d.CL + 0.03, gh, mz);
+              cg.add(mk);
+            });
           }
         }
         const byType = {};
