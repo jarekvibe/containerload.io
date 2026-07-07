@@ -1247,8 +1247,135 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">JA</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">NEIN</span>`;
     return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
+  var LV_STOWAGE = (S) => {
+    const { CL, CW, CH, placed, tiColor, tiPos, legend } = S;
+    if (!placed.length || CL <= 0 || CW <= 0 || CH <= 0) return "";
+
+    const L = S.LANG === "en"
+      ? { top: "TOP VIEW", topSub: "footprint", topHint: "from above",
+          side: "SIDE VIEW", sideSub: "height & stacking", sideHint: "from the side",
+          len: "Length", wid: "Width", hei: "Height", front: "FRONT WALL", door: "◂ DOOR",
+          title: "STOWAGE PLAN", h2: "Schematic load",
+          note: "Schematic view of the computed arrangement. Exact stowage, rotation and stacking in the interactive 3D plan (QR). Purely geometric — axle load, centre of gravity and load securing must be checked separately.",
+          multi: (n) => `Drawing shows container 1 of ${n} — remaining ones in the 3D plan.`,
+          c1: "FLOOR AREA USED", c2: "MAX. STACK HEIGHT", c3: "STACK LAYERS", clear: "clearance",
+          stack: "stackable", nostack: "not stackable" }
+      : { top: "DRAUFSICHT", topSub: "Grundfl\xE4che", topHint: "von oben",
+          side: "SEITENANSICHT", sideSub: "H\xF6he & Stapelung", sideHint: "von der Seite",
+          len: "L\xE4nge", wid: "Breite", hei: "H\xF6he", front: "STIRNWAND", door: "◂ T\xDCR",
+          title: "STAUPLAN", h2: "Schematische Beladung",
+          note: "Schematische Darstellung der berechneten Anordnung. Exakte Stauung, Drehung und Stapelung im interaktiven 3D-Plan (QR). Rein geometrisch — Achslast, Schwerpunkt und Ladungssicherung sind separat fachlich zu pr\xFCfen.",
+          multi: (n) => `Zeichnung zeigt Container 1 von ${n} — weitere im 3D-Plan.`,
+          c1: "BODENFL\xC4CHE BELEGT", c2: "MAX. STAPELH\xD6HE", c3: "STAPELEBENEN", clear: "Luft",
+          stack: "stapelbar", nostack: "nicht stapelbar" };
+
+    const MONO = "font-family:'JetBrains Mono',monospace;";
+    const round = (n) => Math.round(n);
+    const tint = (col) => hexA(col, 0.14);
+
+    // ---- DRAUFSICHT: Grundfl\xE4che pro (x,z)-S\xE4ule gruppieren (gestapelte Boxen teilen sich Footprint) ----
+    const cols = {};
+    placed.forEach((p) => {
+      const k = round(p.x) + "_" + round(p.z);
+      if (!cols[k]) cols[k] = { x: p.x, z: p.z, dx: p.dx, dz: p.dz, ti: p.ti, n: 0 };
+      cols[k].n++;
+    });
+    const colList = Object.values(cols);
+    const drawNums = placed.length <= 300;
+
+    const oxT = 70, oyT = 26, padBot = 46, padRight = 40;
+    let top = `<svg viewBox="0 0 ${CL + oxT + padRight} ${CW + oyT + padBot}" style="width:100%;height:auto;display:block;">`;
+    top += `<rect x="${oxT}" y="${oyT}" width="${CL}" height="${CW}" rx="6" fill="#fff" stroke="#0c1320" stroke-width="2"/>`;
+    for (let gx = 100; gx < CL; gx += 100)
+      top += `<line x1="${oxT + gx}" y1="${oyT}" x2="${oxT + gx}" y2="${oyT + CW}" stroke="#f0f2f5" stroke-width="1"/>`;
+    colList.forEach((c) => {
+      const col = tiColor[c.ti] || "#8492a6";
+      const x = oxT + c.x, y = oyT + c.z;
+      if (c.n > 1) top += `<rect x="${x + 5}" y="${y - 5}" width="${c.dx}" height="${c.dz}" rx="4" fill="none" stroke="${col}" stroke-width="1" stroke-opacity=".35"/>`;
+      top += `<rect x="${x}" y="${y}" width="${c.dx}" height="${c.dz}" rx="4" fill="${tint(col)}" stroke="${col}" stroke-width="2"/>`;
+      if (drawNums) top += `<text x="${x + c.dx / 2}" y="${y + c.dz / 2 + 6}" text-anchor="middle" style="${MONO}font-weight:600;fill:${col}" font-size="20">${String(tiPos[c.ti]).padStart(2, "0")}</text>`;
+      if (c.n > 1) top += `<text x="${x + c.dx - 6}" y="${y + 15}" text-anchor="end" style="${MONO}fill:${col}" font-size="13">\xD7${c.n}</text>`;
+    });
+    top += `<text x="${oxT - 6}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#8492a6" font-size="13" transform="rotate(-90 ${oxT - 6} ${oyT + CW / 2})">${L.front}</text>`;
+    top += `<text x="${oxT + CL + 8}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#0891b2;font-weight:600" font-size="13" transform="rotate(90 ${oxT + CL + 8} ${oyT + CW / 2})">${L.door}</text>`;
+    const dyT = oyT + CW + 26;
+    top += `<line x1="${oxT}" y1="${dyT}" x2="${oxT + CL}" y2="${dyT}" stroke="#c3cbd6" stroke-width="1"/>`;
+    top += `<text x="${oxT + CL / 2}" y="${dyT - 8}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15">${L.len} ${round(CL)} cm</text>`;
+    top += `<text x="${oxT + CL + 34}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15" transform="rotate(90 ${oxT + CL + 34} ${oyT + CW / 2})">${L.wid} ${round(CW)} cm</text>`;
+    top += `</svg>`;
+
+    // ---- SEITENANSICHT: Orthografische Projektion x–y, ferne (gro\xDFes z) zuerst zeichnen ----
+    const oxS = 70, oyS = 30, floorY = oyS + CH;
+    const sorted = placed.slice().sort((a, b) => b.z - a.z);
+    let side = `<svg viewBox="0 0 ${CL + oxS + padRight} ${CH + oyS + 40}" style="width:100%;height:auto;display:block;">`;
+    side += `<line x1="${oxS}" y1="${oyS}" x2="${oxS + CL}" y2="${oyS}" stroke="#0c1320" stroke-width="2" stroke-dasharray="6 5" stroke-opacity=".6"/>`;
+    side += `<text x="${oxS + CL - 4}" y="${oyS - 6}" text-anchor="end" style="${MONO}fill:#8492a6" font-size="13">${L.hei} ${round(CH)} cm</text>`;
+    side += `<line x1="${oxS}" y1="${floorY}" x2="${oxS + CL}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
+    side += `<line x1="${oxS}" y1="${oyS}" x2="${oxS}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
+    side += `<line x1="${oxS + CL}" y1="${oyS}" x2="${oxS + CL}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
+    sorted.forEach((p) => {
+      const col = tiColor[p.ti] || "#8492a6";
+      side += `<rect x="${oxS + p.x}" y="${floorY - (p.y + p.dy)}" width="${p.dx}" height="${p.dy}" rx="3" fill="${tint(col)}" stroke="${col}" stroke-width="2"/>`;
+    });
+    side += `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${L.door.replace("◂ ", "")}</text>`;
+    side += `</svg>`;
+
+    // ---- Legende ----
+    const leg = legend.map((g) => {
+      const nm = escHTML(g.it.name || ("Position " + g.pos));
+      const st = g.it.stackable !== false;
+      return `<div style="display:flex;align-items:center;gap:8px;">
+        <span style="width:15px;height:15px;border-radius:4px;background:${tint(g.color)};border:2px solid ${g.color};flex:none;"></span>
+        <span style="${MONO}font-weight:600;font-size:11px;color:${g.color};">${String(g.pos).padStart(2, "0")}</span>
+        <span style="font-size:11px;color:#0c1320;">${nm}</span>
+        <span style="${MONO}font-size:10px;color:#8492a6;">${num(g.it.qty)}\xD7 \xB7 ${num(g.it.l)}\xD7${num(g.it.w)}\xD7${num(g.it.h)} cm \xB7 ${st ? L.stack : L.nostack}</span>
+      </div>`;
+    }).join("");
+
+    // ---- Kennzahlen (rein geometrisch aus placed) ----
+    const floorUsed = colList.reduce((a, c) => a + c.dx * c.dz, 0);
+    const floorPct = CL * CW > 0 ? Math.round(floorUsed / (CL * CW) * 100) : 0;
+    const maxTop = placed.reduce((m, p) => Math.max(m, p.y + p.dy), 0);
+    const layers = new Set(placed.map((p) => round(p.y))).size;
+
+    const nCont = S.chainLen || 1;
+    const noteFull = nCont > 1 ? `${L.note} ${L.multi(nCont)}` : L.note;
+
+    return `
+    <div style="margin:16px 44px 0; border:1px solid #eceef2; border-radius:14px; overflow:hidden;">
+      <div style="padding:14px 18px 6px 18px; border-bottom:1px solid #f0f1f4;">
+        <div style="${MONO}font-size:10.5px; letter-spacing:.24em; color:#0891b2; font-weight:600;">${L.title}</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; margin-top:4px;">${L.h2}</div>
+      </div>
+      <div style="padding:14px 18px 4px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+          <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.top} <span style="color:#8492a6;letter-spacing:.06em;">\xB7 ${L.topSub}</span></div>
+          <div style="${MONO}font-size:9px;color:#aab4c2;">${L.topHint}</div>
+        </div>
+        ${top}
+      </div>
+      <div style="height:1px;background:#f0f1f4;margin:2px 18px;"></div>
+      <div style="padding:10px 18px 12px;">
+        <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
+          <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.side} <span style="color:#8492a6;letter-spacing:.06em;">\xB7 ${L.sideSub}</span></div>
+          <div style="${MONO}font-size:9px;color:#aab4c2;">${L.sideHint}</div>
+        </div>
+        ${side}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px 16px;padding:12px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">${leg}</div>
+      <div style="display:flex;gap:0;border-top:1px solid #f0f1f4;">
+        <div style="flex:1;padding:11px 16px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c1}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">~${floorPct} %</div></div>
+        <div style="flex:1;padding:11px 16px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c2}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${round(maxTop)}<span style="font-size:12px;color:#5b6b80;"> / ${round(CH)} cm</span></div><div style="font-size:9px;color:#5b6b80;">${Math.max(0, round(CH - maxTop))} cm ${L.clear}</div></div>
+        <div style="flex:1;padding:11px 16px;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c3}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${layers}</div></div>
+      </div>
+      <div style="display:flex;gap:11px;align-items:flex-start;padding:12px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">
+        <div style="width:3px;align-self:stretch;border-radius:2px;background:linear-gradient(135deg,#22d3ee,#14b8a6);flex:none;"></div>
+        <p style="font-size:10px;line-height:1.5;color:#5b6b80;margin:0;">${noteFull}</p>
+      </div>
+    </div>`;
+  };
   var LV_PAGE = (D) => {
-    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR } = D;
+    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, STOWAGE } = D;
     return `<div class="page" style="width:794px; min-height:1123px; background:#ffffff; box-shadow:0 20px 60px rgba(15,23,42,.18); border-radius:6px; overflow:hidden; position:relative; display:flex; flex-direction:column; color:#0c1320;">
 
     <!-- accent top bar -->
@@ -1351,6 +1478,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         </tbody>
       </table>
     </div>
+
+    ${STOWAGE || ""}
 
     <!-- HINTS + 3D/QR -->
     <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:18px; padding:20px 44px 0; align-items:stretch;">
@@ -2294,6 +2423,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           setToast(LANG === "en" ? "Add cargo first" : "Erst Packst\xFCcke hinzuf\xFCgen");
           return;
         }
+        const placed = (result && result.placed) ? result.placed : [];
+        const tiColor = {}, tiPos = {};
+        placed.forEach((p) => {
+          if (tiColor[p.ti] === undefined) {
+            const it = cargo[p.ti];
+            tiColor[p.ti] = colorOf(it, p.ti);
+            tiPos[p.ti] = items.indexOf(it) + 1;
+          }
+        });
+        const legend = Object.keys(tiColor)
+          .map((ti) => ({ ti: +ti, pos: tiPos[ti], color: tiColor[ti], it: cargo[+ti] }))
+          .sort((a, b) => a.pos - b.pos);
+        const STOWAGE = LV_STOWAGE({
+          CL: num(container.l), CW: num(container.w), CH: num(container.h),
+          placed, tiColor, tiPos, legend, LANG,
+          chainLen: (result && result.chain && result.chain.length) ? result.chain.length : 1
+        });
         const colli = items.reduce((a, c) => a + Math.max(0, num(c.qty, 0)), 0);
         const totVol = items.reduce((a, c) => a + num(c.qty, 0) * num(c.l) * num(c.w) * num(c.h) / 1e6, 0);
         const totWt = items.reduce((a, c) => a + num(c.qty, 0) * num(c.weight, 0), 0);
@@ -2344,7 +2490,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           SUMQTY: colli,
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
-          QR: qr
+          QR: qr,
+          STOWAGE
         });
         const w = window.open("", "_blank");
         if (!w) {
