@@ -1640,7 +1640,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       scene.add(ground);
       const target = new THREE.Vector3(0, 0, 0);
       const sph = { r: 14, theta: -0.92, phi: 1 };
-      const cur = { r: 14, theta: -0.92, phi: 1 };
+      const prefersReducedMotion = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      // Erst-Render: leicht zurueckgezogen + hoeher -> vorhandene Lerp (0.12/Frame) schwenkt ein.
+      // Bei reduzierter Bewegung: sofort in Ruheposition (kein Settle).
+      const cur = prefersReducedMotion
+        ? { r: 14, theta: -0.92, phi: 1 }
+        : { r: 20, theta: -0.92, phi: 0.66 };
       const applyCam = () => {
         camera.position.set(
           target.x + cur.r * Math.sin(cur.phi) * Math.cos(cur.theta),
