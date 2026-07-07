@@ -1236,15 +1236,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return "";
     }
   };
-  var LV_ROW = (it, i) => {
+  var LV_ROW = (it, i, lang) => {
+    const en = lang === "en";
     const q = Math.max(0, num(it.qty, 1));
     const totKg = q * num(it.weight, 0);
     const volC = q * num(it.l) * num(it.w) * num(it.h) / 1e6;
     const stack = it.stackable !== false;
     const dims = `${num(it.l)} \xD7 ${num(it.w)} \xD7 ${num(it.h)}`;
-    const nm = escHTML(it.name || "Position " + (i + 1));
+    const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
-    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">JA</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">NEIN</span>`;
+    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${en ? "YES" : "JA"}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${en ? "NO" : "NEIN"}</span>`;
     return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
   var LV_STOWAGE = (S) => {
@@ -1283,7 +1284,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const colList = Object.values(cols);
     const drawNums = placed.length <= 300;
 
-    const oxT = 70, oyT = 26, padBot = 46, padRight = 40;
+    const oxT = 70, oyT = 20, padBot = 32, padRight = 40;
     let top = `<svg viewBox="0 0 ${CL + oxT + padRight} ${CW + oyT + padBot}" style="width:100%;height:auto;display:block;">`;
     top += `<rect x="${oxT}" y="${oyT}" width="${CL}" height="${CW}" rx="6" fill="#fff" stroke="#0c1320" stroke-width="2"/>`;
     for (let gx = 100; gx < CL; gx += 100)
@@ -1305,9 +1306,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     top += `</svg>`;
 
     // ---- SEITENANSICHT: Orthografische Projektion x–y, ferne (gro\xDFes z) zuerst zeichnen ----
-    const oxS = 70, oyS = 30, floorY = oyS + CH;
+    const oxS = 70, oyS = 24, floorY = oyS + CH;
     const sorted = placed.slice().sort((a, b) => b.z - a.z);
-    let side = `<svg viewBox="0 0 ${CL + oxS + padRight} ${CH + oyS + 40}" style="width:100%;height:auto;display:block;">`;
+    let side = `<svg viewBox="0 0 ${CL + oxS + padRight} ${CH + oyS + 28}" style="width:100%;height:auto;display:block;">`;
     side += `<line x1="${oxS}" y1="${oyS}" x2="${oxS + CL}" y2="${oyS}" stroke="#0c1320" stroke-width="2" stroke-dasharray="6 5" stroke-opacity=".6"/>`;
     side += `<text x="${oxS + CL - 4}" y="${oyS - 6}" text-anchor="end" style="${MONO}fill:#8492a6" font-size="13">${L.hei} ${round(CH)} cm</text>`;
     side += `<line x1="${oxS}" y1="${floorY}" x2="${oxS + CL}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
@@ -1342,12 +1343,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const noteFull = nCont > 1 ? `${L.note} ${L.multi(nCont)}` : L.note;
 
     return `
-    <div style="margin:16px 44px 0; border:1px solid #eceef2; border-radius:14px; overflow:hidden;">
-      <div style="padding:14px 18px 6px 18px; border-bottom:1px solid #f0f1f4;">
+    <div style="margin:16px 44px 0; border:1px solid #eceef2; border-radius:14px; overflow:hidden; page-break-before:always; break-before:page; page-break-inside:avoid; break-inside:avoid;">
+      <div style="padding:12px 18px 5px 18px; border-bottom:1px solid #f0f1f4;">
         <div style="${MONO}font-size:10.5px; letter-spacing:.24em; color:#0891b2; font-weight:600;">${L.title}</div>
         <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:16px; margin-top:4px;">${L.h2}</div>
       </div>
-      <div style="padding:14px 18px 4px;">
+      <div style="padding:10px 18px 3px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
           <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.top} <span style="color:#8492a6;letter-spacing:.06em;">\xB7 ${L.topSub}</span></div>
           <div style="${MONO}font-size:9px;color:#aab4c2;">${L.topHint}</div>
@@ -1355,27 +1356,78 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         ${top}
       </div>
       <div style="height:1px;background:#f0f1f4;margin:2px 18px;"></div>
-      <div style="padding:10px 18px 12px;">
+      <div style="padding:8px 18px 10px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
           <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.side} <span style="color:#8492a6;letter-spacing:.06em;">\xB7 ${L.sideSub}</span></div>
           <div style="${MONO}font-size:9px;color:#aab4c2;">${L.sideHint}</div>
         </div>
         ${side}
       </div>
-      <div style="display:flex;flex-wrap:wrap;gap:7px 16px;padding:12px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">${leg}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 16px;padding:10px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">${leg}</div>
       <div style="display:flex;gap:0;border-top:1px solid #f0f1f4;">
-        <div style="flex:1;padding:11px 16px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c1}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">~${floorPct} %</div></div>
-        <div style="flex:1;padding:11px 16px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c2}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${round(maxTop)}<span style="font-size:12px;color:#5b6b80;"> / ${round(CH)} cm</span></div><div style="font-size:9px;color:#5b6b80;">${Math.max(0, round(CH - maxTop))} cm ${L.clear}</div></div>
-        <div style="flex:1;padding:11px 16px;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c3}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${layers}</div></div>
+        <div style="flex:1;padding:10px 14px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c1}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">~${floorPct} %</div></div>
+        <div style="flex:1;padding:10px 14px;border-right:1px solid #f0f1f4;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c2}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${round(maxTop)}<span style="font-size:12px;color:#5b6b80;"> / ${round(CH)} cm</span></div><div style="font-size:9px;color:#5b6b80;">${Math.max(0, round(CH - maxTop))} cm ${L.clear}</div></div>
+        <div style="flex:1;padding:10px 14px;"><div style="${MONO}font-size:9px;letter-spacing:.12em;color:#8492a6;">${L.c3}</div><div style="font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:19px;margin-top:4px;">${layers}</div></div>
       </div>
-      <div style="display:flex;gap:11px;align-items:flex-start;padding:12px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">
+      <div style="display:flex;gap:11px;align-items:flex-start;padding:10px 18px;background:#fafbfc;border-top:1px solid #f0f1f4;">
         <div style="width:3px;align-self:stretch;border-radius:2px;background:linear-gradient(135deg,#22d3ee,#14b8a6);flex:none;"></div>
         <p style="font-size:10px;line-height:1.5;color:#5b6b80;margin:0;">${noteFull}</p>
       </div>
     </div>`;
   };
   var LV_PAGE = (D) => {
-    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, STOWAGE } = D;
+    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, STOWAGE, LANG } = D;
+    const en = LANG === "en";
+    const P = en ? {
+      kicker: "LOADING PLAN", h1: "Non-binding<br>Loading Plan",
+      cont: "CONTAINER", inner: "INNER DIM.", payload: "MAX. PAYLOAD",
+      discK: "NON-BINDING PROPOSAL — PLEASE VERIFY",
+      discBody: "Proposal based on the entered dimensions and weights. Purely geometric calculation — without checking actual weight, axle load, centre of gravity or load securing. Loading, weight distribution and securing must be verified independently before transport. Not an official document.",
+      kPos: "POSITIONS", colliTot: COLLI + " pieces total",
+      kVol: "VOLUME", volUnit: "cbm", util: VOLPCT + " % utilisation",
+      kWeight: "WEIGHT \xB7 INPUT", ofPay: WTPCT + " % of payload",
+      fitsIn: "FITS IN",
+      tPos: "POSITIONS", entries: POSCOUNT + " ENTRIES \xB7 " + COLLI + " PIECES",
+      thPos: "Pos", thDesc: "Description", thQty: "Qty", thDims: "Dims L\xD7W\xD7H", thWpc: "Wt./pc", thTot: "Total kg", thVol: "Vol. cbm", thStk: "Stack.",
+      sum: "Total",
+      notesK: "NOTES", nonbind: "\xB7 NON-BINDING",
+      hints: [
+        "Plan heavy pallets low and evenly distributed.",
+        "Load non-stackable items last / on top.",
+        "Check axle load, centre of gravity and load securing separately.",
+        "Weights = your inputs, not verified by the tool."
+      ],
+      promoK: "INTERACTIVE 3D PLAN", promoH: "Rotate &amp; inspect the plan in 3D",
+      promoB: "Scan the QR → view the load in 3D, adjust and share. No login, right in your browser.",
+      qrAlt: "QR code 3D plan",
+      footer: "Not an official document \xB7 non-binding proposal based on your inputs \xB7 does not replace professional checks of load securing, axle load or weight distribution.",
+      page: "Page 1 / 1"
+    } : {
+      kicker: "LADEVORSCHLAG", h1: "Unverbindlicher<br>Beladungsplan",
+      cont: "CONTAINER", inner: "INNENMASS", payload: "MAX. ZULADUNG",
+      discK: "UNVERBINDLICHER VORSCHLAG — BITTE PR\xDCFEN",
+      discBody: "Vorschlag auf Basis der eingegebenen Ma\xDFe und Gewichte. Rein geometrische Berechnung — ohne Pr\xFCfung von tats\xE4chlichem Gewicht, Achslast, Schwerpunkt oder Ladungssicherung. Verladung, Gewichtsverteilung und Sicherung sind vor dem Transport eigenverantwortlich zu pr\xFCfen. Kein amtliches Dokument.",
+      kPos: "POSITIONEN", colliTot: COLLI + " Colli gesamt",
+      kVol: "VOLUMEN", volUnit: "cbm", util: VOLPCT + " % Auslastung",
+      kWeight: "GEWICHT \xB7 EINGABE", ofPay: WTPCT + " % der Zuladung",
+      fitsIn: "PASST IN",
+      tPos: "POSITIONEN", entries: POSCOUNT + " EINTR\xC4GE \xB7 " + COLLI + " COLLI",
+      thPos: "Pos", thDesc: "Bezeichnung", thQty: "Anzahl", thDims: "Ma\xDFe L\xD7B\xD7H", thWpc: "Gew./Stk", thTot: "Gesamt kg", thVol: "Vol. cbm", thStk: "Stapelb.",
+      sum: "Summe",
+      notesK: "HINWEISE", nonbind: "\xB7 UNVERBINDLICH",
+      hints: [
+        "Schwere Paletten bodennah und gleichm\xE4\xDFig verteilt einplanen.",
+        "Nicht stapelbare Positionen zuletzt bzw. oben verladen.",
+        "Achslast, Schwerpunkt und Ladungssicherung separat fachlich pr\xFCfen.",
+        "Gewichte = Ihre Eingaben, vom Tool nicht verifiziert."
+      ],
+      promoK: "INTERAKTIVER 3D-PLAN", promoH: "Plan in 3D drehen &amp; pr\xFCfen",
+      promoB: "QR scannen → Beladung in 3D ansehen, anpassen und teilen. Ohne Login, direkt im Browser.",
+      qrAlt: "QR-Code 3D-Plan",
+      footer: "Kein amtliches Dokument \xB7 unverbindlicher Vorschlag auf Basis der Eingaben \xB7 ersetzt keine fachliche Pr\xFCfung der Ladungssicherung, Achslast oder Gewichtsverteilung.",
+      page: "Seite 1 / 1"
+    };
+    const hintRow = (t) => `<div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">${t}</span></div>`;
     return `<div class="page" style="width:794px; min-height:1123px; background:#ffffff; box-shadow:0 20px 60px rgba(15,23,42,.18); border-radius:6px; overflow:hidden; position:relative; display:flex; flex-direction:column; color:#0c1320;">
 
     <!-- accent top bar -->
@@ -1398,14 +1450,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       </div>
 
       <div style="margin-top:26px; position:relative;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.32em; color:var(--ac-solid,#22d3ee); font-weight:600;">LADEVORSCHLAG</div>
-        <h1 style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:38px; line-height:1.04; letter-spacing:-.02em; margin:9px 0 0;">Unverbindlicher<br>Beladungsplan</h1>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:.32em; color:var(--ac-solid,#22d3ee); font-weight:600;">${P.kicker}</div>
+        <h1 style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:38px; line-height:1.04; letter-spacing:-.02em; margin:9px 0 0;">${P.h1}</h1>
       </div>
 
       <div style="display:flex; gap:9px; margin-top:22px; flex-wrap:wrap; position:relative;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">CONTAINER</span> <span style="font-weight:600;">${CONTAINER_LABEL}</span></div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">INNENMASS</span> <span style="font-weight:600;">${INNENMASS}</span></div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">MAX. ZULADUNG</span> <span style="font-weight:600;">${PAYLOAD} kg</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">${P.cont}</span> <span style="font-weight:600;">${CONTAINER_LABEL}</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">${P.inner}</span> <span style="font-weight:600;">${INNENMASS}</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; padding:8px 13px; border-radius:8px; border:1px solid var(--hero-line,rgba(255,255,255,.1)); background:var(--hero-chip,rgba(255,255,255,.045)); display:flex; align-items:center; gap:7px;"><span style="color:var(--hero-sub,#8a98ad);">${P.payload}</span> <span style="font-weight:600;">${PAYLOAD} kg</span></div>
       </div>
     </div>
 
@@ -1413,32 +1465,32 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     <div style="display:flex; gap:13px; align-items:flex-start; padding:13px 44px; background:#fafbfc; border-bottom:1px solid #eef0f3;">
       <div style="width:3px; align-self:stretch; border-radius:2px; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6)); flex:none;"></div>
       <div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; font-weight:600; color:var(--ac-solid,#0891b2);">UNVERBINDLICHER VORSCHLAG \u2014 BITTE PR\xDCFEN</div>
-        <p style="margin:5px 0 0; font-size:10.5px; line-height:1.55; color:#5b6b80; max-width:660px;">Vorschlag auf Basis der eingegebenen Ma\xDFe und Gewichte. Rein geometrische Berechnung \u2014 ohne Pr\xFCfung von tats\xE4chlichem Gewicht, Achslast, Schwerpunkt oder Ladungssicherung. Verladung, Gewichtsverteilung und Sicherung sind vor dem Transport eigenverantwortlich zu pr\xFCfen. Kein amtliches Dokument.</p>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:.16em; font-weight:600; color:var(--ac-solid,#0891b2);">${P.discK}</div>
+        <p style="margin:5px 0 0; font-size:10.5px; line-height:1.55; color:#5b6b80; max-width:660px;">${P.discBody}</p>
       </div>
     </div>
 
     <!-- KPI CARDS -->
     <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:13px; padding:22px 44px 6px;">
       <div style="border:1px solid #eceef2; border-radius:13px; padding:15px 16px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">POSITIONEN</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">${P.kPos}</div>
         <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:30px; line-height:1; margin-top:9px;">${POSCOUNT}</div>
-        <div style="font-size:11px; color:#5b6b80; margin-top:7px;">${COLLI} Colli gesamt</div>
+        <div style="font-size:11px; color:#5b6b80; margin-top:7px;">${P.colliTot}</div>
       </div>
       <div style="border:1px solid #eceef2; border-radius:13px; padding:15px 16px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">VOLUMEN</div>
-        <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:30px; line-height:1; margin-top:9px;">${VOL}<span style="font-size:14px; color:#5b6b80; font-weight:600;"> cbm</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">${P.kVol}</div>
+        <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:30px; line-height:1; margin-top:9px;">${VOL}<span style="font-size:14px; color:#5b6b80; font-weight:600;"> ${P.volUnit}</span></div>
         <div style="height:5px; border-radius:3px; background:#eef0f3; margin-top:10px; overflow:hidden;"><div style="width:${VOLBAR}%; height:100%; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6));"></div></div>
-        <div style="font-size:10.5px; color:var(--ac-solid,#0891b2); margin-top:5px; font-weight:600;">${VOLPCT} % Auslastung</div>
+        <div style="font-size:10.5px; color:var(--ac-solid,#0891b2); margin-top:5px; font-weight:600;">${P.util}</div>
       </div>
       <div style="border:1px solid #eceef2; border-radius:13px; padding:15px 16px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">GEWICHT \xB7 EINGABE</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:#8492a6; font-weight:500;">${P.kWeight}</div>
         <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:30px; line-height:1; margin-top:9px;">${WEIGHT}<span style="font-size:14px; color:#5b6b80; font-weight:600;"> kg</span></div>
         <div style="height:5px; border-radius:3px; background:#eef0f3; margin-top:10px; overflow:hidden;"><div style="width:${WTBAR}%; height:100%; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6));"></div></div>
-        <div style="font-size:10.5px; color:var(--ac-solid,#0891b2); margin-top:5px; font-weight:600;">${WTPCT} % der Zuladung</div>
+        <div style="font-size:10.5px; color:var(--ac-solid,#0891b2); margin-top:5px; font-weight:600;">${P.ofPay}</div>
       </div>
       <div style="border:1px solid var(--ac-solid,#0891b2); border-radius:13px; padding:15px 16px; background:var(--ac-soft,#ecfeff); position:relative;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:var(--ac-solid,#0891b2); font-weight:600;">PASST IN</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.16em; color:var(--ac-solid,#0891b2); font-weight:600;">${P.fitsIn}</div>
         <div style="font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:26px; line-height:1.05; margin-top:9px; color:#0c1320;">${PASSTIN}</div>
         <div style="font-size:11px; color:var(--ac-solid,#0891b2); margin-top:7px; font-weight:600; display:flex; align-items:center; gap:5px;"><span style="display:inline-flex; width:14px; height:14px; border-radius:50%; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6)); color:#fff; align-items:center; justify-content:center; font-size:9px;">\u2713</span> ${PASSTSUB}</div>
       </div>
@@ -1447,27 +1499,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     <!-- TABLE -->
     <div style="padding:18px 44px 4px;">
       <div style="display:flex; align-items:baseline; justify-content:space-between; margin-bottom:9px;">
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.2em; color:#0c1320; font-weight:600;">POSITIONEN</div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8492a6;">${POSCOUNT} EINTR\xC4GE \xB7 ${COLLI} COLLI</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.2em; color:#0c1320; font-weight:600;">${P.tPos}</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#8492a6;">${P.entries}</div>
       </div>
       <table style="width:100%; border-collapse:collapse; font-size:12px;">
         <thead>
           <tr style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.06em; color:#8492a6; text-transform:uppercase;">
-            <th style="text-align:left; padding:0 8px 9px 0; font-weight:500; border-bottom:1.5px solid #0c1320;">Pos</th>
-            <th style="text-align:left; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Bezeichnung</th>
-            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Anzahl</th>
-            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Ma\xDFe L\xD7B\xD7H</th>
-            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Gew./Stk</th>
-            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Gesamt kg</th>
-            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">Vol. cbm</th>
-            <th style="text-align:center; padding:0 0 9px 8px; font-weight:500; border-bottom:1.5px solid #0c1320;">Stapelb.</th>
+            <th style="text-align:left; padding:0 8px 9px 0; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thPos}</th>
+            <th style="text-align:left; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thDesc}</th>
+            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thQty}</th>
+            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thDims}</th>
+            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thWpc}</th>
+            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thTot}</th>
+            <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thVol}</th>
+            <th style="text-align:center; padding:0 0 9px 8px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thStk}</th>
           </tr>
         </thead>
         <tbody>
           ${ROWS}
           <tr style="font-family:'JetBrains Mono',monospace;">
             <td style="padding:12px 8px 0 0; border-top:1.5px solid #0c1320;"></td>
-            <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320; font-weight:700; font-family:'Manrope',sans-serif;">Summe</td>
+            <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320; font-weight:700; font-family:'Manrope',sans-serif;">${P.sum}</td>
             <td style="padding:12px 8px 0; text-align:right; border-top:1.5px solid #0c1320; font-weight:700;">${SUMQTY}</td>
             <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320;"></td>
             <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320;"></td>
@@ -1482,39 +1534,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     ${STOWAGE || ""}
 
     <!-- HINTS + 3D/QR -->
-    <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:18px; padding:20px 44px 0; align-items:stretch;">
+    <div style="display:grid; grid-template-columns:1.15fr 1fr; gap:18px; padding:20px 44px 0; align-items:stretch; page-break-inside:avoid; break-inside:avoid;">
       <div>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.2em; color:#0c1320; font-weight:600; margin-bottom:11px;">HINWEISE <span style="color:#8492a6; letter-spacing:.08em;">\xB7 UNVERBINDLICH</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; letter-spacing:.2em; color:#0c1320; font-weight:600; margin-bottom:11px;">${P.notesK} <span style="color:#8492a6; letter-spacing:.08em;">${P.nonbind}</span></div>
         <div style="display:flex; flex-direction:column; gap:9px;">
-          <div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">Schwere Paletten bodennah und gleichm\xE4\xDFig verteilt einplanen.</span></div>
-          <div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">Nicht stapelbare Positionen zuletzt bzw. oben verladen.</span></div>
-          <div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">Achslast, Schwerpunkt und Ladungssicherung separat fachlich pr\xFCfen.</span></div>
-          <div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">Gewichte = Ihre Eingaben, vom Tool nicht verifiziert.</span></div>
+          ${P.hints.map(hintRow).join("")}
         </div>
       </div>
 
       <div style="background:linear-gradient(135deg,#0b1119 0%,#0f1c2e 100%); border-radius:15px; padding:20px; display:flex; gap:16px; align-items:center; position:relative; overflow:hidden;">
         <div style="position:absolute; bottom:-50px; left:-40px; width:160px; height:160px; border-radius:50%; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6)); opacity:.16; filter:blur(6px);"></div>
         <div style="position:relative; flex:1;">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.18em; color:var(--ac-solid,#22d3ee); font-weight:600;">INTERAKTIVER 3D-PLAN</div>
-          <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color:#fff; margin-top:8px; line-height:1.2;">Plan in 3D drehen &amp; pr\xFCfen</div>
-          <p style="font-size:10.5px; line-height:1.5; color:#8a98ad; margin:8px 0 0;">QR scannen \u2192 Beladung in 3D ansehen, anpassen und teilen. Ohne Login, direkt im Browser.</p>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.18em; color:var(--ac-solid,#22d3ee); font-weight:600;">${P.promoK}</div>
+          <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color:#fff; margin-top:8px; line-height:1.2;">${P.promoH}</div>
+          <p style="font-size:10.5px; line-height:1.5; color:#8a98ad; margin:8px 0 0;">${P.promoB}</p>
         </div>
         <div style="position:relative; background:#fff; padding:7px; border-radius:10px; flex:none;">
-          <img src="${QR}" alt="QR-Code 3D-Plan" width="92" height="92" style="display:block; border-radius:4px;">
+          <img src="${QR}" alt="${P.qrAlt}" width="92" height="92" style="display:block; border-radius:4px;">
         </div>
       </div>
     </div>
 
     <!-- FOOTER -->
     <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:18px 44px; border-top:1px solid #eceef2; margin-top:24px;">
-      <p style="font-size:9.5px; line-height:1.5; color:#8492a6; margin:0; max-width:480px;">Kein amtliches Dokument \xB7 unverbindlicher Vorschlag auf Basis der Eingaben \xB7 ersetzt keine fachliche Pr\xFCfung der Ladungssicherung, Achslast oder Gewichtsverteilung.</p>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#5b6b80; text-align:right; white-space:nowrap;">containerload.io<br><span style="color:#aab4c2;">Seite 1 / 1</span></div>
+      <p style="font-size:9.5px; line-height:1.5; color:#8492a6; margin:0; max-width:480px;">${P.footer}</p>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#5b6b80; text-align:right; white-space:nowrap;">containerload.io<br><span style="color:#aab4c2;">${P.page}</span></div>
     </div>
 
   </div>`;
   };
-  var LV_DOC = (pageHTML) => `<!DOCTYPE html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ladevorschlag \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#22d3ee,#14b8a6);color:#04101f}.cl-x{background:#1c2735;color:#cbd5e1}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">Als PDF speichern / drucken</button><button class="cl-x" onclick="window.close()">Schlie\xDFen</button></div><script>(function(){function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+  var LV_DOC = (pageHTML, lang) => `<!DOCTYPE html><html lang="${lang === "en" ? "en" : "de"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${lang === "en" ? "Loading Plan" : "Ladevorschlag"} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#22d3ee,#14b8a6);color:#04101f}.cl-x{background:#1c2735;color:#cbd5e1}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${lang === "en" ? "Save as PDF / print" : "Als PDF speichern / drucken"}</button><button class="cl-x" onclick="window.close()">${lang === "en" ? "Close" : "Schlie\xDFen"}</button></div><script>(function(){function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
   var QIMPORT = (() => {
     try {
       const q = new URLSearchParams(window.location.search).get("q");
@@ -2447,23 +2496,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const pay = num(container.payload, 0);
         const volPct = cVol > 0 ? totVol / cVol * 100 : 0;
         const wtPct = pay > 0 ? totWt / pay * 100 : 0;
-        const pl = preset === "Custom" ? "Eigene Ma\xDFe" : preset;
+        const enPDF = LANG === "en";
+        const pl = preset === "Custom" ? (enPDF ? "Custom dimensions" : "Eigene Ma\xDFe") : preset;
         let passtin, passtsub;
         if (allFit) {
           passtin = "1\xD7 " + pl;
-          passtsub = "geometrisch gepr\xFCft";
+          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
         } else if (sug && sug.type === "single") {
           passtin = "1\xD7 " + sug.name;
-          passtsub = "empfohlen";
+          passtsub = enPDF ? "recommended" : "empfohlen";
         } else if (sug && sug.type === "multi" && sug.combo && sug.combo.length) {
           passtin = sug.combo.map((c) => c.count + "\xD7 " + c.name).join(" + ");
-          passtsub = "Empfehlung";
+          passtsub = enPDF ? "recommendation" : "Empfehlung";
         } else if (sug && sug.type === "toobig") {
           passtin = "\u2014";
-          passtsub = "Position zu gro\xDF";
+          passtsub = enPDF ? "item too large" : "Position zu gro\xDF";
         } else {
           passtin = "1\xD7 " + pl;
-          passtsub = "geometrisch gepr\xFCft";
+          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
         }
         const now = /* @__PURE__ */ new Date();
         const p2 = (n) => String(n).padStart(2, "0");
@@ -2486,12 +2536,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           WTPCT: Math.round(wtPct),
           PASSTIN: escHTML(passtin),
           PASSTSUB: escHTML(passtsub),
-          ROWS: items.map(LV_ROW).join(""),
+          ROWS: items.map((it, i) => LV_ROW(it, i, LANG)).join(""),
           SUMQTY: colli,
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
           QR: qr,
-          STOWAGE
+          STOWAGE,
+          LANG
         });
         const w = window.open("", "_blank");
         if (!w) {
@@ -2499,7 +2550,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           return;
         }
         w.document.open();
-        w.document.write(LV_DOC(pageHTML));
+        w.document.write(LV_DOC(pageHTML, LANG));
         w.document.close();
       } catch (e) {
         setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
