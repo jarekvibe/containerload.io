@@ -1875,10 +1875,45 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           w3.position.set(0, cy, cz);
           w3.rotation.y = Math.PI / 2;
           parent.add(w3);
-          const w4 = new THREE.Mesh(S.geoWallEnd, solid ? S.matEndSolid : S.matEndB);
-          w4.position.set(CL, cy, cz);
-          w4.rotation.y = Math.PI / 2;
-          parent.add(w4);
+          if (kind !== "dry") {                    // dry: Tuerende = offene Blaetter (siehe unten)
+            const w4 = new THREE.Mesh(S.geoWallEnd, solid ? S.matEndSolid : S.matEndB);
+            w4.position.set(CL, cy, cz);
+            w4.rotation.y = Math.PI / 2;
+            parent.add(w4);
+          }
+        }
+        // ── Offene Tuerblaetter (nur dry). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
+        if (kind === "dry") {
+          const DOOR_OPEN = 1.95;  // ~112 Grad nach aussen aufgeschwungen
+          const doorMat = new THREE.MeshStandardMaterial({
+            color: STEEL, transparent: true, opacity: 0.17, depthWrite: false,
+            roughness: 0.8, metalness: 0.28, side: THREE.DoubleSide
+          });
+          const geoLeaf = new THREE.PlaneGeometry(CW / 2, CH);
+          // Linkes Blatt: Scharnier bei z=0, schwingt nach +x auf.
+          const hingeL = new THREE.Group();
+          hingeL.position.set(CL, cy, 0);
+          const leafL = new THREE.Mesh(geoLeaf, doorMat);
+          leafL.rotation.y = Math.PI / 2;   // in die Tuerebene drehen (wie w4)
+          leafL.position.z = CW / 4;        // Blattmitte; Scharnierkante bei z=0
+          hingeL.add(leafL);
+          hingeL.rotation.y = DOOR_OPEN;    // + = nach aussen
+          parent.add(hingeL);
+          // Rechtes Blatt: Scharnier bei z=CW, spiegelbildlich.
+          const hingeR = new THREE.Group();
+          hingeR.position.set(CL, cy, CW);
+          const leafR = new THREE.Mesh(geoLeaf, doorMat);
+          leafR.rotation.y = Math.PI / 2;
+          leafR.position.z = -CW / 4;
+          hingeR.add(leafR);
+          hingeR.rotation.y = -DOOR_OPEN;
+          parent.add(hingeR);
+          // Duenne Rahmenkante am Tuerende (Bezug, damit die offene Oeffnung "gefasst" wirkt)
+          const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(CW, CH));
+          const frameEdge = new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.5 }));
+          frameEdge.rotation.y = Math.PI / 2;
+          frameEdge.position.set(CL, cy, cz);
+          parent.add(frameEdge);
         }
         // ── Dach ──
         if (pan.roof) {
@@ -1919,11 +1954,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         } else if (kind === "flatrack") {
           rail(S.geoBeamW, 0, CH, cz); rail(S.geoBeamW, CL, CH, cz);
         }
-        // ── Tuernaht + Dachkante nur bei geschlossenen Boxen ──
+        // ── Tuernaht + Dachkante ──
         if (kind === "dry" || kind === "opentop") {
-          const seam = new THREE.Mesh(S.geoSeam, S.fmat);
-          seam.position.set(CL + 2e-3, cy, cz);
-          parent.add(seam);
+          if (kind === "opentop") {                 // offene Dry-Tueren brauchen keine Mittelnaht
+            const seam = new THREE.Mesh(S.geoSeam, S.fmat);
+            seam.position.set(CL + 2e-3, cy, cz);
+            parent.add(seam);
+          }
           const te = new THREE.LineSegments(S.geoTop, S.matTop);
           te.rotation.x = -Math.PI / 2;
           te.position.set(cx, CH + 1e-3, cz);
@@ -2005,6 +2042,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (bz < 0) slab(bx, bx + sx, 0, Math.min(sy, gH), bz, 0);                 // ueber Breite -z
           if (bx + sx > gL) slab(gL, bx + sx, 0, Math.min(sy, gH), Math.max(bz, 0), Math.min(bz + sz, gW)); // ueber Laenge vorn
           if (bx < 0) slab(bx, 0, 0, Math.min(sy, gH), Math.max(bz, 0), Math.min(bz + sz, gW));             // ueber Laenge hinten
+        }
+        // ── Tuer-Konflikt: Oeffnung in Warnfarbe rahmen + kritisches Packstueck als Ghost am Tuerspalt.
+        //    Nur Hauptcontainer (ci===0) und nur dry. Tuer-Fit ist reine Mass-Pruefung (fitsThroughDoor). ──
+        if (ci === 0 && ckind === "dry") {
+          const doorOpen = (preset !== "Custom" && container.door)
+            ? container.door
+            : { w: num(container.w), h: num(container.h) };
+          const fails = (cargo || []).filter((it) => num(it.qty) > 0 && !fitsThroughDoor(it, doorOpen));
+          if (fails.length > 0 && doorOpen.w > 0 && doorOpen.h > 0) {
+            const dw = doorOpen.w / 100, dh = doorOpen.h / 100;
+            // (a) Oeffnungsrahmen door.w x door.h in Warn-Amber
+            const apGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(dw, dh));
+            const ap = new THREE.LineSegments(apGeo, new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.9 }));
+            ap.rotation.y = Math.PI / 2;
+            ap.position.set(d.CL + 0.015, dh / 2, d.CW / 2);
+            cg.add(ap);
+            // (b) Ghost des kritischen Packstuecks (erstes fails-Item), aufrecht im "besten" Tuerversuch:
+            //     Breite = min(L,B) (schmalste Kante voran), Hoehe = h — exakt wie fitsThroughDoor prueft.
+            const it = fails[0];
+            const gw = Math.min(num(it.l), num(it.w)) / 100, gh = num(it.h) / 100;
+            const ghostMat = new THREE.MeshStandardMaterial({ color: 0xffb454, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
+            const ghost = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), ghostMat);
+            ghost.rotation.y = Math.PI / 2;
+            ghost.position.set(d.CL + 0.03, gh / 2, d.CW / 2);   // leicht VOR der Tuer = "praesentiert, nicht geladen"
+            cg.add(ghost);
+            const ghostEdge = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.PlaneGeometry(gw, gh)), new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.85 }));
+            ghostEdge.rotation.y = Math.PI / 2;
+            ghostEdge.position.copy(ghost.position);
+            cg.add(ghostEdge);
+          }
         }
         const byType = {};
         (c.placed || []).forEach((p) => (byType[p.ti] = byType[p.ti] || []).push(p));
