@@ -1884,12 +1884,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
         // ── Offene Tuerblaetter (nur dry). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
         if (kind === "dry") {
-          const DOOR_OPEN = 1.95;  // ~112 Grad nach aussen aufgeschwungen
+          const DOOR_OPEN = 1.40;  // ~80 Grad -> Blattflaeche zeigt zur Kamera (war 1.95/~112)
+          // Blattfarbe ist zustandsunabhaengig Stahl -- NIE amber (0xffb454 nur an Oeffnungsrahmen + Ghost).
           const doorMat = new THREE.MeshStandardMaterial({
-            color: STEEL, transparent: true, opacity: 0.17, depthWrite: false,
+            color: STEEL, transparent: true, opacity: 0.22, depthWrite: false,
             roughness: 0.8, metalness: 0.28, side: THREE.DoubleSide
           });
           const geoLeaf = new THREE.PlaneGeometry(CW / 2, CH);
+          const leafEdgeGeo = new THREE.EdgesGeometry(geoLeaf);
+          const leafEdgeMat = new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.7 }); // Stahl, nie amber
           // Linkes Blatt: Scharnier bei z=0, schwingt nach +x auf.
           const hingeL = new THREE.Group();
           hingeL.position.set(CL, cy, 0);
@@ -1897,6 +1900,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           leafL.rotation.y = Math.PI / 2;   // in die Tuerebene drehen (wie w4)
           leafL.position.z = CW / 4;        // Blattmitte; Scharnierkante bei z=0
           hingeL.add(leafL);
+          const edgeL = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
+          edgeL.rotation.y = Math.PI / 2;
+          edgeL.position.z = CW / 4;
+          hingeL.add(edgeL);
           hingeL.rotation.y = DOOR_OPEN;    // + = nach aussen
           parent.add(hingeL);
           // Rechtes Blatt: Scharnier bei z=CW, spiegelbildlich.
@@ -1906,6 +1913,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           leafR.rotation.y = Math.PI / 2;
           leafR.position.z = -CW / 4;
           hingeR.add(leafR);
+          const edgeR = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
+          edgeR.rotation.y = Math.PI / 2;
+          edgeR.position.z = -CW / 4;
+          hingeR.add(edgeR);
           hingeR.rotation.y = -DOOR_OPEN;
           parent.add(hingeR);
           // Duenne Rahmenkante am Tuerende (Bezug, damit die offene Oeffnung "gefasst" wirkt)
