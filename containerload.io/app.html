@@ -1376,7 +1376,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     </div>`;
   };
   var LV_PAGE = (D) => {
-    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, STOWAGE, LANG } = D;
+    const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, QRURL, STOWAGE, LANG } = D;
     const en = LANG === "en";
     const P = en ? {
       kicker: "LOADING PLAN", h1: "Non-binding<br>Loading Plan",
@@ -1399,7 +1399,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ],
       promoK: "INTERACTIVE 3D PLAN", promoH: "Rotate &amp; inspect the plan in 3D",
       promoB: "Scan the QR → view the load in 3D, adjust and share. No login, right in your browser.",
-      qrAlt: "QR code 3D plan",
+      qrAlt: "QR code 3D plan", linkLabel: "Or open the link on your computer:",
       footer: "Not an official document \xB7 non-binding proposal based on your inputs \xB7 does not replace professional checks of load securing, axle load or weight distribution.",
       page: "Page 1 / 1"
     } : {
@@ -1423,7 +1423,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ],
       promoK: "INTERAKTIVER 3D-PLAN", promoH: "Plan in 3D drehen &amp; pr\xFCfen",
       promoB: "QR scannen → Beladung in 3D ansehen, anpassen und teilen. Ohne Login, direkt im Browser.",
-      qrAlt: "QR-Code 3D-Plan",
+      qrAlt: "QR-Code 3D-Plan", linkLabel: "Oder Link am Computer \xF6ffnen:",
       footer: "Kein amtliches Dokument \xB7 unverbindlicher Vorschlag auf Basis der Eingaben \xB7 ersetzt keine fachliche Pr\xFCfung der Ladungssicherung, Achslast oder Gewichtsverteilung.",
       page: "Seite 1 / 1"
     };
@@ -1542,15 +1542,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         </div>
       </div>
 
-      <div style="background:linear-gradient(135deg,#0b1119 0%,#0f1c2e 100%); border-radius:15px; padding:20px; display:flex; gap:16px; align-items:center; position:relative; overflow:hidden;">
+      <div style="background:linear-gradient(135deg,#0b1119 0%,#0f1c2e 100%); border-radius:15px; padding:20px; display:flex; flex-direction:column; gap:14px; position:relative; overflow:hidden;">
         <div style="position:absolute; bottom:-50px; left:-40px; width:160px; height:160px; border-radius:50%; background:var(--ac-grad,linear-gradient(135deg,#22d3ee,#14b8a6)); opacity:.16; filter:blur(6px);"></div>
-        <div style="position:relative; flex:1;">
-          <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.18em; color:var(--ac-solid,#22d3ee); font-weight:600;">${P.promoK}</div>
-          <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color:#fff; margin-top:8px; line-height:1.2;">${P.promoH}</div>
-          <p style="font-size:10.5px; line-height:1.5; color:#8a98ad; margin:8px 0 0;">${P.promoB}</p>
+        <div style="position:relative; display:flex; gap:16px; align-items:center;">
+          <div style="flex:1;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.18em; color:var(--ac-solid,#22d3ee); font-weight:600;">${P.promoK}</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:16px; color:#fff; margin-top:8px; line-height:1.2;">${P.promoH}</div>
+            <p style="font-size:10.5px; line-height:1.5; color:#8a98ad; margin:8px 0 0;">${P.promoB}</p>
+          </div>
+          <div style="background:#fff; padding:7px; border-radius:10px; flex:none;">
+            <img src="${QR}" alt="${P.qrAlt}" width="92" height="92" style="display:block; border-radius:4px;">
+          </div>
         </div>
-        <div style="position:relative; background:#fff; padding:7px; border-radius:10px; flex:none;">
-          <img src="${QR}" alt="${P.qrAlt}" width="92" height="92" style="display:block; border-radius:4px;">
+        <div style="position:relative; border-top:1px solid rgba(255,255,255,.09); padding-top:11px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:.14em; color:var(--ac-solid,#22d3ee); font-weight:600; text-transform:uppercase;">${P.linkLabel}</div>
+          <a href="${QRURL}" style="display:block; font-family:'JetBrains Mono',monospace; font-size:9.5px; line-height:1.45; color:#cbd5e1; margin-top:5px; word-break:break-all; text-decoration:none;">${escHTML(QRURL)}</a>
         </div>
       </div>
     </div>
@@ -2519,7 +2525,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const p2 = (n) => String(n).padStart(2, "0");
         const datum = `${p2(now.getDate())}.${p2(now.getMonth() + 1)}.${now.getFullYear()}`;
         const ref = `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const qr = makeQR(encodePlanURL(preset, container, cargo, forceCentered, domain));
+        const planURL = encodePlanURL(preset, container, cargo, forceCentered, domain);
+        const qr = makeQR(planURL);
         const pageHTML = LV_PAGE({
           REF: ref,
           DATUM: datum,
@@ -2541,6 +2548,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
           QR: qr,
+          QRURL: planURL,
           STOWAGE,
           LANG
         });
