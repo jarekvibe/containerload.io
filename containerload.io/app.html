@@ -1596,7 +1596,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
-    const reveal = useRef({ start: 0, animate: false, prevN: -1 });
+    const reveal = useRef({ start: 0, animate: false, prevN: -1, dur: 0.4, stag: 0.55, firstShare: !!SHARED });
     const isRoad = domain === "road";
     const BASE_Y = 1.2; // Sattelkupplungshoehe in m: Auflieger + Ladung schweben darueber.
     useEffect(() => {
@@ -1708,7 +1708,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         });
         const rv = reveal.current;
         if (rv.animate) {
-          const el = (now - rv.start) / 1e3, dur = 0.4, stag = 0.55;
+          const el = (now - rv.start) / 1e3, dur = rv.dur || 0.4, stag = rv.stag || 0.55;
           let any = false;
           group.children.forEach((cg) => {
             if (!cg.userData || !cg.userData.reveal || !cg.userData.boxMeshes) return;
@@ -2034,6 +2034,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         group.add(cg);
       });
       if (willAnimate) {
+        // Erster Reveal aus einem geteilten Link: bewusst langsamer + staerker gestaffelt.
+        // Danach (und in jeder normalen Session) Standard-Timing.
+        if (reveal.current.firstShare) {
+          reveal.current.dur = 0.7;
+          reveal.current.stag = 1.6;
+          reveal.current.firstShare = false;
+        } else {
+          reveal.current.dur = 0.4;
+          reveal.current.stag = 0.55;
+        }
         reveal.current.start = performance.now();
         reveal.current.animate = true;
       }
