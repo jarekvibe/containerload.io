@@ -1859,7 +1859,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         shellCache[k] = S;
         return S;
       };
-      const addShell = (parent, S, kind, gridParent) => {
+      const addShell = (parent, S, kind, gridParent, openDoors = true) => {
         const CL = S.CL, CH = S.CH, CW = S.CW, cx = CL / 2, cy = CH / 2, cz = CW / 2;
         const pan = panelsFor(kind);
         const hasDeck = kind === "flatrack" || kind === "platform";
@@ -1879,15 +1879,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           w3.position.set(0, cy, cz);
           w3.rotation.y = Math.PI / 2;
           parent.add(w3);
-          if (kind !== "dry") {                    // dry: Tuerende = offene Blaetter (siehe unten)
+          if (kind !== "dry" || !openDoors) {       // dry + letzter: offene Blaetter (unten); sonst flache Stirnwand am Tuerende
             const w4 = new THREE.Mesh(S.geoWallEnd, solid ? S.matEndSolid : S.matEndB);
             w4.position.set(CL, cy, cz);
             w4.rotation.y = Math.PI / 2;
             parent.add(w4);
           }
         }
-        // ── Offene Tuerblaetter (nur dry). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
-        if (kind === "dry") {
+        // ── Offene Tuerblaetter (nur dry, nur am letzten Container der Kette). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
+        if (kind === "dry" && openDoors) {
           const DOOR_OPEN = 1.40;  // ~80 Grad -> Blattflaeche zeigt zur Kamera (war 1.95/~112)
           // Blattfarbe ist zustandsunabhaengig Stahl -- NIE amber (0xffb454 nur an Oeffnungsrahmen + Ghost).
           const doorMat = new THREE.MeshStandardMaterial({
@@ -2027,7 +2027,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const cg = new THREE.Group();
         cg.position.x = xpos[ci];
         if (isRoad) cg.position.y = BASE_Y; // Auflieger + Ladung anheben; placed-Koordinaten unberuehrt.
-        addShell(cg, S, ckind, isRoad ? group : cg);
+        addShell(cg, S, ckind, isRoad ? group : cg, ci === chain.length - 1);
         // ── Buchungsgrenze (gauge.h) sichtbar machen: das gauge-Huellmass ist NICHT die
         //    sichtbare Huelle (z. B. Flat-Rack-Stirnwand 218 < gauge.h 259). Linie als Bezug,
         //    damit die Amber-Markierung nicht "im Leeren" zu schweben scheint. ──
