@@ -905,7 +905,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "\xDCberl\xE4nge h.",
       oogSlots: (n) => `Blockierte Slots: ${n}`,
       oogDisc: "Sch\xE4tzung zur Buchungsvorbereitung – keine verbindliche Stauplanung.",
-      plansBtn: "Meine Pl\xE4ne", plansTitle: "Meine Pl\xE4ne", plansSaveTitle: "Aktuellen Plan speichern",
+      plansBtn: "Meine Pl\xE4ne", plansTitle: "Meine Pl\xE4ne", plansSaveTitle: "Aktuellen Plan speichern", planRename: "Umbenennen",
       plansNamePh: "Plan-Name", plansSave: "Speichern", plansSaved: "Gespeichert", plansLoaded: "Plan geladen",
       plansLinkCopied: "Link kopiert", plansOpen: "\xD6ffnen", plansShare: "Teilen", plansDelete: "L\xF6schen",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "Position" : "Positionen"} \xB7 ${pcs} Stk`,
@@ -1013,7 +1013,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "Over length b.",
       oogSlots: (n) => `Blocked slots: ${n}`,
       oogDisc: "Estimate for booking prep – not a binding stowage plan.",
-      plansBtn: "My plans", plansTitle: "My plans", plansSaveTitle: "Save current plan",
+      plansBtn: "My plans", plansTitle: "My plans", plansSaveTitle: "Save current plan", planRename: "Rename",
       plansNamePh: "Plan name", plansSave: "Save", plansSaved: "Saved", plansLoaded: "Plan loaded",
       plansLinkCopied: "Link copied", plansOpen: "Open", plansShare: "Share", plansDelete: "Delete",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "item" : "items"} \xB7 ${pcs} pcs`,
@@ -2368,6 +2368,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const dstr = (ts) => { try { return new Date(ts).toLocaleDateString(LANG === "en" ? "en-US" : "de-DE", { day: "2-digit", month: "short" }); } catch (e) { return ""; } };
     const defName = preset + " \xB7 " + dstr(Date.now());
     const [name, setName] = useState("");
+    const [editingId, setEditingId] = useState(null);
+    const [editName, setEditName] = useState("");
     const save = () => {
       const plan = { id: uid(), name: (name.trim() || defName).slice(0, 60), savedAt: Date.now(), state: planStateFrom(preset, container, cargo, forceCentered, domain) };
       setPlans(savePlanToStore(plan));
@@ -2377,6 +2379,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d); onClose(); setToast(T.plansLoaded); };
     const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
     const removePlan = (id) => setPlans(deletePlanFromStore(id));
+    const startRename = (pl) => { setEditingId(pl.id); setEditName(pl.name); };
+    const commitRename = () => {
+      const nm = editName.trim();
+      if (nm) setPlans(writePlans(loadPlans().map((p) => p.id === editingId ? { ...p, name: nm.slice(0, 60) } : p)));
+      setEditingId(null);
+      setEditName("");
+    };
     const folderIcon = (sz, col) => /* @__PURE__ */ React.createElement("svg", { width: sz, height: sz, viewBox: "0 0 24 24", fill: "none", stroke: col, strokeWidth: "2.2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }));
     const actBtn = (label, fn, accent) => /* @__PURE__ */ React.createElement("button", { onClick: fn, className: "px-2.5 py-1 rounded-md transition hover:brightness-125", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.04em", cursor: "pointer", color: accent ? "#bcd9ff" : C.dim, background: accent ? hexA(C.accent, 0.12) : "transparent", border: `1px solid ${accent ? hexA(C.accent, 0.32) : "#243246"}` } }, label);
     const card = (pl) => {
@@ -2384,12 +2393,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return /* @__PURE__ */ React.createElement("div", { key: pl.id, className: "rounded-xl p-3", style: { background: "#0b1018", border: "1px solid #1a2330" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex items-start gap-2" },
           /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" },
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, pl.name),
+            editingId === pl.id ? /* @__PURE__ */ React.createElement("input", { autoFocus: true, value: editName, onChange: (e) => setEditName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") { setEditingId(null); setEditName(""); } }, onBlur: commitRename, className: "w-full rounded-md px-2 py-1", style: { background: C.field, border: `1px solid ${hexA(C.accent, 0.5)}`, color: C.text, fontSize: 13.5, fontWeight: 700, fontFamily: SANS, outline: "none" } }) : /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: C.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" } }, pl.name),
             /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 9.5, color: C.faint, marginTop: 3 } }, T.plansMeta(st.pr || "Custom", pos, pcs))),
           /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 9.5, color: C.faint, flexShrink: 0 } }, dstr(pl.savedAt))),
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 mt-2.5" },
           actBtn(T.plansOpen, () => openPlan(pl), true),
           actBtn(T.plansShare, () => sharePlan(pl), false),
+          actBtn(T.planRename, () => startRename(pl), false),
           /* @__PURE__ */ React.createElement("button", { onClick: () => removePlan(pl.id), className: "ml-auto px-2.5 py-1 rounded-md transition hover:brightness-125", style: { fontFamily: MONO, fontSize: 10, color: C.faint, background: "transparent", border: "1px solid #243246", cursor: "pointer" } }, T.plansDelete)));
     };
     return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)", backdropFilter: "blur(4px)" }, onClick: onClose },
