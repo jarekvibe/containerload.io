@@ -1327,7 +1327,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return false;
     }
   }
-  var LV_ROW = (it, i, lang) => {
+  // Liefert Map ti -> Ladereihenfolge-Rang (1 = zuerst laden). Deterministisch aus placed:
+  // vorne (x) zuerst, dann untere Lage (y), Tiebreak z/ti. Pro Typ der frueheste Rang.
+  function loadingOrder(placed) {
+    const sorted = [...placed].sort((a, b) => a.x - b.x || a.y - b.y || a.z - b.z || a.ti - b.ti);
+    const firstRankOfType = /* @__PURE__ */ new Map();
+    sorted.forEach((p, idx) => {
+      if (!firstRankOfType.has(p.ti)) firstRankOfType.set(p.ti, idx);
+    });
+    const types = [...firstRankOfType.entries()].sort((a, b) => a[1] - b[1]);
+    const rank = /* @__PURE__ */ new Map();
+    types.forEach(([ti], i) => rank.set(ti, i + 1));
+    return rank;
+  }
+  var LV_ROW = (it, i, lang, rank) => {
     const en = lang === "en";
     const q = Math.max(0, num(it.qty, 1));
     const totKg = q * num(it.weight, 0);
@@ -1337,7 +1350,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
     const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${en ? "YES" : "JA"}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${en ? "NO" : "NEIN"}</span>`;
-    return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
+    const rk = rank ? String(rank) : "—";
+    return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border-radius:20px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2);">${rk}</span></td><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
   var LV_STOWAGE = (S) => {
     const { CL, CW, CH, placed, tiColor, tiPos, legend } = S;
@@ -1480,6 +1494,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fitsIn: "FITS IN",
       tPos: "POSITIONS", entries: POSCOUNT + " ENTRIES \xB7 " + COLLI + " PIECES",
       thPos: "Pos", thDesc: "Description", thQty: "Qty", thDims: "Dims L\xD7W\xD7H", thWpc: "Wt./pc", thTot: "Total kg", thVol: "Vol. cbm", thStk: "Stack.",
+      orderCol: "Order", orderNote: "Order is a suggestion (heavy/lower items first) — not a mandatory loading instruction.",
       sum: "Total",
       notesK: "NOTES", nonbind: "\xB7 NON-BINDING",
       hints: [
@@ -1504,6 +1519,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fitsIn: "PASST IN",
       tPos: "POSITIONEN", entries: POSCOUNT + " EINTR\xC4GE \xB7 " + COLLI + " COLLI",
       thPos: "Pos", thDesc: "Bezeichnung", thQty: "Anzahl", thDims: "Ma\xDFe L\xD7B\xD7H", thWpc: "Gew./Stk", thTot: "Gesamt kg", thVol: "Vol. cbm", thStk: "Stapelb.",
+      orderCol: "Reihenfolge", orderNote: "Reihenfolge ist ein Vorschlag (schwere/untere Positionen zuerst) — keine zwingende Ladeanweisung.",
       sum: "Summe",
       notesK: "HINWEISE", nonbind: "\xB7 UNVERBINDLICH",
       hints: [
@@ -1596,6 +1612,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <table style="width:100%; border-collapse:collapse; font-size:12px;">
         <thead>
           <tr style="font-family:'JetBrains Mono',monospace; font-size:9.5px; letter-spacing:.06em; color:#8492a6; text-transform:uppercase;">
+            <th style="text-align:center; padding:0 8px 9px 0; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.orderCol}</th>
             <th style="text-align:left; padding:0 8px 9px 0; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thPos}</th>
             <th style="text-align:left; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thDesc}</th>
             <th style="text-align:right; padding:0 8px 9px; font-weight:500; border-bottom:1.5px solid #0c1320;">${P.thQty}</th>
@@ -1610,6 +1627,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           ${ROWS}
           <tr style="font-family:'JetBrains Mono',monospace;">
             <td style="padding:12px 8px 0 0; border-top:1.5px solid #0c1320;"></td>
+            <td style="padding:12px 8px 0 0; border-top:1.5px solid #0c1320;"></td>
             <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320; font-weight:700; font-family:'Manrope',sans-serif;">${P.sum}</td>
             <td style="padding:12px 8px 0; text-align:right; border-top:1.5px solid #0c1320; font-weight:700;">${SUMQTY}</td>
             <td style="padding:12px 8px 0; border-top:1.5px solid #0c1320;"></td>
@@ -1620,6 +1638,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           </tr>
         </tbody>
       </table>
+      <p style="margin:9px 0 0; font-size:9.5px; line-height:1.5; color:#8492a6;">${P.orderNote}</p>
     </div>
 
     ${STOWAGE || ""}
@@ -2745,6 +2764,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           placed, tiColor, tiPos, legend, LANG,
           chainLen: (result && result.chain && result.chain.length) ? result.chain.length : 1
         });
+        // Ladereihenfolge-Rang je Typ (ti = Index in cargo); Vorschlag: vorne/unten zuerst.
+        const order = loadingOrder(result && result.placed ? result.placed : []);
         const colli = items.reduce((a, c) => a + Math.max(0, num(c.qty, 0)), 0);
         const totVol = items.reduce((a, c) => a + num(c.qty, 0) * num(c.l) * num(c.w) * num(c.h) / 1e6, 0);
         const totWt = items.reduce((a, c) => a + num(c.qty, 0) * num(c.weight, 0), 0);
@@ -2793,7 +2814,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           WTPCT: Math.round(wtPct),
           PASSTIN: escHTML(passtin),
           PASSTSUB: escHTML(passtsub),
-          ROWS: items.map((it, i) => LV_ROW(it, i, LANG)).join(""),
+          ROWS: items.map((it, i) => LV_ROW(it, i, LANG, order.get(cargo.indexOf(it)))).join(""),
           SUMQTY: colli,
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
