@@ -487,15 +487,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       for (let i = 0; i < t.qty; i++) units.push(t);
     });
     if (units.length > 1500) units = units.slice(0, 1500);
+    // Kanonische Normalisierung: macht das Ergebnis unabhaengig von der Eingabe-Reihenfolge
+    // der Typen (auch der Shuffle-Restarts, die sonst auf der Array-Ausgangslage variieren).
+    units.sort((a, b) => (a.stackable === false ? 0 : 1) - (b.stackable === false ? 0 : 1) || b.l * b.w * b.h - a.l * a.w * a.h || b.l - a.l || b.w - a.w || b.h - a.h || b.weight - a.weight || a.ti - b.ti);
     const big = units.length;
     const cap = big > 200 ? 1500 : 3e3;
-    const allSorts = [
-      (u) => u.slice().sort((a, b) => b.l * b.w * b.h - a.l * a.w * a.h),
-      (u) => u.slice().sort((a, b) => b.l * b.w - a.l * a.w),
-      (u) => u.slice().sort((a, b) => Math.max(b.l, b.w) - Math.max(a.l, a.w)),
-      (u) => u.slice().sort((a, b) => b.h - a.h)
+    // Nicht-stapelbare Boxen muessen auf den Boden -> als eingeschraenkteste zuerst platzieren.
+    // Jede Basissortierung zusaetzlich in einer "nicht-stapelbar-zuerst"-Variante; emsSearch nimmt
+    // das Beste aller Laeufe, daher nie schlechter, aber reihenfolge-unabhaengig bei Misch-Ladung.
+    const byStack = (a, b) => (a.stackable === false ? 0 : 1) - (b.stackable === false ? 0 : 1);
+    const baseKeys = [
+      (a, b) => b.l * b.w * b.h - a.l * a.w * a.h,
+      (a, b) => b.l * b.w - a.l * a.w,
+      (a, b) => Math.max(b.l, b.w) - Math.max(a.l, a.w),
+      (a, b) => b.h - a.h
     ];
-    const sorts = big > 300 ? [allSorts[0], allSorts[3]] : allSorts;
+    const allSorts = [];
+    baseKeys.forEach((k) => {
+      allSorts.push((u) => u.slice().sort(k));
+      allSorts.push((u) => u.slice().sort((a, b) => byStack(a, b) || k(a, b)));
+    });
+    const sorts = big > 300 ? [allSorts[0], allSorts[1], allSorts[6], allSorts[7]] : allSorts;
     const orderN = big > 300 ? 2 : 4;
     const rs = big > 400 ? Math.min(restarts, 6) : restarts;
     const vol = (p) => p.reduce((s, b) => s + b.dx * b.dy * b.dz, 0);
