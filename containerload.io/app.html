@@ -487,6 +487,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       for (let i = 0; i < t.qty; i++) units.push(t);
     });
     if (units.length > 1500) units = units.slice(0, 1500);
+    // Kanonische Normalisierung: macht das Ergebnis unabhaengig von der Eingabe-Reihenfolge
+    // der Typen (auch der Shuffle-Restarts, die sonst auf der Array-Ausgangslage variieren).
+    units.sort((a, b) => (a.stackable === false ? 0 : 1) - (b.stackable === false ? 0 : 1) || b.l * b.w * b.h - a.l * a.w * a.h || b.l - a.l || b.w - a.w || b.h - a.h || b.weight - a.weight || a.ti - b.ti);
     const big = units.length;
     const cap = big > 200 ? 1500 : 3e3;
     // Nicht-stapelbare Boxen muessen auf den Boden -> als eingeschraenkteste zuerst platzieren.

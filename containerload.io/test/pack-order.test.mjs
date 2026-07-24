@@ -30,4 +30,20 @@ for (const Ct of CTs) {
   assert.strictEqual(a, 22, `${Ct.n}: erwartet 22 geladen (11 nicht-stapelbar auf Boden, 11 stapelbar darüber), war ${a}`);
 }
 
-console.log("pack-order: alle Tests grün (reihenfolge-unabhängig, 22/22 in allen Containertypen)");
+// Vollständige Reihenfolge-Unabhängigkeit: gleiche Ladung, umgekehrte Typreihenfolge -> gleiches Ergebnis.
+let seed = 99;
+const rnd = () => ((seed = (seed * 1103515245 + 12345) & 2147483647) / 2147483647);
+const ri = (a, b) => a + Math.floor(rnd() * (b - a + 1));
+let checked = 0;
+for (let i = 0; i < 60; i++) {
+  const Ct = CTs[ri(0, 3)];
+  const nT = ri(1, 4);
+  const types = [];
+  for (let t = 0; t < nT; t++) types.push({ l: ri(40, 140), w: ri(30, 120), h: ri(40, 160), weight: ri(50, 500), qty: ri(2, 12), stackable: rnd() < 0.5, rotatable: rnd() < 0.8 });
+  const fwd = packCargo(Ct, types, {}).boxes;
+  const rev = packCargo(Ct, [...types].reverse(), {}).boxes;
+  assert.strictEqual(fwd, rev, `${Ct.n}: reihenfolge-abhängig (${fwd} vs ${rev}) für ${JSON.stringify(types)}`);
+  checked++;
+}
+
+console.log(`pack-order: alle Tests grün (22/22 in allen Containertypen; ${checked} Zufallsladungen reihenfolge-unabhängig)`);
