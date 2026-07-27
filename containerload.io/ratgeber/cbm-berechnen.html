@@ -3,19 +3,19 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht — ContainerLoad</title>
-<meta name="description" content="Innenmaße und Zuladung von 20-Fuß-, 40-Fuß- und 45-Fuß-Containern (Standard & High Cube) in einer Tabelle. Live in 3D beladen." />
-<link rel="canonical" href="https://containerload.io/ratgeber/container-masse-innenmasse" />
+<title>CBM berechnen: Kubikmeter der Ladung für die Seefracht — ContainerLoad</title>
+<meta name="description" content="CBM = Länge × Breite × Höhe (in Metern) × Stückzahl. So berechnest du das Ladevolumen für Seefracht und Angebote — mit Formel, Beispiel und Live-Rechner in 3D." />
+<link rel="canonical" href="https://containerload.io/ratgeber/cbm-berechnen" />
 <meta name="robots" content="index,follow" />
 <meta property="og:type" content="article" />
-<meta property="og:title" content="Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht — ContainerLoad" />
-<meta property="og:description" content="Innenmaße und Zuladung von 20-Fuß-, 40-Fuß- und 45-Fuß-Containern (Standard & High Cube) in einer Tabelle. Live in 3D beladen." />
-<meta property="og:url" content="https://containerload.io/ratgeber/container-masse-innenmasse" />
+<meta property="og:title" content="CBM berechnen: Kubikmeter der Ladung für die Seefracht — ContainerLoad" />
+<meta property="og:description" content="CBM = Länge × Breite × Höhe (in Metern) × Stückzahl. So berechnest du das Ladevolumen für Seefracht und Angebote — mit Formel, Beispiel und Live-Rechner in 3D." />
+<meta property="og:url" content="https://containerload.io/ratgeber/cbm-berechnen" />
 <meta property="og:site_name" content="ContainerLoad" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht — ContainerLoad" />
-<meta name="twitter:description" content="Innenmaße und Zuladung von 20-Fuß-, 40-Fuß- und 45-Fuß-Containern (Standard & High Cube) in einer Tabelle. Live in 3D beladen." />
+<meta name="twitter:title" content="CBM berechnen: Kubikmeter der Ladung für die Seefracht — ContainerLoad" />
+<meta name="twitter:description" content="CBM = Länge × Breite × Höhe (in Metern) × Stückzahl. So berechnest du das Ladevolumen für Seefracht und Angebote — mit Formel, Beispiel und Live-Rechner in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#070a0f" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -51,6 +51,7 @@ p{color:#cdd7e2;margin:0 0 14px}
 .lead{font-size:18px;color:var(--text)}
 .answer{background:rgba(12,17,26,.7);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:14px;padding:18px 20px;margin:20px 0}
 .answer b{color:#fff}
+.formula{font-family:var(--mono);font-size:15px;background:rgba(56,224,200,.07);border:1px solid rgba(56,224,200,.25);border-radius:12px;padding:14px 16px;margin:6px 0 14px;color:#c7f5ec}
 .cta{display:flex;flex-wrap:wrap;gap:12px;margin:26px 0 8px}
 table{width:100%;border-collapse:collapse;margin:8px 0 6px;font-size:14px}
 th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line)}
@@ -64,32 +65,41 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0;color:var
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
 footer a{color:var(--dim)}
 </style>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht","acceptedAnswer":{"@type":"Answer","text":"Innenmaße und Zuladung der gängigen Seecontainer: 20′ GP 590×235×239 cm, 40′ GP 1203×235×239 cm, 40′ HC 1203×235×270 cm, 45′ HC 1355×235×270 cm."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Wie berechnet man CBM?","acceptedAnswer":{"@type":"Answer","text":"CBM (Kubikmeter) = Länge × Breite × Höhe in Metern, multipliziert mit der Stückzahl. Beispiel: 10 Kartons 60×40×40 cm = 0,6 × 0,4 × 0,4 = 0,096 m³ pro Karton × 10 = 0,96 CBM."}},{"@type":"Question","name":"Was bedeutet CBM in der Seefracht?","acceptedAnswer":{"@type":"Answer","text":"CBM steht für Cubic Meter (Kubikmeter) und ist das Ladevolumen der Sendung. In der Seefracht (LCL) wird der Preis meist nach CBM oder Gewicht abgerechnet — je nachdem, was höher ist (Frachtmeter-Prinzip: 1 CBM entspricht rechnerisch oft 1000 kg)."}},{"@type":"Question","name":"Wie viel CBM passen in einen Container?","acceptedAnswer":{"@type":"Answer","text":"Ein 20-Fuß-Container fasst rund 33 CBM, ein 40-Fuß-Container rund 68 CBM. Nutzbar ist wegen Packstückform und Stapelbarkeit meist etwas weniger."}}]}</script>
 </head>
 <body>
 <header class="nav">
   <div class="nav-in">
     <a class="brand" href="/"><span class="mark"><svg width="16" height="13" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="17" height="13" rx="1.5" stroke="#04101f" stroke-opacity=".9"/><line x1="5" y1="1" x2="5" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="9" y1="1" x2="9" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="13" y1="1" x2="13" y2="13" stroke="#04101f" stroke-opacity=".9"/></svg></span>Container<span class="grad-text">Load</span></a>
-    <a class="btn btn-primary" style="margin-left:auto" href="/app?q=10%20Kisten%20100x120x110%20stapelbar%20400kg">3D-Rechner öffnen</a>
+    <a class="btn btn-primary" style="margin-left:auto" href="/app?q=10%20Kartons%2060x40x40%2015kg%20stapelbar">3D-Rechner öffnen</a>
   </div>
 </header>
 <main>
   <article class="wrap">
-    <div class="eyebrow">Ratgeber · Ladungsberechnung</div>
-    <h1>Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht</h1>
-    <div class="answer"><p class="lead" style="margin:0">Die wichtigsten <b>Innenmaße</b> (Länge × Breite × Höhe) und die <b>maximale Zuladung</b> der gängigen Seecontainer findest du in der Tabelle unten — dieselben Werte, mit denen der 3D-Rechner arbeitet.</p></div>
-    <h2>Innenmaße & Zuladung</h2><p>Alle Werte in Zentimetern; Zuladung als Richtwert in Kilogramm. High-Cube-Container (HC) sind rund 30&nbsp;cm höher als die Standardvariante (GP).</p>
-    <table><thead><tr><th>Preset</th><th>Länge</th><th>Breite</th><th>Höhe</th><th>Zuladung</th></tr></thead><tbody><tr><td>20′ GP</td><td class="num">590 cm</td><td class="num">235 cm</td><td class="num">239 cm</td><td class="num">28.200 kg</td></tr><tr><td>20′ HC</td><td class="num">590 cm</td><td class="num">235 cm</td><td class="num">270 cm</td><td class="num">28.150 kg</td></tr><tr><td>40′ GP</td><td class="num">1203 cm</td><td class="num">235 cm</td><td class="num">239 cm</td><td class="num">26.600 kg</td></tr><tr><td>40′ HC</td><td class="num">1203 cm</td><td class="num">235 cm</td><td class="num">270 cm</td><td class="num">26.580 kg</td></tr><tr><td>45′ HC</td><td class="num">1355 cm</td><td class="num">235 cm</td><td class="num">270 cm</td><td class="num">27.600 kg</td></tr></tbody></table>
+    <div class="eyebrow">Ratgeber · Frachtberechnung</div>
+    <h1>CBM berechnen: Kubikmeter der Ladung</h1>
+    <div class="answer"><p class="lead" style="margin:0"><b>CBM</b> (Kubikmeter) = <b>Länge × Breite × Höhe</b> in Metern, mal <b>Stückzahl</b>. Das ist das Ladevolumen deiner Sendung — die Basis für Seefracht-Angebote (LCL) und die Container-Auslastung.</p></div>
+    <h2>Die Formel</h2>
+    <div class="formula">CBM = L (m) × B (m) × H (m) × Stückzahl</div>
+    <p>Wichtig: alle Maße in <b>Metern</b>. Zentimeter zuerst durch 100 teilen (60&nbsp;cm = 0,6&nbsp;m).</p>
+    <h2>Beispiel</h2>
+    <p>10 Kartons, je 60 × 40 × 40&nbsp;cm:</p>
+    <table><thead><tr><th>Schritt</th><th>Rechnung</th><th>Ergebnis</th></tr></thead><tbody>
+    <tr><td>Volumen je Karton</td><td class="num">0,6 × 0,4 × 0,4</td><td class="num">0,096 m³</td></tr>
+    <tr><td>× Stückzahl</td><td class="num">0,096 × 10</td><td class="num">0,96 CBM</td></tr>
+    </tbody></table>
+    <h2>CBM und Frachtkosten</h2>
+    <p>In der Seefracht (LCL, Sammelcontainer) wird oft nach dem <b>Frachtmeter-Prinzip</b> abgerechnet: Es zählt <b>CBM oder Gewicht</b> — je nachdem, was höher ist (Faustregel: 1 CBM ≈ 1000&nbsp;kg). Deshalb solltest du beides kennen. Der 3D-Rechner zeigt dir <b>CBM und Gewicht gleichzeitig</b> und rechnet die Container-Auslastung live mit.</p>
     <div class="cta">
-      <a class="btn btn-primary" href="/app?q=10%20Kisten%20100x120x110%20stapelbar%20400kg">➜ Im 3D-Rechner ansehen</a>
-      <a class="btn btn-ghost" href="/">Zur Startseite</a>
+      <a class="btn btn-primary" href="/app?q=10%20Kartons%2060x40x40%2015kg%20stapelbar">➜ CBM live im Rechner</a>
+      <a class="btn btn-ghost" href="/ratgeber/container-volumen-cbm">Container-Volumen</a>
     </div>
-    <p style="font-size:13px;color:var(--faint);margin-top:6px">Der Button öffnet den Rechner mit einer passenden Beispielladung — dort frei anpassbar.</p>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Packstücke eingeben — der Rechner summiert CBM &amp; Gewicht und zeigt die Auslastung in 3D.</p>
 
     <h2>Verwandte Fragen</h2>
-    <div class="related"><a href="/ratgeber/container-volumen-cbm">Container-Volumen (m³)</a><a href="/ratgeber/container-zuladung-gewicht">Zuladung & Gewicht</a><a href="/ratgeber/europaletten-40-fuss-container">Europaletten 40′</a><a href="/ratgeber/europaletten-20-fuss-container">Europaletten 20′</a><a href="/ratgeber/ladungsberechnung-lkw-planensattel">LKW / Planensattel</a><a href="/">Zum 3D-Rechner</a></div>
+    <div class="related"><a href="/ratgeber/container-volumen-cbm">Container-Volumen (m³)</a><a href="/ratgeber/container-zuladung-gewicht">Zuladung & Gewicht</a><a href="/ratgeber/container-masse-innenmasse">Container-Innenmaße</a><a href="/">Zum 3D-Rechner</a></div>
 
-    <div class="note"><b style="color:var(--dim)">Ohne Gewähr:</b> Innenmaße können je nach Baureihe und Hersteller leicht abweichen. Alle Angaben sind geometrische Richtwerte und ersetzen keine Prüfung von Achslast, Schwerpunkt oder Ladungssicherung.</div>
+    <div class="note"><b style="color:var(--dim)">Ohne Gewähr:</b> CBM ist das geometrische Ladevolumen. Tatsächliche Frachtkosten, Volumengewicht-Faktoren und Mindestmengen legt die Reederei bzw. der Spediteur fest. Das Tool rechnet rein geometrisch und ersetzt keine verbindliche Frachtkalkulation.</div>
   </article>
 </main>
 <footer>
