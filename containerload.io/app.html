@@ -2211,7 +2211,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const gap = 0.02;
       const dummy = new THREE.Object3D();
       const dimsArr = chain.map(dimsOf);
-      const gapX = Math.max(0.6, Math.max(...dimsArr.map((d) => d.CL)) * 0.16);
+      const gapX = Math.max(isRoad ? 3.0 : 0.6, Math.max(...dimsArr.map((d) => d.CL)) * 0.16);
       const xpos = [];
       let acc = 0;
       dimsArr.forEach((d, i) => { xpos[i] = acc; acc += d.CL + gapX; });
