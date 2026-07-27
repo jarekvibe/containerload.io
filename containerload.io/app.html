@@ -2203,10 +2203,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             parent.add(bow);
           }
         }
-        const g = new THREE.LineSegments(S.gridGeo, S.gridMat);
-        g.position.set(cx, 2e-3, cz);
-        // Road: Strasse bleibt auf y=0, auch wenn der Auflieger angehoben wird (gridParent = group).
-        (gridParent || parent).add(g);
+        // Boden-Grid wird NICHT mehr pro Element gezeichnet (deckte sonst nur das erste ab),
+        // sondern einmal durchgehend ueber die ganze Kette – siehe floorGrid weiter unten.
       };
       const gap = 0.02;
       const dummy = new THREE.Object3D();
@@ -2217,6 +2215,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       dimsArr.forEach((d, i) => { xpos[i] = acc; acc += d.CL + gapX; });
       const rowW = acc - gapX, rowCx = rowW / 2;
       const maxCH = Math.max(...dimsArr.map((d) => d.CH)), maxCW = Math.max(...dimsArr.map((d) => d.CW));
+      // Ein durchgehendes Boden-Grid ueber die GESAMTE Kette (nicht pro Element) – deckt sonst nur das
+      // erste Fahrzeug/den ersten Container ab. Liegt auf y~0 (Strasse/Boden), unabhaengig von BASE_Y.
+      const gSize = Math.ceil(Math.max(rowW, maxCW)) + 6;
+      const floorGrid = new THREE.GridHelper(gSize, gSize, 1449771, 1449771);
+      floorGrid.material.transparent = true;
+      floorGrid.material.opacity = 0.5;
+      floorGrid.position.set(rowCx, 2e-3, maxCW / 2);
+      group.add(floorGrid);
       const placed0 = chain[0].placed || [];
       const willAnimate = !REDUCED && placed0.length > 0 && placed0.length <= 280 && placed0.length !== reveal.current.prevN;
       reveal.current.prevN = placed0.length;
