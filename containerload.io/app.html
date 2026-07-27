@@ -887,6 +887,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return { chain, remainingBoxes: totRem };
   }
+  // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
+  // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
+  function chainVehicles(container0, preset0, cargo, slot0, overrides, MAXVIS) {
+    const chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
+    let remaining = cargo.map((t, i) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
+    let totRem = remaining.reduce((s, t) => s + t.qty, 0);
+    let slot = 1;
+    while (totRem > 0 && chain.length < MAXVIS) {
+      const ov = overrides && overrides[slot];
+      const manual = ov && VEHICLES[ov];
+      const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
+      const rr = packCargo(pick.p, remaining, { noHint: true });
+      if (rr.boxes === 0 && !manual) break;
+      chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
+      if (rr.boxes === 0) break;
+      remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i] ? rr.perType[i].loaded : 0) }));
+      totRem = remaining.reduce((s, t) => s + t.qty, 0);
+      slot++;
+    }
+    return { chain, remainingBoxes: totRem };
+  }
   var LANG = (() => {
     try {
       // Vorrang: ?lang aus der URL. Clean URLs laufen jetzt ueber die explizite _redirects
@@ -1762,16 +1783,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return null;
   })();
-  function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick }) {
-    const names = Object.keys(PRESETS);
-    const isCustomMain = isMain && !PRESETS[mainPreset];
+  function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain }) {
+    const road = domain === "road";
+    const TBL = road ? VEHICLES : PRESETS;
+    const names = Object.keys(TBL);
+    const isCustomMain = isMain && !TBL[mainPreset];
     const val = isMain ? isCustomMain ? "__custom" : mainPreset : overrides && overrides[idx] ? overrides[idx] : "__auto";
     const optStyle = { background: "#0c121c", color: C.text };
     const opts = [];
     if (!isMain) opts.push(/* @__PURE__ */ React.createElement("option", { key: "__auto", value: "__auto", style: optStyle }, T.autoCont + " \xB7 " + (name || "")));
     if (isCustomMain) opts.push(/* @__PURE__ */ React.createElement("option", { key: "__custom", value: "__custom", disabled: true, style: { background: "#0c121c", color: C.dim } }, "Custom"));
     names.forEach((nm) => opts.push(/* @__PURE__ */ React.createElement("option", { key: nm, value: nm, style: optStyle }, nm)));
-    return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-1.5 py-1", style: { pointerEvents: "auto", background: hexA("#0c121c", 0.88), border: "1px solid #243042", backdropFilter: "blur(6px)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 9, color: C.faint } }, "C" + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: MONO, fontSize: 10.5, fontWeight: 600, cursor: "pointer" } }, opts));
+    return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-1.5 py-1", style: { pointerEvents: "auto", background: hexA("#0c121c", 0.88), border: "1px solid #243042", backdropFilter: "blur(6px)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 9, color: C.faint } }, (road ? "F" : "C") + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: MONO, fontSize: 10.5, fontWeight: 600, cursor: "pointer" } }, opts));
   }
   function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo }) {
     const mountRef = useRef(null);
@@ -2180,20 +2203,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             parent.add(bow);
           }
         }
-        const g = new THREE.LineSegments(S.gridGeo, S.gridMat);
-        g.position.set(cx, 2e-3, cz);
-        // Road: Strasse bleibt auf y=0, auch wenn der Auflieger angehoben wird (gridParent = group).
-        (gridParent || parent).add(g);
+        // Boden-Grid wird NICHT mehr pro Element gezeichnet (deckte sonst nur das erste ab),
+        // sondern einmal durchgehend ueber die ganze Kette – siehe floorGrid weiter unten.
       };
       const gap = 0.02;
       const dummy = new THREE.Object3D();
       const dimsArr = chain.map(dimsOf);
-      const gapX = Math.max(0.6, Math.max(...dimsArr.map((d) => d.CL)) * 0.16);
+      const gapX = Math.max(isRoad ? 3.0 : 0.6, Math.max(...dimsArr.map((d) => d.CL)) * 0.16);
       const xpos = [];
       let acc = 0;
       dimsArr.forEach((d, i) => { xpos[i] = acc; acc += d.CL + gapX; });
       const rowW = acc - gapX, rowCx = rowW / 2;
       const maxCH = Math.max(...dimsArr.map((d) => d.CH)), maxCW = Math.max(...dimsArr.map((d) => d.CW));
+      // Ein durchgehendes Boden-Grid ueber die GESAMTE Kette (nicht pro Element) – deckt sonst nur das
+      // erste Fahrzeug/den ersten Container ab. Liegt auf y~0 (Strasse/Boden), unabhaengig von BASE_Y.
+      const gSize = Math.ceil(Math.max(rowW, maxCW)) + 6;
+      const floorGrid = new THREE.GridHelper(gSize, gSize, 1449771, 1449771);
+      floorGrid.material.transparent = true;
+      floorGrid.material.opacity = 0.5;
+      floorGrid.position.set(rowCx, 2e-3, maxCW / 2);
+      group.add(floorGrid);
       const placed0 = chain[0].placed || [];
       const willAnimate = !REDUCED && placed0.length > 0 && placed0.length <= 280 && placed0.length !== reveal.current.prevN;
       reveal.current.prevN = placed0.length;
@@ -2324,64 +2353,62 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       //    An group (y=0) gehaengt, damit Raeder auf der Strasse stehen; Geometrien werden beim
       //    naechsten Build via group.traverse mitentsorgt (kein Leak). Keine CapsuleGeometry (r128).
       if (isRoad) {
-        const CLr = d0.CL, CWr = d0.CW, CHr = d0.CH;
-        // Solofahrzeug (Kabine direkt am Kasten) vs. Sattelzug (Zugmaschine + Auflieger).
-        // Heuristik ueber die Ladelaenge: nur der Planensattel (>9 m) ist artikuliert.
-        const artic = CLr > 9;
         const darkMat = new THREE.MeshStandardMaterial({ color: STEEL, roughness: 0.6, metalness: 0.5 });
         const tireM = new THREE.MeshStandardMaterial({ color: 0x0e141d, roughness: 0.85, metalness: 0.1 });
         const hubM = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.4, metalness: 0.7 });
         const glass = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.5, roughness: 0.15, side: THREE.DoubleSide, emissive: 0x18384f, emissiveIntensity: 0.45 });
         const cabMat = new THREE.MeshStandardMaterial({ color: 0x5b6e94, roughness: 0.5, metalness: 0.5 });
         const lampM = new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffcf6a, emissiveIntensity: 0.9, roughness: 0.4 });
-        const tg = new THREE.Group();
-        const R = CLr < 6 ? 0.36 : 0.5, TW = 0.24, cz = CWr / 2;
-        // Rad = Reifen + Nabe; dual = Zwillingsbereifung (nach innen versetzt).
-        const mkWheel = (x, z, dual) => {
-          const add = (zz) => {
-            const tire = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TW, 22), tireM);
-            tire.rotation.x = Math.PI / 2; tire.position.set(x, R, zz); tire.castShadow = true; tg.add(tire);
-            const hub = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R * 0.4, TW + 0.03, 8), hubM);
-            hub.rotation.x = Math.PI / 2; hub.position.set(x, R, zz); tg.add(hub);
+        // Baut EIN Fahrzeug (Kabine/Zugmaschine + Raeder + Fahrgestell) am lokalen Ursprung
+        // (x=0 = Vorderkante der Ladeflaeche). Solofahrzeug (Kabine direkt am Kasten) vs. Sattelzug
+        // (Zugmaschine + Auflieger, ab >9 m). Pro Ketten-Fahrzeug an xpos[ci] gesetzt.
+        const buildTruck = (dd) => {
+          const CLr = dd.CL, CWr = dd.CW, CHr = dd.CH, artic = CLr > 9;
+          const tg = new THREE.Group();
+          const R = CLr < 6 ? 0.36 : 0.5, TW = 0.24, cz = CWr / 2;
+          const mkWheel = (x, z, dual) => {
+            const add = (zz) => {
+              const tire = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TW, 22), tireM);
+              tire.rotation.x = Math.PI / 2; tire.position.set(x, R, zz); tire.castShadow = true; tg.add(tire);
+              const hub = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R * 0.4, TW + 0.03, 8), hubM);
+              hub.rotation.x = Math.PI / 2; hub.position.set(x, R, zz); tg.add(hub);
+            };
+            add(z);
+            if (dual) add(z + (z < cz ? TW + 0.05 : -(TW + 0.05)));
           };
-          add(z);
-          if (dual) add(z + (z < cz ? TW + 0.05 : -(TW + 0.05)));
+          const axle = (x, dual) => { mkWheel(x, 0.24, dual); mkWheel(x, CWr - 0.24, dual); };
+          const buildCab = (frontX, cabL, cabTop) => {
+            const cabBot = 0.6, cyc = (cabBot + cabTop) / 2, cabHh = cabTop - cabBot, cabW = CWr - 0.16;
+            const body = new THREE.Mesh(new THREE.BoxGeometry(cabL, cabHh, cabW), cabMat);
+            body.position.set(frontX + cabL / 2, cyc, cz); body.castShadow = true; tg.add(body);
+            const wsH = cabHh * 0.44, wsY = cabTop - wsH / 2 - 0.07;
+            const front = new THREE.Mesh(new THREE.PlaneGeometry(cabW * 0.9, wsH), glass);
+            front.rotation.y = -Math.PI / 2; front.position.set(frontX - 0.012, wsY, cz); tg.add(front);
+            [cz - cabW / 2 - 0.008, cz + cabW / 2 + 0.008].forEach((zz) => {
+              const sw = new THREE.Mesh(new THREE.PlaneGeometry(cabL * 0.52, wsH * 0.82), glass);
+              sw.position.set(frontX + cabL * 0.3, wsY, zz); tg.add(sw);
+            });
+            const bump = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, cabW + 0.12), darkMat);
+            bump.position.set(frontX + 0.01, 0.52, cz); tg.add(bump);
+            [cz - cabW * 0.32, cz + cabW * 0.32].forEach((zz) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.24), lampM); l.position.set(frontX - 0.02, 0.8, zz); tg.add(l); });
+          };
+          const chassisX0 = artic ? -2.35 : -(CLr < 6 ? 1.6 : 1.85), chassisLen = CLr - chassisX0 + 0.2;
+          [0.42, CWr - 0.42].forEach((zz) => { const rr = new THREE.Mesh(new THREE.BoxGeometry(chassisLen, 0.16, 0.13), darkMat); rr.position.set(chassisX0 + chassisLen / 2, BASE_Y - 0.22, zz); tg.add(rr); });
+          if (artic) {
+            axle(-2.0, false); axle(-0.6, true);
+            axle(CLr - 2.7, true); axle(CLr - 1.4, true);
+            const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.9), darkMat);
+            fifth.position.set(-0.5, BASE_Y - 0.13, cz); tg.add(fifth);
+            buildCab(-2.3, 1.9, Math.min(BASE_Y + CHr - 0.35, 3.15));
+          } else {
+            const cabL = CLr < 6 ? 1.5 : 1.75;
+            axle(-cabL * 0.5, false);
+            axle(CLr - (CLr < 6 ? 1.0 : 1.5), CLr >= 6);
+            buildCab(-cabL - 0.08, cabL, Math.min(BASE_Y + CHr, CLr < 6 ? 2.5 : 2.75));
+          }
+          return tg;
         };
-        const axle = (x, dual) => { mkWheel(x, 0.24, dual); mkWheel(x, CWr - 0.24, dual); };
-        // Kabine: kompakter Korpus (etwas schmaler -> sichtbare Stufe zum Aufbau) mit grosser
-        // Front- und zwei Seitenscheiben, Stossstange und Scheinwerfern. Bewusst KEIN Dach-Spoiler.
-        const buildCab = (frontX, cabL, cabTop) => {
-          const cabBot = 0.6, cyc = (cabBot + cabTop) / 2, cabHh = cabTop - cabBot, cabW = CWr - 0.16;
-          const body = new THREE.Mesh(new THREE.BoxGeometry(cabL, cabHh, cabW), cabMat);
-          body.position.set(frontX + cabL / 2, cyc, cz); body.castShadow = true; tg.add(body);
-          const wsH = cabHh * 0.44, wsY = cabTop - wsH / 2 - 0.07;
-          const front = new THREE.Mesh(new THREE.PlaneGeometry(cabW * 0.9, wsH), glass);
-          front.rotation.y = -Math.PI / 2; front.position.set(frontX - 0.012, wsY, cz); tg.add(front);
-          [cz - cabW / 2 - 0.008, cz + cabW / 2 + 0.008].forEach((zz) => {
-            const sw = new THREE.Mesh(new THREE.PlaneGeometry(cabL * 0.52, wsH * 0.82), glass);
-            sw.position.set(frontX + cabL * 0.3, wsY, zz); tg.add(sw);
-          });
-          const bump = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, cabW + 0.12), darkMat);
-          bump.position.set(frontX + 0.01, 0.52, cz); tg.add(bump);
-          [cz - cabW * 0.32, cz + cabW * 0.32].forEach((zz) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.24), lampM); l.position.set(frontX - 0.02, 0.8, zz); tg.add(l); });
-          return { cx: frontX + cabL / 2, cabL, cabTop };
-        };
-        // Fahrgestell-Laengstraeger unter dem Ladebett.
-        const chassisX0 = artic ? -2.35 : -(CLr < 6 ? 1.6 : 1.85), chassisLen = CLr - chassisX0 + 0.2;
-        [0.42, CWr - 0.42].forEach((zz) => { const rr = new THREE.Mesh(new THREE.BoxGeometry(chassisLen, 0.16, 0.13), darkMat); rr.position.set(chassisX0 + chassisLen / 2, BASE_Y - 0.22, zz); tg.add(rr); });
-        if (artic) {
-          axle(-2.0, false); axle(-0.6, true);            // Zugmaschine: Lenk- + Antriebsachse (Zwilling)
-          axle(CLr - 2.7, true); axle(CLr - 1.4, true);   // Auflieger: 2 Achsen
-          const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.9), darkMat);
-          fifth.position.set(-0.5, BASE_Y - 0.13, cz); tg.add(fifth);
-          buildCab(-2.3, 1.9, Math.min(BASE_Y + CHr - 0.35, 3.15)); // Kabine dicht am Auflieger (Spalt ~0,4 m)
-        } else {
-          const cabL = CLr < 6 ? 1.5 : 1.75;
-          axle(-cabL * 0.5, false);                       // Vorderachse unter der Kabine
-          axle(CLr - (CLr < 6 ? 1.0 : 1.5), CLr >= 6);    // Hinterachse (Zwilling ab Motorwagen)
-          buildCab(-cabL - 0.08, cabL, Math.min(BASE_Y + CHr, CLr < 6 ? 2.5 : 2.75));
-        }
-        group.add(tg);
+        chain.forEach((c, ci) => { const tk = buildTruck(dimsArr[ci]); tk.position.x = xpos[ci]; group.add(tk); });
       }
       const n = chain.length;
       const yLift = isRoad ? BASE_Y : 0; // Kamera-Ziel mit anheben; Truck ragt vorne raus -> mehr Abstand.
@@ -2426,7 +2453,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #070a0f 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0c121c", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px", backdropFilter: "blur(6px)" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0c121c", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, backdropFilter: "blur(6px)" }, title: T.resetView }, "\u27F3"));
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #070a0f 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0c121c", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px", backdropFilter: "blur(6px)" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0c121c", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, backdropFilter: "blur(6px)" }, title: T.resetView }, "\u27F3"));
   }
   var Label = ({ children }) => /* @__PURE__ */ React.createElement("span", { className: "block mb-1.5", style: { fontFamily: MONO, fontSize: 9.5, letterSpacing: "0.14em", textTransform: "uppercase", color: C.dim } }, children);
   var Num = ({ value, onChange, mono = true }) => /* @__PURE__ */ React.createElement(
@@ -2682,8 +2709,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // 3D-Ansicht: Container-Kette aufbauen (Slot 0 = gewählter Container; Folge-Container
         // automatisch kleinster passender Typ oder manuell übersteuert). Gedeckelt auf 4 Hüllen.
         const MAXVIS = 4;
-        if (domain === "sea" && r.boxes < r.totalBoxes && r.totalBoxes > 0) {
-          const ch = chainContainers(container, preset, cargo, r, chainOverride, MAXVIS);
+        if (r.boxes < r.totalBoxes && r.totalBoxes > 0) {
+          const ch = domain === "road"
+            ? chainVehicles(container, preset, cargo, r, chainOverride, MAXVIS)
+            : chainContainers(container, preset, cargo, r, chainOverride, MAXVIS);
           r.chain = ch.chain;
           r.remainingBoxes = ch.remainingBoxes;
         } else {
@@ -2733,13 +2762,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     // Manuelle Container-Wahl je dargestelltem Container (nur sitzungsweise, NICHT im ?p=-Link).
     const onSlotType = (slot, name) => {
+      const TBL = domain === "road" ? VEHICLES : PRESETS;
       if (slot === 0) {
-        if (PRESETS[name]) applyPreset(name);
+        if (TBL[name]) applyPreset(name);
         return;
       }
       setChainOverride((o) => {
         const next = { ...o };
-        if (name === "__auto" || !PRESETS[name]) delete next[slot];
+        if (name === "__auto" || !TBL[name]) delete next[slot];
         else next[slot] = name;
         return next;
       });
