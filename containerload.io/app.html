@@ -2328,11 +2328,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Solofahrzeug (Kabine direkt am Kasten) vs. Sattelzug (Zugmaschine + Auflieger).
         // Heuristik ueber die Ladelaenge: nur der Planensattel (>9 m) ist artikuliert.
         const artic = CLr > 9;
-        const steelMat = new THREE.MeshStandardMaterial({ color: FRAME, roughness: 0.5, metalness: 0.55 });
         const darkMat = new THREE.MeshStandardMaterial({ color: STEEL, roughness: 0.6, metalness: 0.5 });
         const tireM = new THREE.MeshStandardMaterial({ color: 0x0e141d, roughness: 0.85, metalness: 0.1 });
         const hubM = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.4, metalness: 0.7 });
-        const glass = new THREE.MeshStandardMaterial({ color: 0x2f9bff, transparent: true, opacity: 0.32, roughness: 0.2 });
+        const glass = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.5, roughness: 0.15, side: THREE.DoubleSide, emissive: 0x18384f, emissiveIntensity: 0.45 });
+        const cabMat = new THREE.MeshStandardMaterial({ color: 0x5b6e94, roughness: 0.5, metalness: 0.5 });
         const lampM = new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffcf6a, emissiveIntensity: 0.9, roughness: 0.4 });
         const tg = new THREE.Group();
         const R = CLr < 6 ? 0.36 : 0.5, TW = 0.24, cz = CWr / 2;
@@ -2348,34 +2348,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (dual) add(z + (z < cz ? TW + 0.05 : -(TW + 0.05)));
         };
         const axle = (x, dual) => { mkWheel(x, 0.24, dual); mkWheel(x, CWr - 0.24, dual); };
-        // Kabine: Korpus + geneigte Windschutzscheibe + Stossstange + zwei Scheinwerfer.
+        // Kabine: kompakter Korpus (etwas schmaler -> sichtbare Stufe zum Aufbau) mit grosser
+        // Front- und zwei Seitenscheiben, Stossstange und Scheinwerfern. Bewusst KEIN Dach-Spoiler.
         const buildCab = (frontX, cabL, cabTop) => {
-          const cabBot = 0.48, cyc = (cabBot + cabTop) / 2, cabHh = cabTop - cabBot, cabW = CWr - 0.04;
-          const body = new THREE.Mesh(new THREE.BoxGeometry(cabL, cabHh, cabW), steelMat);
+          const cabBot = 0.6, cyc = (cabBot + cabTop) / 2, cabHh = cabTop - cabBot, cabW = CWr - 0.16;
+          const body = new THREE.Mesh(new THREE.BoxGeometry(cabL, cabHh, cabW), cabMat);
           body.position.set(frontX + cabL / 2, cyc, cz); body.castShadow = true; tg.add(body);
-          const ws = new THREE.Mesh(new THREE.PlaneGeometry(cabW * 0.9, cabHh * 0.42), glass);
-          ws.rotation.y = -Math.PI / 2; ws.rotation.z = 0.14; ws.position.set(frontX + 0.03, cabTop - cabHh * 0.27, cz); tg.add(ws);
-          const bump = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, cabW), darkMat);
-          bump.position.set(frontX + 0.02, 0.4, cz); tg.add(bump);
-          [CWr * 0.24, CWr * 0.76].forEach((zz) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.26), lampM); l.position.set(frontX, 0.66, zz); tg.add(l); });
+          const wsH = cabHh * 0.44, wsY = cabTop - wsH / 2 - 0.07;
+          const front = new THREE.Mesh(new THREE.PlaneGeometry(cabW * 0.9, wsH), glass);
+          front.rotation.y = -Math.PI / 2; front.position.set(frontX - 0.012, wsY, cz); tg.add(front);
+          [cz - cabW / 2 - 0.008, cz + cabW / 2 + 0.008].forEach((zz) => {
+            const sw = new THREE.Mesh(new THREE.PlaneGeometry(cabL * 0.52, wsH * 0.82), glass);
+            sw.position.set(frontX + cabL * 0.3, wsY, zz); tg.add(sw);
+          });
+          const bump = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.3, cabW + 0.12), darkMat);
+          bump.position.set(frontX + 0.01, 0.52, cz); tg.add(bump);
+          [cz - cabW * 0.32, cz + cabW * 0.32].forEach((zz) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.14, 0.24), lampM); l.position.set(frontX - 0.02, 0.8, zz); tg.add(l); });
           return { cx: frontX + cabL / 2, cabL, cabTop };
         };
         // Fahrgestell-Laengstraeger unter dem Ladebett.
-        const chassisX0 = artic ? -3.0 : -2.0, chassisLen = CLr - chassisX0 + 0.2;
+        const chassisX0 = artic ? -2.35 : -(CLr < 6 ? 1.6 : 1.85), chassisLen = CLr - chassisX0 + 0.2;
         [0.42, CWr - 0.42].forEach((zz) => { const rr = new THREE.Mesh(new THREE.BoxGeometry(chassisLen, 0.16, 0.13), darkMat); rr.position.set(chassisX0 + chassisLen / 2, BASE_Y - 0.22, zz); tg.add(rr); });
         if (artic) {
-          axle(-2.9, false); axle(-0.7, true);          // Zugmaschine: Lenk- + Antriebsachse
-          axle(CLr - 2.7, true); axle(CLr - 1.4, true);  // Auflieger: 2 Achsen
-          const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 1.0), darkMat);
+          axle(-2.0, false); axle(-0.6, true);            // Zugmaschine: Lenk- + Antriebsachse (Zwilling)
+          axle(CLr - 2.7, true); axle(CLr - 1.4, true);   // Auflieger: 2 Achsen
+          const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.1, 0.9), darkMat);
           fifth.position.set(-0.5, BASE_Y - 0.13, cz); tg.add(fifth);
-          const c = buildCab(-3.05, 2.0, Math.min(BASE_Y + CHr - 0.2, 3.0));
-          const defl = new THREE.Mesh(new THREE.BoxGeometry(c.cabL * 0.62, 0.46, (CWr - 0.04) * 0.9), steelMat);
-          defl.position.set(c.cx + c.cabL * 0.12, c.cabTop + 0.16, cz); defl.rotation.z = -0.3; tg.add(defl);
+          buildCab(-2.3, 1.9, Math.min(BASE_Y + CHr - 0.35, 3.15)); // Kabine dicht am Auflieger (Spalt ~0,4 m)
         } else {
           const cabL = CLr < 6 ? 1.5 : 1.75;
-          axle(-cabL * 0.55, false);                     // Vorderachse unter der Kabine
-          axle(CLr - (CLr < 6 ? 1.0 : 1.5), CLr >= 6);   // Hinterachse (Zwilling ab Motorwagen)
-          buildCab(-cabL - 0.12, cabL, Math.min(BASE_Y + CHr, CLr < 6 ? 2.4 : 2.7));
+          axle(-cabL * 0.5, false);                       // Vorderachse unter der Kabine
+          axle(CLr - (CLr < 6 ? 1.0 : 1.5), CLr >= 6);    // Hinterachse (Zwilling ab Motorwagen)
+          buildCab(-cabL - 0.08, cabL, Math.min(BASE_Y + CHr, CLr < 6 ? 2.5 : 2.75));
         }
         group.add(tg);
       }
