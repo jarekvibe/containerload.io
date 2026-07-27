@@ -2324,33 +2324,59 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       //    An group (y=0) gehaengt, damit Raeder auf der Strasse stehen; Geometrien werden beim
       //    naechsten Build via group.traverse mitentsorgt (kein Leak). Keine CapsuleGeometry (r128).
       if (isRoad) {
-        const CLr = d0.CL, CWr = d0.CW;
+        const CLr = d0.CL, CWr = d0.CW, CHr = d0.CH;
+        // Solofahrzeug (Kabine direkt am Kasten) vs. Sattelzug (Zugmaschine + Auflieger).
+        // Heuristik ueber die Ladelaenge: nur der Planensattel (>9 m) ist artikuliert.
+        const artic = CLr > 9;
         const steelMat = new THREE.MeshStandardMaterial({ color: FRAME, roughness: 0.5, metalness: 0.55 });
+        const darkMat = new THREE.MeshStandardMaterial({ color: STEEL, roughness: 0.6, metalness: 0.5 });
         const tireM = new THREE.MeshStandardMaterial({ color: 0x0e141d, roughness: 0.85, metalness: 0.1 });
-        const glass = new THREE.MeshStandardMaterial({ color: 0x2f9bff, transparent: true, opacity: 0.3, roughness: 0.2 });
+        const hubM = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.4, metalness: 0.7 });
+        const glass = new THREE.MeshStandardMaterial({ color: 0x2f9bff, transparent: true, opacity: 0.32, roughness: 0.2 });
+        const lampM = new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffcf6a, emissiveIntensity: 0.9, roughness: 0.4 });
         const tg = new THREE.Group();
-        const R = 0.5, TW = 0.26;
-        const wheel = (x, z) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TW, 20), tireM); m.rotation.x = Math.PI / 2; m.position.set(x, R, z); m.castShadow = true; tg.add(m); };
-        const axle = (x) => { wheel(x, 0.18); wheel(x, CWr - 0.18); };
-        axle(-2.6);
-        axle(-0.2);
-        axle(CLr - 2.4);
-        axle(CLr - 1.5);
-        const beam = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.18, 0.9), steelMat);
-        beam.position.set(-1.2, BASE_Y - 0.18, CWr / 2);
-        beam.castShadow = true;
-        tg.add(beam);
-        const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.06, 1), steelMat);
-        fifth.position.set(0.3, BASE_Y - 0.06, CWr / 2);
-        tg.add(fifth);
-        const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.85, CWr - 0.1), steelMat);
-        cab.position.set(-2.45, 1 + 1.85 / 2, CWr / 2);
-        cab.castShadow = true;
-        tg.add(cab);
-        const ws = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), glass);
-        ws.rotation.y = -Math.PI / 2;
-        ws.position.set(-3.305, 2.35, CWr / 2);
-        tg.add(ws);
+        const R = CLr < 6 ? 0.36 : 0.5, TW = 0.24, cz = CWr / 2;
+        // Rad = Reifen + Nabe; dual = Zwillingsbereifung (nach innen versetzt).
+        const mkWheel = (x, z, dual) => {
+          const add = (zz) => {
+            const tire = new THREE.Mesh(new THREE.CylinderGeometry(R, R, TW, 22), tireM);
+            tire.rotation.x = Math.PI / 2; tire.position.set(x, R, zz); tire.castShadow = true; tg.add(tire);
+            const hub = new THREE.Mesh(new THREE.CylinderGeometry(R * 0.4, R * 0.4, TW + 0.03, 8), hubM);
+            hub.rotation.x = Math.PI / 2; hub.position.set(x, R, zz); tg.add(hub);
+          };
+          add(z);
+          if (dual) add(z + (z < cz ? TW + 0.05 : -(TW + 0.05)));
+        };
+        const axle = (x, dual) => { mkWheel(x, 0.24, dual); mkWheel(x, CWr - 0.24, dual); };
+        // Kabine: Korpus + geneigte Windschutzscheibe + Stossstange + zwei Scheinwerfer.
+        const buildCab = (frontX, cabL, cabTop) => {
+          const cabBot = 0.48, cyc = (cabBot + cabTop) / 2, cabHh = cabTop - cabBot, cabW = CWr - 0.04;
+          const body = new THREE.Mesh(new THREE.BoxGeometry(cabL, cabHh, cabW), steelMat);
+          body.position.set(frontX + cabL / 2, cyc, cz); body.castShadow = true; tg.add(body);
+          const ws = new THREE.Mesh(new THREE.PlaneGeometry(cabW * 0.9, cabHh * 0.42), glass);
+          ws.rotation.y = -Math.PI / 2; ws.rotation.z = 0.14; ws.position.set(frontX + 0.03, cabTop - cabHh * 0.27, cz); tg.add(ws);
+          const bump = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.32, cabW), darkMat);
+          bump.position.set(frontX + 0.02, 0.4, cz); tg.add(bump);
+          [CWr * 0.24, CWr * 0.76].forEach((zz) => { const l = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.16, 0.26), lampM); l.position.set(frontX, 0.66, zz); tg.add(l); });
+          return { cx: frontX + cabL / 2, cabL, cabTop };
+        };
+        // Fahrgestell-Laengstraeger unter dem Ladebett.
+        const chassisX0 = artic ? -3.0 : -2.0, chassisLen = CLr - chassisX0 + 0.2;
+        [0.42, CWr - 0.42].forEach((zz) => { const rr = new THREE.Mesh(new THREE.BoxGeometry(chassisLen, 0.16, 0.13), darkMat); rr.position.set(chassisX0 + chassisLen / 2, BASE_Y - 0.22, zz); tg.add(rr); });
+        if (artic) {
+          axle(-2.9, false); axle(-0.7, true);          // Zugmaschine: Lenk- + Antriebsachse
+          axle(CLr - 2.7, true); axle(CLr - 1.4, true);  // Auflieger: 2 Achsen
+          const fifth = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.1, 1.0), darkMat);
+          fifth.position.set(-0.5, BASE_Y - 0.13, cz); tg.add(fifth);
+          const c = buildCab(-3.05, 2.0, Math.min(BASE_Y + CHr - 0.2, 3.0));
+          const defl = new THREE.Mesh(new THREE.BoxGeometry(c.cabL * 0.62, 0.46, (CWr - 0.04) * 0.9), steelMat);
+          defl.position.set(c.cx + c.cabL * 0.12, c.cabTop + 0.16, cz); defl.rotation.z = -0.3; tg.add(defl);
+        } else {
+          const cabL = CLr < 6 ? 1.5 : 1.75;
+          axle(-cabL * 0.55, false);                     // Vorderachse unter der Kabine
+          axle(CLr - (CLr < 6 ? 1.0 : 1.5), CLr >= 6);   // Hinterachse (Zwilling ab Motorwagen)
+          buildCab(-cabL - 0.12, cabL, Math.min(BASE_Y + CHr, CLr < 6 ? 2.4 : 2.7));
+        }
         group.add(tg);
       }
       const n = chain.length;
