@@ -4,12 +4,14 @@
 /share.html        /share         301!
 /impressum.html    /impressum     301!
 /datenschutz.html  /datenschutz   301!
+/updates.html      /updates       301!
 
 # Saubere Pfade intern auf die Dateien mappen (200 = Rewrite, URL bleibt)
 /app           /app.html           200
 /share         /share.html         200
 /impressum     /impressum.html     200
 /datenschutz   /datenschutz.html   200
+/updates       /updates.html       200
 
 # Ratgeber (SEO Long-Tail): saubere Pfade -> Dateien. 200 = Rewrite (Query-Strings bleiben erhalten).
 # Echte .html-Dateien werden weiterhin direkt ausgeliefert (Rewrites ohne ! haben niedrigere Prio).
