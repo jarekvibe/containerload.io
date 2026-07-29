@@ -443,6 +443,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (it.rotatable) add(it.w, it.h, it.l);
     return o;
   }
+  // Abstuetzung/Schwerkraft: eine Kiste bei py>0 braucht genug Auflageflaeche von den Kisten
+  // direkt darunter (deren Oberkante == py). Verhindert schwebende Kisten / grosse Ueberhaenge –
+  // rein geometrisch, keine echte Physik/Sicherung. SUPPORT_MIN = geforderter Anteil der Grundflaeche.
+  var SUPPORT_MIN = 0.7;
+  function supportRatio(px, pz, dx, dz, py, placed) {
+    if (py <= 1e-4) return 1; // steht auf dem Boden
+    const base = dx * dz;
+    if (base <= 0) return 1;
+    let sup = 0;
+    for (const b of placed) {
+      if (Math.abs(b.y + b.dy - py) > 1e-3) continue; // nur direkt darunterliegende Oberkanten
+      const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
+      if (ox <= 0) continue;
+      const oz = Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z);
+      if (oz <= 0) continue;
+      sup += ox * oz;
+      if (sup >= base * 0.999) return 1;
+    }
+    return sup / base;
+  }
   function emsPackOnce(C2, units, order, pay, cap) {
     let ems = [{ x: 0, y: 0, z: 0, dx: C2.l, dy: C2.h, dz: C2.w }];
     const placed = [];
@@ -455,6 +475,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         for (const [dx, dy, dz] of emsOris(u)) {
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
             const px = S.x, py = S.y, pz = S.z;
+            if (py > 1e-4 && supportRatio(px, pz, dx, dz, py, placed) < SUPPORT_MIN) continue; // nicht genug Auflage -> nicht schweben lassen
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
