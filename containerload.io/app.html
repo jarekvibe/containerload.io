@@ -2104,7 +2104,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       let raf;
       const tick = () => {
         const now = performance.now();
-        if (now - lastInteract > 2800 && !dragging) sph.theta += 15e-4;
+        // Leerlauf-Rotation stoert beim manuellen Platzieren (praezises Klicken braucht eine
+        // ruhige Kamera) – deshalb waehrend manualMode ausgesetzt. propsRef statt direktem Prop-
+        // Zugriff, da tick() ein einmalig erzeugter (Mount-Once-Effekt) Dauerlauf-Closure ist.
+        if (now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
         cur.r += (sph.r - cur.r) * 0.12;
         cur.theta += (sph.theta - cur.theta) * 0.12;
         cur.phi += (sph.phi - cur.phi) * 0.12;
