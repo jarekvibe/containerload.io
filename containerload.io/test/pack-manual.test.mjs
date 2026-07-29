@@ -1,5 +1,5 @@
 // Regressionstest für die reinen Geometrie-Helfer des manuellen Platzierens (Slice 2):
-// boxesOverlap/withinBounds/dropHeight/manualCandidate. Extrahiert aus app.html.
+// boxesOverlap/withinBounds/dropHeight/manualCandidate/snapAxis. Extrahiert aus app.html.
 // node test/pack-manual.test.mjs
 import fs from "node:fs";
 import assert from "node:assert";
@@ -13,8 +13,8 @@ const s = L.findIndex((l) => l.includes("var SUPPORT_MIN = 0.7;"));
 const e = L.findIndex((l, i) => i > s && l.includes("function emsPackOnce"));
 const block = L.slice(s, e).join("\n");
 const src = 'var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;\n' + block +
-  "\nreturn { boxesOverlap, withinBounds, dropHeight, manualCandidate, SUPPORT_MIN };";
-const { boxesOverlap, withinBounds, dropHeight, manualCandidate } = new Function(src)();
+  "\nreturn { boxesOverlap, withinBounds, dropHeight, manualCandidate, snapAxis, SUPPORT_MIN, SNAP_TOL };";
+const { boxesOverlap, withinBounds, dropHeight, manualCandidate, snapAxis, SNAP_TOL } = new Function(src)();
 
 const Ct = { l: 590, w: 235, h: 239, payload: 28200 };
 
@@ -85,4 +85,30 @@ assert.ok(r.ok);
 assert.ok(r.box.x + r.box.dx <= 590 + 1e-6, "x wird geklemmt, damit die Kiste im Container bleibt");
 assert.ok(r.box.z + r.box.dz <= 235 + 1e-6);
 
-console.log("manual-placement: alle 10 Tests grün");
+// 11) Kanten-Snapping: Cursor 15 cm neben der rechten Kante einer Nachbarkiste (bei x=120) ->
+//     rastet buendig ein (kein Spalt), Abstand liegt innerhalb SNAP_TOL (25 cm).
+let snapped = snapAxis(135, 80, [0, 120], SNAP_TOL);
+assert.strictEqual(snapped, 120, "15 cm Abstand liegt innerhalb der Snap-Toleranz -> buendig an die Kante");
+
+// 12) Kein Snapping, wenn der Cursor zu weit weg ist (60 cm > SNAP_TOL).
+snapped = snapAxis(180, 80, [0, 120], SNAP_TOL);
+assert.strictEqual(snapped, 180, "60 cm Abstand liegt ausserhalb der Snap-Toleranz -> unveraendert");
+
+// 13) Snapping wirkt auch von der ANDEREN Seite: rechte Kante der neuen Box nah an der linken
+//     Kante (x=0) einer Nachbarkiste -> Box wird links davon buendig platziert.
+snapped = snapAxis(-95, 80, [0, 120], SNAP_TOL);
+assert.strictEqual(snapped, -80, "rechte Kante der neuen Box dockt an x=0 an (origin = 0 - size)");
+
+// 14) End-zu-End mit manualCandidate: zwei Kisten nebeneinander, Cursor beim zweiten Klick
+//     15 cm daneben statt exakt an der Kante -> landet trotzdem spaltfrei bündig, kein Overlap.
+const snapItem = { l: 120, w: 80, h: 110, weight: 300, stackable: true, rotatable: true };
+const firstBox = manualCandidate(Ct, snapItem, false, 0, 0, [], 0).box;
+const edgesX = [firstBox.x, firstBox.x + firstBox.dx];
+const snappedOriginX = snapAxis(135, 120, edgesX, SNAP_TOL); // Klick bei "originX"=135 statt exakt 120
+assert.strictEqual(snappedOriginX, 120);
+const secondBox = manualCandidate(Ct, snapItem, false, snappedOriginX, 0, [firstBox], 300);
+assert.ok(secondBox.ok, "zweite Kiste passt bündig neben die erste");
+assert.strictEqual(secondBox.box.x, 120, "kein Spalt zur ersten Kiste");
+assert.ok(!boxesOverlap({ ...firstBox }, secondBox.box), "keine Überlappung trotz ungenauem Klick");
+
+console.log("manual-placement: alle 14 Tests grün");

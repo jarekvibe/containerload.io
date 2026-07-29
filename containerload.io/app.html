@@ -448,6 +448,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // rein geometrisch, keine echte Physik/Sicherung. SUPPORT_MIN = geforderter Anteil der Grundflaeche.
   var SUPPORT_MIN = 0.7;
   var MANUAL_NUDGE = 10; // cm – Feinjustier-Schrittweite fuer eine ausgewaehlte, manuell platzierte Kiste
+  var SNAP_TOL = 25; // cm – Fangradius fuer das Andocken an die Kante einer Nachbarkiste beim Platzieren
+  // Rastet eine Achsen-Koordinate an die naeheste Kante in "edges" ein, wenn sie innerhalb von "tol"
+  // liegt (linke ODER rechte Kante der neuen Box gegen jede Nachbarkante) – sonst unveraendert.
+  // Macht das "buendig danebenstellen" so leicht wie das bereits bestehende Klemmen an die Wand.
+  function snapAxis(origin, size, edges, tol) {
+    let best = origin, bestDist = tol;
+    for (const e of edges) {
+      const dLeft = Math.abs(origin - e);
+      if (dLeft < bestDist) { bestDist = dLeft; best = e; }
+      const dRight = Math.abs(origin + size - e);
+      if (dRight < bestDist) { bestDist = dRight; best = e - size; }
+    }
+    return best;
+  }
   function supportRatio(px, pz, dx, dz, py, placed) {
     if (py <= 1e-4) return 1; // steht auf dem Boden
     const base = dx * dz;
@@ -2026,7 +2040,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
         const l = num(item.l), w = num(item.w), h = num(item.h);
         const dx = p.manualRot ? w : l, dz = p.manualRot ? l : w;
-        const originX = hit.x - dx / 2, originZ = hit.z - dz / 2;
+        let originX = hit.x - dx / 2, originZ = hit.z - dz / 2;
+        // Kanten-Snapping: buendig an eine bereits platzierte Nachbarkiste andocken, sobald der
+        // Cursor nah genug ist – sonst muesste man pixelgenau an die Nachbarkiste heranfahren, um
+        // ohne Spalt danebenzustellen. Analog zum bestehenden Klemmen an die Container-Wand.
+        const edgesX = [], edgesZ = [];
+        p.manualPlaced.forEach((b) => { edgesX.push(b.x, b.x + b.dx); edgesZ.push(b.z, b.z + b.dz); });
+        originX = snapAxis(originX, dx, edgesX, SNAP_TOL);
+        originZ = snapAxis(originZ, dz, edgesZ, SNAP_TOL);
         const weightUsed = p.manualPlaced.reduce((s, o) => s + (p.cargo[o.ti] ? num(p.cargo[o.ti].weight) : 0), 0);
         const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed);
         t.ghost.visible = true;
