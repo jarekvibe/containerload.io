@@ -538,6 +538,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!withinBounds(container, cand)) return { ok: false, reason: "bounds" };
     return { ok: true, box: cand };
   }
+  // Wird eine bereits platzierte Kiste entfernt, verschoben oder gedreht, verlieren die Kisten
+  // darueber ihre Auflage und wuerden sonst in der Luft stehen bleiben – im 3D-Bild sieht das aus,
+  // als steckten die Packstuecke ineinander. settlePlaced laesst darum jede Kiste an ihrer x/z-Stelle
+  // so weit absacken, wie die Abstuetz-Regel (SUPPORT_MIN) es zulaesst: von unten nach oben, damit
+  // ganze Stapel geschlossen nachrutschen. Die Array-Reihenfolge bleibt erhalten, damit die Auswahl
+  // (manualSel) auf dieselbe Kiste zeigt wie vorher.
+  function settlePlaced(container, placed, cargo) {
+    const out = new Array(placed.length);
+    const done = [];
+    const order = placed.map((_, i) => i).sort((a, b) => placed[a].y - placed[b].y || a - b);
+    for (const i of order) {
+      const b = placed[i];
+      const item = cargo && cargo[b.ti];
+      const y = item && item.stackable === false ? 0 : dropHeight(b.x, b.z, b.dx, b.dz, b.dy, done);
+      const nb = { ...b, y: y == null ? b.y : y };
+      out[i] = nb;
+      done.push(nb);
+    }
+    return out;
+  }
   function emsPackOnce(C2, units, order, pay, cap) {
     let ems = [{ x: 0, y: 0, z: 0, dx: C2.l, dy: C2.h, dz: C2.w }];
     const placed = [];
@@ -3063,7 +3083,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const manualRemoveSel = () => {
       if (manualSel == null) return;
-      manualPush(manualPlaced.filter((_, i) => i !== manualSel));
+      manualPush(settlePlaced(container, manualPlaced.filter((_, i) => i !== manualSel), cargo));
       setManualSel(null);
     };
     const manualRotateSel = () => {
@@ -3080,7 +3100,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       const next = rest.slice();
       next.splice(manualSel, 0, { ...res.box, ti: b.ti, rot: !b.rot });
-      manualPush(next);
+      manualPush(settlePlaced(container, next, cargo));
     };
     const manualNudge = (dxAxis, dzAxis) => {
       if (manualSel == null) return;
@@ -3096,7 +3116,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       const next = rest.slice();
       next.splice(manualSel, 0, { ...res.box, ti: b.ti, rot: b.rot });
-      manualPush(next);
+      manualPush(settlePlaced(container, next, cargo));
     };
     const manualClear = () => {
       manualPush([]);
