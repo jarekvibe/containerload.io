@@ -1,0 +1,22 @@
+# Führt die Regressionstests bei jedem Pull Request und auf main aus.
+# Bewusst ohne npm/Install-Schritt: die Tests sind reine node-Skripte, die die zu prüfenden
+# Funktionen direkt aus app.html herausschneiden – passend dazu, dass das Projekt keinen Build hat.
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: node --test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Regressionstests
+        run: node --test test/*.mjs
+        working-directory: containerload.io
