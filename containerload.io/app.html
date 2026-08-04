@@ -558,6 +558,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return out;
   }
+  // Haelt die manuell platzierten Stuecke mit der Ladungsliste in Deckung, waehrend sich Container
+  // oder Ladung aendern. Wichtig: die Position einer Zeile im cargo-Array (ti) ist KEINE verlaessliche
+  // Kennung – wird eine Zeile darueber geloescht, rutschen alle folgenden nach und ein platziertes
+  // Stueck wuerde stillschweigend zur falschen Ware (Farbe, Gewicht, Name, Stapelbarkeit). Massgeblich
+  // ist darum die stabile cargo-id (cid); ti wird daraus jedes Mal neu bestimmt. Entfernt werden
+  // Stuecke, deren Ware es nicht mehr gibt, die ausserhalb der neuen Masse liegen oder die ueber der
+  // eingegebenen Menge liegen. Bleibt alles gueltig, kommt dieselbe Array-Referenz zurueck (kein Re-Render).
+  function remapPlaced(container, placed, cargo) {
+    const byId = /* @__PURE__ */ new Map();
+    (cargo || []).forEach((c, i) => { if (c && c.id != null) byId.set(c.id, i); });
+    const counts = {};
+    const next = [];
+    let changed = false;
+    for (const b of placed) {
+      const ti = b.cid != null ? byId.has(b.cid) ? byId.get(b.cid) : -1 : b.ti;
+      const item = ti >= 0 ? (cargo || [])[ti] : null;
+      if (!item || !withinBounds(container, b)) {
+        changed = true;
+        continue;
+      }
+      counts[ti] = (counts[ti] || 0) + 1;
+      if (counts[ti] > Math.max(0, Math.floor(num(item.qty)))) {
+        changed = true;
+        continue;
+      }
+      if (ti !== b.ti) {
+        changed = true;
+        next.push({ ...b, ti });
+      } else next.push(b);
+    }
+    return changed ? next : placed;
+  }
   function emsPackOnce(C2, units, order, pay, cap) {
     let ems = [{ x: 0, y: 0, z: 0, dx: C2.l, dy: C2.h, dz: C2.w }];
     const placed = [];
@@ -2072,7 +2104,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed);
         t.ghost.visible = true;
         if (res.ok) {
-          t.ghostCandidate = { ti: p.manualArmedTi, rot: p.manualRot, ...res.box };
+          t.ghostCandidate = { ti: p.manualArmedTi, cid: item.id, rot: p.manualRot, ...res.box };
           t.ghost.position.set((res.box.x + res.box.dx / 2) / 100, (res.box.y + res.box.dy / 2) / 100, (res.box.z + res.box.dz / 2) / 100);
           t.ghost.scale.set(res.box.dx / 100, res.box.dy / 100, res.box.dz / 100);
           t.ghost.material.color.setHex(0x37d39f);
@@ -3057,7 +3089,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Hauptcontainer/das Hauptfahrzeug (Kette wird waehrend manualMode nicht gebaut). Session-
     // lokal – bewusst NICHT Teil des ?p=/?c=-Vertrags (siehe CLAUDE.md, Slice-Notiz in PR). ──
     const [manualMode, setManualMode] = useState(false);
-    const [manualPlaced, setManualPlaced] = useState([]); // [{ti,x,y,z,dx,dy,dz,rot}]
+    const [manualPlaced, setManualPlaced] = useState([]); // [{ti,cid,x,y,z,dx,dy,dz,rot}] – cid = stabile cargo-id, ti nur abgeleiteter Index
     const [manualArmed, setManualArmed] = useState(null); // Index in cargo, oder null
     const [manualRot, setManualRot] = useState(false); // Rotationsstatus des gerade "bewaffneten" Typs
     const [manualSel, setManualSel] = useState(null); // Index in manualPlaced, oder null
@@ -3099,7 +3131,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         return;
       }
       const next = rest.slice();
-      next.splice(manualSel, 0, { ...res.box, ti: b.ti, rot: !b.rot });
+      next.splice(manualSel, 0, { ...res.box, ti: b.ti, cid: b.cid, rot: !b.rot });
       manualPush(settlePlaced(container, next, cargo));
     };
     const manualNudge = (dxAxis, dzAxis) => {
@@ -3115,7 +3147,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         return;
       }
       const next = rest.slice();
-      next.splice(manualSel, 0, { ...res.box, ti: b.ti, rot: b.rot });
+      next.splice(manualSel, 0, { ...res.box, ti: b.ti, cid: b.cid, rot: b.rot });
       manualPush(settlePlaced(container, next, cargo));
     };
     const manualClear = () => {
@@ -3124,7 +3156,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const manualLoadAuto = () => {
       const src = (result && result.chain && result.chain[0] && result.chain[0].placed) || result.placed || [];
-      manualPush(src.map((p) => ({ ti: p.ti, x: p.x, y: p.y, z: p.z, dx: p.dx, dy: p.dy, dz: p.dz, rot: false })));
+      manualPush(src.map((p) => ({ ti: p.ti, cid: cargo[p.ti] && cargo[p.ti].id, x: p.x, y: p.y, z: p.z, dx: p.dx, dy: p.dy, dz: p.dz, rot: false })));
     };
     const manualUndoLast = () => {
       if (!manualUndo.length) return;
@@ -3137,26 +3169,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // entfernt, damit der 3D-Plan nie einen Zustand zeigt, den es laut Eingabe gar nicht mehr gibt.
     useEffect(() => {
       if (!manualMode) return;
-      setManualPlaced((mp) => {
-        const counts = {};
-        const next = [];
-        let changed = false;
-        for (const b of mp) {
-          const item = cargo[b.ti];
-          if (!item || !withinBounds(container, b)) {
-            changed = true;
-            continue;
-          }
-          const cap = Math.max(0, Math.floor(num(item.qty)));
-          counts[b.ti] = (counts[b.ti] || 0) + 1;
-          if (counts[b.ti] > cap) {
-            changed = true;
-            continue;
-          }
-          next.push(b);
-        }
-        return changed ? next : mp;
-      });
+      setManualPlaced((mp) => remapPlaced(container, mp, cargo));
     }, [container, cargo, manualMode]);
     const [toast, setToast] = useState("");
     const [plansOpen, setPlansOpen] = useState(false);
