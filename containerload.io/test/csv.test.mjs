@@ -17,7 +17,7 @@ function buildCargoCSV(cargo, result, container, preset, opts) {
       c.name || "Position " + (i + 1),
       q, +c.l || 0, +c.w || 0, +c.h || 0,
       +c.weight || 0, (+c.weight || 0) * q,
-      c.stackable === false ? "nein" : "ja",
+      c.stackable === false ? "nein" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
       c.rotatable === false ? "nein" : "ja",
       pt.loaded, pt.total
     ]));
