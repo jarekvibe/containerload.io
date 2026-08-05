@@ -1,15 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 312 64" width="312" height="64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" width="320" height="64">
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#2f9bff"/>
-      <stop offset="1" stop-color="#38e0c8"/>
+      <stop offset="0" stop-color="#22CFE6"/>
+      <stop offset="1" stop-color="#2E8FFF"/>
     </linearGradient>
   </defs>
-  <rect width="64" height="64" rx="14" fill="url(#g)"/>
-  <rect x="10" y="20" width="44" height="24" rx="3" fill="none" stroke="#04101f" stroke-width="4"/>
-  <rect x="14" y="24" width="6" height="16" rx="1" fill="#04101f"/>
-  <rect x="22" y="24" width="6" height="16" rx="1" fill="#04101f"/>
-  <rect x="30" y="24" width="6" height="16" rx="1" fill="#04101f"/>
-  <line x1="48" y1="20" x2="48" y2="44" stroke="#04101f" stroke-width="2.5"/>
-  <text x="80" y="42" font-family="Inter, system-ui, -apple-system, sans-serif" font-weight="800" font-size="29" letter-spacing="-0.5" fill="url(#g)">ContainerLoad</text>
+  <rect width="64" height="64" rx="18" fill="url(#g)"/>
+  <polygon points="32,9 52.3,20.8 32,32.5 11.7,20.8" fill="#0A2B46"/>
+  <polygon points="11.7,20.8 32,32.5 32,55 11.7,43.2" fill="#165780"/>
+  <polygon points="52.3,20.8 32,32.5 32,55 52.3,43.2" fill="#0F3C60"/>
+  <text x="82" y="43" font-family="Archivo, system-ui, -apple-system, sans-serif" font-weight="800" font-size="30" letter-spacing="-0.8" fill="#E9F0F7">Container<tspan fill="url(#g)">Load</tspan></text>
 </svg>
