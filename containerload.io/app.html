@@ -393,6 +393,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   };
   // Liefert die zwei Verlaufs-Stops fuer den Export-Akzent. hex == null -> Marken-Verlauf.
   var exportAccentStops = (hex) => hex ? [hex, shade(hex, -0.22)] : ["#22CFE6", "#2E8FFF"];
+  // CSS-Injection fuer PDF-Export-Akzente: hex == null -> keine Styles (Fallbacks greifen).
+  var pdfAccentCSS = (hex) => {
+    if (!hex) return "";
+    const grad = `linear-gradient(135deg, ${hex}, ${shade(hex, -0.22)})`;
+    return `<style>:root{--ac-grad:${grad};--ac-solid:${hex};--ac-soft:${hexA(hex, 0.08)};}</style>`;
+  };
   function makeFloorPacker(l, w, rotatable) {
     const memo = /* @__PURE__ */ new Map();
     const grid = (a, b, pl, pw) => {
@@ -3872,7 +3878,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           return;
         }
         w.document.open();
-        w.document.write(LV_DOC(pageHTML, LANG));
+        const accentCSS = pdfAccentCSS(EXPORT_ACCENTS[exportAccent]);
+        w.document.write(LV_DOC(pageHTML, LANG).replace("</head>", accentCSS + "</head>"));
         w.document.close();
       } catch (e) {
         setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
