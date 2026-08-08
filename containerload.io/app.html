@@ -2352,16 +2352,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const curW = mount.clientWidth || W, curH = mount.clientHeight || H;
           const outW = 1600, outH = 1000; // fixes 16:10-Format, unabhaengig von der Bildschirmgroesse
           const aspect = outW / outH;
-          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, an die Szene eingepasst (alle
-          // Packstuecke im Bild), unabhaengig davon wie der Nutzer gerade gedreht/gezoomt hat.
-          const bbox = new THREE.Box3().setFromObject(group);
-          const center = new THREE.Vector3(), bsph = new THREE.Sphere();
-          if (!bbox.isEmpty()) { bbox.getCenter(center); bbox.getBoundingSphere(bsph); }
-          else { center.copy(target); bsph.radius = 6; }
-          const radius = Math.max(0.5, bsph.radius);
+          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, eng an den CONTAINER eingepasst
+          // (die Packstuecke liegen darin). Bewusst NICHT die Gruppen-Bounding-Box: die enthaelt die
+          // grosse Boden-Gitterflaeche und wuerde den Container winzig zoomen.
+          const cont = propsRef.current.container || {};
+          const CLm = num(cont.l) / 100, CHm = num(cont.h) / 100, CWm = num(cont.w) / 100;
+          const center = target.clone();
+          const radius = CLm > 0 && CHm > 0 && CWm > 0 ? Math.max(0.8, 0.5 * Math.sqrt(CLm * CLm + CHm * CHm + CWm * CWm)) : 6;
           const fov = camera.fov * Math.PI / 180;
           const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
-          const dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.16;
+          const dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
           const theta = -0.92, phi = 1;
           const prevFog = scene.fog;
           if (transparent) { scene.fog = null; if (ground) ground.visible = false; }
@@ -3504,6 +3504,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           { l: en ? "VOLUME" : "VOLUMEN", v: `${(+shotVol || 0).toFixed(1)} m\xB3` }
         ];
         const valF = `700 ${px(22)}px ${MONOF}`, labF = `500 ${px(10)}px ${MONOF}`, gap = px(26);
+        let mutedCol = "#4A5C6E"; // Label-/Untertext-Ton; im Transparenz-Modus heller (Kontrast auf hellem BG)
         // Marken-Logo (Verlaufsquadrat + Wuerfel) + Wortmarke – bleibt IMMER Marke (Cyan->Blau).
         const drawLogo = (lx, ly, ls) => {
           const cyMid = ly + ls / 2;
@@ -3523,7 +3524,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const wg = g.createLinearGradient(bx + cw, 0, bx + cw + px(72), 0);
           wg.addColorStop(0, "#22CFE6"); wg.addColorStop(1, "#2E8FFF");
           g.fillStyle = wg; g.fillText("Load", bx + cw, cyMid - px(2));
-          g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = "#4A5C6E";
+          g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = mutedCol;
           g.fillText("CONTAINERLOAD.IO", bx, cyMid + px(16));
         };
         // Kennzahlen-Raster rechtsbuendig; nur die Auslastungs-%-Zahl nimmt den Export-Akzent.
@@ -3533,7 +3534,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           let mx = rightX - totalW;
           blocks.forEach((b, i) => {
             g.textAlign = "left"; g.textBaseline = "alphabetic";
-            g.font = labF; g.fillStyle = "#4A5C6E"; g.fillText(b.m.l, mx, cyMid - px(9));
+            g.font = labF; g.fillStyle = mutedCol; g.fillText(b.m.l, mx, cyMid - px(9));
             g.font = valF;
             if (b.m.grad) { const vg = g.createLinearGradient(mx, 0, mx + b.w, 0); vg.addColorStop(0, accStops[0]); vg.addColorStop(1, accStops[1]); g.fillStyle = vg; } else g.fillStyle = "#E9F0F7";
             g.fillText(b.m.v, mx, cyMid + px(16));
@@ -3567,13 +3568,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           g.drawImage(img, FR, FR, cap.w, cap.h);
           drawChips(FR, FR);
           const barX = FR, barY = FR + cap.h + gapR, barW = cap.w;
-          rr(barX, barY, barW, barH, px(16)); g.fillStyle = "rgba(10,15,22,0.86)"; g.fill();
-          g.strokeStyle = "rgba(255,255,255,0.10)"; g.lineWidth = Math.max(1, S); rr(barX + 0.5, barY + 0.5, barW - 1, barH - 1, px(16)); g.stroke();
+          rr(barX, barY, barW, barH, px(16)); g.fillStyle = "rgba(10,15,22,0.5)"; g.fill();
+          g.strokeStyle = "rgba(255,255,255,0.14)"; g.lineWidth = Math.max(1, S); rr(barX + 0.5, barY + 0.5, barW - 1, barH - 1, px(16)); g.stroke();
           accentLine(barX + px(16), barY, barW - px(32));
+          mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
           drawLogo(barX + px(20), midY - px(22), px(44));
           drawMetrics(barX + barW - px(20), midY);
-          g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#6E8298"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+          g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#BCC9D6"; g.textAlign = "center"; g.textBaseline = "alphabetic";
           g.fillText(String(T.shotFoot).toUpperCase(), barX + barW / 2, barY + barH - px(11));
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
