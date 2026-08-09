@@ -751,9 +751,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       single = true;
       const t = valid[0];
       const maxLay = Math.floor((CH + 1e-6) / t.h);
-      layers = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
+      // capLay = wie viele Lagen theoretisch uebereinander PASSEN. Nur die Schleifengrenze.
+      // Die spaeter ausgewiesene Lagenzahl wird nach dem Packen aus den tatsaechlich
+      // belegten Hoehen gezaehlt (siehe unten) — sonst meldet das Tool "2 gestapelt",
+      // obwohl nur ein Packstueck auf dem Boden steht.
+      const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
       const fl = makeFloorPacker(t.l, t.w, t.rotatable)(CL, CW);
-      outer: for (let ly = 0; ly < layers; ly++) {
+      outer: for (let ly = 0; ly < capLay; ly++) {
         for (const r of fl.rects) {
           if (loaded[t.ti] >= t.qty) break outer;
           if (weight + t.weight > pay + 1e-6) break outer;
@@ -762,6 +766,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           weight += t.weight;
         }
       }
+      // Gleiche Zaehlweise wie im gemischten Pfad: tatsaechlich belegte Hoehen, nicht moegliche.
+      layers = placed.length ? new Set(placed.map((p) => Math.round(p.y))).size : 0;
     } else if (valid.length > 1) {
       const totalU = valid.reduce((s, t) => s + t.qty, 0);
       const restarts = opts.quick ? 0 : opts.intensive ? totalU <= 60 ? 280 : totalU <= 200 ? 70 : 18 : totalU <= 40 ? 60 : totalU <= 120 ? 12 : 0;
