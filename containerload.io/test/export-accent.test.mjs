@@ -21,8 +21,14 @@ test("shade veraendert die Farbe, liefert gueltigen Hex und clamped", () => {
   assert.strictEqual(shade("#000000", -0.22), "#000000", "Schwarz bleibt Schwarz (Clamp)");
 });
 
-test("exportAccentStops: standard -> Marken-Verlauf, sonst hex + Abdunklung", () => {
-  assert.deepStrictEqual(exportAccentStops(null), ["#22CFE6", "#2E8FFF"], "standard = Marke");
+// Seit der Umstellung auf EINEN Markenton gilt fuer den Standard dieselbe Regel wie fuer
+// selbst gewaehlte Farben: Akzent + abgedunkelter Akzent. Ein Verlauf zwischen zwei
+// verschiedenen Markentoenen existiert nicht mehr.
+test("exportAccentStops: immer Farbe + Abdunklung, auch im Standard", () => {
+  const [sa, sb] = exportAccentStops(null);
+  assert.strictEqual(sa, "#2E8FFF", "standard = Markenakzent");
+  assert.ok(/^#[0-9a-f]{6}$/i.test(sb), "zweiter Stop ist gueltiger Hex");
+  assert.notStrictEqual(sb.toLowerCase(), sa.toLowerCase(), "zweiter Stop ist wirklich dunkler, kein Verlauf ins Nichts");
   const [a, b] = exportAccentStops("#0057a3");
   assert.strictEqual(a, "#0057a3", "erster Stop = gewaehlte Farbe");
   assert.ok(/^#[0-9a-f]{6}$/i.test(b) && b.toLowerCase() !== "#0057a3", "zweiter Stop abgedunkelt");
