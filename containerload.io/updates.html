@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Updates — ContainerLoad</title>
+<meta name="description" content="Was ist neu bei ContainerLoad: alle Verbesserungen am 3D-Rechner, kurz und ehrlich zusammengefasst." />
+<link rel="canonical" href="https://containerload.io/updates" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Updates — ContainerLoad" />
+<meta property="og:description" content="Was ist neu bei ContainerLoad: alle Verbesserungen am 3D-Rechner, kurz und ehrlich zusammengefasst." />
+<meta property="og:url" content="https://containerload.io/updates" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#070a0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<style>
+:root{--bg:#070a0f;--card:#0c111a;--line:#19222f;--line2:#26313f;--text:#eef2f7;--dim:#9aa7b8;--faint:#67748a;--accent:#2f9bff;--teal:#38e0c8;--good:#37d39f;--warn:#ffb454;--grad:linear-gradient(90deg,#2f9bff,#38e0c8);--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.mono{font-family:var(--mono)}
+.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+header.nav{position:sticky;top:0;z-index:20;background:rgba(9,13,20,.72);border-bottom:1px solid rgba(120,150,200,.13);backdrop-filter:blur(14px)}
+.nav-in{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:10px}
+.brand{display:inline-flex;align-items:center;gap:9px;font-weight:800;font-size:16px;color:var(--text)}
+.brand:hover{text-decoration:none}
+.mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center}
+.btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;border-radius:12px;transition:.18s;cursor:pointer;white-space:nowrap;padding:.7rem 1.1rem;font-size:14px}
+.btn-primary{background:var(--grad);color:#04101f;box-shadow:0 8px 30px -8px rgba(47,155,255,.6)}
+.btn-primary:hover{filter:brightness(1.08);text-decoration:none}
+.btn-ghost{background:rgba(255,255,255,.03);border:1px solid var(--line2);color:var(--text)}
+.btn-ghost:hover{border-color:rgba(47,155,255,.6);text-decoration:none}
+.langbtn{color:var(--faint);background:transparent;cursor:pointer;transition:.15s;line-height:1;border:0;padding:6px 8px;display:inline-flex;align-items:center;gap:6px;font:600 12px var(--mono)}
+.langbtn.on{color:var(--text);background:rgba(47,155,255,.14)}
+.langbtn:hover{color:var(--text)}
+.langwrap{display:flex;align-items:center;border-radius:8px;overflow:hidden;border:1px solid var(--line2)}
+main{position:relative;z-index:1;padding:46px 0 40px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
+h1{font-size:clamp(26px,4.4vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.12;margin:0 0 14px}
+p{color:#cdd7e2;margin:0 0 14px}
+.lead{font-size:16.5px;color:var(--dim);max-width:560px}
+.entries{margin-top:34px;display:flex;flex-direction:column;gap:2px}
+.entry{display:grid;grid-template-columns:112px 1fr;gap:18px;padding:20px 0;border-top:1px solid var(--line)}
+.entry:first-child{border-top:1px solid var(--line2)}
+.entry .date{font-family:var(--mono);font-size:11.5px;color:var(--faint);padding-top:2px;white-space:nowrap}
+.tag{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:5px;margin-bottom:8px}
+.tag.new{color:#bcd9ff;background:rgba(47,155,255,.14);border:1px solid rgba(47,155,255,.32)}
+.tag.improved{color:#a6f5e6;background:rgba(56,224,200,.12);border:1px solid rgba(56,224,200,.32)}
+.tag.fix{color:#ffe0b3;background:rgba(255,180,84,.12);border:1px solid rgba(255,180,84,.32)}
+.entry h3{margin:0 0 6px;font-size:15.5px;font-weight:700;color:#eef2f7}
+.entry p{margin:0;font-size:13.5px;color:var(--dim);line-height:1.55}
+.note{font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);margin-top:36px;padding-top:16px;line-height:1.6}
+footer{border-top:1px solid var(--line);margin-top:20px;padding:26px 0;color:var(--faint);font-size:13px}
+footer .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between;max-width:1080px}
+footer a{color:var(--dim)}
+@media (max-width:520px){.entry{grid-template-columns:1fr}.entry .date{padding-top:0}}
+</style>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><span class="mark"><svg width="16" height="13" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="17" height="13" rx="1.5" stroke="#04101f" stroke-opacity=".9"/><line x1="5" y1="1" x2="5" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="9" y1="1" x2="9" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="13" y1="1" x2="13" y2="13" stroke="#04101f" stroke-opacity=".9"/></svg></span>Container<span class="grad-text">Load</span></a>
+    <a href="/ratgeber/" class="mono" style="margin-left:auto;font-size:12px;color:var(--dim)" data-i18n="nav_ratgeber">Ratgeber</a>
+    <div class="langwrap">
+      <button data-lang="de" class="langbtn"><svg width="14" height="9" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</button>
+      <button data-lang="en" class="langbtn" style="border-left:1px solid var(--line2)"><svg width="14" height="9" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+    </div>
+    <a href="/app" class="btn btn-primary" data-i18n="nav_open" style="font-size:13px;padding:.55rem .9rem">Rechner öffnen</a>
+  </div>
+</header>
+<main>
+  <article class="wrap">
+    <div class="eyebrow" data-i18n="ey">Updates</div>
+    <h1 data-i18n="h1">Was ist neu bei ContainerLoad</h1>
+    <p class="lead" data-i18n="lead">Kurz und ehrlich: hier landet jede spürbare Verbesserung am Rechner — neueste zuerst.</p>
+
+    <div class="entries" id="entries"></div>
+
+    <div class="note" data-i18n="note">Diese Liste zeigt Highlights, nicht jede einzelne Änderung. Alle Angaben ohne Gewähr — Details siehe jeweilige Funktion im Rechner.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span data-i18n="foot_c">© ContainerLoad · Bremen</span>
+    <span><a href="/app" data-i18n="fl_open">Rechner</a> · <a href="/ratgeber/" data-i18n="fl_ratgeber">Ratgeber</a> · <a href="/impressum" data-i18n="fl_imp">Impressum</a> · <a href="/datenschutz" data-i18n="fl_priv">Datenschutz</a></span>
+  </div>
+</footer>
+<script>
+// Änderungen hier anhängen (neueste zuerst) – ein Objekt pro Eintrag, kein Build-Schritt nötig.
+// tag: "new" | "improved" | "fix"
+var ENTRIES = [
+  { date_de: "30. Juli 2026", date_en: "Jul 30, 2026", tag: "new",
+    de_h: "Packstücke selbst platzieren", en_h: "Place items yourself",
+    de_p: "Neues Panel „Manuell stauen“ für die Seefracht: Kisten per Klick im 3D-Bild ablegen, drehen, feinjustieren oder entfernen — die Höhe berechnet das Tool automatisch, damit nichts schwebt. Inklusive Kanten-Snapping direkt neben Nachbarkisten.",
+    en_p: "New “Manual stowage” panel for sea freight: place, rotate, nudge or remove boxes right in the 3D view with a click — height is calculated automatically so nothing floats. Includes edge-snapping flush against neighboring boxes." },
+  { date_de: "29. Juli 2026", date_en: "Jul 29, 2026", tag: "improved",
+    de_h: "Realistischere Stauung", en_h: "More realistic stowage",
+    de_p: "Der Packer verhindert jetzt schwebende Packstücke und große Überhänge: Jede gestapelte Kiste braucht ausreichend Auflagefläche darunter.",
+    en_p: "The packer now prevents floating items and big overhangs: every stacked box needs enough support underneath." },
+  { date_de: "28. Juli 2026", date_en: "Jul 28, 2026", tag: "new",
+    de_h: "Landfracht: mehr Fahrzeuge + automatische Fahrzeug-Kette", en_h: "Road freight: more vehicles + automatic vehicle chaining",
+    de_p: "Neben dem Planensattel jetzt auch Wechselbrücke, Motorwagen, 7,5-Tonner und Sprinter. Passt die Ladung nicht auf eines, schlägt das Tool automatisch ein zweites vor und zeigt es direkt in 3D.",
+    en_p: "Alongside the curtainsider: swap body, rigid truck, 7.5-tonner and van. If your load doesn't fit one vehicle, the tool automatically suggests a second and shows it right in 3D." },
+  { date_de: "27. Juli 2026", date_en: "Jul 27, 2026", tag: "improved",
+    de_h: "Ehrlichere Gewichts-Warnung", en_h: "Clearer weight warning",
+    de_p: "Deutliche Warnung, wenn die eingegebene Ladung schwerer ist als die Zuladung erlaubt — auch wenn geometrisch noch Platz wäre.",
+    en_p: "A visible alert when your entered cargo is heavier than the payload allows — even if there'd still be room, geometrically." },
+  { date_de: "27. Juli 2026", date_en: "Jul 27, 2026", tag: "new",
+    de_h: "Vier neue Ratgeber-Seiten", en_h: "Four new guide pages",
+    de_p: "Container-Volumen, Zuladung, Gitterboxen und CBM-Berechnung — jetzt auch direkt von der Startseite aus verlinkt.",
+    en_p: "Container volume, payload, mesh crates and CBM calculation — now linked right from the homepage." },
+  { date_de: "26. Juli 2026", date_en: "Jul 26, 2026", tag: "fix",
+    de_h: "Bugfix-Runde", en_h: "Bugfix sweep",
+    de_p: "Textimport, Teilen-Link und Container-Empfehlung genauer geprüft und mehrere kleine Ungenauigkeiten behoben.",
+    en_p: "Text import, share links and container recommendations checked over and several small inaccuracies fixed." },
+  { date_de: "24. Juli 2026", date_en: "Jul 24, 2026", tag: "new",
+    de_h: "Neue Status-Leiste", en_h: "New status rail",
+    de_p: "Auslastung, Gewicht und Lademeter kompakt am unteren Bildrand, mit aufklappbaren Details zur Gewichtsverteilung.",
+    en_p: "Utilization, weight and loading meters at a glance along the bottom, with an expandable weight-distribution breakdown." },
+  { date_de: "9. Juli 2026", date_en: "Jul 9, 2026", tag: "new",
+    de_h: "CSV-Export, Ladereihenfolge & mehr", en_h: "CSV export, loading order & more",
+    de_p: "Ladung als CSV exportieren, Ladereihenfolge im PDF, „Meine Pläne“ umbenennbar, CBM-Kachel in der Landfracht-Ansicht — mehrere kleinere Verbesserungen an einem Tag.",
+    en_p: "Export cargo as CSV, loading order in the PDF, renameable saved plans, a CBM tile in the road-freight view — several smaller improvements landed the same day." },
+  { date_de: "7. Juli 2026", date_en: "Jul 7, 2026", tag: "improved",
+    de_h: "Türen, Kamera & Teilen-Dialog poliert", en_h: "Doors, camera & share dialog polished",
+    de_p: "Türen mit echter Funktion, eine ruhigere Kamera-Einstellung und ein neu gestalteter Teilen-Dialog.",
+    en_p: "Functional doors, a calmer camera settle, and a redesigned share dialog." }
+];
+var TAG_LABEL = { de: { new: "Neu", improved: "Verbessert", fix: "Behoben" }, en: { new: "New", improved: "Improved", fix: "Fixed" } };
+function renderEntries(lang) {
+  var host = document.getElementById('entries');
+  host.innerHTML = ENTRIES.map(function (e) {
+    var h = lang === 'en' ? e.en_h : e.de_h;
+    var p = lang === 'en' ? e.en_p : e.de_p;
+    var date = lang === 'en' ? e.date_en : e.date_de;
+    var tagLabel = TAG_LABEL[lang === 'en' ? 'en' : 'de'][e.tag];
+    return '<div class="entry"><div class="date">' + date + '</div><div><span class="tag ' + e.tag + '">' + tagLabel + '</span><h3>' + h + '</h3><p>' + p + '</p></div></div>';
+  }).join('');
+}
+var els = [].slice.call(document.querySelectorAll('[data-i18n]'));
+var DE = {};
+els.forEach(function (el) { var k = el.getAttribute('data-i18n'); if (DE[k] === undefined) DE[k] = el.innerHTML; });
+var EN = {
+  nav_ratgeber: "Guides", nav_open: "Open tool",
+  ey: "Updates", h1: "What's new in ContainerLoad",
+  lead: "Short and honest: every noticeable improvement to the calculator lands here — newest first.",
+  note: "This list shows highlights, not every single change. All details without guarantee — see the relevant feature in the calculator for specifics.",
+  foot_c: "© ContainerLoad · Bremen", fl_open: "Calculator", fl_ratgeber: "Guides", fl_imp: "Legal notice", fl_priv: "Privacy"
+};
+function appHref(lang) { return '/app' + (lang === 'en' ? '?lang=en' : ''); }
+function setLang(lang) {
+  lang = (lang === 'en') ? 'en' : 'de';
+  els.forEach(function (el) { var k = el.getAttribute('data-i18n'); var v = (lang === 'en') ? (EN[k] !== undefined ? EN[k] : DE[k]) : DE[k]; if (v !== undefined) el.innerHTML = v; });
+  document.documentElement.lang = lang;
+  document.title = lang === 'en' ? "Updates — ContainerLoad" : "Updates — ContainerLoad";
+  [].slice.call(document.querySelectorAll('.langbtn')).forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-lang') === lang); });
+  [].slice.call(document.querySelectorAll('a[href^="/app"]')).forEach(function (a) { a.setAttribute('href', appHref(lang)); });
+  renderEntries(lang);
+  try { localStorage.setItem('cl_lang', lang); } catch (e) {}
+}
+[].slice.call(document.querySelectorAll('.langbtn')).forEach(function (b) { b.addEventListener('click', function () { setLang(b.getAttribute('data-lang')); }); });
+var initial = 'de';
+try { var sv = localStorage.getItem('cl_lang'); if (sv) { initial = sv; } else if ((navigator.language || '').toLowerCase().indexOf('de') !== 0) { initial = 'en'; } }
+catch (e) { if ((navigator.language || '').toLowerCase().indexOf('de') !== 0) { initial = 'en'; } }
+setLang(initial);
+</script>
+</body>
+</html>
