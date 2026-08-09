@@ -18,10 +18,10 @@
 <meta name="twitter:title" content="ContainerLoad — Beladung in Sekunden" />
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
-<meta name="theme-color" content="#070a0f" />
+<meta name="theme-color" content="#0E1116" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
@@ -29,168 +29,213 @@
 <link rel="manifest" href="/site.webmanifest" />
 <script src="https://cdn.tailwindcss.com"></script>
 <style>
+/* ============================================================
+   ContainerLoad — Landingpage
+   Ein Akzent, feste Flaechenstufen, Bewegung nur wo sie etwas erklaert.
+   Der Akzent (#2E8FFF) und die Schrift (Archivo) sind identisch mit app.html,
+   damit Landingpage und Rechner wie ein Produkt wirken.
+   ============================================================ */
 :root{
-  --bg:#070a0f; --card:#0c111a; --card2:#0e1420; --line:#19222f; --line2:#26313f;
-  --text:#eef2f7; --dim:#9aa7b8; --faint:#67748a;
-  --accent:#2f9bff; --teal:#38e0c8; --good:#37d39f; --warn:#ffb454;
-  --grad:linear-gradient(90deg,#2f9bff,#38e0c8);
-  --mono:'JetBrains Mono',ui-monospace,monospace;
+  /* Flaechen: vom Grund nach oben, jede Stufe eine Spur heller */
+  --bg:#0E1116; --card:#151A21; --card2:#1A212A;
+  --line:#232B35; --line2:#303A46;
+  /* Text: drei Stufen, mehr braucht es nicht */
+  --text:#E9ECF1; --dim:#9BA5B2; --faint:#6D7784;
+  /* EIN Akzent — kein Verlauf, kein zweiter Markenton */
+  --accent:#2E8FFF; --accent-soft:rgba(46,143,255,.10); --accent-line:rgba(46,143,255,.34);
+  /* Diese drei tragen Bedeutung und werden nie als Dekoration verwendet */
+  --good:#35BE87; --warn:#DDA24C; --bad:#E4636F;
+  /* Kompatibilitaet: Das EN-Woerterbuch und Alt-Markup referenzieren --teal
+     und --grad noch. Beide zeigen jetzt auf den einen Akzent statt auf einen
+     Verlauf — dadurch bleibt die englische Fassung unveraendert lauffaehig. */
+  --teal:#2E8FFF; --grad:#2E8FFF;
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+  --r-s:6px; --r-m:10px; --r-l:14px;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
-section[id],header[id]{scroll-margin-top:88px}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,sans-serif;overflow-x:hidden}
-.mono{font-family:var(--mono)}
-.grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
-.grad-bg{background:var(--grad)}
-/* grid backdrop */
-.grid-bg{position:fixed;inset:0;z-index:0;pointer-events:none;
-  background-image:linear-gradient(rgba(120,150,200,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,150,200,.05) 1px,transparent 1px);
-  background-size:54px 54px;
-  -webkit-mask-image:radial-gradient(120% 90% at 50% 0%,#000 30%,transparent 80%);
-  mask-image:radial-gradient(120% 90% at 50% 0%,#000 30%,transparent 80%);}
-.glow{position:fixed;border-radius:50%;filter:blur(90px);z-index:0;pointer-events:none;opacity:.5}
-.card{background:rgba(12,17,26,.7);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(8px)}
-.glass{background:rgba(10,15,24,.72);border:1px solid #1e2a3a;backdrop-filter:blur(12px)}
-.btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;border-radius:12px;transition:.18s;cursor:pointer;white-space:nowrap}
-.btn-primary{background:var(--grad);color:#04101f;box-shadow:0 8px 30px -8px rgba(47,155,255,.6)}
-.btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
-.btn-ghost{background:rgba(255,255,255,.03);border:1px solid var(--line2);color:var(--text)}
-.btn-ghost:hover{border-color:rgba(47,155,255,.6);background:rgba(47,155,255,.06)}
-.chip{font-family:var(--mono);font-size:11px;letter-spacing:.04em;border:1px solid var(--line2);border-radius:9px;padding:.4rem .6rem;color:var(--dim);background:rgba(255,255,255,.02);transition:.3s}
-.chip.on{border-color:rgba(47,155,255,.7);color:#bcd9ff;background:rgba(47,155,255,.1);box-shadow:0 0 22px -6px rgba(47,155,255,.6)}
-.chip.ok{border-color:rgba(55,211,159,.7);color:#9bf0cd;background:rgba(55,211,159,.1)}
-.reveal{opacity:0;transform:translateY(26px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
+section[id],header[id]{scroll-margin-top:96px}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font-weight:400;line-height:1.55;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3{font-weight:700;letter-spacing:-.021em;line-height:1.16;margin:0}
+/* Zahlen und Masse laufen ueberall in gleicher Breite — sonst zappeln Tabellen */
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* Sichtbarer Fokus fuer Tastatur- und Screenreader-Bedienung */
+a:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--r-s)}
+
+/* --- Flaechen: Tiefe entsteht durch Kante und Helligkeit, nicht durch Unschaerfe --- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-l)}
+a.card{text-decoration:none;display:block;transition:border-color .14s,background-color .14s}
+a.card:hover{border-color:var(--line2);background:var(--card2)}
+
+/* Die Namen grad-text/grad-bg bleiben (das EN-Woerterbuch setzt sie per innerHTML),
+   tragen aber keinen Verlauf mehr — nur noch den einen Akzent. */
+.grad-text{color:var(--accent);-webkit-text-fill-color:var(--accent)}
+.grad-bg{background:var(--accent)}
+
+/* --- Schaltflaechen --- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  font-weight:600;border-radius:var(--r-m);cursor:pointer;white-space:nowrap;
+  text-decoration:none;transition:background-color .14s,border-color .14s,color .14s}
+.btn-primary{background:var(--accent);color:#08111C;border:1px solid var(--accent)}
+.btn-primary:hover{background:#4CA2FF;border-color:#4CA2FF}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--text)}
+.btn-ghost:hover{background:var(--card2);border-color:var(--faint)}
+
+/* --- Bewegung: einmal beim Erscheinen, kurz, nur nach oben --- */
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .42s ease,transform .42s ease}
 .reveal.in{opacity:1;transform:none}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
-.cursor{display:inline-block;width:2px;height:1.05em;background:var(--accent);margin-left:2px;vertical-align:-2px;animation:blink 1s steps(1) infinite}
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
-.floaty{animation:float 5s ease-in-out infinite}
-@keyframes pulse{0%,100%{opacity:.35}50%{opacity:1}}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--good);box-shadow:0 0 10px var(--good);animation:pulse 1.6s infinite}
-.glass-nav{background:rgba(9,13,20,.62);border:1px solid rgba(120,150,200,.13);backdrop-filter:blur(14px);box-shadow:0 12px 44px -18px rgba(0,0,0,.75)}
-.glass-nav.scrolled{background:rgba(7,10,15,.86)}
-@keyframes navpop{0%{opacity:0;transform:translateY(-14px) scale(.93)}62%{opacity:1;transform:translateY(0) scale(1.022)}100%{opacity:1;transform:scale(1)}}
-@keyframes itempop{0%{opacity:0;transform:translateY(-7px) scale(.86)}70%{opacity:1;transform:scale(1.08)}100%{opacity:1;transform:scale(1)}}
-.navpill{animation:navpop .68s cubic-bezier(.18,.7,.2,1) both}
-@keyframes clload{0%{transform:scaleY(0)}100%{transform:scaleY(1)}}
-@keyframes clload2{0%{transform:scaleY(0)}100%{transform:scaleY(1)}}
-.cl-bar{transform-box:fill-box;transform-origin:50% 100%;animation:clload .5s cubic-bezier(.2,.8,.2,1) both}
-.cl-bar.b2{animation-delay:.13s}.cl-bar.b3{animation-delay:.26s}
-.brandlogo:hover .cl-bar{animation-name:clload2}
-.navitem{animation:itempop .5s cubic-bezier(.18,.7,.2,1.1) both;opacity:0}
-.navlink{color:var(--dim);font-size:14px;font-weight:500;transition:.15s}
+
+/* Traegt den Namen aus dem EN-Woerterbuch weiter, pulsiert aber nicht mehr:
+   ein Punkt, der nichts misst, darf auch nicht so tun als wuerde er es. */
+.live-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+/* --- Kopfleiste --- */
+.glass-nav{background:rgba(14,17,22,.92);border:1px solid var(--line)}
+.glass-nav.scrolled{background:var(--bg);border-color:var(--line2)}
+.navlink{color:var(--dim);font-size:14px;font-weight:500;transition:color .14s;text-decoration:none}
 .navlink:hover{color:var(--text)}
-.langbtn{color:var(--faint);background:transparent;cursor:pointer;transition:.15s;line-height:1}
-.langbtn.on{color:var(--text);background:rgba(47,155,255,.14)}
+.langbtn{color:var(--faint);background:transparent;cursor:pointer;transition:color .14s,background-color .14s;line-height:1}
+.langbtn.on{color:var(--text);background:var(--accent-soft)}
 .langbtn:hover{color:var(--text)}
-.feature-ic{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;background:rgba(47,155,255,.1);border:1px solid rgba(47,155,255,.25)}
+
+/* Logo-Balken fahren hoch wie Ladung in den Container — die einzige Animation,
+   die etwas ueber das Produkt aussagt. Deshalb bleibt sie. */
+@keyframes clload{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.cl-bar{transform-box:fill-box;transform-origin:50% 100%;animation:clload .45s cubic-bezier(.2,.8,.2,1) both}
+.cl-bar.b2{animation-delay:.1s}.cl-bar.b3{animation-delay:.2s}
+
+/* --- Kleinteile --- */
+.eyebrow{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:0}
+.feature-ic{width:34px;height:34px;border-radius:var(--r-s);display:flex;align-items:center;
+  justify-content:center;border:1px solid var(--line2);color:var(--accent)}
 details>summary{list-style:none;cursor:pointer}
 details>summary::-webkit-details-marker{display:none}
 details[open] .faq-plus{transform:rotate(45deg)}
-.faq-plus{transition:.2s;color:var(--accent)}
-.dotline{stroke:rgba(47,155,255,.4);stroke-width:1.4;stroke-dasharray:4 4;fill:none}
-.demo-frame{border:1px solid var(--line2);border-radius:16px;overflow:hidden;background:#0a0d12;box-shadow:0 40px 120px -40px rgba(0,0,0,.9),0 0 0 1px rgba(47,155,255,.08)}
-/* ===== Tool-Showcase (ersetzt die iframe-Demo) ===== */
+.faq-plus{transition:transform .18s;color:var(--faint);font-weight:400}
+/* ===== Tool-Showcase: drei Karten, je ein Schritt des Ablaufs ===== */
 .sc-grid{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
 @media (max-width:900px){.sc-grid{grid-template-columns:1fr}}
-.sc-vig{background:rgba(12,17,26,.7);border:1px solid var(--line);border-radius:18px;backdrop-filter:blur(8px);overflow:hidden;display:flex;flex-direction:column;transition:border-color .25s,transform .25s}
-.sc-vig:hover{border-color:rgba(47,155,255,.45);transform:translateY(-3px)}
-.sc-visual{height:230px;position:relative;background:radial-gradient(120% 100% at 50% 0%,rgba(47,155,255,.07),transparent 60%),#0a0e15;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sc-vig{background:var(--card);border:1px solid var(--line);border-radius:var(--r-l);
+  overflow:hidden;display:flex;flex-direction:column;transition:border-color .16s}
+.sc-vig:hover{border-color:var(--line2)}
+.sc-visual{height:230px;position:relative;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
 .sc-vig-body{padding:18px 20px 20px}
-.sc-vig-h{margin:0;font-size:18px;font-weight:700}
+.sc-vig-h{margin:0;font-size:17px;font-weight:600;letter-spacing:-.015em}
 .sc-vig-p{margin:7px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim)}
-.sc-tag{position:absolute;top:12px;left:14px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--faint);border:1px solid var(--line2);border-radius:7px;padding:4px 8px;background:rgba(10,15,24,.7);z-index:3}
-/* Vignette 1 · Eingabe */
+.sc-tag{position:absolute;top:12px;left:14px;font-size:11px;font-weight:500;color:var(--faint);
+  border:1px solid var(--line);border-radius:var(--r-s);padding:3px 8px;background:var(--card);z-index:3}
+/* Karte 1 · Eingabe — Monospace hier bewusst: das sind echte Masse */
 .sc-form{width:82%;display:flex;flex-direction:column;gap:8px}
-.sc-fm-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);border-radius:10px;background:var(--card2);padding:9px 12px}
-.sc-ic{width:16px;height:16px;border-radius:4px;flex:none}
-.sc-nm{font-size:12.5px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.sc-dims{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap}
-.sc-qty{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--teal)}
-.sc-paste{border:1px dashed var(--line2);border-radius:10px;padding:8px 12px;display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10.5px;color:var(--faint)}
-.sc-paste b{color:var(--accent);font-weight:600}
-/* Vignette 2 · 3D-Pille */
-.sc-pill{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:10px;font-weight:600;padding:5px 10px;border-radius:9px;background:rgba(12,19,32,.85);border:1px solid var(--line2);color:var(--dim);white-space:nowrap;z-index:3}
-.sc-pill-d{width:6px;height:6px;border-radius:50%;background:var(--good);box-shadow:0 0 8px var(--good)}
-/* Vignette 3 · Teilen & PDF */
+.sc-fm-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--card2);padding:9px 12px}
+.sc-ic{width:14px;height:14px;border-radius:3px;flex:none}
+.sc-nm{font-size:12.5px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-dims{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sc-qty{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.sc-paste{border:1px dashed var(--line2);border-radius:var(--r-s);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--faint)}
+.sc-paste b{color:var(--dim);font-weight:600}
+/* Karte 2 · Ergebnis-Zeile */
+.sc-pill{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:inline-flex;
+  align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;font-weight:500;padding:5px 10px;
+  border-radius:var(--r-s);background:var(--card);border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;z-index:3;font-variant-numeric:tabular-nums}
+.sc-pill-d{width:5px;height:5px;border-radius:50%;background:var(--good)}
+/* Karte 3 · Teilen & PDF */
 .sc-share{width:82%;display:flex;flex-direction:column;gap:10px;align-items:center}
-.sc-chip{display:flex;align-items:center;gap:8px;border:1px solid rgba(47,155,255,.4);background:rgba(47,155,255,.07);border-radius:10px;padding:8px 13px;font-family:var(--mono);font-size:10.5px;color:var(--text);max-width:100%}
-.sc-lk{color:var(--accent)}
-.sc-pdf{display:flex;gap:12px;border:1px solid var(--line2);border-radius:12px;background:#fff;color:#0b1320;padding:12px 14px;width:100%;box-shadow:0 14px 40px -14px rgba(0,0,0,.8)}
+.sc-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--card2);
+  border-radius:var(--r-s);padding:8px 13px;font-family:var(--mono);font-size:10.5px;color:var(--dim);max-width:100%}
+.sc-lk{color:var(--text)}
+/* Das PDF ist bewusst weiss: es ist ein Ausdruck, kein Bildschirmelement */
+.sc-pdf{display:flex;gap:12px;border-radius:var(--r-s);background:#fff;color:#0b1320;padding:12px 14px;width:100%}
 .sc-pdf-txt{flex:1;min-width:0}
-.sc-pdf-h{font-weight:800;font-size:11.5px;letter-spacing:-.01em}
-.sc-l{height:5px;border-radius:3px;background:#dbe2ec;margin-top:6px}
+.sc-pdf-h{font-weight:700;font-size:11.5px;letter-spacing:-.01em}
+.sc-l{height:5px;border-radius:2px;background:#dbe2ec;margin-top:6px}
 .sc-l.s{width:70%}.sc-l.xs{width:45%}
-.sc-pdf-meta{margin-top:8px;font-family:var(--mono);font-size:8px;color:#8b96a6;letter-spacing:.06em;text-transform:uppercase}
-.sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:6px}
+.sc-pdf-meta{margin-top:8px;font-size:9px;color:#8b96a6}
+.sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:4px}
 .sc-qr i{background:#0b1320;border-radius:1px}
 .sc-qr i.o{background:transparent}
-/* CTA-Zeile */
-.sc-cta{margin-top:36px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;align-items:center}
-.chatmsg{opacity:0;transform:translateY(8px);transition:.4s}
-.chatmsg.in{opacity:1;transform:none}
-::-webkit-scrollbar{width:9px;height:9px}::-webkit-scrollbar-track{background:#080c12}::-webkit-scrollbar-thumb{background:#243042;border-radius:6px}
-/* --- Hero "Re-Solve" Animation (clh-*) --- */
+.sc-cta{margin-top:36px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;align-items:center}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+/* --- Hero-Animation "Re-Solve" (clh-*) ---
+   Die Animation selbst bleibt: sie zeigt, was das Werkzeug tut (laden → passt
+   nicht → groesserer Container → passt). Was weggefallen ist, ist die Deko
+   drumherum — Schweben, Glueh-Schatten, Weichzeichner. */
 .clh-stage{position:relative;width:100%;aspect-ratio:1.18/1;min-height:380px}
 @media(max-width:920px){.clh-stage{aspect-ratio:1.05/1}}
 #clhScene{position:absolute;inset:0;width:100%;height:100%;display:none}
 .clh-poster{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6% 4%}
-.clh-pill{position:absolute;z-index:6;display:inline-flex;align-items:center;gap:7px;font-family:var(--mono);font-size:11px;font-weight:600;
-  padding:7px 11px;border-radius:11px;background:rgba(12,19,32,.82);border:1px solid var(--line2);color:var(--dim);
-  box-shadow:0 12px 30px -12px rgba(0,0,0,.8);backdrop-filter:blur(8px);transition:.4s;white-space:nowrap}
-@keyframes clhfloaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-.clh-pill.f1{top:7%;left:4%;animation:clhfloaty 5s ease-in-out infinite}
-.clh-pill.f2{top:11%;right:5%;animation:clhfloaty 4.3s ease-in-out infinite .6s}
-.clh-dot{width:7px;height:7px;border-radius:50%;background:var(--accent)}
-.clh-timeline{position:absolute;left:50%;bottom:3%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;
-  padding:6px 8px;border-radius:13px;background:rgba(10,15,24,.7);border:1px solid var(--line2);backdrop-filter:blur(10px)}
-.clh-step{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:9px;transition:.35s}
-.clh-step .clh-sd{width:8px;height:8px;border-radius:50%;background:#2a3646;transition:.35s;flex-shrink:0}
-.clh-step .clh-sl{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--faint);transition:.35s;white-space:nowrap}
+.clh-pill{position:absolute;z-index:6;display:inline-flex;align-items:center;gap:7px;
+  font-family:var(--mono);font-size:11px;font-weight:500;font-variant-numeric:tabular-nums;
+  padding:6px 10px;border-radius:var(--r-s);background:var(--card);border:1px solid var(--line);
+  color:var(--dim);transition:border-color .3s,color .3s;white-space:nowrap}
+.clh-pill.f1{top:7%;left:4%}
+.clh-pill.f2{top:11%;right:5%}
+.clh-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex:none}
+.clh-timeline{position:absolute;left:50%;bottom:3%;transform:translateX(-50%);z-index:6;
+  display:flex;align-items:center;padding:5px 7px;border-radius:var(--r-m);
+  background:var(--card);border:1px solid var(--line)}
+.clh-step{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:var(--r-s)}
+.clh-step .clh-sd{width:7px;height:7px;border-radius:50%;background:var(--line2);transition:background-color .3s;flex-shrink:0}
+.clh-step .clh-sl{font-size:11px;font-weight:500;color:var(--faint);transition:color .3s;white-space:nowrap}
 .clh-step.on .clh-sl{color:var(--text)}
-.clh-sep{width:16px;height:1px;background:#222d3b;margin:0 2px}
+.clh-sep{width:14px;height:1px;background:var(--line);margin:0 2px}
 @media(max-width:520px){.clh-step .clh-sl{display:none}.clh-step{padding:5px}}
-.clh-status{margin-top:24px;display:flex;align-items:center;gap:12px;max-width:480px;border:1px solid var(--line2);border-radius:14px;
-  padding:12px 14px;background:rgba(10,15,24,.55);backdrop-filter:blur(10px);transition:border-color .4s,box-shadow .4s}
-.clh-status .clh-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:800;font-size:15px;transition:.4s}
-.clh-status .clh-txt{font-family:var(--mono);font-size:13px;font-weight:600;line-height:1.25;transition:color .35s}
-.clh-status .clh-meta{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:2px}
+/* Statuszeile: sagt in Worten, was die Animation gerade zeigt */
+.clh-status{margin-top:20px;display:flex;align-items:center;gap:12px;max-width:480px;
+  border:1px solid var(--line);border-radius:var(--r-m);padding:11px 13px;
+  background:var(--card);transition:border-color .3s}
+.clh-status .clh-ic{width:26px;height:26px;border-radius:var(--r-s);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-weight:600;font-size:14px;transition:background-color .3s}
+.clh-status .clh-txt{font-size:13.5px;font-weight:600;line-height:1.3;transition:color .3s}
+.clh-status .clh-meta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* Wer im Betriebssystem weniger Bewegung eingestellt hat, bekommt keine. */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important}
+  .reveal{opacity:1;transform:none}
+}
 </style>
 </head>
 <body>
-<div class="grid-bg"></div>
-<div class="glow" style="width:520px;height:520px;background:#2f9bff;top:-160px;left:55%;opacity:.22"></div>
-<div class="glow" style="width:440px;height:440px;background:#38e0c8;top:380px;left:-120px;opacity:.14"></div>
-
 <!-- NAV -->
 <div class="fixed top-3 inset-x-0 z-50 px-3">
-  <nav id="nav" class="navpill max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-2xl glass-nav pl-3.5 pr-2 py-2">
-    <a href="#top" class="navitem brandlogo flex items-center gap-2.5" style="animation-delay:.06s">
-      <span class="w-8 h-8 rounded-lg grad-bg flex items-center justify-center" style="box-shadow:0 4px 16px -4px rgba(47,155,255,.7)">
+  <nav id="nav" class="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-xl glass-nav pl-3.5 pr-2 py-2">
+    <a href="#top" class="brandlogo flex items-center gap-2.5" style="text-decoration:none;color:var(--text)">
+      <span class="w-8 h-8 rounded-md grad-bg flex items-center justify-center">
         <svg width="18" height="18" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="1.5" fill="none" stroke="#04101f" stroke-width="2"/><rect class="cl-bar b1" x="5" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b2" x="7.9" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b3" x="10.8" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/></svg>
       </span>
-      <span class="font-extrabold text-[16px] tracking-tight">Container<span class="grad-text">Load</span></span>
+      <span class="font-bold text-[16px] tracking-tight">Container<span class="grad-text">Load</span></span>
     </a>
     <div class="hidden md:flex items-center gap-1">
-      <a href="#demo" class="navitem navlink px-3 py-1.5 rounded-lg" style="animation-delay:.13s">Tool</a>
-      <a data-i18n="nav_features" href="#features" class="navitem navlink px-3 py-1.5 rounded-lg" style="animation-delay:.19s">Funktionen</a>
-      <a data-i18n="nav_how" href="#how" class="navitem navlink px-3 py-1.5 rounded-lg" style="animation-delay:.25s">So funktioniert’s</a>
-      <a data-i18n="nav_ratgeber" href="#ratgeber" class="navitem navlink px-3 py-1.5 rounded-lg" style="animation-delay:.28s">Ratgeber</a>
-      <a href="#faq" class="navitem navlink px-3 py-1.5 rounded-lg" style="animation-delay:.31s">FAQ</a>
+      <a href="#demo" class="navlink px-3 py-1.5 rounded-md">Tool</a>
+      <a data-i18n="nav_features" href="#features" class="navlink px-3 py-1.5 rounded-md">Funktionen</a>
+      <a data-i18n="nav_how" href="#how" class="navlink px-3 py-1.5 rounded-md">So funktioniert’s</a>
+      <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink px-3 py-1.5 rounded-md">Ratgeber</a>
+      <a href="#faq" class="navlink px-3 py-1.5 rounded-md">FAQ</a>
     </div>
     <div class="flex items-center gap-2">
-      <div class="navitem hidden sm:flex items-center rounded-lg overflow-hidden mono text-[12px]" style="border:1px solid var(--line2);animation-delay:.42s">
+      <div class="hidden sm:flex items-center rounded-md overflow-hidden text-[12px] font-medium" style="border:1px solid var(--line)">
         <button data-lang="de" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold"><svg width="15" height="10" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</button>
-        <button data-lang="en" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold" style="border-left:1px solid var(--line2)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+        <button data-lang="en" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold" style="border-left:1px solid var(--line)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
       </div>
-      <a data-i18n="nav_open" href="/app" class="navitem btn btn-primary text-[13px] px-4 py-2" style="animation-delay:.48s">Tool öffnen</a>
-      <button id="burger" class="navitem md:hidden p-1.5" style="color:var(--dim);animation-delay:.48s">
+      <a data-i18n="nav_open" href="/app" class="btn btn-primary text-[13px] px-4 py-2">Tool öffnen</a>
+      <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       </button>
     </div>
   </nav>
-  <div id="mobileMenu" class="md:hidden hidden max-w-6xl mx-auto mt-2 rounded-2xl glass-nav px-4 py-3">
+  <div id="mobileMenu" class="md:hidden hidden max-w-6xl mx-auto mt-2 rounded-xl glass-nav px-4 py-3">
     <div class="flex flex-col gap-0.5">
       <a href="#demo" class="navlink py-2">Tool</a>
       <a data-i18n="nav_features" href="#features" class="navlink py-2">Funktionen</a>
@@ -209,53 +254,53 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <header id="top" class="relative z-10 max-w-7xl mx-auto px-5 pt-32 md:pt-40 pb-20">
   <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
     <div class="text-center lg:text-left">
-      <div data-i18n="hero_badge" class="inline-flex items-center gap-2 mono text-[11px] px-3 py-1.5 rounded-full mb-6" style="border:1px solid var(--line2);color:var(--dim)">
-        <span class="live-dot"></span> PALETTENGENAU · 3D-ANSICHT
+      <div data-i18n="hero_badge" class="inline-flex items-center gap-2 text-[12.5px] font-medium px-3 py-1.5 rounded-md mb-6" style="border:1px solid var(--line);color:var(--dim)">
+        <span class="live-dot"></span> Palettengenau · 3D-Ansicht
       </div>
-      <h1 data-i18n="hero_h1" class="font-extrabold leading-[1.02] tracking-tight text-[46px] md:text-[56px]">
-        Jede Ladung.<br><span class="grad-text">Im richtigen Container.</span>
+      <h1 data-i18n="hero_h1" class="font-bold leading-[1.08] tracking-tight text-[42px] md:text-[52px]">
+        Jede Ladung.<br><span style="color:var(--dim)">Im richtigen Container.</span>
       </h1>
-      <p data-i18n="hero_sub" class="mt-6 text-[17px] md:text-[19px] leading-relaxed max-w-[560px] mx-auto lg:mx-0" style="color:var(--dim)">
+      <p data-i18n="hero_sub" class="mt-5 text-[16.5px] md:text-[18px] leading-relaxed max-w-[540px] mx-auto lg:mx-0" style="color:var(--dim)">
         3D-Beladung, palettengenaue Berechnung und automatische Container-Empfehlung – in Sekunden, direkt im Browser. Kein Excel, kein Schätzen.
       </p>
       <div class="mt-8 flex flex-wrap gap-3 justify-center lg:justify-start">
-        <a data-i18n="hero_cta1" href="/app" class="btn btn-primary text-[15px] px-6 py-3.5">Tool öffnen – kostenlos</a>
-        <a data-i18n="hero_cta2" href="#demo" class="btn btn-ghost text-[15px] px-6 py-3.5">Reinschauen <span style="color:var(--accent)">↓</span></a>
+        <a data-i18n="hero_cta1" href="/app" class="btn btn-primary text-[15px] px-6 py-3">Tool öffnen – kostenlos</a>
+        <a data-i18n="hero_cta2" href="#demo" class="btn btn-ghost text-[15px] px-6 py-3">Reinschauen <span style="color:var(--faint)">↓</span></a>
       </div>
-      <div data-i18n="hero_trust" class="mt-7 flex items-center gap-5 justify-center lg:justify-start mono text-[12px]" style="color:var(--faint)">
-        <span>✓ Ohne Account</span><span>✓ 0 € Setup</span><span>✓ ISO 668</span>
+      <div data-i18n="hero_trust" class="mt-7 flex items-center gap-5 justify-center lg:justify-start text-[13px]" style="color:var(--faint)">
+        <span>Ohne Account</span><span>Kostenlos</span><span>Maße nach ISO 668</span>
       </div>
     </div>
     <!-- Re-Solve 3D-Hero (rechte Spalte): Status-Strip steht ueber der Animation, damit klar wird, dass beides zusammengehoert -->
     <div>
       <!-- Status-Strip: laeuft synchron zur 3D-Hero-Animation (Texte vom clh-Modul gesetzt, kein data-i18n) -->
-      <div class="clh-status mx-auto mb-4" id="clhStatus" style="border-color:#37d39f;box-shadow:0 0 26px -10px #37d39f">
-        <div class="clh-ic" id="clhStatusIc" style="background:#37d39f;color:#04101f">✓</div>
+      <div class="clh-status mx-auto mb-4" id="clhStatus" style="border-color:var(--line)">
+        <div class="clh-ic" id="clhStatusIc" style="background:#35BE87;color:#08111C">✓</div>
         <div>
-          <div class="clh-txt" id="clhStatusTxt" style="color:#37d39f">Alles verstaut</div>
+          <div class="clh-txt" id="clhStatusTxt" style="color:#35BE87">Alles verstaut</div>
           <div class="clh-meta" id="clhStatusMeta">1× 40′ GP · gelöst</div>
         </div>
       </div>
       <div class="clh-stage reveal">
-      <div class="clh-pill f1" id="clhPillType"><span class="clh-dot" style="background:#37d39f"></span> 40′ GP</div>
-      <div class="clh-pill f2" id="clhPillFit"><span class="clh-dot" style="background:#37d39f"></span> ✓ passt</div>
+      <div class="clh-pill f1" id="clhPillType"><span class="clh-dot" style="background:#35BE87"></span> 40′ GP</div>
+      <div class="clh-pill f2" id="clhPillFit"><span class="clh-dot" style="background:#35BE87"></span> ✓ passt</div>
 
       <!-- SVG-Standbild: Default sichtbar, auf Desktop vom Canvas ersetzt -->
       <div class="clh-poster" id="clhPoster" aria-hidden="true">
         <svg viewBox="0 0 600 460" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
-          <g fill="none" stroke="#37d39f" stroke-width="2" stroke-linejoin="round" opacity="0.92">
+          <g fill="none" stroke="#35BE87" stroke-width="2" stroke-linejoin="round" opacity="0.92">
             <path d="M120 300 L120 175 L470 175 L470 300 Z"/>
             <path d="M120 175 L165 140 L515 140 L470 175"/>
             <path d="M470 175 L515 140 L515 265 L470 300"/>
           </g>
           <g opacity="0.96">
-            <rect x="150" y="235" width="62" height="60" fill="#1d4a48" stroke="#37d39f" stroke-width="1.6"/>
-            <rect x="218" y="235" width="62" height="60" fill="#1d4a48" stroke="#37d39f" stroke-width="1.6"/>
-            <rect x="150" y="200" width="62" height="34" fill="#1d4a48" stroke="#37d39f" stroke-width="1.6"/>
-            <rect x="286" y="235" width="62" height="60" fill="#1d4a48" stroke="#37d39f" stroke-width="1.6"/>
-            <rect x="218" y="200" width="62" height="34" fill="#1d4a48" stroke="#37d39f" stroke-width="1.6"/>
+            <rect x="150" y="235" width="62" height="60" fill="#1B3B31" stroke="#35BE87" stroke-width="1.6"/>
+            <rect x="218" y="235" width="62" height="60" fill="#1B3B31" stroke="#35BE87" stroke-width="1.6"/>
+            <rect x="150" y="200" width="62" height="34" fill="#1B3B31" stroke="#35BE87" stroke-width="1.6"/>
+            <rect x="286" y="235" width="62" height="60" fill="#1B3B31" stroke="#35BE87" stroke-width="1.6"/>
+            <rect x="218" y="200" width="62" height="34" fill="#1B3B31" stroke="#35BE87" stroke-width="1.6"/>
           </g>
-          <line x1="105" y1="300" x2="500" y2="300" stroke="#16212d" stroke-width="2"/>
+          <line x1="105" y1="300" x2="500" y2="300" stroke="#232B35" stroke-width="2"/>
         </svg>
       </div>
 
@@ -268,7 +313,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <div class="clh-sep"></div>
         <div class="clh-step" data-k="solve"><span class="clh-sd"></span><span class="clh-sl">Lösen</span></div>
         <div class="clh-sep"></div>
-        <div class="clh-step on" data-k="done"><span class="clh-sd" style="background:#37d39f;box-shadow:0 0 10px #37d39f"></span><span class="clh-sl">Gelöst</span></div>
+        <div class="clh-step on" data-k="done"><span class="clh-sd" style="background:#35BE87"></span><span class="clh-sl">Gelöst</span></div>
       </div>
       </div>
     </div>
@@ -279,8 +324,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <!-- TOOL SHOWCASE -->
 <section id="demo" class="relative z-10 max-w-7xl mx-auto px-5 pt-4 pb-20">
   <div class="reveal text-center max-w-2xl mx-auto mb-8">
-    <div data-i18n="tool_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Der Rechner</div>
-    <h2 data-i18n="tool_h" class="font-extrabold text-[30px] md:text-[40px] tracking-tight">Ein Blick ins Tool.</h2>
+    <div data-i18n="tool_ey" class="eyebrow mb-3">Der Rechner</div>
+    <h2 data-i18n="tool_h" class="font-bold text-[30px] md:text-[40px] tracking-tight">Ein Blick ins Tool.</h2>
     <p data-i18n="tool_p" class="mt-3 text-[15px]" style="color:var(--dim)">Eingeben, in 3D prüfen, weitergeben – das ist der ganze Workflow. Kein Login, nichts zu installieren.</p>
   </div>
 
@@ -292,13 +337,13 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <span class="sc-tag" data-i18n="sc1_tag">Eingabe</span>
         <div class="sc-form">
           <div class="sc-fm-row">
-            <span class="sc-ic" style="background:#2f9bff"></span>
+            <span class="sc-ic" style="background:#2E8FFF"></span>
             <span class="sc-nm" data-i18n="sc1_row1">EUR-Palette</span>
             <span class="sc-dims">120×80×105</span>
             <span class="sc-qty">×22</span>
           </div>
           <div class="sc-fm-row">
-            <span class="sc-ic" style="background:#38e0c8"></span>
+            <span class="sc-ic" style="background:#2E8FFF"></span>
             <span class="sc-nm" data-i18n="sc1_row2">Kiste Motorteile</span>
             <span class="sc-dims">240×110×95</span>
             <span class="sc-qty">×2</span>
@@ -349,18 +394,18 @@ details[open] .faq-plus{transform:rotate(45deg)}
   </div>
 
   <div class="sc-cta reveal">
-    <a data-i18n="sc_cta_open" href="/app" class="btn btn-primary text-[15px] px-7 py-4">Tool kostenlos öffnen ↗</a>
-    <a href="#how" class="btn btn-ghost text-[15px] px-7 py-4"><span data-i18n="sc_cta_how">So funktioniert’s</span> <span style="color:var(--accent)">↓</span></a>
+    <a data-i18n="sc_cta_open" href="/app" class="btn btn-primary text-[15px] px-6 py-3">Tool kostenlos öffnen ↗</a>
+    <a href="#how" class="btn btn-ghost text-[15px] px-6 py-3"><span data-i18n="sc_cta_how">So funktioniert’s</span> <span style="color:var(--faint)">↓</span></a>
   </div>
-  <p data-i18n="sc_cap" class="text-center mt-4 mono text-[11px]" style="color:var(--faint)">Kostenlos · ohne Account · direkt im Browser</p>
+  <p data-i18n="sc_cap" class="text-center mt-4 text-[12.5px]" style="color:var(--faint)">Kostenlos · ohne Account · direkt im Browser</p>
 </section>
 
 <!-- PACKLISTEN-IMPORT -->
 <section id="import" class="relative z-10 max-w-7xl mx-auto px-5 py-16">
   <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
     <div class="reveal">
-      <div data-i18n="imp_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Packlisten-Import</div>
-      <h2 data-i18n="imp_h" class="font-extrabold text-[34px] md:text-[42px] tracking-tight leading-tight">Aus Excel.<br><span style="color:var(--dim)">In den Container.</span></h2>
+      <div data-i18n="imp_ey" class="eyebrow mb-3">Packlisten-Import</div>
+      <h2 data-i18n="imp_h" class="font-bold text-[34px] md:text-[42px] tracking-tight leading-tight">Aus Excel.<br><span style="color:var(--dim)">In den Container.</span></h2>
       <p data-i18n="imp_p" class="mt-4 text-[15px] leading-relaxed max-w-[480px]" style="color:var(--dim)">Packliste in Excel markieren, kopieren, hier einfügen — ContainerLoad erkennt Spalten, Maße und Gewichte automatisch. Keine Tipparbeit, kein Umformatieren.</p>
       <div class="mt-5 flex flex-col gap-2 text-[14px]" style="color:#c8d2de">
         <span data-i18n="imp_c1"><span style="color:var(--good)">✓</span> Erkennt Kopfzeilen auf Deutsch und Englisch</span>
@@ -370,13 +415,12 @@ details[open] .faq-plus{transform:rotate(45deg)}
     </div>
     <div class="card p-5 reveal">
       <div class="flex items-center gap-2 mb-3">
-        <span aria-hidden="true" style="color:var(--teal);font-size:15px;line-height:1">▦</span>
         <span data-i18n="imp_box_h" class="text-[13.5px] font-semibold">Packliste einfügen</span>
-        <span data-i18n="imp_kbd" class="ml-auto mono text-[10px]" style="color:var(--faint)">Strg+V</span>
+        <span data-i18n="imp_kbd" class="ml-auto mono text-[11px]" style="color:var(--faint)">Strg+V</span>
       </div>
-      <textarea id="impPaste" rows="6" class="w-full rounded-xl p-3 mono" style="background:#141d2b;border:1px dashed #2a3850;color:var(--text);font-size:11.5px;line-height:1.8;resize:vertical;outline:none" placeholder="Bezeichnung  Stk  L  B  H  kg&#10;Motorblock  4  120  80  95  310&#10;Getriebe  6  110  75  80  240&#10;Kartons Zubehör  18  60  40  40  12"></textarea>
+      <textarea id="impPaste" rows="6" class="w-full p-3 mono" style="background:var(--card2);border:1px solid var(--line2);border-radius:var(--r-s);color:var(--text);font-size:11.5px;line-height:1.8;resize:vertical;outline:none" placeholder="Bezeichnung  Stk  L  B  H  kg&#10;Motorblock  4  120  80  95  310&#10;Getriebe  6  110  75  80  240&#10;Kartons Zubehör  18  60  40  40  12"></textarea>
       <button id="impGo" class="btn btn-primary w-full justify-center mt-3 text-[14px] py-3" data-i18n="imp_cta" disabled style="opacity:.5;cursor:default">Im 3D-Rechner öffnen →</button>
-      <p id="impHintLine" data-i18n="imp_hint" class="mt-2.5 text-center mono text-[10px]" style="color:var(--faint)">wird im Tool geprüft — Maße in cm, sofern nicht anders angegeben</p>
+      <p id="impHintLine" data-i18n="imp_hint" class="mt-2.5 text-center text-[11.5px]" style="color:var(--faint)">wird im Tool geprüft — Maße in cm, sofern nicht anders angegeben</p>
     </div>
   </div>
 </section>
@@ -384,32 +428,32 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <!-- FEATURES -->
 <section id="features" class="relative z-10 max-w-7xl mx-auto px-5 py-20">
   <div class="reveal max-w-2xl">
-    <div data-i18n="feat_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Funktionen</div>
-    <h2 data-i18n="feat_h" class="font-extrabold text-[34px] md:text-[42px] tracking-tight leading-tight">Alles, was du zum Beladen brauchst.<br><span style="color:var(--dim)">Und nichts, was nur im Weg ist.</span></h2>
+    <div data-i18n="feat_ey" class="eyebrow mb-3">Funktionen</div>
+    <h2 data-i18n="feat_h" class="font-bold text-[34px] md:text-[42px] tracking-tight leading-tight">Alles, was du zum Beladen brauchst.<br><span style="color:var(--dim)">Und nichts, was nur im Weg ist.</span></h2>
   </div>
   <div class="mt-12 grid md:grid-cols-3 gap-4">
-    <div class="card p-6 reveal md:col-span-2" style="background:linear-gradient(135deg,rgba(47,155,255,.08),rgba(12,17,26,.7))">
-      <div class="feature-ic mb-4">🧊</div>
+    <div class="card p-6 reveal md:col-span-2">
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.6 21 7.2v9.6L12 21.4 3 16.8V7.2z"/><path d="M3 7.2l9 4.6 9-4.6"/><path d="M12 11.8v9.6"/></svg></div>
       <h3 data-i18n="f1_h" class="font-bold text-[19px]">3D-Ansicht in Echtzeit</h3>
       <p data-i18n="f1_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Drehen, zoomen, prüfen. Die Packstücke erscheinen nacheinander im Container – mit weichen Schatten und ruhiger Eigendrehung. Du siehst sofort, wie deine Ladung wirklich steht.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4">📐</div>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="1"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="1"/></svg></div>
       <h3 data-i18n="f2_h" class="font-bold text-[19px]">Exakte Paletten-Logik</h3>
       <p data-i18n="f2_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Erkennt auch gedrehte Lademuster – so passen <b style="color:var(--text)">11 EUR-Paletten statt 9</b> in den 20-Fuß. Genau die Werte aus den Speditionstabellen.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4">🎯</div>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.8 12.2l2.9 2.9 5.5-6.2"/></svg></div>
       <h3 data-i18n="f3_h" class="font-bold text-[19px]">Smarte Container-Empfehlung</h3>
       <p data-i18n="f3_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Passt nicht alles rein? Das Tool schlägt die günstigste Kombination vor – <b style="color:var(--text)">1× 45' + 1× 20'</b> statt 2× 45'.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4">↻</div>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v6h-6"/></svg></div>
       <h3 data-i18n="f4_h" class="font-bold text-[19px]">Dreh- & Stapel-Regeln</h3>
       <p data-i18n="f4_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Für jedes Packstück einzeln: stapelbar, nicht stapelbar, um 90° drehbar. Realistisch wie an der Rampe.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4">⚖️</div>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17"/><path d="M5.5 7.5h13"/><path d="M8.5 20.5h7"/><path d="M5.5 7.5 2.5 14a3 3 0 0 0 6 0z"/><path d="M18.5 7.5 21.5 14a3 3 0 0 1-6 0z"/></svg></div>
       <h3 data-i18n="f5_h" class="font-bold text-[19px]">Gewicht & Zuladung</h3>
       <p data-i18n="f5_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Die maximale Zuladung jedes Containers ist hinterlegt – du wirst gewarnt, bevor du überladen losfährst.</p>
     </div>
@@ -419,22 +463,22 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <!-- HOW IT WORKS -->
 <section id="how" class="relative z-10 max-w-7xl mx-auto px-5 py-16">
   <div class="reveal text-center max-w-2xl mx-auto">
-    <div data-i18n="how_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">So funktioniert's</div>
-    <h2 data-i18n="how_h" class="font-extrabold text-[32px] md:text-[40px] tracking-tight">In drei Schritten zum Ladeplan</h2>
+    <div data-i18n="how_ey" class="eyebrow mb-3">So funktioniert's</div>
+    <h2 data-i18n="how_h" class="font-bold text-[32px] md:text-[40px] tracking-tight">In drei Schritten zum Ladeplan</h2>
   </div>
   <div class="mt-12 grid md:grid-cols-3 gap-4">
     <div class="card p-6 reveal">
-      <div class="mono text-[13px] grad-text font-bold mb-3">01</div>
+      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">01</div>
       <h3 data-i18n="s1_h" class="font-bold text-[18px]">Container & Ladung</h3>
       <p data-i18n="s1_p" class="mt-2 text-[14px]" style="color:var(--dim)">Container wählen oder eigene Maße eingeben. Dann die Packstücke mit Anzahl, Maßen und Gewicht – alles in Zentimetern.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="mono text-[13px] grad-text font-bold mb-3">02</div>
+      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">02</div>
       <h3 data-i18n="s2_h" class="font-bold text-[18px]">Live-Berechnung</h3>
       <p data-i18n="s2_p" class="mt-2 text-[14px]" style="color:var(--dim)">ContainerLoad berechnet im Hintergrund die beste Stauung – palettengenau bei einer Sorte, mit Suchalgorithmus bei gemischter Ladung.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="mono text-[13px] grad-text font-bold mb-3">03</div>
+      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">03</div>
       <h3 data-i18n="s3_h" class="font-bold text-[18px]">Ergebnis & Plan</h3>
       <p data-i18n="s3_p" class="mt-2 text-[14px]" style="color:var(--dim)">Du siehst Auslastung, Lagen und Gewicht – und bekommst eine klare Empfehlung, falls nicht alles passt. Dazu der 3D-Plan zum Drehen.</p>
     </div>
@@ -444,8 +488,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <!-- FAQ -->
 <section id="faq" class="relative z-10 max-w-3xl mx-auto px-5 py-20">
   <div class="reveal text-center mb-10">
-    <div class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">FAQ</div>
-    <h2 data-i18n="faq_h" class="font-extrabold text-[32px] md:text-[40px] tracking-tight">Häufige Fragen</h2>
+    <div class="eyebrow mb-3">FAQ</div>
+    <h2 data-i18n="faq_h" class="font-bold text-[32px] md:text-[40px] tracking-tight">Häufige Fragen</h2>
   </div>
   <div class="flex flex-col gap-3">
     <details class="reveal card p-5"><summary data-i18n="q1_s" class="flex items-center justify-between font-semibold text-[16px]">Ist der Rechner wirklich kostenlos?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q1_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Ja, komplett. Der 3D-Rechner inkl. Container-Empfehlung ist gratis und ohne Account nutzbar – einfach öffnen und loslegen.</p></details>
@@ -458,8 +502,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
 <!-- RATGEBER -->
 <section id="ratgeber" class="relative z-10 max-w-6xl mx-auto px-5 py-20">
   <div class="reveal text-center mb-10">
-    <div data-i18n="rg_ey" class="mono text-[12px] tracking-[0.2em] uppercase mb-3" style="color:var(--accent)">Ratgeber</div>
-    <h2 data-i18n="rg_h" class="font-extrabold text-[32px] md:text-[40px] tracking-tight">Wissen rund um die Ladung</h2>
+    <div data-i18n="rg_ey" class="eyebrow mb-3">Ratgeber</div>
+    <h2 data-i18n="rg_h" class="font-bold text-[32px] md:text-[40px] tracking-tight">Wissen rund um die Ladung</h2>
     <p data-i18n="rg_p" class="mt-3 text-[15px] max-w-[560px] mx-auto" style="color:var(--dim)">Konkrete Antworten aus der Praxis – jede verlinkt direkt in den 3D-Rechner.</p>
   </div>
   <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -495,11 +539,10 @@ details[open] .faq-plus{transform:rotate(45deg)}
 
 <!-- FINAL CTA -->
 <section class="relative z-10 max-w-5xl mx-auto px-5 py-16">
-  <div class="reveal rounded-3xl p-10 md:p-14 text-center relative overflow-hidden" style="border:1px solid rgba(47,155,255,.3);background:linear-gradient(135deg,rgba(47,155,255,.12),rgba(56,224,200,.06),rgba(12,17,26,.8))">
-    <div class="glow" style="width:300px;height:300px;background:#2f9bff;top:-100px;left:50%;position:absolute;opacity:.3"></div>
-    <h2 data-i18n="cta_h" class="relative font-extrabold text-[30px] md:text-[42px] tracking-tight">Plane deine nächste Ladung – jetzt.</h2>
-    <p data-i18n="cta_p" class="relative mt-4 text-[16px]" style="color:var(--dim)">In 30 Sekunden weißt du, ob's reinpasst und in welchen Container.</p>
-    <a data-i18n="cta_a" href="/app" class="relative btn btn-primary text-[16px] px-8 py-4 mt-8">Tool kostenlos öffnen</a>
+  <div class="reveal card p-10 md:p-14 text-center">
+    <h2 data-i18n="cta_h" class="font-bold text-[28px] md:text-[38px] tracking-tight">Plane deine nächste Ladung – jetzt.</h2>
+    <p data-i18n="cta_p" class="mt-4 text-[16px]" style="color:var(--dim)">In 30 Sekunden weißt du, ob's reinpasst und in welchen Container.</p>
+    <a data-i18n="cta_a" href="/app" class="btn btn-primary text-[15px] px-7 py-3.5 mt-8">Tool kostenlos öffnen</a>
   </div>
 </section>
 
@@ -508,18 +551,18 @@ details[open] .faq-plus{transform:rotate(45deg)}
   <div class="max-w-7xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
     <div class="md:col-span-1">
       <div class="brandlogo flex items-center gap-2.5 mb-3">
-        <span class="w-7 h-7 rounded-lg grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="1.5" fill="none" stroke="#04101f" stroke-width="2"/><rect class="cl-bar b1" x="5" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b2" x="7.9" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b3" x="10.8" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/></svg></span>
-        <span class="font-extrabold text-[15px]">Container<span class="grad-text">Load</span></span>
+        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="1.5" fill="none" stroke="#04101f" stroke-width="2"/><rect class="cl-bar b1" x="5" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b2" x="7.9" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b3" x="10.8" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/></svg></span>
+        <span class="font-bold text-[15px]">Container<span class="grad-text">Load</span></span>
       </div>
       <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Kein Excel. Kein Schätzen.<br>Nur der richtige Container.<br><span style="white-space:nowrap">Bremen, Deutschland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
     </div>
-    <div><div data-i18n="footer_prod" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Produkt</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app" class="navlink">Tool öffnen</a><a data-i18n="nav_features" href="#features" class="navlink">Funktionen</a><a data-i18n="nav_how" href="#how" class="navlink">So funktioniert’s</a><a href="#faq" class="navlink">FAQ</a></div></div>
-    <div><div data-i18n="footer_res" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Ressourcen</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_demo" href="#demo" class="navlink">Vorschau</a><a data-i18n="fl_ratgeber" href="/ratgeber/" class="navlink">Ratgeber</a><a href="#faq" class="navlink">FAQ</a></div></div>
-    <div><div data-i18n="footer_legal" class="mono text-[11px] tracking-widest uppercase mb-3" style="color:var(--faint)">Rechtliches</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_imp" href="/impressum" class="navlink">Impressum</a><a data-i18n="fl_priv" href="/datenschutz" class="navlink">Datenschutz</a><a data-i18n="fl_contact" href="mailto:info@containerload.io" class="navlink">Kontakt</a></div></div>
+    <div><div data-i18n="footer_prod" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Produkt</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app" class="navlink">Tool öffnen</a><a data-i18n="nav_features" href="#features" class="navlink">Funktionen</a><a data-i18n="nav_how" href="#how" class="navlink">So funktioniert’s</a><a href="#faq" class="navlink">FAQ</a></div></div>
+    <div><div data-i18n="footer_res" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Ressourcen</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_demo" href="#demo" class="navlink">Vorschau</a><a data-i18n="fl_ratgeber" href="/ratgeber/" class="navlink">Ratgeber</a><a href="#faq" class="navlink">FAQ</a></div></div>
+    <div><div data-i18n="footer_legal" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Rechtliches</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_imp" href="/impressum" class="navlink">Impressum</a><a data-i18n="fl_priv" href="/datenschutz" class="navlink">Datenschutz</a><a data-i18n="fl_contact" href="mailto:info@containerload.io" class="navlink">Kontakt</a></div></div>
   </div>
   <div class="max-w-7xl mx-auto px-5 py-5 flex flex-col sm:flex-row items-center justify-between gap-2" style="border-top:1px solid var(--line);color:var(--faint)">
-    <span class="mono text-[11px]">© 2026 ContainerLoad · ISO 668 · cm · kg</span>
-    <span data-i18n="foot_disc" class="mono text-[11px]">geometrische Schätzung · keine Achslast-Garantie</span>
+    <span class="text-[12px]">© 2026 ContainerLoad · Maße nach ISO 668 · cm · kg</span>
+    <span data-i18n="foot_disc" class="text-[12px]">geometrische Schätzung · keine Achslast-Garantie</span>
   </div>
 </footer>
 
@@ -534,8 +577,6 @@ mm.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>mm.classList.
 // reveal on scroll
 const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
 document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
-// waitlist buttons
-document.querySelectorAll('[data-wl]').forEach(b=>b.addEventListener('click',()=>{const o=b.textContent;b.textContent='✓ Notiert — wir melden uns';setTimeout(()=>b.textContent=o,2400);}));
 // clean anchor scrolling (kein # in der Adressleiste)
 document.querySelectorAll('a[href^="#"]').forEach(function(a){
   a.addEventListener('click',function(e){
@@ -552,7 +593,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
 <script>
 (function(){
-  var EN={"nav_features": "Features", "nav_how": "How it works", "nav_ratgeber": "Guides", "nav_open": "Open tool", "rg_ey": "Guides", "rg_h": "Everything about your load", "rg_p": "Straight answers from practice – each links right into the 3D calculator.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked – more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "About 25–26 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example & live tool.", "rg_all": "See all guides →","hero_badge": "<span class=\"live-dot\"></span> PALLET-EXACT · 3D VIEW", "hero_h1": "Every load.<br><span class=\"grad-text\">In the right container.</span>", "hero_sub": "3D loading, pallet-exact calculation and automatic container recommendation – in seconds, right in your browser. No Excel, no guessing.", "hero_cta1": "Open the tool – free", "hero_cta2": "Take a look <span style=\"color:var(--accent)\">↓</span>", "hero_trust": "<span>✓ No account</span><span>✓ €0 setup</span><span>✓ ISO 668</span>", "stat1d": "EUR pallets in a 20-ft, exact", "stat2d": "Loading in real time", "stat3d": "Packing algorithm for mixed loads", "stat4d": "setup, no install", "tool_ey": "The calculator", "tool_h": "A look inside the tool.", "tool_p": "Enter, check in 3D, share – that's the whole workflow. No login, nothing to install.", "tool_full": "Open fullscreen ↗", "tool_cap": "Runs best on desktop · on mobile use “Open fullscreen”", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "— paste your packing list", "sc1_h": "Dimensions in, done.", "sc1_p": "Enter items freely or paste your packing list straight from Excel – quantity, dimensions, weight. All in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "See it, don't guess it.", "sc2_p": "The best stow appears live in 3D – rotate, zoom, check. Pallet-exact for a single type, with a search algorithm for mixed loads.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share it so it lands.", "sc3_p": "Share the load as a link – the recipient sees it instantly in 3D, no login. Or as a PDF with a QR code that always leads back to the plan.", "sc_cta_open": "Open the tool – free ↗", "sc_cta_how": "How it works", "sc_cap": "Free · no account · right in your browser", "feat_ey": "Features", "feat_h": "Everything you need to load.<br><span style=\"color:var(--dim)\">And nothing that just gets in the way.</span>", "f1_h": "Real-time 3D view", "f1_p": "Rotate, zoom, check. The items appear one by one in the container – with soft shadows and a calm auto-rotate. You instantly see how your load really sits.", "f2_h": "Exact pallet logic", "f2_p": "Detects rotated loading patterns too – so <b style=\"color:var(--text)\">11 EUR pallets fit instead of 9</b> in a 20-ft. Exactly the values from the forwarder tables.", "f3_h": "Smart container recommendation", "f3_p": "Not everything fits? The tool suggests the cheapest combination – <b style=\"color:var(--text)\">1× 45' + 1× 20'</b> instead of 2× 45'.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: stackable, non-stackable, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's max payload is built in – you're warned before you set off overloaded.", "how_ey": "How it works", "how_h": "Your load plan in three steps", "s1_h": "Container & cargo", "s1_p": "Pick a container or enter your own dimensions. Then the items with quantity, dimensions and weight – all in centimetres.", "s2_h": "Live calculation", "s2_p": "ContainerLoad computes the best stow in the background – pallet-exact for a single type, with a search algorithm for mixed loads.", "s3_h": "Result & plan", "s3_p": "You see usage, layers and weight – plus a clear recommendation if not everything fits. Along with the 3D plan to rotate.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "cta_h": "Plan your next load – now.", "cta_p": "In 30 seconds you know whether it fits and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Resources", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Preview", "fl_ratgeber": "Guides", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No typing, no reformatting.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
+  var EN={"nav_features": "Features", "nav_how": "How it works", "nav_ratgeber": "Guides", "nav_open": "Open tool", "rg_ey": "Guides", "rg_h": "Everything about your load", "rg_p": "Straight answers from practice – each links right into the 3D calculator.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked – more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "About 25–26 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example & live tool.", "rg_all": "See all guides →","hero_badge": "<span class=\"live-dot\"></span> Pallet-exact · 3D view", "hero_h1": "Every load.<br><span style=\"color:var(--dim)\">In the right container.</span>", "hero_sub": "3D loading, pallet-exact calculation and automatic container recommendation – in seconds, right in your browser. No Excel, no guessing.", "hero_cta1": "Open the tool – free", "hero_cta2": "Take a look <span style=\"color:var(--faint)\">↓</span>", "hero_trust": "<span>No account</span><span>Free</span><span>ISO 668 dimensions</span>", "stat1d": "EUR pallets in a 20-ft, exact", "stat2d": "Loading in real time", "stat3d": "Packing algorithm for mixed loads", "stat4d": "setup, no install", "tool_ey": "The calculator", "tool_h": "A look inside the tool.", "tool_p": "Enter, check in 3D, share – that's the whole workflow. No login, nothing to install.", "tool_full": "Open fullscreen ↗", "tool_cap": "Runs best on desktop · on mobile use “Open fullscreen”", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "— paste your packing list", "sc1_h": "Dimensions in, done.", "sc1_p": "Enter items freely or paste your packing list straight from Excel – quantity, dimensions, weight. All in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "See it, don't guess it.", "sc2_p": "The best stow appears live in 3D – rotate, zoom, check. Pallet-exact for a single type, with a search algorithm for mixed loads.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share it so it lands.", "sc3_p": "Share the load as a link – the recipient sees it instantly in 3D, no login. Or as a PDF with a QR code that always leads back to the plan.", "sc_cta_open": "Open the tool – free ↗", "sc_cta_how": "How it works", "sc_cap": "Free · no account · right in your browser", "feat_ey": "Features", "feat_h": "Everything you need to load.<br><span style=\"color:var(--dim)\">And nothing that just gets in the way.</span>", "f1_h": "Real-time 3D view", "f1_p": "Rotate, zoom, check. The items appear one by one in the container – with soft shadows and a calm auto-rotate. You instantly see how your load really sits.", "f2_h": "Exact pallet logic", "f2_p": "Detects rotated loading patterns too – so <b style=\"color:var(--text)\">11 EUR pallets fit instead of 9</b> in a 20-ft. Exactly the values from the forwarder tables.", "f3_h": "Smart container recommendation", "f3_p": "Not everything fits? The tool suggests the cheapest combination – <b style=\"color:var(--text)\">1× 45' + 1× 20'</b> instead of 2× 45'.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: stackable, non-stackable, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's max payload is built in – you're warned before you set off overloaded.", "how_ey": "How it works", "how_h": "Your load plan in three steps", "s1_h": "Container & cargo", "s1_p": "Pick a container or enter your own dimensions. Then the items with quantity, dimensions and weight – all in centimetres.", "s2_h": "Live calculation", "s2_p": "ContainerLoad computes the best stow in the background – pallet-exact for a single type, with a search algorithm for mixed loads.", "s3_h": "Result & plan", "s3_p": "You see usage, layers and weight – plus a clear recommendation if not everything fits. Along with the 3D plan to rotate.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "cta_h": "Plan your next load – now.", "cta_p": "In 30 seconds you know whether it fits and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Resources", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Preview", "fl_ratgeber": "Guides", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No typing, no reformatting.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
   var els=[].slice.call(document.querySelectorAll('[data-i18n]'));
   var DE={};
   els.forEach(function(el){var k=el.getAttribute('data-i18n'); if(DE[k]===undefined) DE[k]=el.innerHTML;});
@@ -584,7 +625,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       if(!t.trim())return;
       var enc=encodeURIComponent(t);
       // URL-Laengen-Guard: ehrlicher Hinweis statt stillem Abschneiden.
-      if(enc.length>6000){ if(impHint){ impHint.textContent = document.documentElement.lang==='en' ? EN.imp_toolong : 'Liste zu lang — bitte direkt im Tool über „Excel / Text“ einfügen.'; impHint.style.color='var(--warn, #ffb454)'; } return; }
+      if(enc.length>6000){ if(impHint){ impHint.textContent = document.documentElement.lang==='en' ? EN.imp_toolong : 'Liste zu lang — bitte direkt im Tool über „Excel / Text“ einfügen.'; impHint.style.color='var(--warn, #DDA24C)'; } return; }
       window.location.href='/app?q='+enc+(document.documentElement.lang==='en'?'&lang=en':'');
     });
   }
@@ -614,22 +655,22 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // ---------- i18n strings (folgt document.documentElement.lang) ----------
   function lang(){ return (document.documentElement.lang==='en')?'en':'de'; }
   var STA={
-    intro:{ic:'…',col:'#2f9bff',tl:'load',fitCol:'#ffb454',
+    intro:{ic:'…',col:'#2E8FFF',tl:'load',fitCol:'#DDA24C',
       txt:{de:'Ladung wird vorbereitet…',en:'Preparing cargo…'},
       meta:{de:'20′ GP · live',en:'20′ GP · live'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'prüfe…',en:'checking…'}},
-    pack:{ic:'▣',col:'#2f9bff',tl:'load',fitCol:'#2f9bff',
+    pack:{ic:'▣',col:'#2E8FFF',tl:'load',fitCol:'#2E8FFF',
       txt:{de:'Packe in den 20′ GP…',en:'Loading the 20′ GP…'},
       meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'lädt…',en:'loading…'}},
-    over:{ic:'✕',col:'#ff6b78',tl:'conflict',fitCol:'#ff6b78',
+    over:{ic:'✕',col:'#E4636F',tl:'conflict',fitCol:'#E4636F',
       txt:{de:'{O} Packstücke passen nicht',en:"{O} items don't fit"},
       meta:{de:'20′ GP · zu klein',en:'20′ GP · too small'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'✕ {O} außerhalb',en:'✕ {O} outside'}},
-    solve:{ic:'⟳',col:'#38e0c8',tl:'solve',fitCol:'#38e0c8',
+    solve:{ic:'⟳',col:'#2E8FFF',tl:'solve',fitCol:'#2E8FFF',
       txt:{de:'Passender Container wird gesucht',en:'Finding the right container'},
       meta:{de:'rechnet{dots}',en:'calculating{dots}'}, type:{de:'rechnet…',en:'calculating…'}, fit:{de:'⟳ vermesse',en:'⟳ measuring'}},
-    repack:{ic:'→',col:'#38e0c8',tl:'done',fitCol:'#38e0c8',
+    repack:{ic:'→',col:'#2E8FFF',tl:'done',fitCol:'#2E8FFF',
       txt:{de:'Container wird zum 40′ GP',en:'Container grows to 40′ GP'},
       meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'passt rein…',en:'fitting…'}},
-    done:{ic:'✓',col:'#37d39f',tl:'done',fitCol:'#37d39f',
+    done:{ic:'✓',col:'#35BE87',tl:'done',fitCol:'#35BE87',
       txt:{de:'Alles verstaut',en:'All stowed'},
       meta:{de:'1× 40′ GP · gelöst',en:'1× 40′ GP · solved'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'✓ passt',en:'✓ fits'}}
   };
@@ -644,8 +685,8 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function setTimeline(active){
     Object.keys(tlSteps).forEach(function(k){
       var on=(k===active),st=tlSteps[k];st.classList.toggle('on',on);
-      var col= active==='conflict'&&k==='conflict'?'#ff6b78':active==='solve'&&k==='solve'?'#38e0c8':active==='done'&&k==='done'?'#37d39f':on?'#2f9bff':'#2a3646';
-      var sd=st.querySelector('.clh-sd'); if(sd){sd.style.background=col; sd.style.boxShadow=on?('0 0 10px '+col):'none';}
+      var col= active==='conflict'&&k==='conflict'?'#E4636F':active==='solve'&&k==='solve'?'#2E8FFF':active==='done'&&k==='done'?'#35BE87':on?'#2E8FFF':'#303A46';
+      var sd=st.querySelector('.clh-sd'); if(sd){sd.style.background=col;}
     });
   }
   function applyStatus(key,n,t){
@@ -657,8 +698,8 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+s.fitCol+'"></span> '+fill(s.fit[L]);
     if(key!==lastKey){
       if(statusTxt) statusTxt.style.color=s.col;
-      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=s.col; statusIc.style.color='#04101f';}
-      if(statusBox){statusBox.style.borderColor=s.col; statusBox.style.boxShadow='0 0 26px -10px '+s.col;}
+      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=s.col; statusIc.style.color='#08111C';}
+      if(statusBox){statusBox.style.borderColor=s.col;}
       if(pillType){var d=pillType.querySelector('.clh-dot'); if(d)d.style.background=s.col;}
       setTimeline(s.tl); lastKey=key;
     }
@@ -687,7 +728,9 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // ====================== SCENE ======================
   var renderer,scene,camera,pivot,CONT,shadow,sweep,scanGroup,bracketMat,bboxMat,clock;
   var boxes=[],repackRank=[],lbMin,lbMax,bc,bs;
-  var C_TEAL=0x38e0c8,C_GOOD=0x37d39f,C_WARN=0xffb454,C_BLUEEDGE=0x4fa8ff;
+  // Farbfuehrung der Animation: Akzent = arbeitet, Gelb = Konflikt, Gruen = geloest.
+  // C_TEAL heisst historisch so, traegt jetzt aber den einen Akzent (kein zweiter Markenton).
+  var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF;
   var CAM_BASE={x:0.0,y:1.4,z:6.0,lx:0.0}, CAM_WIDE={x:1.0,y:1.7,z:8.7,lx:1.25};
   var XL=-1.25,L0=2.5,W=1.0,H=1.16,BL=0.62,BH=0.52,BW=0.46,DROP=5.4;
   var _ca,_cb,_tmp;
@@ -713,7 +756,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var img=g.createImageData(s,s);
     for(var y=0;y<s;y++){for(var x=0;x<s;x++){var u=Math.abs(x/(s-1)-0.5)*2,v=Math.abs(y/(s-1)-0.5)*2;
       var au=Math.max(0,1-u*u),av=Math.max(0,1-Math.pow(v,0.6)),a=Math.pow(av,2.2)*au,i=(y*s+x)*4;
-      img.data[i]=150;img.data[i+1]=245;img.data[i+2]=225;img.data[i+3]=Math.round(a*255);}}
+      img.data[i]=120;img.data[i+1]=180;img.data[i+2]=255;img.data[i+3]=Math.round(a*255);}}
     g.putImageData(img,0,0);return new THREE.CanvasTexture(c);}
 
   function packPositions(cx,lengthU,n){
@@ -728,7 +771,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2a3a4f,0x16212d); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
     pivot.add(grp);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
       setLength:function(L){grp.scale.x=L/L0; grp.position.x=XL+L/2;},
@@ -746,7 +789,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     pivot=new THREE.Object3D(); scene.add(pivot);
     scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
     var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
-    var fillL=new THREE.PointLight(0x2f9bff,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
+    var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
 
     CONT=makeContainer(); CONT.setLength(L0);
     shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
@@ -757,7 +800,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var final40=packPositions(1.25,5.0,14);
     for(var i=0;i<TOTAL;i++){
       var geo=new THREE.BoxGeometry(BL,BH,BW);
-      var mat=new THREE.MeshStandardMaterial({color:0x1a3e5f,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+      var mat=new THREE.MeshStandardMaterial({color:0x1B2E45,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
       var m=new THREE.Mesh(geo,mat);
       var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
       m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em)); pivot.add(m);
@@ -809,20 +852,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     if(name==='outro')fade=1-smooth(p);
 
     if(name==='intro'){
-      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1a3e5f);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);});
       CONT.setColor(C_BLUEEDGE); applyStatus('intro',0,t);
     } else if(name==='pack'){
       var stag=0.17,dur=1.05,tt=p*PH[1].d;
       boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
         b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
         if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
-        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0x55401d:0x1a3e5f);});
+        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0x453620:0x1B2E45);});
       CONT.setColor(C_BLUEEDGE); applyStatus('pack',placed,t);
     } else if(name==='overflow'){
       var pulse=0.5+0.5*Math.sin(t*5.0);
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);
-        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x55401d);b.mesh.scale.setScalar(1+pulse*0.04);}
-        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1a3e5f);b.mesh.scale.setScalar(1);}});
+        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);b.mesh.scale.setScalar(1+pulse*0.04);}
+        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);}});
       CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus('over',placed,t);
     } else if(name==='solve'){
       dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
@@ -830,7 +873,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       scanGroup.visible=true; scanGroup.scale.setScalar(lerp(1.16,1.0,smooth(clamp01(p/0.4))));
       var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0); bracketMat.opacity=inn*pl; bboxMat.opacity=inn*0.20;
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
-        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x55401d);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1a3e5f);}});
+        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);}});
       CONT.setColor(C_WARN); applyStatus('solve',0,t);
     } else if(name==='grow'||name==='repack'){
       var growP=name==='grow'?smooth(p):1;
@@ -842,18 +885,18 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       boxes.forEach(function(b,i){var rank=repackRank[i],lp=clamp01((winT-rank*stag2)/dur2);
         lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
         b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
-        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1d4a48);placed++;}
-        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0x55401d:0x1a3e5f);}});
+        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);placed++;}
+        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0x453620:0x1B2E45);}});
       applyStatus('repack',placed,t);
     } else if(name==='success'){
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx;
       var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
       CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1d4a48);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);b.mesh.scale.setScalar(1);});
       placed=TOTAL; applyStatus('done',placed,t);
     } else {
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1d4a48);}); placed=TOTAL;
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);}); placed=TOTAL;
     }
 
     CONT.setLength(L); placeShadow(L);
@@ -937,7 +980,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
   var wire='rgba(120,170,230,.55)', wireDim='rgba(120,170,230,.20)';
   // Boden + Gitter
-  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(47,155,255,.045)',wireDim,1);
+  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(46,143,255,.05)',wireDim,1);
   for(var g=1;g<5;g++){ line([L*g/5,0,0],[L*g/5,W,0],wireDim,0.8); }
   line([0,W/2,0],[L,W/2,0],wireDim,0.8);
   // hintere Pfosten + hintere Deckenschienen (faint, hinter Ladung)
@@ -951,8 +994,10 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var bl=1.30, bw=1.05, bh=0.98, gap=0.06, vgap=0.03, nx=4, ny=2;
   var usedL=nx*bl+(nx-1)*gap, usedW=ny*bw+(ny-1)*gap;
   var sx=(L-usedL)/2, sy=(W-usedW)/2;
-  var blue={top:'#5aacff',left:'#2f8fe6',right:'#2274c4'};
-  var teal={top:'#63e6d4',left:'#33cdb6',right:'#209f8e'};
+  // Zwei Lagen, eine Farbfamilie: die obere Lage heller. Der Unterschied zeigt
+  // die Stapelung an — er ist Information, nicht Dekoration.
+  var blue={top:'#2C6296',left:'#24507B',right:'#1C3F62'};   // untere Lage
+  var teal={top:'#4E9BE8',left:'#3C7EC0',right:'#2F6499'};   // obere Lage
   var edge='rgba(4,16,31,.5)';
   var boxes=[];
   for(var lay=0;lay<2;lay++)
