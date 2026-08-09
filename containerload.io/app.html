@@ -156,7 +156,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var C = {
     text: "#E9F0F7",
     dim: "#9DB0C2",
-    faint: "#5C7085",
+    // faint war #5C7085 und lag je nach Untergrund zwischen 3,19:1 und 3,93:1 — unter der
+    // Lesbarkeitsgrenze von 4,5:1 (WCAG AA), am schlimmsten auf raised/field. #7689A0 haelt
+    // die Grenze auf ALLEN Flaechenstufen (4,54:1 im schlechtesten Fall) und bleibt trotzdem
+    // deutlich hinter dim zurueck. Beim Aendern bitte gegen bg/chrome/surface/raised pruefen.
+    faint: "#7689A0",
     accent: "#2E8FFF",
     // teal behaelt seinen Namen (37 Fundstellen), traegt aber denselben Akzent wie oben.
     // Ein Produkt, ein Markenton — genau wie auf der Landingpage. Farbverlaeufe von
@@ -833,9 +837,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   function computeLongCog(placed, weightOf, contLenCm) {
     const L = Math.max(1, +contLenCm || 1);
     let W = 0, mom = 0, front = 0, rear = 0; // front = vordere Haelfte (x < L/2)
+    let placedCount = 0, withWeightCount = 0;  // Zaehlung: insgesamt vs. mit Gewicht
     for (const p of placed) {
+      placedCount++;
       const w = Math.max(0, +weightOf(p.ti) || 0);
       if (w === 0) continue;
+      withWeightCount++;
       const cx = (+p.x || 0) + (+p.dx || 0) / 2; // Laengs-Mitte der Colli (cm)
       W += w;
       mom += w * cx;
@@ -851,7 +858,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (devPct < -5) balance = "front";
     else if (devPct > 5) balance = "rear";
     else balance = "balanced";
-    return { totalKg: W, cogCm, cogPct, frontPct, rearPct, devPct, balance };
+    return { totalKg: W, cogCm, cogPct, frontPct, rearPct, devPct, balance, placedCount, withWeightCount };
   }
   // Platzierung eines Uebermass-Stuecks auf dem Deck (cm, Min-Ecke). j/m = Index/Anzahl Stuecke.
   // "placed" sind die bereits auf dem Deck stehenden Stuecke (normale Ladung + zuvor platziertes
@@ -1249,6 +1256,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
       cogBalanced: "ausbalanciert", cogFrontHeavy: "Tendenz kopflastig", cogRearHeavy: "Tendenz hecklastig",
+      cogWeightsMissing: (w, t) => `Nur ${w} von ${t} Packst\xFCcken haben ein Gewicht`,
+      cogWeightsMissingNote: "der Schwerpunkt gilt nur f\xFCr diese",
       cogDisclaimer: "Richtwert aus Geometrie & eingegebenen Gewichten. Keine Achslast-/Schwerpunkt-Pr\xFCfung, keine Ladungssicherung. Vor Transport eigenverantwortlich pr\xFCfen.",
       footL: "ISO 668 \xB7 EUR / ISO-Paletten \xB7 cm \xB7 kg",
       footR: "geometrische Sch\xE4tzung \xB7 keine Achslast-Garantie",
@@ -1406,6 +1415,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
       cogBalanced: "balanced", cogFrontHeavy: "front-heavy", cogRearHeavy: "rear-heavy",
+      cogWeightsMissing: (w, t) => `Only ${w} of ${t} pieces have a weight`,
+      cogWeightsMissingNote: "the centre of gravity covers those only",
       cogDisclaimer: "Estimate based on geometry & entered weights. No axle-load / center-of-gravity check, no load securing. Verify independently before transport.",
       footL: "ISO 668 \xB7 EUR / ISO pallets \xB7 cm \xB7 kg",
       footR: "geometric estimate \xB7 no axle-load guarantee",
@@ -3863,6 +3874,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, T.cogTitle),
               /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: MONO, fontSize: 8.5, fontWeight: 600, padding: "2px 8px", background: hexA(C.warn, 0.12), color: C.warn, border: `1px solid ${hexA(C.warn, 0.3)}` } }, T.cogNoGuarantee)
             ),
+            cog.placedCount > cog.withWeightCount && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, lineHeight: 1.45, color: C.dim } }, T.cogWeightsMissing(cog.withWeightCount, cog.placedCount), " — ", T.cogWeightsMissingNote),
             /* @__PURE__ */ React.createElement("div", null,
               /* @__PURE__ */ React.createElement("div", { className: "flex justify-between", style: { fontFamily: MONO, fontSize: 9, color: C.faint, marginBottom: 5 } },
                 /* @__PURE__ */ React.createElement("span", null, T.cogFront),
