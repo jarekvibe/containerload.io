@@ -669,19 +669,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
             const px = S.x, py = S.y, pz = S.z;
             if (py > 1e-4 && supportRatio(px, pz, dx, dz, py, placed) < SUPPORT_MIN) continue; // nicht genug Auflage -> nicht schweben lassen
-            if (py > 1e-4 && isFinite(u.stackMax) && py > (u.stackMax - 1) * u.h + 1e-3) continue; // Stapel-Obergrenze: eigenen Turm nicht ueber N Lagen wachsen lassen (dy == u.h, da emsOris nur giert)
+            // Stapel-Obergrenze: zaehlt die Lagen im EIGENEN TURM -- Stuecke, die unmittelbar
+            // untereinanderstehen UND dieselbe Bauhoehe haben wie das Stueck selbst (dieselbe
+            // Sorte hat immer dieselbe Hoehe, daher deckt das den Normalfall "eigene Sorte" ab;
+            // steht darunter eine andersartige, andershohe Kiste, beginnt der Turm bei dieser
+            // Lage neu). Nicht die absolute Hoehe im Container -- sonst blockiert eine hohe
+            // fremde Kiste am Boden faelschlich schon die erste eigene Lage weiter oben
+            // (siehe test/pack-stackmax-mixed.test.mjs). Gleich hohe fremde Sorten zaehlen
+            // dagegen weiter mit (test/pack-stackmax.test.mjs, Misch-Ladung-Fall).
+            let tower = 1;
+            if (py > 1e-4) {
+              for (const b of placed) {
+                if (Math.abs(b.dy - dy) > 1e-3 || Math.abs(b.y + b.dy - py) > 1e-3) continue;
+                const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
+                if (ox <= 1e-6) continue;
+                const oz = Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z);
+                if (oz <= 1e-6) continue;
+                tower = Math.max(tower, (b.tower || 1) + 1);
+              }
+              if (isFinite(u.stackMax) && tower > u.stackMax) continue;
+            }
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
             else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
             else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
-            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score };
+            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, tower };
           }
         }
       }
       if (!best) continue;
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti });
+      placed.push({ ...B, ti: u.ti, tower: best.tower });
       weight += u.weight;
       const next = [];
       for (const S of ems) {
@@ -835,15 +854,52 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return { totalKg: W, cogCm, cogPct, frontPct, rearPct, devPct, balance };
   }
   // Platzierung eines Uebermass-Stuecks auf dem Deck (cm, Min-Ecke). j/m = Index/Anzahl Stuecke.
-  function placeOversize(dims, Ct, panels, forceCentered, j, m) {
+  // "placed" sind die bereits auf dem Deck stehenden Stuecke (normale Ladung + zuvor platziertes
+  // Uebermass) -- Uebermass darf ueber den Container hinausragen (das ist sein Zweck), aber es
+  // darf nicht DURCH andere Ladung hindurchgehen. Zuerst wird die "schoene" Standardposition
+  // versucht (mittig ueber die Laenge verteilt, seitlich zentriert oder an den offenen Rand
+  // geschoben); ueberschneidet die sich mit bereits stehender Ladung, wird ein Ausweich-Raster
+  // aus Kanten der bereits platzierten Stuecke sowie den Containerraendern durchprobiert. Findet
+  // sich keine kollisionsfreie Stelle, gibt es null zurueck -- das Stueck bleibt dann unverladen,
+  // statt sich mit anderer Ladung zu durchdringen.
+  // Durch GESCHLOSSENE Huellflaechen darf nichts ragen -- das ist Stahl, kein Freiraum.
+  // Ueber OFFENE Flaechen darf es das sehr wohl, genau dafuer gibt es Open Top und Flat Rack.
+  function fitsPanels(c, CL, CW, panels) {
+    const tol = 1e-6;
+    if (panels.ends && (c.x < -tol || c.x + c.dx > CL + tol)) return false;
+    if (panels.sides && (c.z < -tol || c.z + c.dz > CW + tol)) return false;
+    return true;
+  }
+  function placeOversize(dims, Ct, panels, forceCentered, j, m, placed) {
     const CL = num(Ct.l), CW = num(Ct.w);
-    const dx = num(dims.l), dy = num(dims.h), dz = num(dims.w);
+    const l = num(dims.l), w = num(dims.w), dy = num(dims.h);
     const xc = CL * (j + 0.5) / Math.max(1, m);
-    let x = xc - dx / 2;
-    let z;
-    if (!panels.sides && dz > CW && !forceCentered) z = CW - dz;
-    else z = (CW - dz) / 2;
-    return { x, y: 0, z, dx, dy, dz };
+    // Zwei Ausrichtungen, geliefert zuerst. Der Grund fuer die zweite: Die Einstufung in
+    // packKind fragt "Math.min(l, w) > CW" -- sie haelt ein Stueck also schon fuer
+    // breitenkonform, sobald es QUER zwischen die Waende passt, und setzt damit stillschweigend
+    // voraus, dass gedreht wird. Ohne diese Drehung stand ein 300 cm breites Stueck im Open Top
+    // 32,5 cm links und rechts durch massive Seitenwaende (test/oversize-breite.test.mjs).
+    // Die gelieferte Ausrichtung bleibt vorne, damit sich bei OFFENEN Seiten nichts aendert:
+    // dort ist der Ueberstand gewollt und die OOG-Vermessung rechnet mit ihm.
+    const oris = l === w || dims.rot === false ? [[l, w]] : [[l, w], [w, l]];
+    for (const [dx, dz] of oris) {
+      const zCentered = (CW - dz) / 2;
+      const zEdge = !panels.sides && dz > CW && !forceCentered ? CW - dz : zCentered;
+      const xCandidates = [xc - dx / 2, 0, CL - dx];
+      const zCandidates = [zEdge, zCentered, 0, CW - dz];
+      for (const b of placed || []) {
+        xCandidates.push(b.x + b.dx, b.x - dx);
+        zCandidates.push(b.z + b.dz, b.z - dz);
+      }
+      for (const x of xCandidates) {
+        for (const z of zCandidates) {
+          const cand = { x, y: 0, z, dx, dy, dz };
+          if (!fitsPanels(cand, CL, CW, panels)) continue;
+          if (!(placed || []).some((b) => boxesOverlap(cand, b))) return cand;
+        }
+      }
+    }
+    return null;
   }
   // OOG-Vermessung (cm) gegen das gauge-Huellmass, nur in OFFENEN Richtungen. md = groesste
   // Stueckmasse je Achse (der groesste Ueberstand je Achse bestimmt den Buchungswert).
@@ -887,7 +943,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (fitsDeck) return;
       const overL = l > CL && (w > CW || l > CW), overW = Math.min(l, w) > CW, overH = h > CH;
       const placeable = (!overL || !panels.ends) && (!overW || !panels.sides) && (!overH || !panels.roof);
-      if (placeable) { overTi.add(ti); for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h }); }
+      // rot wandert mit: nicht drehbare Ware darf auch beim Uebermass nicht quer gelegt werden.
+      if (placeable) { overTi.add(ti); for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot: t.rotatable !== false }); }
     });
     const masked = cargo.map((t, ti) => overTi.has(ti) ? { ...t, qty: 0 } : t);
     const base = packCargo(Ct, masked, { ...opts, noHint: true });
@@ -899,7 +956,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     overUnits.forEach((u, j) => {
       const uw = num(cargo[u.ti].weight);
       if (weight + uw > payCap + 1e-6) return; // Nutzlast-Grenze: Uebermass nicht ueberladen
-      const box = placeOversize(u, Ct, panels, forceCentered, j, overUnits.length);
+      const box = placeOversize(u, Ct, panels, forceCentered, j, overUnits.length, placed);
+      if (!box) return; // keine kollisionsfreie Stelle gefunden -> Stueck bleibt unverladen (zaehlt bei perType/boxes als offen, wie beim normalen Packer)
       placed.push({ ti: u.ti, x: box.x, y: box.y, z: box.z, dx: box.dx, dy: box.dy, dz: box.dz });
       perType2[u.ti].loaded++;
       weight += uw;
