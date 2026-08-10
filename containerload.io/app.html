@@ -3586,13 +3586,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const valF = `700 ${px(22)}px ${MONOF}`, labF = `500 ${px(10)}px ${MONOF}`, gap = px(26);
         let mutedCol = "#4A5C6E"; // Label-/Untertext-Ton; im Transparenz-Modus heller (Kontrast auf hellem BG)
         // Logo-Zeichnung: Custom Firmenlogo oder Marken-Logo (Verlaufsquadrat + Wuerfel) + Wortmarke
-        const drawLogo = (lx, ly, ls, customLogoImg) => {
+        const drawLogo = (lx, ly, ls, customLogoImg, boxW, boxH) => {
           if (customLogoImg) {
-            // Custom Logo: deutlich groessere Box als das kleine Marken-Icon (keine Wortmarke
-            // daneben noetig) und seitenverhaeltnistreu eingepasst ("contain"), statt verzerrt
-            // in ein Quadrat gequetscht zu werden – die meisten Firmenlogos sind nicht quadratisch.
+            // Custom Logo: eigene, grosszuegig bemessene Box (deutlich groesser als das kleine
+            // Marken-Icon, da keine Wortmarke danebensteht) und seitenverhaeltnistreu eingepasst
+            // ("contain"), statt verzerrt in ein Quadrat gequetscht zu werden.
             const cyMid = ly + ls / 2;
-            const boxW = px(170), boxH = px(70);
             const iw = customLogoImg.naturalWidth || customLogoImg.width || 1;
             const ih = customLogoImg.naturalHeight || customLogoImg.height || 1;
             const scale = Math.min(boxW / iw, boxH / ih);
@@ -3655,7 +3654,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
         if (cap.transparent) {
           // Transparent: freigestellter Render + dezenter Glass-Balken (bleibt auf hell UND dunkel lesbar).
-          const FR = px(22), gapR = px(14), barH = px(96);
+          const FR = px(22), gapR = px(14), barH = customLogoImg ? px(150) : px(96);
           cv.width = cap.w + FR * 2;
           cv.height = FR + cap.h + gapR + barH + FR;
           g.clearRect(0, 0, cv.width, cv.height);
@@ -3667,13 +3666,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           accentLine(barX + px(16), barY, barW - px(32));
           mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
-          drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg);
+          drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(barX + barW - px(20), midY);
           g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#BCC9D6"; g.textAlign = "center"; g.textBaseline = "alphabetic";
           g.fillText(String(T.shotFoot).toUpperCase(), barX + barW / 2, barY + barH - px(11));
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
-          const FR = px(26), footH = px(96), discH = px(30), cardR = px(14);
+          const FR = px(26), footH = customLogoImg ? px(150) : px(96), discH = px(30), cardR = px(14);
           cv.width = cap.w + FR * 2;
           cv.height = FR + cap.h + footH + discH;
           g.fillStyle = "#0A0F16"; g.fillRect(0, 0, cv.width, cv.height);
@@ -3682,7 +3681,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           drawChips(FR, FR);
           const fy = FR + cap.h, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), cap.w);
-          drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg);
+          drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(cv.width - FR - px(24), fcy);
           const dY = FR + cap.h + footH; g.strokeStyle = "#131C26"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = "#3F5061"; g.textAlign = "center"; g.textBaseline = "middle";
