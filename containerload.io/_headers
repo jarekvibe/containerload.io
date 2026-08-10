@@ -18,11 +18,15 @@
   #   fonts.gstatic.com    -> die Schriftdateien selbst
   #   gc.zgo.at            -> Besucherzaehler GoatCounter (das Skript)
   #   *.goatcounter.com    -> Besucherzaehler (wohin gezaehlt wird)
+  #   app.netlify.com      -> NUR die Vorschau-Leiste, die Netlify in Deploy-Previews
+  #                           einblendet. Auf der Live-Seite gibt es sie nicht. Ohne
+  #                           diesen Eintrag meldet jede Vorschau einen CSP-Fehler,
+  #                           und echte Fehler gehen daneben unter.
   #
   # 'unsafe-inline' ist noetig, weil das Projekt bewusst ohne Build-Schritt
   # arbeitet: der gesamte Code steht direkt in den HTML-Dateien.
   # data: und blob: bei img-src brauchen der PNG-Export und die QR-Codes.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://containerload.goatcounter.com; connect-src 'self' https://containerload.goatcounter.com; worker-src 'self' blob:; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://containerload.goatcounter.com; connect-src 'self' https://containerload.goatcounter.com; worker-src 'self' blob:; frame-src 'self' https://app.netlify.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
 
   # Fremde Seiten duerfen ContainerLoad nicht in einen Rahmen einbetten.
   # SAMEORIGIN statt DENY, weil die Startseite den Rechner selbst per iframe zeigt.
