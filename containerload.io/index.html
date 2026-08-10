@@ -109,8 +109,18 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .glass-nav.scrolled{background:var(--bg);border-color:var(--line2)}
 .navlink{color:var(--dim);font-size:14px;font-weight:500;transition:color .14s;text-decoration:none}
 .navlink:hover{color:var(--text)}
-.langbtn{color:var(--faint);background:transparent;cursor:pointer;transition:color .14s,background-color .14s;line-height:1;text-decoration:none}
+/* Sprachumschalter — dieselbe Form wie im Rechner: ein weiches Segmentfeld,
+   keine Flaggen. Eine Flagge bezeichnet ein Land, keine Sprache; der Partner in
+   Rotterdam oder Singapur liest Englisch, ist aber weder Brite noch Amerikaner.
+   Ohne die beiden bunten Fahnen ist die Navigationsleiste ausserdem wieder
+   einfarbig, und "Tool oeffnen" bleibt das einzige gefuellte Element darin. */
+.langswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
+.langbtn{padding:4px 9px;border-radius:5px;font-size:11px;font-weight:600;line-height:1;
+  color:var(--faint);background:transparent;cursor:pointer;text-decoration:none;
+  transition:color .15s,background-color .15s}
 .langbtn:hover{text-decoration:none}
+/* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn. */
+.langswitch-lg .langbtn{padding:7px 14px;font-size:13px;border-radius:6px}
 /* Hinweis fuer englischsprachige Besucher. Bewusst ein Angebot statt automatischem
    Umschalten: dieselbe Adresse muss immer dieselbe Sprache zeigen, sonst raet Google
    sich die Sprache der Startseite zusammen. Unten angesetzt, weil die Navigation oben
@@ -124,7 +134,7 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .langbar a:hover{text-decoration:underline}
 .langbar button{color:var(--faint);background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
 .langbar button:hover{color:var(--text)}
-.langbtn.on{color:var(--text);background:var(--accent-soft)}
+.langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:700;cursor:default}
 .langbtn:hover{color:var(--text)}
 
 /* Logo-Balken fahren hoch wie Ladung in den Container — die einzige Animation,
@@ -257,12 +267,12 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a href="#faq" class="navlink px-3 py-1.5 rounded-md">FAQ</a>
     </div>
     <div class="flex items-center gap-2">
-      <div class="hidden sm:flex items-center rounded-md overflow-hidden text-[12px] font-medium" style="border:1px solid var(--line)">
-        <!-- Echte Links, keine Knoepfe: nur so kann eine Suchmaschine die englische
-             Fassung ueberhaupt finden. Der Klick wird abgefangen und schaltet ohne
-             Neuladen um, die Adresse zieht per replaceState mit. -->
-        <a data-lang="de" href="/" hreflang="de" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold"><svg width="15" height="10" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</a>
-        <a data-lang="en" href="/?lang=en" hreflang="en" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold" style="border-left:1px solid var(--line)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</a>
+      <!-- Echte Links, keine Knoepfe: nur so kann eine Suchmaschine die englische
+           Fassung ueberhaupt finden. Der Klick wird abgefangen und schaltet ohne
+           Neuladen um, die Adresse zieht per replaceState mit. -->
+      <div class="hidden sm:flex langswitch">
+        <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
+        <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
       </div>
       <a data-i18n="nav_open" href="/app" class="btn btn-primary text-[13px] px-4 py-2">Tool öffnen</a>
       <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
@@ -278,8 +288,10 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink py-2">Container-Wissen</a>
       <a href="#faq" class="navlink py-2">FAQ</a>
       <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
-        <a data-lang="de" href="/" hreflang="de" class="langbtn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mono text-[13px] font-semibold" style="border:1px solid var(--line2)"><svg width="15" height="10" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</a>
-        <a data-lang="en" href="/?lang=en" hreflang="en" class="langbtn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mono text-[13px] font-semibold" style="border:1px solid var(--line2)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukm"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukm)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</a>
+        <div class="langswitch langswitch-lg">
+          <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
+          <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
+        </div>
       </div>
     </div>
   </div>
