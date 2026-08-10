@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ContainerLoad</title>
 <meta name="description" content="3D-Beladung, palettengenaue Berechnung und automatische Container-Empfehlung in Sekunden, direkt im Browser. Kostenlos, ohne Account." />
-<meta property="og:title" content="ContainerLoad — Beladung in Sekunden" />
+<meta property="og:title" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta property="og:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://containerload.io/" />
@@ -15,10 +15,18 @@
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="ContainerLoad — Beladung in Sekunden" />
+<meta name="twitter:title" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#0E1116" />
+<!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch,
+     /?lang=en ist englisch. Beide zeigen aufeinander, damit Suchmaschinen wissen,
+     dass es dieselbe Seite in zwei Sprachen ist und keine doppelten Inhalte.
+     canonical und og:url werden beim Umschalten mitgefuehrt (siehe setLang). -->
+<link rel="canonical" href="https://containerload.io/" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/?lang=en" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
@@ -101,8 +109,32 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .glass-nav.scrolled{background:var(--bg);border-color:var(--line2)}
 .navlink{color:var(--dim);font-size:14px;font-weight:500;transition:color .14s;text-decoration:none}
 .navlink:hover{color:var(--text)}
-.langbtn{color:var(--faint);background:transparent;cursor:pointer;transition:color .14s,background-color .14s;line-height:1}
-.langbtn.on{color:var(--text);background:var(--accent-soft)}
+/* Sprachumschalter — dieselbe Form wie im Rechner: ein weiches Segmentfeld,
+   keine Flaggen. Eine Flagge bezeichnet ein Land, keine Sprache; der Partner in
+   Rotterdam oder Singapur liest Englisch, ist aber weder Brite noch Amerikaner.
+   Ohne die beiden bunten Fahnen ist die Navigationsleiste ausserdem wieder
+   einfarbig, und "Tool oeffnen" bleibt das einzige gefuellte Element darin. */
+.langswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
+.langbtn{padding:4px 9px;border-radius:5px;font-size:11px;font-weight:600;line-height:1;
+  color:var(--faint);background:transparent;cursor:pointer;text-decoration:none;
+  transition:color .15s,background-color .15s}
+.langbtn:hover{text-decoration:none}
+/* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn. */
+.langswitch-lg .langbtn{padding:7px 14px;font-size:13px;border-radius:6px}
+/* Hinweis fuer englischsprachige Besucher. Bewusst ein Angebot statt automatischem
+   Umschalten: dieselbe Adresse muss immer dieselbe Sprache zeigen, sonst raet Google
+   sich die Sprache der Startseite zusammen. Unten angesetzt, weil die Navigation oben
+   fixiert ist. */
+.langbar{display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:60;
+  align-items:center;gap:12px;padding:10px 14px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--line2);box-shadow:0 8px 24px rgba(0,0,0,.45);
+  font-size:13.5px;color:var(--dim);max-width:calc(100vw - 24px)}
+.langbar.on{display:flex}
+.langbar a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.langbar a:hover{text-decoration:underline}
+.langbar button{color:var(--faint);background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
+.langbar button:hover{color:var(--text)}
+.langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:700;cursor:default}
 .langbtn:hover{color:var(--text)}
 
 /* Logo-Balken fahren hoch wie Ladung in den Container — die einzige Animation,
@@ -210,6 +242,14 @@ details[open] .faq-plus{transform:rotate(45deg)}
 </style>
 </head>
 <body>
+<!-- Sprachhinweis: wird nur eingeblendet, wenn der Browser nicht auf Deutsch steht
+     und der Besucher noch nie selbst umgeschaltet hat. Der Text ist fest englisch —
+     er richtet sich ja gerade an Leute, die kein Deutsch lesen. -->
+<div id="langbar" class="langbar" role="region" aria-label="Language">
+  <span>This page is available in English.</span>
+  <a href="/?lang=en" hreflang="en" data-lang="en">Switch to English →</a>
+  <button id="langbarX" type="button" aria-label="Dismiss">&times;</button>
+</div>
 <!-- NAV -->
 <div class="fixed top-3 inset-x-0 z-50 px-3">
   <nav id="nav" class="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-xl glass-nav pl-3.5 pr-2 py-2">
@@ -227,9 +267,12 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a href="#faq" class="navlink px-3 py-1.5 rounded-md">FAQ</a>
     </div>
     <div class="flex items-center gap-2">
-      <div class="hidden sm:flex items-center rounded-md overflow-hidden text-[12px] font-medium" style="border:1px solid var(--line)">
-        <button data-lang="de" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold"><svg width="15" height="10" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</button>
-        <button data-lang="en" class="langbtn flex items-center gap-1.5 px-2 py-1 font-semibold" style="border-left:1px solid var(--line)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukc"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukc)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+      <!-- Echte Links, keine Knoepfe: nur so kann eine Suchmaschine die englische
+           Fassung ueberhaupt finden. Der Klick wird abgefangen und schaltet ohne
+           Neuladen um, die Adresse zieht per replaceState mit. -->
+      <div class="hidden sm:flex langswitch">
+        <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
+        <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
       </div>
       <a data-i18n="nav_open" href="/app" class="btn btn-primary text-[13px] px-4 py-2">Tool öffnen</a>
       <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
@@ -245,8 +288,10 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink py-2">Container-Wissen</a>
       <a href="#faq" class="navlink py-2">FAQ</a>
       <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
-        <button data-lang="de" class="langbtn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mono text-[13px] font-semibold" style="border:1px solid var(--line2)"><svg width="15" height="10" viewBox="0 0 5 3" style="border-radius:1px;flex-shrink:0"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg>DE</button>
-        <button data-lang="en" class="langbtn flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg mono text-[13px] font-semibold" style="border:1px solid var(--line2)"><svg width="15" height="10" viewBox="0 0 60 30" style="border-radius:1px;flex-shrink:0"><clipPath id="ukm"><path d="M0 0v30h60V0z"/></clipPath><g clip-path="url(#ukm)"><path d="M0 0v30h60V0z" fill="#012169"/><path d="M0 0l60 30m0-30L0 30" stroke="#fff" stroke-width="6"/><path d="M30 0v30M0 15h60" stroke="#fff" stroke-width="10"/><path d="M30 0v30M0 15h60" stroke="#C8102E" stroke-width="6"/></g></svg>EN</button>
+        <div class="langswitch langswitch-lg">
+          <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
+          <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
+        </div>
       </div>
     </div>
   </div>
@@ -600,22 +645,84 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var DE={};
   els.forEach(function(el){var k=el.getAttribute('data-i18n'); if(DE[k]===undefined) DE[k]=el.innerHTML;});
   function appHref(lang){return '/app'+(lang==='en'?'?lang=en':'');}
+  function pageHref(lang){return lang==='en'?'/?lang=en':'/';}
+
+  // Kopfdaten je Sprache. Ohne die steht im Suchergebnis der englischen Seite ein
+  // deutscher Titel — der stille Fehler, der eine Uebersetzung wertlos macht.
+  // Die deutschen Werte werden aus dem Dokument gelesen, damit sie nur an EINER
+  // Stelle stehen (im <head>) und hier nicht doppelt gepflegt werden muessen.
+  var H={t:document.querySelector('title'),d:document.querySelector('meta[name="description"]'),
+         ot:document.querySelector('meta[property="og:title"]'),od:document.querySelector('meta[property="og:description"]'),
+         ou:document.querySelector('meta[property="og:url"]'),tt:document.querySelector('meta[name="twitter:title"]'),
+         td:document.querySelector('meta[name="twitter:description"]'),c:document.querySelector('link[rel="canonical"]')};
+  var META={de:{t:H.t?H.t.textContent:'',d:H.d?H.d.content:'',ot:H.ot?H.ot.content:'',od:H.od?H.od.content:''},
+            en:{t:'ContainerLoad — 3D container load calculator',
+                d:'3D loading, pallet-exact calculation and automatic container recommendation — right in your browser. Free, no sign-up.',
+                ot:'ContainerLoad — Every load, in the right container.',
+                od:'Will your load fit? Which container? ContainerLoad works it out live in 3D.'}};
+
   function setLang(lang){
     lang=(lang==='en')?'en':'de';
     els.forEach(function(el){var k=el.getAttribute('data-i18n');var v=(lang==='en')?(EN[k]!==undefined?EN[k]:DE[k]):DE[k]; if(v!==undefined) el.innerHTML=v;});
     document.documentElement.lang=lang;
+    var m=META[lang], abs='https://containerload.io'+pageHref(lang);
+    if(H.t) H.t.textContent=m.t;
+    if(H.d) H.d.content=m.d;
+    if(H.ot) H.ot.content=m.ot;
+    if(H.od) H.od.content=m.od;
+    if(H.tt) H.tt.content=m.ot;
+    if(H.td) H.td.content=m.od;
+    if(H.ou) H.ou.content=abs;
+    if(H.c) H.c.href=abs;
     [].slice.call(document.querySelectorAll('.langbtn')).forEach(function(b){b.classList.toggle('on',b.getAttribute('data-lang')===lang);});
     [].slice.call(document.querySelectorAll('a[href^="/app"]')).forEach(function(a){a.setAttribute('href',appHref(lang));});
     var ifr=document.querySelector('iframe[title="ContainerLoad"]'); if(ifr){var want=appHref(lang); if(ifr.getAttribute('src')!==want) ifr.setAttribute('src',want);}
     // Placeholder ist ein Attribut (data-i18n setzt innerHTML) -> direktes Setzen, gleiches Muster wie frueher.
     var _ip=document.getElementById('impPaste'); if(_ip){ _ip.placeholder = lang==='en' ? EN.imp_ph : 'Bezeichnung\tStk\tL\tB\tH\tkg\nMotorblock\t4\t120\t80\t95\t310\nGetriebe\t6\t110\t75\t80\t240\nKartons Zubehör\t18\t60\t40\t40\t12'; }
-    try{localStorage.setItem('cl_lang',lang);}catch(e){}
   }
-  [].slice.call(document.querySelectorAll('.langbtn')).forEach(function(b){b.addEventListener('click',function(){setLang(b.getAttribute('data-lang'));});});
-  var initial='de';
-  try{var sv=localStorage.getItem('cl_lang'); if(sv){initial=sv;} else if((navigator.language||'').toLowerCase().indexOf('de')!==0){initial='en';}}
-  catch(e){if((navigator.language||'').toLowerCase().indexOf('de')!==0){initial='en';}}
+  function merken(lang){try{localStorage.setItem('cl_lang',lang);}catch(e){}}
+  function adresse(lang){try{history.replaceState(null,'',pageHref(lang));}catch(e){}}
+
+  // Klick auf einen Sprachlink: umschalten OHNE Neuladen, aber die Adresse zieht mit.
+  // Die Links bleiben echte Links mit href — nur so findet eine Suchmaschine die
+  // englische Fassung ueberhaupt. Ohne JavaScript laedt der Link ganz normal neu.
+  [].slice.call(document.querySelectorAll('a[data-lang]')).forEach(function(a){
+    a.addEventListener('click',function(ev){
+      if(ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.button) return; // neuer Tab bleibt neuer Tab
+      ev.preventDefault();
+      var l=a.getAttribute('data-lang');
+      setLang(l); merken(l); adresse(l);
+      var bar=document.getElementById('langbar'); if(bar) bar.classList.remove('on');
+    });
+  });
+
+  // Sprachwahl: Die ADRESSE hat Vorrang, dann die eigene frühere Wahl, sonst Deutsch.
+  //
+  // Frueher entschied hier die Browsersprache. Das hiess: dieselbe Adresse lieferte je
+  // nach Besucher Deutsch ODER Englisch. Googles Renderer meldet en-US — die deutsche
+  // Startseite wurde also als englisch gerendert, waehrend Titel und Beschreibung im
+  // Quelltext deutsch blieben. Google bietet fuer / und /app bis heute "Diese Seite
+  // uebersetzen" an, fuer die statischen Ratgeber-Seiten nicht. Genau dieser
+  // Widerspruch faellt damit weg.
+  function urlLang(){var m=/[?&]lang=([A-Za-z-]+)/.exec(location.search);return m?(m[1].toLowerCase().indexOf('en')===0?'en':'de'):null;}
+  var erzwungen=urlLang(), gemerkt=null;
+  try{var sv=localStorage.getItem('cl_lang'); if(sv==='en'||sv==='de') gemerkt=sv;}catch(e){}
+  var initial=erzwungen||gemerkt||'de';
   setLang(initial);
+  // Wer sich frueher fuer Englisch entschieden hat, bekommt es — dann soll aber auch
+  // die Adresse dazu passen, statt Englisch unter der deutschen URL zu zeigen.
+  if(!erzwungen&&initial==='en') adresse('en');
+
+  // Kein automatisches Umschalten mehr, sondern ein Angebot. Nur fuer Leute, deren
+  // Browser nicht auf Deutsch steht und die noch nie selbst gewaehlt haben.
+  if(!erzwungen&&!gemerkt&&(navigator.language||'').toLowerCase().indexOf('de')!==0){
+    var bar=document.getElementById('langbar'); if(bar) bar.classList.add('on');
+  }
+  var barX=document.getElementById('langbarX');
+  if(barX) barX.addEventListener('click',function(){
+    var bar=document.getElementById('langbar'); if(bar) bar.classList.remove('on');
+    merken('de'); // einmal weggeklickt heisst: nicht wieder fragen
+  });
   // Packlisten-Import-Box: KEIN Parser hier — kanonisches Parsing passiert NUR in
   // app.html (?q= -> parseCargoText). Die Landingpage reicht den Text nur durch.
   var impTa=document.getElementById('impPaste'), impGo=document.getElementById('impGo'), impHint=document.getElementById('impHintLine');
