@@ -5,14 +5,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
 <title>ContainerLoad — Rechner</title>
 <meta property="og:type" content="website" />
-<meta property="og:url" content="https://containerload.io/" />
+<meta property="og:url" content="https://containerload.io/app" />
 <meta property="og:site_name" content="ContainerLoad" />
+<!-- Sprache: /app ist deutsch, /app?lang=en ist englisch. canonical und og:url werden
+     beim Start passend zur gewaehlten Sprache nachgezogen (siehe LANG weiter unten). -->
+<link rel="canonical" href="https://containerload.io/app" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/app" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/app?lang=en" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/app" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="ContainerLoad — Beladung in Sekunden" />
+<meta name="twitter:title" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#05080C" />
@@ -1237,13 +1243,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (p) return p.startsWith("en") ? "en" : "de";
       var stored = (window.localStorage.getItem("cl_lang") || "").toLowerCase();
       if (stored) return stored.startsWith("en") ? "en" : "de";
-      var nav = (navigator.language || "").toLowerCase();
-      if (nav) return nav.startsWith("de") ? "de" : "en";
+      // Frueher entschied hier die Browsersprache. Damit lieferte DIESELBE Adresse je nach
+      // Besucher Deutsch oder Englisch — auch fuer Suchmaschinen, deren Renderer en-US
+      // meldet. Google bot fuer /app deshalb "Diese Seite uebersetzen" an, fuer die
+      // statischen Ratgeber-Seiten nicht. Jetzt entscheidet die Adresse: /app ist deutsch,
+      // /app?lang=en ist englisch. Eine eigene Wahl wird ueber cl_lang weiterhin gemerkt.
       return "de";
     } catch (e) {
       return "de";
     }
   })();
+  // Dokumentsprache, Titel und kanonische Adresse mitfuehren. Ohne das bleibt
+  // <html lang="de"> stehen, auch wenn auf dem Bildschirm Englisch steht: Screenreader
+  // lesen dann mit deutscher Aussprache vor, und Suchmaschinen bekommen ein
+  // widerspruechliches Signal (deutscher Titel ueber englischem Inhalt).
+  try {
+    document.documentElement.lang = LANG;
+    document.title = LANG === "en" ? "ContainerLoad — Load calculator" : "ContainerLoad — Rechner";
+    var _abs = "https://containerload.io/app" + (LANG === "en" ? "?lang=en" : "");
+    var _can = document.querySelector('link[rel="canonical"]');
+    if (_can) _can.href = _abs;
+    var _ogu = document.querySelector('meta[property="og:url"]');
+    if (_ogu) _ogu.content = _abs;
+  } catch (e) {}
   var I18N = {
     de: {
       sub: "3D-Ladungsrechner",
