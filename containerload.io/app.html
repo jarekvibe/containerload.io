@@ -1288,6 +1288,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansEmpty: "Noch keine Pl\xE4ne gespeichert. Speichere oben deinen aktuellen Plan, um ihn sp\xE4ter wiederzufinden.",
       plansFoot: "Pl\xE4ne liegen nur in diesem Browser — kein Login, keine Cloud. Auf ein anderes Ger\xE4t bringst du einen Plan per Teilen-Link.",
       orbitHint: "ziehen \xB7 scrollen", resetView: "Ansicht zur\xFCcksetzen",
+      autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
       ldm: "Lademeter", ldmUtil: "Lademeter-Auslastung", spots: "Stellpl\xE4tze", spotsSub: "Bodenlage",
       footLRoad: "EN 12642 \xB7 EUR / ISO-Paletten \xB7 cm \xB7 kg",
@@ -1449,6 +1450,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansEmpty: "No saved plans yet. Save your current plan above to find it again later.",
       plansFoot: "Plans live only in this browser — no login, no cloud. To move one to another device, use the share link.",
       orbitHint: "drag \xB7 scroll", resetView: "Reset view",
+      autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
       ldm: "Loading meters", ldmUtil: "Loading-meter usage", spots: "Floor spots", spotsSub: "ground layer",
       footLRoad: "EN 12642 \xB7 EUR / ISO pallets \xB7 cm \xB7 kg",
@@ -2099,6 +2101,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
+    const autoRotateRef = useRef(true); // per Ref gelesen: tick() ist ein Mount-Once-Dauerlauf-Closure
+    const [autoRotateOn, setAutoRotateOn] = useState(true);
     const reveal = useRef({ start: 0, animate: false, prevN: -1, dur: 0.4, stag: 0.55, firstShare: !!SHARED });
     const isRoad = domain === "road";
     const BASE_Y = 1.2; // Sattelkupplungshoehe in m: Auflieger + Ladung schweben darueber.
@@ -2295,7 +2299,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Leerlauf-Rotation stoert beim manuellen Platzieren (praezises Klicken braucht eine
         // ruhige Kamera) – deshalb waehrend manualMode ausgesetzt. propsRef statt direktem Prop-
         // Zugriff, da tick() ein einmalig erzeugter (Mount-Once-Effekt) Dauerlauf-Closure ist.
-        if (now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
+        if (autoRotateRef.current && now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
         cur.r += (sph.r - cur.r) * 0.12;
         cur.theta += (sph.theta - cur.theta) * 0.12;
         cur.phi += (sph.phi - cur.phi) * 0.12;
@@ -3011,7 +3015,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #05080C 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0F1721", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #05080C 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0F1721", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 12 }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   var Label = ({ children }) => /* @__PURE__ */ React.createElement("span", { className: "block mb-1.5", style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, children);
   var Num = ({ value, onChange, mono = true }) => /* @__PURE__ */ React.createElement(
