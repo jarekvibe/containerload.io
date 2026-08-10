@@ -595,6 +595,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   }
   // Baut/prueft eine vollstaendige Platzierung fuer "item" (aus cargo) an (px,pz), inkl. Rotation,
   // Container-Grenzen, Stapelbarkeit und Zuladung. px/pz werden auf gueltigen Bereich geklemmt.
+  // Zaehlt, wie viele Stuecke gleicher Bauhoehe an dieser Stelle unmittelbar untereinander
+  // stehen -- das neue Stueck eingerechnet. Das ist die Zahl, die stackMax begrenzt.
+  //
+  // Dieselbe Regel wie im Auto-Packer (emsPackOnce fuehrt sie als b.tower mit, was dort
+  // billiger ist, weil die Zahl beim Platzieren schon feststeht). Beide MUESSEN dasselbe
+  // ergeben, sonst verhaelt sich Ziehen von Hand anders als automatisches Packen --
+  // test/stackmax-manuell.test.mjs prueft genau das.
+  //
+  // Nicht die absolute Hoehe im Container: sonst koennte eine flache Kiste nie auf einer
+  // hohen stehen, weil deren Hoehe die Grenze schon aufbraucht.
+  function towerAt(px, pz, dx, dz, dy, y, placed) {
+    let n = 1, cur = y;
+    for (let guard = 0; guard <= placed.length; guard++) {
+      const below = placed.find((b) =>
+        Math.abs(b.dy - dy) < 1e-3 && Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
+        Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
+      if (!below) break;
+      n++;
+      cur = below.y;
+    }
+    return n;
+  }
   function manualCandidate(container, item, rotated, px, pz, placed, weightUsed) {
     const l = num(item.l), w = num(item.w), h = num(item.h);
     const dx = rotated ? w : l, dz = rotated ? l : w, dy = h;
@@ -614,7 +637,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const y = dropHeight(px, pz, dx, dz, dy, placed);
     if (y == null) return { ok: false, reason: "overlap" };
     const cap = stackCapOf(item);
-    if (isFinite(cap) && y > (cap - 1) * h + 1e-3) return { ok: false, reason: "stackmax" };
+    if (isFinite(cap) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > cap) return { ok: false, reason: "stackmax" };
     const cand = { x: px, y, z: pz, dx, dy, dz };
     if (!withinBounds(container, cand)) return { ok: false, reason: "bounds" };
     return { ok: true, box: cand };
