@@ -3584,11 +3584,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Logo-Zeichnung: Custom Firmenlogo oder Marken-Logo (Verlaufsquadrat + Wuerfel) + Wortmarke
         const drawLogo = (lx, ly, ls, customLogoImg) => {
           if (customLogoImg) {
-            // Custom Logo: zentriert im Quadrat (ls x ls)
-            const logoSize = ls * 0.75; // 75% der verfuegbaren Groesse
-            const logoX = lx + (ls - logoSize) / 2;
-            const logoY = ly + (ls - logoSize) / 2;
-            g.drawImage(customLogoImg, logoX, logoY, logoSize, logoSize);
+            // Custom Logo: deutlich groessere Box als das kleine Marken-Icon (keine Wortmarke
+            // daneben noetig) und seitenverhaeltnistreu eingepasst ("contain"), statt verzerrt
+            // in ein Quadrat gequetscht zu werden – die meisten Firmenlogos sind nicht quadratisch.
+            const cyMid = ly + ls / 2;
+            const boxW = px(170), boxH = px(70);
+            const iw = customLogoImg.naturalWidth || customLogoImg.width || 1;
+            const ih = customLogoImg.naturalHeight || customLogoImg.height || 1;
+            const scale = Math.min(boxW / iw, boxH / ih);
+            const drawW = iw * scale, drawH = ih * scale;
+            g.drawImage(customLogoImg, lx, cyMid - drawH / 2, drawW, drawH);
           } else {
             // Standard ContainerLoad Logo (Verlaufsquadrat + Wuerfel)
             const cyMid = ly + ls / 2;
