@@ -137,11 +137,13 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:700;cursor:default}
 .langbtn:hover{color:var(--text)}
 
-/* Logo-Balken fahren hoch wie Ladung in den Container — die einzige Animation,
-   die etwas ueber das Produkt aussagt. Deshalb bleibt sie. */
-@keyframes clload{from{transform:scaleY(0)}to{transform:scaleY(1)}}
-.cl-bar{transform-box:fill-box;transform-origin:50% 100%;animation:clload .45s cubic-bezier(.2,.8,.2,1) both}
-.cl-bar.b2{animation-delay:.1s}.cl-bar.b3{animation-delay:.2s}
+/* Die Marke baut sich beim Laden auf: erst die beiden Seitenflaechen, dann der Deckel.
+   Dieselbe Idee wie vorher (Ladung geht rein), jetzt am richtigen Zeichen — die drei
+   Flaechen des Wuerfels sind das Markenzeichen aus favicon.svg und logo-icon.svg.
+   Die Regel fuer reduzierte Bewegung weiter unten schaltet das automatisch ab. */
+@keyframes clface{from{opacity:0;transform:translateY(2.4px)}to{opacity:1;transform:none}}
+.cl-face{transform-box:fill-box;animation:clface .42s cubic-bezier(.2,.8,.2,1) both}
+.cl-face.f2{animation-delay:.08s}.cl-face.f3{animation-delay:.16s}
 
 /* --- Kleinteile --- */
 .eyebrow{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:0}
@@ -255,7 +257,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
   <nav id="nav" class="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-xl glass-nav pl-3.5 pr-2 py-2">
     <a href="#top" class="brandlogo flex items-center gap-2.5" style="text-decoration:none;color:var(--text)">
       <span class="w-8 h-8 rounded-md grad-bg flex items-center justify-center">
-        <svg width="18" height="18" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="1.5" fill="none" stroke="#04101f" stroke-width="2"/><rect class="cl-bar b1" x="5" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b2" x="7.9" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b3" x="10.8" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polygon class="cl-face f3" points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon class="cl-face f1" points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon class="cl-face f2" points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg>
       </span>
       <span class="font-bold text-[16px] tracking-tight">Container<span class="grad-text">Load</span></span>
     </a>
@@ -598,7 +600,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
   <div class="max-w-7xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
     <div class="md:col-span-1">
       <div class="brandlogo flex items-center gap-2.5 mb-3">
-        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="11" rx="1.5" fill="none" stroke="#04101f" stroke-width="2"/><rect class="cl-bar b1" x="5" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b2" x="7.9" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/><rect class="cl-bar b3" x="10.8" y="9.3" width="2.3" height="6.4" rx="0.5" fill="#04101f"/></svg></span>
+        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
         <span class="font-bold text-[15px]">Container<span class="grad-text">Load</span></span>
       </div>
       <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Kein Excel. Kein Schätzen.<br>Nur der richtige Container.<br><span style="white-space:nowrap">Bremen, Deutschland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
