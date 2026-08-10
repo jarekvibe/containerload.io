@@ -152,7 +152,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var KIND_LABEL = (T) => ({ dry: T.kDry, opentop: T.kOpenTop, flatrack: T.kFlatRack, platform: T.kPlatform, reefer: T.kReefer });
   var KIND_SUB = (T) => ({ dry: T.subDry, opentop: T.subOpenTop, flatrack: T.subFlatRack, platform: T.subPlatform, reefer: T.subReefer });
   var KIND_META = (T) => ({ dry: null, opentop: T.metaOpenTop, flatrack: T.metaFlatRack, platform: T.metaPlatform, reefer: T.metaReefer });
-  var TYPE_COLORS = ["#3B8CFF", "#16D9C4", "#FF7A1A", "#B15CFF", "#FF3D6E", "#2BE06B", "#FFC21F", "#FF4FD1"];
+  var TYPE_COLORS = ["#3B8CFF", "#16D9C4", "#FF7A1A", "#B15CFF", "#FF3D6E", "#2BE06B", "#FFC21F", "#FF4FD1", "#FFFFFF", "#000000"];
   var C = {
     text: "#E9F0F7",
     dim: "#9DB0C2",
@@ -189,6 +189,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   };
   var SANS = "'Archivo', ui-sans-serif, system-ui, -apple-system, sans-serif";
   var MONO = "'JetBrains Mono', ui-monospace, 'SF Mono', monospace";
+  // Bild direkt in die Zwischenablage kopieren (statt nur als Datei-Download) – erlaubt Einfuegen
+  // per Strg+V mitten in ein Mail-Compose-Fenster, wie bei einem echten Screenshot.
+  var CLIPBOARD_IMAGE_SUPPORTED = typeof navigator !== "undefined" && !!(navigator.clipboard && navigator.clipboard.write && typeof window.ClipboardItem === "function");
   var num = (v, d = 0) => Number.isFinite(+v) && v !== "" ? +v : d;
   var fitsThroughDoor = (it, door) => num(it.h) <= door.h && Math.min(num(it.l), num(it.w)) <= door.w;
   var _id = 0;
@@ -1300,12 +1303,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
       shotAccentLabel: "Akzentfarbe",
+      shotLogoLabel: "Firmenlogo (optional)",
+      shotLogoDrag: "Logo hier ablegen oder klicken zum Hochladen",
+      shotLogoRemove: "Logo entfernen",
+      shotLogoRemoveBtn: "×",
       shotTransparent: "Transparenter Hintergrund",
       shotTransparentHint: "Container freigestellt – ideal zum Einf\xFCgen in E-Mails.",
       shotSave: "Bild speichern",
+      shotCopyBtn: "In Zwischenablage kopieren",
+      shotCopyHint: "Direkt mit Strg+V in eine E-Mail einf\xFCgen – kein Anhang n\xF6tig.",
       shotTitle: "Ansicht als Bild speichern (PNG f\xFCr Kunden/Agenten)",
       shotEmpty: "Erst Packst\xFCcke laden",
       shotDone: "Bild gespeichert",
+      shotCopied: "In Zwischenablage kopiert – jetzt mit Strg+V einf\xFCgen",
+      shotCopyFail: "Kopieren nicht m\xF6glich – bitte stattdessen speichern",
       shotFoot: "Schematische 3D-Ansicht \xB7 rein geometrisch",
       recRot: (p) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Mit ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, "90\xB0-Drehung"), " passt alles in den ", p, "."),
       recSingle: (n) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Empfehlung: ein ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), " \u2014 dann passt alles rein."),
@@ -1351,6 +1362,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansEmpty: "Noch keine Pl\xE4ne gespeichert. Speichere oben deinen aktuellen Plan, um ihn sp\xE4ter wiederzufinden.",
       plansFoot: "Pl\xE4ne liegen nur in diesem Browser — kein Login, keine Cloud. Auf ein anderes Ger\xE4t bringst du einen Plan per Teilen-Link.",
       orbitHint: "ziehen \xB7 scrollen", resetView: "Ansicht zur\xFCcksetzen",
+      autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
       ldm: "Lademeter", ldmUtil: "Lademeter-Auslastung", spots: "Stellpl\xE4tze", spotsSub: "Bodenlage",
       footLRoad: "EN 12642 \xB7 EUR / ISO-Paletten \xB7 cm \xB7 kg",
@@ -1459,12 +1471,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       shotExportTitle: "Export image",
       shotExportDesc: "Clean view image for customers/agents – always from the perfect angle.",
       shotAccentLabel: "Accent colour",
+      shotLogoLabel: "Company logo (optional)",
+      shotLogoDrag: "Drop logo here or click to upload",
+      shotLogoRemove: "Remove logo",
+      shotLogoRemoveBtn: "×",
       shotTransparent: "Transparent background",
       shotTransparentHint: "Container cut out – ideal for pasting into emails.",
       shotSave: "Save image",
+      shotCopyBtn: "Copy to clipboard",
+      shotCopyHint: "Paste directly into an email with Ctrl+V – no attachment needed.",
       shotTitle: "Save view as image (PNG for customers/agents)",
       shotEmpty: "Load cargo first",
       shotDone: "Image saved",
+      shotCopied: "Copied to clipboard – now paste it with Ctrl+V",
+      shotCopyFail: "Couldn't copy – please save instead",
       shotFoot: "Schematic 3D view \xB7 geometry only",
       recRot: (p) => /* @__PURE__ */ React.createElement(React.Fragment, null, "A ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, "90\xB0 turn"), " fits everything in the ", p, "."),
       recSingle: (n) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Recommendation: one ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), " \u2014 then it all fits."),
@@ -1510,6 +1530,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansEmpty: "No saved plans yet. Save your current plan above to find it again later.",
       plansFoot: "Plans live only in this browser — no login, no cloud. To move one to another device, use the share link.",
       orbitHint: "drag \xB7 scroll", resetView: "Reset view",
+      autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
       ldm: "Loading meters", ldmUtil: "Loading-meter usage", spots: "Floor spots", spotsSub: "ground layer",
       footLRoad: "EN 12642 \xB7 EUR / ISO pallets \xB7 cm \xB7 kg",
@@ -2160,6 +2181,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
+    const autoRotateRef = useRef(true); // per Ref gelesen: tick() ist ein Mount-Once-Dauerlauf-Closure
+    const [autoRotateOn, setAutoRotateOn] = useState(true);
     const reveal = useRef({ start: 0, animate: false, prevN: -1, dur: 0.4, stag: 0.55, firstShare: !!SHARED });
     const isRoad = domain === "road";
     const BASE_Y = 1.2; // Sattelkupplungshoehe in m: Auflieger + Ladung schweben darueber.
@@ -2356,7 +2379,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Leerlauf-Rotation stoert beim manuellen Platzieren (praezises Klicken braucht eine
         // ruhige Kamera) – deshalb waehrend manualMode ausgesetzt. propsRef statt direktem Prop-
         // Zugriff, da tick() ein einmalig erzeugter (Mount-Once-Effekt) Dauerlauf-Closure ist.
-        if (now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
+        if (autoRotateRef.current && now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
         cur.r += (sph.r - cur.r) * 0.12;
         cur.theta += (sph.theta - cur.theta) * 0.12;
         cur.phi += (sph.phi - cur.phi) * 0.12;
@@ -3072,7 +3095,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #05080C 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0F1721", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #0a0f17 55%, #05080C 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[10px] tracking-[0.18em] uppercase pointer-events-none", style: { fontFamily: MONO, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: MONO, fontSize: 10, letterSpacing: "0.03em", color: C.warn, background: hexA("#0F1721", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 12 }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#0F1721", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   var Label = ({ children }) => /* @__PURE__ */ React.createElement("span", { className: "block mb-1.5", style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, children);
   var Num = ({ value, onChange, mono = true }) => /* @__PURE__ */ React.createElement(
@@ -3350,6 +3373,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [exportAccent, setExportAccent] = useState("standard"); // Akzentfarbe nur fuer das Export-Bild
     const [exportOpen, setExportOpen] = useState(false); // Bild-Export-Dialog
     const [exportTransparent, setExportTransparent] = useState(false); // transparenter Hintergrund im Export-Bild
+    const [customLogo, setCustomLogo] = useState(null); // Custom Firmenlogo fuer Export (Data-URL oder Image-Objekt)
     const [forceCentered, setForceCentered] = useState(SHARED ? !!SHARED.forceCentered : false);
     const [result, setResult] = useState(() => packKind(INIT_CONTAINER, INIT_CARGO, {}, SHARED ? !!SHARED.forceCentered : false));
     const [chainOverride, setChainOverride] = useState({});
@@ -3587,7 +3611,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     // "Bild"-Export: sauberes Ansichtsbild fuer Kunden/Agenten – 3D-Render + dezente Fusszeile
     // (Logo, Containertyp, Auslastung, geladene Stueck). Rein clientseitig, kein Upload.
-    const saveScreenshot = () => {
+    const loadCustomLogoImage = () => new Promise((resolve) => {
+      if (!customLogo) { resolve(null); return; }
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => resolve(null);
+      img.src = customLogo;
+    });
+    // Baut das fertige Export-PNG (3D-Render + Fusszeile) und liefert es als Blob – gemeinsame
+    // Grundlage fuer "Bild speichern" (Download) und "In Zwischenablage kopieren" (Clipboard-API,
+    // damit sich das Bild wie ein echter Screenshot direkt in eine Mail einfuegen laesst).
+    const composeExportBlob = async () => {
       // Fusszeilen-Kennzahlen ehrlich zur SICHTBAREN Anordnung: im manuellen Modus aus den
       // tatsaechlich platzierten Kisten, sonst aus dem Auto-Ergebnis.
       let shotUtil = result ? result.util : 0, shotLoaded = result ? result.boxes : 0, shotTotal = result ? result.totalBoxes : 0;
@@ -3604,14 +3638,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       if (!shotTotal) {
         setToast(T.shotEmpty);
-        return;
+        return null;
       }
       const cap = shotRef.current && shotRef.current({ transparent: exportTransparent });
       if (!cap) {
         setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
-        return;
+        return null;
       }
       setExportOpen(false);
+      const customLogoImg = await loadCustomLogoImage();
+      return new Promise((resolveBlob) => {
       const img = new Image();
       img.onload = () => {
         // Bild-Compose: opak = Chrome-Karte mit Fussleiste; transparent = freigestellter Render
@@ -3633,27 +3669,40 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         ];
         const valF = `700 ${px(22)}px ${MONOF}`, labF = `500 ${px(10)}px ${MONOF}`, gap = px(26);
         let mutedCol = "#4A5C6E"; // Label-/Untertext-Ton; im Transparenz-Modus heller (Kontrast auf hellem BG)
-        // Marken-Logo (Verlaufsquadrat + Wuerfel) + Wortmarke – bleibt IMMER Marke (Cyan->Blau).
-        const drawLogo = (lx, ly, ls) => {
-          const cyMid = ly + ls / 2;
-          const lg = g.createLinearGradient(lx, ly, lx + ls, ly + ls);
-          lg.addColorStop(0, "#2E8FFF"); lg.addColorStop(1, "#2E8FFF");
-          rr(lx, ly, ls, ls, Math.round(ls * 0.28)); g.fillStyle = lg; g.fill();
-          const CP = (a, b) => [lx + a / 24 * ls, ly + b / 24 * ls];
-          const cube = (pts, fill) => { g.beginPath(); pts.forEach((p, i) => { const c = CP(p[0], p[1]); i ? g.lineTo(c[0], c[1]) : g.moveTo(c[0], c[1]); }); g.closePath(); g.fillStyle = fill; g.fill(); };
-          cube([[12, 3.4], [19.6, 7.8], [12, 12.2], [4.4, 7.8]], "#0A2B46");
-          cube([[4.4, 7.8], [12, 12.2], [12, 20.6], [4.4, 16.2]], "#165780");
-          cube([[19.6, 7.8], [12, 12.2], [12, 20.6], [19.6, 16.2]], "#0F3C60");
-          const bx = lx + ls + px(14);
-          g.textAlign = "left"; g.textBaseline = "alphabetic";
-          g.font = `700 ${px(21)}px ${SANSF}`;
-          g.fillStyle = "#E9F0F7"; g.fillText("Container", bx, cyMid - px(2));
-          const cw = g.measureText("Container").width;
-          const wg = g.createLinearGradient(bx + cw, 0, bx + cw + px(72), 0);
-          wg.addColorStop(0, "#2E8FFF"); wg.addColorStop(1, "#2E8FFF");
-          g.fillStyle = wg; g.fillText("Load", bx + cw, cyMid - px(2));
-          g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = mutedCol;
-          g.fillText("CONTAINERLOAD.IO", bx, cyMid + px(16));
+        // Logo-Zeichnung: Custom Firmenlogo oder Marken-Logo (Verlaufsquadrat + Wuerfel) + Wortmarke
+        const drawLogo = (lx, ly, ls, customLogoImg, boxW, boxH) => {
+          if (customLogoImg) {
+            // Custom Logo: eigene, grosszuegig bemessene Box (deutlich groesser als das kleine
+            // Marken-Icon, da keine Wortmarke danebensteht) und seitenverhaeltnistreu eingepasst
+            // ("contain"), statt verzerrt in ein Quadrat gequetscht zu werden.
+            const cyMid = ly + ls / 2;
+            const iw = customLogoImg.naturalWidth || customLogoImg.width || 1;
+            const ih = customLogoImg.naturalHeight || customLogoImg.height || 1;
+            const scale = Math.min(boxW / iw, boxH / ih);
+            const drawW = iw * scale, drawH = ih * scale;
+            g.drawImage(customLogoImg, lx, cyMid - drawH / 2, drawW, drawH);
+          } else {
+            // Standard ContainerLoad Logo (Verlaufsquadrat + Wuerfel)
+            const cyMid = ly + ls / 2;
+            const lg = g.createLinearGradient(lx, ly, lx + ls, ly + ls);
+            lg.addColorStop(0, "#2E8FFF"); lg.addColorStop(1, "#2E8FFF");
+            rr(lx, ly, ls, ls, Math.round(ls * 0.28)); g.fillStyle = lg; g.fill();
+            const CP = (a, b) => [lx + a / 24 * ls, ly + b / 24 * ls];
+            const cube = (pts, fill) => { g.beginPath(); pts.forEach((p, i) => { const c = CP(p[0], p[1]); i ? g.lineTo(c[0], c[1]) : g.moveTo(c[0], c[1]); }); g.closePath(); g.fillStyle = fill; g.fill(); };
+            cube([[12, 3.4], [19.6, 7.8], [12, 12.2], [4.4, 7.8]], "#0A2B46");
+            cube([[4.4, 7.8], [12, 12.2], [12, 20.6], [4.4, 16.2]], "#165780");
+            cube([[19.6, 7.8], [12, 12.2], [12, 20.6], [19.6, 16.2]], "#0F3C60");
+            const bx = lx + ls + px(14);
+            g.textAlign = "left"; g.textBaseline = "alphabetic";
+            g.font = `700 ${px(21)}px ${SANSF}`;
+            g.fillStyle = "#E9F0F7"; g.fillText("Container", bx, cyMid - px(2));
+            const cw = g.measureText("Container").width;
+            const wg = g.createLinearGradient(bx + cw, 0, bx + cw + px(72), 0);
+            wg.addColorStop(0, "#2E8FFF"); wg.addColorStop(1, "#2E8FFF");
+            g.fillStyle = wg; g.fillText("Load", bx + cw, cyMid - px(2));
+            g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = mutedCol;
+            g.fillText("CONTAINERLOAD.IO", bx, cyMid + px(16));
+          }
         };
         // Kennzahlen-Raster rechtsbuendig; nur die Auslastungs-%-Zahl nimmt den Export-Akzent.
         const drawMetrics = (rightX, cyMid) => {
@@ -3689,7 +3738,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
         if (cap.transparent) {
           // Transparent: freigestellter Render + dezenter Glass-Balken (bleibt auf hell UND dunkel lesbar).
-          const FR = px(22), gapR = px(14), barH = px(96);
+          const FR = px(22), gapR = px(14), barH = customLogoImg ? px(150) : px(96);
           cv.width = cap.w + FR * 2;
           cv.height = FR + cap.h + gapR + barH + FR;
           g.clearRect(0, 0, cv.width, cv.height);
@@ -3701,13 +3750,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           accentLine(barX + px(16), barY, barW - px(32));
           mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
-          drawLogo(barX + px(20), midY - px(22), px(44));
+          drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(barX + barW - px(20), midY);
           g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#BCC9D6"; g.textAlign = "center"; g.textBaseline = "alphabetic";
           g.fillText(String(T.shotFoot).toUpperCase(), barX + barW / 2, barY + barH - px(11));
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
-          const FR = px(26), footH = px(96), discH = px(30), cardR = px(14);
+          const FR = px(26), footH = customLogoImg ? px(150) : px(96), discH = px(30), cardR = px(14);
           cv.width = cap.w + FR * 2;
           cv.height = FR + cap.h + footH + discH;
           g.fillStyle = "#0A0F16"; g.fillRect(0, 0, cv.width, cv.height);
@@ -3716,30 +3765,48 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           drawChips(FR, FR);
           const fy = FR + cap.h, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), cap.w);
-          drawLogo(FR + px(24), fcy - px(22), px(44));
+          drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(cv.width - FR - px(24), fcy);
           const dY = FR + cap.h + footH; g.strokeStyle = "#131C26"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = "#3F5061"; g.textAlign = "center"; g.textBaseline = "middle";
           g.fillText(String(T.shotFoot).toUpperCase(), cv.width / 2, dY + discH / 2);
         }
         cv.toBlob((blob) => {
-          if (!blob) {
-            setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
-            return;
-          }
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement("a");
-          a.href = url;
-          a.download = `containerload-ansicht-${nowStamp()}.png`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          setTimeout(() => URL.revokeObjectURL(url), 1e3);
-          setToast(T.shotDone);
+          if (!blob) setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
+          resolveBlob(blob);
         }, "image/png");
       };
-      img.onerror = () => setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
+      img.onerror = () => {
+        setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
+        resolveBlob(null);
+      };
       img.src = cap.url;
+      });
+    };
+    const saveScreenshot = async () => {
+      const blob = await composeExportBlob();
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `containerload-ansicht-${nowStamp()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1e3);
+      setToast(T.shotDone);
+    };
+    // In Zwischenablage kopieren: fuehlt sich wie ein echter Screenshot an – Nutzer koennen das
+    // Bild direkt per Strg+V in ihr Mail-Programm einfuegen, statt es als Anhang beilegen zu muessen.
+    const copyScreenshotToClipboard = async () => {
+      const blob = await composeExportBlob();
+      if (!blob) return;
+      try {
+        await navigator.clipboard.write([new window.ClipboardItem({ "image/png": blob })]);
+        setToast(T.shotCopied);
+      } catch (e) {
+        setToast(T.shotCopyFail);
+      }
     };
     // Sprachumschaltung im Header: cl_lang merken und mit ?lang neu laden (die App liest LANG
     // beim Start aus URL/localStorage – ein Reload ist der einfachste, robusteste Weg).
@@ -4019,7 +4086,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const on = c.rotatable !== false;
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "rounded-lg transition flex items-center gap-1", style: { height: 31, padding: "0 12px", fontSize: 10.5, fontWeight: on ? 600 : 500, background: on ? hexA(C.accent, 0.15) : "#16212D", border: `1px solid ${on ? hexA(C.accent, 0.6) : "#1E2A36"}`, color: on ? C.accent : C.dim } }, "\u21BB 90\xB0");
       })())));
-    })))), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-h-[380px]" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-1.5", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: MONO, fontSize: 10.5, fontWeight: 600, color: forceCentered ? C.text : C.dim, background: hexA("#0A0F16", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#22394B"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#0A0F16", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 5 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: MONO, fontSize: 11, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: 700 } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 11, color: "#ffd9a8", marginTop: 4, fontWeight: 600 } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8.5, lineHeight: 1.35, color: C.faint, marginTop: 6 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-xl px-3.5 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, "\u{1F6AA}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-4 clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4 rounded-2xl", style: { padding: "14px 20px 14px 14px", background: C.glass, border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "leading-tight" }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint } }, T.loaded), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: allFit ? C.good : C.text, marginTop: 2 } }, result.boxes, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, color: C.faint } }, " / ", result.totalBoxes)), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 mt-1", style: { fontSize: 11.5, fontWeight: 600, color: allFit ? C.good : C.warn } }, /* @__PURE__ */ React.createElement("span", null, allFit ? "\u2713" : "\u26A0"), /* @__PURE__ */ React.createElement("span", null, allFit ? T.allLoaded : T.open(unplaced))), overweight && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 mt-1", style: { fontSize: 11.5, fontWeight: 600, color: C.bad } }, /* @__PURE__ */ React.createElement("span", null, "\u26A0"), /* @__PURE__ */ React.createElement("span", null, T.overCap(overKg))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 6 } }, T.freeTitle), /* @__PURE__ */ React.createElement("div", { className: "flex gap-4" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums" } }, freeLenM.toFixed(2), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " m")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freeLen)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums" } }, freeVolM3.toFixed(1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " m\xB3")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freeVol)), freePayKg !== null && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: overweight ? C.bad : C.text, fontVariantNumeric: "tabular-nums" } }, (freePayKg / 1e3).toFixed(1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " t")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freePay))))))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2.5 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, result.rotHintAll ? "\u21BB" : sug && (sug.type === "single" || sug.type === "equip") ? "\u2728" : "\u{1F4E6}"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: 12.5, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: `linear-gradient(90deg,${C.accent},${C.teal})`, color: "#04121A", fontSize: 12, fontWeight: 700 } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12, fontWeight: 700 } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12, fontWeight: 700 } }, T.apply)))), /* @__PURE__ */ railEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-5 py-2.5 flex items-center justify-between", style: { borderTop: "1px solid #16212D", fontFamily: MONO, fontSize: 9.5, color: C.faint, letterSpacing: "0.08em" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", null, T.footR)), exportOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setExportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 460, background: "#0D141D", borderRadius: 20, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "8.5", cy: "8.5", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M21 15l-5-5L5 21" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shotExportTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#0D141D", border: "1px solid #22394B", color: C.dim, fontSize: 16, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13, lineHeight: 1.5, marginBottom: 16 } }, T.shotExportDesc), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 9 } }, T.shotAccentLabel), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 18 } }, Object.entries(EXPORT_ACCENTS).map(([key, hex]) => { const on = exportAccent === key; const lbl = { standard: "Standard", blau: LANG === "en" ? "Blue" : "Blau", rot: LANG === "en" ? "Red" : "Rot" }[key]; return /* @__PURE__ */ React.createElement("button", { key, onClick: () => setExportAccent(key), className: "flex items-center gap-2 rounded-lg transition", style: { padding: "6px 11px 6px 8px", background: on ? hexA(C.accent, 0.1) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.5) : C.fieldBorder}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 16, height: 16, borderRadius: 999, background: hex || "linear-gradient(135deg,#2E8FFF,#2E8FFF)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, fontWeight: 600, color: on ? C.text : C.dim } }, lbl)); })), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between", style: { padding: "12px 14px", borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("div", { style: { paddingRight: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.text } }, T.shotTransparent), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.faint, marginTop: 2, lineHeight: 1.4 } }, T.shotTransparentHint)), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportTransparent((v) => !v), role: "switch", "aria-checked": exportTransparent, style: { flexShrink: 0, width: 42, height: 24, borderRadius: 999, border: 0, cursor: "pointer", padding: 3, display: "flex", justifyContent: exportTransparent ? "flex-end" : "flex-start", background: exportTransparent ? "linear-gradient(135deg,#2E8FFF,#2E8FFF)" : "#22394B", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 18, height: 18, borderRadius: 999, background: exportTransparent ? "#04121A" : "#8FA3B6" } })))), /* @__PURE__ */ React.createElement("div", { className: "flex justify-end gap-2", style: { padding: "15px 20px", borderTop: "1px solid #16212D", background: "#0A0F16", borderRadius: "0 0 20px 20px" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: "transparent", color: C.dim, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, LANG === "en" ? "Cancel" : "Abbrechen"), /* @__PURE__ */ React.createElement("button", { onClick: saveScreenshot, className: "px-4 py-2 rounded-lg transition hover:brightness-110 flex items-center gap-2", style: { background: `linear-gradient(135deg, ${C.accent}, ${C.teal})`, color: "#04121A", fontWeight: 700, fontSize: 13, cursor: "pointer" } }, T.shotSave)))), shareOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setShareOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 520, background: "#0D141D", borderRadius: 20, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shareTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setShareOpen(false), className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#0D141D", border: "1px solid #22394B", color: C.dim, fontSize: 16, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13, lineHeight: 1.5, marginBottom: 12 } }, T.shareDesc), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { readOnly: true, value: shareURL, onFocus: (e) => e.target.select(), className: "flex-1 rounded-lg px-3 py-2.5", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: 12, fontFamily: MONO, outline: "none" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    })))), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-h-[380px]" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-1.5", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: MONO, fontSize: 10.5, fontWeight: 600, color: forceCentered ? C.text : C.dim, background: hexA("#0A0F16", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#22394B"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: 3, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#0A0F16", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 5 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: MONO, fontSize: 11, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: 700 } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 11, color: "#ffd9a8", marginTop: 4, fontWeight: 600 } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 8.5, lineHeight: 1.35, color: C.faint, marginTop: 6 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-xl px-3.5 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 14 } }, "\u{1F6AA}"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-4 clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-4 rounded-2xl", style: { padding: "14px 20px 14px 14px", background: C.glass, border: "1px solid rgba(255,255,255,0.09)", boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "leading-tight" }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint } }, T.loaded), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 26, fontWeight: 700, letterSpacing: "-0.02em", color: allFit ? C.good : C.text, marginTop: 2 } }, result.boxes, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 15, color: C.faint } }, " / ", result.totalBoxes)), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 mt-1", style: { fontSize: 11.5, fontWeight: 600, color: allFit ? C.good : C.warn } }, /* @__PURE__ */ React.createElement("span", null, allFit ? "\u2713" : "\u26A0"), /* @__PURE__ */ React.createElement("span", null, allFit ? T.allLoaded : T.open(unplaced))), overweight && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5 mt-1", style: { fontSize: 11.5, fontWeight: 600, color: C.bad } }, /* @__PURE__ */ React.createElement("span", null, "\u26A0"), /* @__PURE__ */ React.createElement("span", null, T.overCap(overKg))), /* @__PURE__ */ React.createElement("div", { style: { marginTop: 10, paddingTop: 10, borderTop: "1px solid rgba(255,255,255,0.07)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 6 } }, T.freeTitle), /* @__PURE__ */ React.createElement("div", { className: "flex gap-4" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums" } }, freeLenM.toFixed(2), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " m")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freeLen)), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: C.text, fontVariantNumeric: "tabular-nums" } }, freeVolM3.toFixed(1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " m\xB3")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freeVol)), freePayKg !== null && /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: overweight ? C.bad : C.text, fontVariantNumeric: "tabular-nums" } }, (freePayKg / 1e3).toFixed(1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint, fontSize: 10, fontWeight: 500 } }, " t")), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 9.5, color: C.faint, marginTop: 1 } }, T.freePay))))))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2.5 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 16 } }, result.rotHintAll ? "\u21BB" : sug && (sug.type === "single" || sug.type === "equip") ? "\u2728" : "\u{1F4E6}"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: 12.5, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: `linear-gradient(90deg,${C.accent},${C.teal})`, color: "#04121A", fontSize: 12, fontWeight: 700 } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12, fontWeight: 700 } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12, fontWeight: 700 } }, T.apply)))), /* @__PURE__ */ railEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-5 py-2.5 flex items-center justify-between", style: { borderTop: "1px solid #16212D", fontFamily: MONO, fontSize: 9.5, color: C.faint, letterSpacing: "0.08em" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", null, T.footR)), exportOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setExportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 460, background: "#0D141D", borderRadius: 20, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "8.5", cy: "8.5", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M21 15l-5-5L5 21" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shotExportTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#0D141D", border: "1px solid #22394B", color: C.dim, fontSize: 16, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13, lineHeight: 1.5, marginBottom: 16 } }, T.shotExportDesc), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 9 } }, T.shotAccentLabel), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 18 } }, Object.entries(EXPORT_ACCENTS).map(([key, hex]) => { const on = exportAccent === key; const lbl = { standard: "Standard", blau: LANG === "en" ? "Blue" : "Blau", rot: LANG === "en" ? "Red" : "Rot" }[key]; return /* @__PURE__ */ React.createElement("button", { key, onClick: () => setExportAccent(key), className: "flex items-center gap-2 rounded-lg transition", style: { padding: "6px 11px 6px 8px", background: on ? hexA(C.accent, 0.1) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.5) : C.fieldBorder}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 16, height: 16, borderRadius: 999, background: hex || "linear-gradient(135deg,#2E8FFF,#2E8FFF)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, fontWeight: 600, color: on ? C.text : C.dim } }, lbl)); })), /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}`, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.text, marginBottom: 9 } }, T.shotLogoLabel), /* @__PURE__ */ React.createElement("div", { onDragOver: (e) => { e.preventDefault(); e.target.style.background = hexA(C.accent, 0.15); }, onDragLeave: (e) => { e.target.style.background = C.field; }, onDrop: (e) => { e.preventDefault(); const files = e.dataTransfer.files; if (files.length > 0) { const file = files[0]; if (file.type.startsWith("image/")) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } } e.target.style.background = C.field; }, onClick: () => { const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.onchange = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } }; input.click(); }, style: { padding: "16px", borderRadius: 8, border: `2px dashed ${C.fieldBorder}`, background: C.field, cursor: "pointer", textAlign: "center", transition: "background .2s" } }, customLogo ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12, color: C.accent, fontWeight: 600 } }, "✓ ", LANG === "en" ? "Logo uploaded" : "Logo hochgeladen"), /* @__PURE__ */ React.createElement("button", { onClick: (e) => { e.stopPropagation(); setCustomLogo(null); }, className: "ml-auto px-2 py-1 rounded transition hover:brightness-110", style: { background: hexA(C.bad, 0.15), border: `1px solid ${hexA(C.bad, 0.4)}`, color: C.bad, fontSize: 11, fontWeight: 600, cursor: "pointer" } }, T.shotLogoRemoveBtn)) : /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 12 } }, T.shotLogoDrag)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between", style: { padding: "12px 14px", borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("div", { style: { paddingRight: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.text } }, T.shotTransparent), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11.5, color: C.faint, marginTop: 2, lineHeight: 1.4 } }, T.shotTransparentHint)), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportTransparent((v) => !v), role: "switch", "aria-checked": exportTransparent, style: { flexShrink: 0, width: 42, height: 24, borderRadius: 999, border: 0, cursor: "pointer", padding: 3, display: "flex", justifyContent: exportTransparent ? "flex-end" : "flex-start", background: exportTransparent ? "linear-gradient(135deg,#2E8FFF,#2E8FFF)" : "#22394B", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 18, height: 18, borderRadius: 999, background: exportTransparent ? "#04121A" : "#8FA3B6" } })))), /* @__PURE__ */ React.createElement("div", { style: { padding: "15px 20px", borderTop: "1px solid #16212D", background: "#0A0F16", borderRadius: "0 0 20px 20px" } }, CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginBottom: 10, lineHeight: 1.4 } }, "\u{1F4CE} ", T.shotCopyHint), /* @__PURE__ */ React.createElement("div", { className: "flex justify-end gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: "transparent", color: C.dim, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, LANG === "en" ? "Cancel" : "Abbrechen"), /* @__PURE__ */ React.createElement("button", { onClick: saveScreenshot, className: "px-4 py-2 rounded-lg transition hover:brightness-110 flex items-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: 600, fontSize: 13, cursor: "pointer" } }, T.shotSave), CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("button", { onClick: copyScreenshotToClipboard, className: "px-4 py-2 rounded-lg transition hover:brightness-110 flex items-center gap-2", style: { background: `linear-gradient(135deg, ${C.accent}, ${C.teal})`, color: "#04121A", fontWeight: 700, fontSize: 13, cursor: "pointer" } }, T.shotCopyBtn))))), shareOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setShareOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 520, background: "#0D141D", borderRadius: 20, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shareTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setShareOpen(false), className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#0D141D", border: "1px solid #22394B", color: C.dim, fontSize: 16, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13, lineHeight: 1.5, marginBottom: 12 } }, T.shareDesc), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { readOnly: true, value: shareURL, onFocus: (e) => e.target.select(), className: "flex-1 rounded-lg px-3 py-2.5", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: 12, fontFamily: MONO, outline: "none" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => {
       try {
         navigator.clipboard.writeText(shareURL).then(() => setShareCopied(true), () => {
         });
