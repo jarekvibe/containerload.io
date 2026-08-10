@@ -40,7 +40,9 @@
   --bg:#0E1116; --card:#151A21; --card2:#1A212A;
   --line:#232B35; --line2:#303A46;
   /* Text: drei Stufen, mehr braucht es nicht */
-  --text:#E9ECF1; --dim:#9BA5B2; --faint:#6D7784;
+  /* --faint war #6D7784 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
+     von 4,5:1 (WCAG AA). #767F8C liegt bei 4,67:1 und bleibt genauso zurueckhaltend. */
+  --text:#E9ECF1; --dim:#9BA5B2; --faint:#767F8C;
   /* EIN Akzent — kein Verlauf, kein zweiter Markenton */
   --accent:#2E8FFF; --accent-soft:rgba(46,143,255,.10); --accent-line:rgba(46,143,255,.34);
   /* Diese drei tragen Bedeutung und werden nie als Dekoration verwendet */

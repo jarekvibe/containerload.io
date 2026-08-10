@@ -152,11 +152,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var KIND_LABEL = (T) => ({ dry: T.kDry, opentop: T.kOpenTop, flatrack: T.kFlatRack, platform: T.kPlatform, reefer: T.kReefer });
   var KIND_SUB = (T) => ({ dry: T.subDry, opentop: T.subOpenTop, flatrack: T.subFlatRack, platform: T.subPlatform, reefer: T.subReefer });
   var KIND_META = (T) => ({ dry: null, opentop: T.metaOpenTop, flatrack: T.metaFlatRack, platform: T.metaPlatform, reefer: T.metaReefer });
+  // Farbwaehler: alle zehn stehen zur Wahl. Wer weisse Kartons hat, soll sie weiss sehen.
   var TYPE_COLORS = ["#3B8CFF", "#16D9C4", "#FF7A1A", "#B15CFF", "#FF3D6E", "#2BE06B", "#FFC21F", "#FF4FD1", "#FFFFFF", "#000000"];
+  // Automatische Vergabe nach Position: nur die ersten acht. Weiss und Schwarz werden
+  // NIE von selbst vergeben. Grund: Die Packstuecke in der 3D-Ansicht haben keine
+  // Kantenlinien (die hat nur die Containerhuelle), und ihr Material reflektiert bei
+  // Schwarz praktisch nichts. Vor dem Hintergrund (C.bg = #05080C) waere die 10. Position
+  // damit fast unsichtbar — ohne dass jemand das ausgewaehlt haette. Selbst gewaehlt ist
+  // Schwarz in Ordnung, zugeteilt nicht.
+  var TYPE_COLORS_AUTO = TYPE_COLORS.slice(0, 8);
   var C = {
     text: "#E9F0F7",
     dim: "#9DB0C2",
-    faint: "#5C7085",
+    // faint war #5C7085 und lag je nach Untergrund zwischen 3,19:1 und 3,93:1 — unter der
+    // Lesbarkeitsgrenze von 4,5:1 (WCAG AA), am schlimmsten auf raised/field. #7689A0 haelt
+    // die Grenze auf ALLEN Flaechenstufen (4,54:1 im schlechtesten Fall) und bleibt trotzdem
+    // deutlich hinter dim zurueck. Beim Aendern bitte gegen bg/chrome/surface/raised pruefen.
+    faint: "#7689A0",
     accent: "#2E8FFF",
     // teal behaelt seinen Namen (37 Fundstellen), traegt aber denselben Akzent wie oben.
     // Ein Produkt, ein Markenton — genau wie auf der Landingpage. Farbverlaeufe von
@@ -672,19 +684,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
             const px = S.x, py = S.y, pz = S.z;
             if (py > 1e-4 && supportRatio(px, pz, dx, dz, py, placed) < SUPPORT_MIN) continue; // nicht genug Auflage -> nicht schweben lassen
-            if (py > 1e-4 && isFinite(u.stackMax) && py > (u.stackMax - 1) * u.h + 1e-3) continue; // Stapel-Obergrenze: eigenen Turm nicht ueber N Lagen wachsen lassen (dy == u.h, da emsOris nur giert)
+            // Stapel-Obergrenze: zaehlt die Lagen im EIGENEN TURM -- Stuecke, die unmittelbar
+            // untereinanderstehen UND dieselbe Bauhoehe haben wie das Stueck selbst (dieselbe
+            // Sorte hat immer dieselbe Hoehe, daher deckt das den Normalfall "eigene Sorte" ab;
+            // steht darunter eine andersartige, andershohe Kiste, beginnt der Turm bei dieser
+            // Lage neu). Nicht die absolute Hoehe im Container -- sonst blockiert eine hohe
+            // fremde Kiste am Boden faelschlich schon die erste eigene Lage weiter oben
+            // (siehe test/pack-stackmax-mixed.test.mjs). Gleich hohe fremde Sorten zaehlen
+            // dagegen weiter mit (test/pack-stackmax.test.mjs, Misch-Ladung-Fall).
+            let tower = 1;
+            if (py > 1e-4) {
+              for (const b of placed) {
+                if (Math.abs(b.dy - dy) > 1e-3 || Math.abs(b.y + b.dy - py) > 1e-3) continue;
+                const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
+                if (ox <= 1e-6) continue;
+                const oz = Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z);
+                if (oz <= 1e-6) continue;
+                tower = Math.max(tower, (b.tower || 1) + 1);
+              }
+              if (isFinite(u.stackMax) && tower > u.stackMax) continue;
+            }
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
             else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
             else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
-            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score };
+            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, tower };
           }
         }
       }
       if (!best) continue;
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti });
+      placed.push({ ...B, ti: u.ti, tower: best.tower });
       weight += u.weight;
       const next = [];
       for (const S of ems) {
@@ -817,9 +848,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   function computeLongCog(placed, weightOf, contLenCm) {
     const L = Math.max(1, +contLenCm || 1);
     let W = 0, mom = 0, front = 0, rear = 0; // front = vordere Haelfte (x < L/2)
+    let placedCount = 0, withWeightCount = 0;  // Zaehlung: insgesamt vs. mit Gewicht
     for (const p of placed) {
+      placedCount++;
       const w = Math.max(0, +weightOf(p.ti) || 0);
       if (w === 0) continue;
+      withWeightCount++;
       const cx = (+p.x || 0) + (+p.dx || 0) / 2; // Laengs-Mitte der Colli (cm)
       W += w;
       mom += w * cx;
@@ -835,18 +869,55 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (devPct < -5) balance = "front";
     else if (devPct > 5) balance = "rear";
     else balance = "balanced";
-    return { totalKg: W, cogCm, cogPct, frontPct, rearPct, devPct, balance };
+    return { totalKg: W, cogCm, cogPct, frontPct, rearPct, devPct, balance, placedCount, withWeightCount };
   }
   // Platzierung eines Uebermass-Stuecks auf dem Deck (cm, Min-Ecke). j/m = Index/Anzahl Stuecke.
-  function placeOversize(dims, Ct, panels, forceCentered, j, m) {
+  // "placed" sind die bereits auf dem Deck stehenden Stuecke (normale Ladung + zuvor platziertes
+  // Uebermass) -- Uebermass darf ueber den Container hinausragen (das ist sein Zweck), aber es
+  // darf nicht DURCH andere Ladung hindurchgehen. Zuerst wird die "schoene" Standardposition
+  // versucht (mittig ueber die Laenge verteilt, seitlich zentriert oder an den offenen Rand
+  // geschoben); ueberschneidet die sich mit bereits stehender Ladung, wird ein Ausweich-Raster
+  // aus Kanten der bereits platzierten Stuecke sowie den Containerraendern durchprobiert. Findet
+  // sich keine kollisionsfreie Stelle, gibt es null zurueck -- das Stueck bleibt dann unverladen,
+  // statt sich mit anderer Ladung zu durchdringen.
+  // Durch GESCHLOSSENE Huellflaechen darf nichts ragen -- das ist Stahl, kein Freiraum.
+  // Ueber OFFENE Flaechen darf es das sehr wohl, genau dafuer gibt es Open Top und Flat Rack.
+  function fitsPanels(c, CL, CW, panels) {
+    const tol = 1e-6;
+    if (panels.ends && (c.x < -tol || c.x + c.dx > CL + tol)) return false;
+    if (panels.sides && (c.z < -tol || c.z + c.dz > CW + tol)) return false;
+    return true;
+  }
+  function placeOversize(dims, Ct, panels, forceCentered, j, m, placed) {
     const CL = num(Ct.l), CW = num(Ct.w);
-    const dx = num(dims.l), dy = num(dims.h), dz = num(dims.w);
+    const l = num(dims.l), w = num(dims.w), dy = num(dims.h);
     const xc = CL * (j + 0.5) / Math.max(1, m);
-    let x = xc - dx / 2;
-    let z;
-    if (!panels.sides && dz > CW && !forceCentered) z = CW - dz;
-    else z = (CW - dz) / 2;
-    return { x, y: 0, z, dx, dy, dz };
+    // Zwei Ausrichtungen, geliefert zuerst. Der Grund fuer die zweite: Die Einstufung in
+    // packKind fragt "Math.min(l, w) > CW" -- sie haelt ein Stueck also schon fuer
+    // breitenkonform, sobald es QUER zwischen die Waende passt, und setzt damit stillschweigend
+    // voraus, dass gedreht wird. Ohne diese Drehung stand ein 300 cm breites Stueck im Open Top
+    // 32,5 cm links und rechts durch massive Seitenwaende (test/oversize-breite.test.mjs).
+    // Die gelieferte Ausrichtung bleibt vorne, damit sich bei OFFENEN Seiten nichts aendert:
+    // dort ist der Ueberstand gewollt und die OOG-Vermessung rechnet mit ihm.
+    const oris = l === w || dims.rot === false ? [[l, w]] : [[l, w], [w, l]];
+    for (const [dx, dz] of oris) {
+      const zCentered = (CW - dz) / 2;
+      const zEdge = !panels.sides && dz > CW && !forceCentered ? CW - dz : zCentered;
+      const xCandidates = [xc - dx / 2, 0, CL - dx];
+      const zCandidates = [zEdge, zCentered, 0, CW - dz];
+      for (const b of placed || []) {
+        xCandidates.push(b.x + b.dx, b.x - dx);
+        zCandidates.push(b.z + b.dz, b.z - dz);
+      }
+      for (const x of xCandidates) {
+        for (const z of zCandidates) {
+          const cand = { x, y: 0, z, dx, dy, dz };
+          if (!fitsPanels(cand, CL, CW, panels)) continue;
+          if (!(placed || []).some((b) => boxesOverlap(cand, b))) return cand;
+        }
+      }
+    }
+    return null;
   }
   // OOG-Vermessung (cm) gegen das gauge-Huellmass, nur in OFFENEN Richtungen. md = groesste
   // Stueckmasse je Achse (der groesste Ueberstand je Achse bestimmt den Buchungswert).
@@ -890,7 +961,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (fitsDeck) return;
       const overL = l > CL && (w > CW || l > CW), overW = Math.min(l, w) > CW, overH = h > CH;
       const placeable = (!overL || !panels.ends) && (!overW || !panels.sides) && (!overH || !panels.roof);
-      if (placeable) { overTi.add(ti); for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h }); }
+      // rot wandert mit: nicht drehbare Ware darf auch beim Uebermass nicht quer gelegt werden.
+      if (placeable) { overTi.add(ti); for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot: t.rotatable !== false }); }
     });
     const masked = cargo.map((t, ti) => overTi.has(ti) ? { ...t, qty: 0 } : t);
     const base = packCargo(Ct, masked, { ...opts, noHint: true });
@@ -902,7 +974,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     overUnits.forEach((u, j) => {
       const uw = num(cargo[u.ti].weight);
       if (weight + uw > payCap + 1e-6) return; // Nutzlast-Grenze: Uebermass nicht ueberladen
-      const box = placeOversize(u, Ct, panels, forceCentered, j, overUnits.length);
+      const box = placeOversize(u, Ct, panels, forceCentered, j, overUnits.length, placed);
+      if (!box) return; // keine kollisionsfreie Stelle gefunden -> Stueck bleibt unverladen (zaehlt bei perType/boxes als offen, wie beim normalen Packer)
       placed.push({ ti: u.ti, x: box.x, y: box.y, z: box.z, dx: box.dx, dy: box.dy, dz: box.dz });
       perType2[u.ti].loaded++;
       weight += uw;
@@ -1194,6 +1267,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
       cogBalanced: "ausbalanciert", cogFrontHeavy: "Tendenz kopflastig", cogRearHeavy: "Tendenz hecklastig",
+      cogWeightsMissing: (w, t) => `Nur ${w} von ${t} Packst\xFCcken haben ein Gewicht`,
+      cogWeightsMissingNote: "der Schwerpunkt gilt nur f\xFCr diese",
       cogDisclaimer: "Richtwert aus Geometrie & eingegebenen Gewichten. Keine Achslast-/Schwerpunkt-Pr\xFCfung, keine Ladungssicherung. Vor Transport eigenverantwortlich pr\xFCfen.",
       footL: "ISO 668 \xB7 EUR / ISO-Paletten \xB7 cm \xB7 kg",
       footR: "geometrische Sch\xE4tzung \xB7 keine Achslast-Garantie",
@@ -1360,6 +1435,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
       cogBalanced: "balanced", cogFrontHeavy: "front-heavy", cogRearHeavy: "rear-heavy",
+      cogWeightsMissing: (w, t) => `Only ${w} of ${t} pieces have a weight`,
+      cogWeightsMissingNote: "the centre of gravity covers those only",
       cogDisclaimer: "Estimate based on geometry & entered weights. No axle-load / center-of-gravity check, no load securing. Verify independently before transport.",
       footL: "ISO 668 \xB7 EUR / ISO pallets \xB7 cm \xB7 kg",
       footR: "geometric estimate \xB7 no axle-load guarantee",
@@ -2525,7 +2602,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       const boxGeo = new THREE.BoxGeometry(1, 1, 1);
       const typeMats = {};
-      const typeMat = (ti) => typeMats[ti] || (typeMats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS[ti % TYPE_COLORS.length]), roughness: 0.62, metalness: 0.08 }));
+      const typeMat = (ti) => typeMats[ti] || (typeMats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length]), roughness: 0.62, metalness: 0.08 }));
       // Special-Equipment-Ressourcen (dimensionsunabhaengig, einmal pro Build).
       const dT = 0.14, cs = 0.16;
       const matDeck = new THREE.MeshStandardMaterial({ color: 0x222a36, roughness: 0.85, metalness: 0.25 });
@@ -3198,7 +3275,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             const done = counts[i] || 0;
             const on = manualArmed === i;
             return /* @__PURE__ */ React.createElement("button", { key: c.id || i, onClick: total > 0 ? () => manualArm(i) : void 0, style: chip(on, total <= 0), disabled: total <= 0 },
-              /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: 2, background: c.color || TYPE_COLORS[i % TYPE_COLORS.length], flexShrink: 0 } }),
+              /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: 2, background: c.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length], flexShrink: 0 } }),
               /* @__PURE__ */ React.createElement("span", null, c.name || "Position " + (i + 1)),
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, color: done >= total && total > 0 ? C.good : C.faint } }, done, "/", total)
             );
@@ -3399,7 +3476,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [plans, setPlans] = useState(() => loadPlans());
     const [colorPickFor, setColorPickFor] = useState(null); // cargo.id | null: offene Farb-Palette
     // Farbauflösung zentral: eigene Farbe (item.color) oder indexbasierte Palettenfarbe.
-    const colorOf = (item, i) => item.color || TYPE_COLORS[i % TYPE_COLORS.length];
+    const colorOf = (item, i) => item.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length];
     // Gewichtsverteilungs-Indikator: aufklappbar, standardmaessig zu.
     const [cogOpen, setCogOpen] = useState(false);
     // Container-Empfehlung: Berechnung genau EINMAL beim Oeffnen (nicht reaktiv auf cargo).
@@ -3872,6 +3949,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, T.cogTitle),
               /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: MONO, fontSize: 8.5, fontWeight: 600, padding: "2px 8px", background: hexA(C.warn, 0.12), color: C.warn, border: `1px solid ${hexA(C.warn, 0.3)}` } }, T.cogNoGuarantee)
             ),
+            cog.placedCount > cog.withWeightCount && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, lineHeight: 1.45, color: C.dim } }, T.cogWeightsMissing(cog.withWeightCount, cog.placedCount), " — ", T.cogWeightsMissingNote),
             /* @__PURE__ */ React.createElement("div", null,
               /* @__PURE__ */ React.createElement("div", { className: "flex justify-between", style: { fontFamily: MONO, fontSize: 9, color: C.faint, marginBottom: 5 } },
                 /* @__PURE__ */ React.createElement("span", null, T.cogFront),

@@ -1,0 +1,60 @@
+# Netlify-Header fuer containerload.io
+#
+# Format: Eine Zeile die mit / beginnt ist ein Pfadmuster.
+# Die eingerueckten Zeilen darunter sind die Header fuer diesen Pfad.
+#
+# WICHTIG bei Aenderungen: Wenn hier ein fremder Server fehlt, der irgendwo
+# nachgeladen wird, blockiert der Browser ihn stillschweigend. Die Seite sieht
+# dann kaputt aus, ohne Fehlermeldung. Vor dem Hinzufuegen einer neuen
+# Bibliothek also immer auch hier eintragen.
+
+/*
+  # Content-Security-Policy: Sagt dem Browser, von welchen Servern er ueberhaupt
+  # etwas laden darf. Alles was hier nicht steht, wird blockiert.
+  #
+  #   cdn.tailwindcss.com  -> Tailwind (Gestaltung)
+  #   cdnjs.cloudflare.com -> React und Three.js (3D-Ansicht)
+  #   fonts.googleapis.com -> Schrift-Stylesheet
+  #   fonts.gstatic.com    -> die Schriftdateien selbst
+  #   gc.zgo.at            -> Besucherzaehler GoatCounter (das Skript)
+  #   *.goatcounter.com    -> Besucherzaehler (wohin gezaehlt wird)
+  #   app.netlify.com      -> NUR die Vorschau-Leiste, die Netlify in Deploy-Previews
+  #                           einblendet. Auf der Live-Seite gibt es sie nicht. Ohne
+  #                           diesen Eintrag meldet jede Vorschau einen CSP-Fehler,
+  #                           und echte Fehler gehen daneben unter.
+  #
+  # 'unsafe-inline' ist noetig, weil das Projekt bewusst ohne Build-Schritt
+  # arbeitet: der gesamte Code steht direkt in den HTML-Dateien.
+  # data: und blob: bei img-src brauchen der PNG-Export und die QR-Codes.
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://containerload.goatcounter.com; connect-src 'self' https://containerload.goatcounter.com; worker-src 'self' blob:; frame-src 'self' https://app.netlify.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+
+  # Fremde Seiten duerfen ContainerLoad nicht in einen Rahmen einbetten.
+  # SAMEORIGIN statt DENY, weil die Startseite den Rechner selbst per iframe zeigt.
+  X-Frame-Options: SAMEORIGIN
+
+  # Der Browser soll Dateitypen nicht raten, sondern nehmen was der Server sagt.
+  X-Content-Type-Options: nosniff
+
+  # Beim Wechsel auf eine fremde Seite wird nur die Domain mitgegeben,
+  # nicht die genaue Adresse (in der ja eine geteilte Ladung stecken kann).
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # Kamera, Mikrofon und Standort werden nie gebraucht - also komplett abschalten.
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+
+  # Standard: bei jedem Aufruf nachfragen, ob es etwas Neues gibt.
+  # Das Projekt hat keinen Build-Schritt, die Dateinamen aendern sich also nie.
+  # Ein langer Cache wuerde bedeuten, dass eine Korrektur tagelang nicht ankommt.
+  Cache-Control: public, max-age=0, must-revalidate
+
+# Bilder und Symbole aendern sich selten. Ein Tag Zwischenspeicher ist ein guter
+# Kompromiss: schnell fuer Wiederkehrer, aber eine Korrektur ist morgen sichtbar.
+# Bewusst KEIN "immutable" - das wuerde ein Jahr lang jede Aenderung aussperren.
+/*.png
+  Cache-Control: public, max-age=86400
+
+/*.svg
+  Cache-Control: public, max-age=86400
+
+/*.ico
+  Cache-Control: public, max-age=86400
