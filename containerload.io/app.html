@@ -152,7 +152,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var KIND_LABEL = (T) => ({ dry: T.kDry, opentop: T.kOpenTop, flatrack: T.kFlatRack, platform: T.kPlatform, reefer: T.kReefer });
   var KIND_SUB = (T) => ({ dry: T.subDry, opentop: T.subOpenTop, flatrack: T.subFlatRack, platform: T.subPlatform, reefer: T.subReefer });
   var KIND_META = (T) => ({ dry: null, opentop: T.metaOpenTop, flatrack: T.metaFlatRack, platform: T.metaPlatform, reefer: T.metaReefer });
+  // Farbwaehler: alle zehn stehen zur Wahl. Wer weisse Kartons hat, soll sie weiss sehen.
   var TYPE_COLORS = ["#3B8CFF", "#16D9C4", "#FF7A1A", "#B15CFF", "#FF3D6E", "#2BE06B", "#FFC21F", "#FF4FD1", "#FFFFFF", "#000000"];
+  // Automatische Vergabe nach Position: nur die ersten acht. Weiss und Schwarz werden
+  // NIE von selbst vergeben. Grund: Die Packstuecke in der 3D-Ansicht haben keine
+  // Kantenlinien (die hat nur die Containerhuelle), und ihr Material reflektiert bei
+  // Schwarz praktisch nichts. Vor dem Hintergrund (C.bg = #05080C) waere die 10. Position
+  // damit fast unsichtbar — ohne dass jemand das ausgewaehlt haette. Selbst gewaehlt ist
+  // Schwarz in Ordnung, zugeteilt nicht.
+  var TYPE_COLORS_AUTO = TYPE_COLORS.slice(0, 8);
   var C = {
     text: "#E9F0F7",
     dim: "#9DB0C2",
@@ -2594,7 +2602,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       const boxGeo = new THREE.BoxGeometry(1, 1, 1);
       const typeMats = {};
-      const typeMat = (ti) => typeMats[ti] || (typeMats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS[ti % TYPE_COLORS.length]), roughness: 0.62, metalness: 0.08 }));
+      const typeMat = (ti) => typeMats[ti] || (typeMats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length]), roughness: 0.62, metalness: 0.08 }));
       // Special-Equipment-Ressourcen (dimensionsunabhaengig, einmal pro Build).
       const dT = 0.14, cs = 0.16;
       const matDeck = new THREE.MeshStandardMaterial({ color: 0x222a36, roughness: 0.85, metalness: 0.25 });
@@ -3267,7 +3275,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             const done = counts[i] || 0;
             const on = manualArmed === i;
             return /* @__PURE__ */ React.createElement("button", { key: c.id || i, onClick: total > 0 ? () => manualArm(i) : void 0, style: chip(on, total <= 0), disabled: total <= 0 },
-              /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: 2, background: c.color || TYPE_COLORS[i % TYPE_COLORS.length], flexShrink: 0 } }),
+              /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: 2, background: c.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length], flexShrink: 0 } }),
               /* @__PURE__ */ React.createElement("span", null, c.name || "Position " + (i + 1)),
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, color: done >= total && total > 0 ? C.good : C.faint } }, done, "/", total)
             );
@@ -3468,7 +3476,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [plans, setPlans] = useState(() => loadPlans());
     const [colorPickFor, setColorPickFor] = useState(null); // cargo.id | null: offene Farb-Palette
     // Farbauflösung zentral: eigene Farbe (item.color) oder indexbasierte Palettenfarbe.
-    const colorOf = (item, i) => item.color || TYPE_COLORS[i % TYPE_COLORS.length];
+    const colorOf = (item, i) => item.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length];
     // Gewichtsverteilungs-Indikator: aufklappbar, standardmaessig zu.
     const [cogOpen, setCogOpen] = useState(false);
     // Container-Empfehlung: Berechnung genau EINMAL beim Oeffnen (nicht reaktiv auf cargo).
