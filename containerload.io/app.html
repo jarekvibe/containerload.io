@@ -2526,7 +2526,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
           const theta = -0.92, phi = 1;
           const prevFog = scene.fog;
-          if (transparent) { scene.fog = null; if (ground) ground.visible = false; }
+          // Boden-Gitterlinien (floorGrid, separat vom Schatten-"ground") sonst im freigestellten
+          // Export sichtbar, wo sie auf hellem Mail-/Dokument-Hintergrund unschoen durchscheinen.
+          if (transparent) { scene.fog = null; if (ground) ground.visible = false; group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = false; }); }
           const prevPR = renderer.getPixelRatio();
           renderer.setPixelRatio(1);
           renderer.setSize(outW, outH, false);
@@ -2539,6 +2541,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           // Live-Ansicht exakt wiederherstellen
           scene.fog = prevFog;
           if (ground) ground.visible = true;
+          if (transparent) group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = true; });
           renderer.setPixelRatio(prevPR);
           renderer.setSize(curW, curH, true);
           camera.aspect = curW / curH;
