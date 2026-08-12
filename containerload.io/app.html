@@ -126,13 +126,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Hapag-Lloyd keinen 20' HC an, COSCO fuehrt keinen 45er). Dann gilt der Standardwert, und die
   // Auswahl sagt das auch.
   var CARRIERS = {
-    "Maersk": { src: "maersk.com", eq: {
+    "Maersk": { src: "maersk.com", url: "https://www.maersk.com/~/media_sc9/maersk/local-information/files/africa/south-africa/important-information/container-type-and-sizes/dry-equipment-specifications-updated.pdf", eq: {
       "20' GP": { l: 589.6, w: 235, h: 239.3, door: { w: 235, h: 227.4 } },
       "40' GP": { l: 1203.2, w: 235, h: 239.3, door: { w: 234, h: 227.4 } },
       "40' HC": { l: 1203.2, w: 235, h: 269.7, door: { w: 234, h: 257.7 } },
       "45' HC": { l: 1355.6, w: 235.2, h: 269.8, door: { w: 234, h: 258.5 } }
     } },
-    "CMA CGM": { src: "cma-cgm.com", eq: {
+    "CMA CGM": { src: "cma-cgm.com", url: "https://www.cma-cgm.com/products-services/containers", eq: {
       "20' GP": { l: 590, w: 235.2, h: 239.3, door: { w: 234, h: 228 } },
       "40' GP": { l: 1203.4, w: 235.2, h: 239.5, door: { w: 234, h: 228 } },
       "40' HC": { l: 1203.4, w: 235.2, h: 270, door: { w: 234, h: 258.5 } },
@@ -142,24 +142,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Das passt zu ihrer Kubikangabe (36 m3), nicht aber zum 20' HC dieses Rechners (270 cm,
     // 9'6" aussen) – das waere ein anderer Bautyp. Solange das nicht geklaert ist, bleibt der
     // Eintrag draussen und der 20' HC beim Standardwert, statt eine Zahl zu behaupten.
-    "COSCO": { src: "coscoshipping.com", eq: {
+    "COSCO": { src: "coscoshipping.it", url: "https://www.coscoshipping.it/container-dimension", eq: {
       "20' GP": { l: 589.8, w: 235.2, h: 239.2, door: { w: 234, h: 228 } },
       "40' GP": { l: 1203.1, w: 235.2, h: 239.2, door: { w: 234, h: 228 } },
       "40' HC": { l: 1203.1, w: 235.2, h: 269.7, door: { w: 234, h: 258.5 } }
     } },
-    "Hapag-Lloyd": { src: "hapag-lloyd.com", eq: {
+    "Hapag-Lloyd": { src: "hapag-lloyd.com", url: "https://www.hapag-lloyd.com/en/services-information/cargo-fleet/container.html", eq: {
       "20' GP": { l: 590, w: 235.2, h: 239.5, door: { w: 234, h: 229.2 } },
       "40' GP": { l: 1203.2, w: 235.2, h: 239.5, door: { w: 234, h: 229.2 } },
       "40' HC": { l: 1203.2, w: 235.2, h: 270, door: { w: 234, h: 259.7 } },
       "45' HC": { l: 1355.6, w: 235.2, h: 270, door: { w: 234, h: 259.7 } }
     } },
-    "ONE": { src: "one-line.com", eq: {
+    "ONE": { src: "one-line.com", url: "https://www.one-line.com/en/dry-containers", eq: {
       "20' GP": { l: 589.8, w: 235, h: 239, door: { w: 234, h: 228 } },
       "40' GP": { l: 1203.2, w: 235, h: 239, door: { w: 234, h: 228 } },
       "40' HC": { l: 1203.2, w: 235, h: 269.5, door: { w: 234, h: 258.5 } },
       "45' HC": { l: 1355.6, w: 235.2, h: 269.7, door: { w: 234, h: 258.5 } }
     } },
-    "Evergreen": { src: "evergreen-line.com", eq: {
+    "Evergreen": { src: "evergreen-line.com", url: "https://www.evergreen-line.com/container/jsp/CNTR_ContainerInformation.jsp", eq: {
       "20' GP": { l: 589.8, w: 235.2, h: 239.3, door: { w: 234, h: 228 } },
       "40' GP": { l: 1203.2, w: 235.2, h: 238.5, door: { w: 234.3, h: 228 } },
       "40' HC": { l: 1203.2, w: 235.2, h: 269, door: { w: 234.3, h: 258.5 } },
@@ -167,11 +167,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     } },
     // HMM veroeffentlicht auf seinen Container-Seiten nur 20' und 40' Dry; fuer 40' HC und 45'
     // gibt es dort keine eigenen Masse, also bleibt es dort beim Standard.
-    "HMM": { src: "hmm21.com", eq: {
+    "HMM": { src: "hmm21.com", url: "https://www.hmm21.com/e-service/information/mobile/containerInformationDetail.do?pageName=dryCntr_20", eq: {
       "20' GP": { l: 589.8, w: 235.2, h: 239.2, door: { w: 234, h: 228 } },
       "40' GP": { l: 1203.2, w: 235.2, h: 239.2, door: { w: 234, h: 228 } }
     } },
-    "Yang Ming": { src: "yangming.com", eq: {
+    "Yang Ming": { src: "yangming.com", url: "https://www.yangming.com/en/service/service_network/container_equipment_detail_40HQ.aspx", eq: {
       "20' GP": { l: 589.6, w: 235.2, h: 239.3, door: { w: 234, h: 228 } },
       "40' GP": { l: 1202.5, w: 235.2, h: 239.3, door: { w: 234, h: 228 } },
       "40' HC": { l: 1203.1, w: 235.2, h: 270, door: { w: 234, h: 258.5 } },
@@ -1368,8 +1368,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ctType: "Typ", ctHeight: "H\xF6he", ctStandard: "Standard", ctHighCube: "High Cube",
       ctAdjust: "Ma\xDFe anpassen", ctCustom: "Custom",
       ctCarrier: "Reederei", ctCarrierStd: "Standard (ISO)",
-      ctCarrierSrc: (n, src) => "Innenma\xDFe laut " + n + " (" + src + ") \xB7 unverbindlich",
-      ctCarrierNone: (n, typ) => n + " ver\xF6ffentlicht f\xFCr " + typ + " keine eigenen Ma\xDFe — Standardwerte",
+      ctCarrierSrc: (n) => "Innenma\xDFe laut " + n + " \xB7 unverbindlich \xB7 ",
+      ctCarrierNone: (n, typ) => n + " ver\xF6ffentlicht f\xFCr " + typ + " keine eigenen Ma\xDFe — Standardwerte \xB7 ",
+      ctCarrierOpen: "Quelle nachlesen",
       kDry: "Standard", kOpenTop: "Open Top", kFlatRack: "Flat Rack", kPlatform: "Platform", kReefer: "Reefer",
       subDry: "GP / HC", subOpenTop: "Dach offen", subFlatRack: "Stirnw\xE4nde", subPlatform: "nur Deck", subReefer: "isoliert",
       metaOpenTop: "Dach offen \xB7 \xDCberh\xF6he von oben", metaFlatRack: "Stirnw\xE4nde \xB7 \xDCberbreite / -h\xF6he",
@@ -1539,8 +1540,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ctType: "Type", ctHeight: "Height", ctStandard: "Standard", ctHighCube: "High Cube",
       ctAdjust: "Adjust size", ctCustom: "Custom",
       ctCarrier: "Carrier", ctCarrierStd: "Standard (ISO)",
-      ctCarrierSrc: (n, src) => "Inside dimensions per " + n + " (" + src + ") \xB7 non-binding",
-      ctCarrierNone: (n, typ) => n + " publishes no own dimensions for " + typ + " — standard values",
+      ctCarrierSrc: (n) => "Inside dimensions per " + n + " \xB7 non-binding \xB7 ",
+      ctCarrierNone: (n, typ) => n + " publishes no own dimensions for " + typ + " — standard values \xB7 ",
+      ctCarrierOpen: "Read the source",
       kDry: "Standard", kOpenTop: "Open Top", kFlatRack: "Flat Rack", kPlatform: "Platform", kReefer: "Reefer",
       subDry: "GP / HC", subOpenTop: "open roof", subFlatRack: "end walls", subPlatform: "deck only", subReefer: "insulated",
       metaOpenTop: "Open roof \xB7 over-height from top", metaFlatRack: "End walls \xB7 over-width / -height",
@@ -3370,10 +3372,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // veroeffentlichen die Reedereien keine vergleichbaren Masse, und eigene Masse ("Custom")
     // wuerden von einer Reederei-Wahl ueberschrieben.
     const carrierRow = !cur.custom && cur.kind === "dry";
-    const carrierNote = carrierRow && carrier && CARRIERS[carrier]
-      ? (carrierSpec(carrier, cur.key) ? T.ctCarrierSrc(carrier, CARRIERS[carrier].src) : T.ctCarrierNone(carrier, name))
-      : null;
-    const carrierMissing = !!(carrierRow && carrier && CARRIERS[carrier] && !carrierSpec(carrier, cur.key));
+    const carrierInfo = carrierRow && carrier && CARRIERS[carrier] ? CARRIERS[carrier] : null;
+    const carrierMissing = !!(carrierInfo && !carrierSpec(carrier, cur.key));
+    const carrierNote = carrierInfo ? (carrierMissing ? T.ctCarrierNone(carrier, name) : T.ctCarrierSrc(carrier)) : null;
     return /* @__PURE__ */ React.createElement("div", { className: "p-5", style: { borderBottom: "1px solid #16212D" } },
       /* @__PURE__ */ React.createElement(SectionTitle, null, T.container),
       /* @__PURE__ */ React.createElement("div", { style: segRow }, /* @__PURE__ */ React.createElement("span", { style: segKey }, T.ctType), /* @__PURE__ */ React.createElement("div", { style: segWrap }, KINDS_PRESENT.map((k) => Pill(k, cur.kind === k && !cur.custom, false, LAB[k], /* @__PURE__ */ React.createElement("small", { style: sub(cur.kind === k && !cur.custom) }, SUB[k]), () => pickKind(k))))),
@@ -3388,7 +3389,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("div", { style: { marginTop: 13, background: "linear-gradient(180deg,#111C27,#0D141D)", border: "1px solid #1E2A36", borderRadius: 14, padding: 14 } },
         /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } }, /* @__PURE__ */ React.createElement("div", { style: { width: 100, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(ContainerGlyph, { length: num(P.l), on: true, kind: cur.custom ? "dry" : cur.kind })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 17, fontWeight: 800, letterSpacing: "-0.02em", color: "#eaf4ff" } }, name), metaTxt ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.teal, marginTop: 3 } }, metaTxt) : null)),
         /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 0, marginTop: 13, paddingTop: 12, borderTop: "1px solid #1E2A36" } }, stats.map((el, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { borderLeft: i ? "1px solid #1E2A36" : "none", paddingLeft: i ? 13 : 0 } }, el))),
-        carrierNote ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 8.5, lineHeight: 1.45, letterSpacing: "0.03em", color: carrierMissing ? C.warn : C.faint, marginTop: 11, paddingTop: 9, borderTop: "1px solid #1E2A36" } }, carrierNote) : null),
+        carrierNote ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 8.5, lineHeight: 1.45, letterSpacing: "0.03em", color: carrierMissing ? C.warn : C.faint, marginTop: 11, paddingTop: 9, borderTop: "1px solid #1E2A36" } },
+          carrierNote,
+          // Die Zahlen sind nachpruefbar: ein Klick fuehrt auf die Seite, von der sie stammen.
+          // Nicht die volle Adresse, sondern die Domain – die traegt das Vertrauen, nicht der Pfad.
+          carrierInfo.url ? /* @__PURE__ */ React.createElement("a", { href: carrierInfo.url, target: "_blank", rel: "noopener noreferrer", title: T.ctCarrierOpen + " – " + carrierInfo.url, style: { color: C.accent, textDecoration: "none", whiteSpace: "nowrap", borderBottom: `1px solid ${hexA(C.accent, 0.4)}` } }, carrierInfo.src, " ↗") : null) : null),
       /* @__PURE__ */ React.createElement("div", { style: { marginTop: 11 } },
         /* @__PURE__ */ React.createElement("button", { onClick: () => setAdjOpen((o) => !o), style: { width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: adjOpen ? hexA(C.accent, 0.08) : "#0F1721", border: `1px ${adjOpen ? "solid" : "dashed"} ${adjOpen ? hexA(C.accent, 0.45) : "#22394B"}`, borderRadius: 11, padding: "9px 12px", cursor: "pointer", color: adjOpen ? "#bcd9ff" : C.dim, fontFamily: SANS, fontSize: 11.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", null, "⚙ ", T.ctAdjust), /* @__PURE__ */ React.createElement("span", { style: { transform: adjOpen ? "rotate(180deg)" : "none", transition: "transform .2s", fontSize: 11 } }, "▾")),
         adjOpen ? /* @__PURE__ */ React.createElement("div", { style: { paddingTop: 10 } }, /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: container[k], onChange: (v) => setCont(k, v) })))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 8, color: C.faint, marginTop: 8, letterSpacing: "0.04em" } }, T.adjHint)) : null));
@@ -4270,6 +4275,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     return /* @__PURE__ */ React.createElement("div", { className: "w-full min-h-screen flex flex-col", style: { fontFamily: SANS, color: C.text, background: "radial-gradient(1300px 700px at 85% -10%, #0d1726 0%, #05080C 60%)" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         html,body,#root{font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif!important;}
+        /* Das aufgeklappte Menue eines <select> zeichnet das Betriebssystem, nicht diese Seite.
+           Ohne diesen Hinweis kommt es in Windows-Hellgrau ueber die dunkle Oberflaeche.
+           color-scheme sagt dem Browser, in welcher Welt er sich befindet; die option-Regel ist
+           die Rueckfallebene fuer Browser, die das noch nicht auswerten. */
+        select{color-scheme:dark;}
+        select option{background:#0F1721;color:#E9F0F7;}
         @keyframes clrise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
         .clrise{animation:clrise .4s cubic-bezier(.4,0,.2,1) both}
         @keyframes clspin{to{transform:rotate(360deg)}}

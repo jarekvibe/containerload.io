@@ -30,6 +30,16 @@ test("alle acht Reedereien sind da und nennen ihre Quelle", () => {
   }
 });
 
+test("die angezeigte Domain fuehrt auch dorthin, wo sie hinzeigt", () => {
+  // In der Oberflaeche steht c.src als Linktext ueber c.url. Zeigten die auseinander, waere
+  // der Vertrauensbeweis eine Irrefuehrung — genau das faengt dieser Test ab.
+  for (const [name, c] of Object.entries(CARRIERS)) {
+    assert.ok(/^https:\/\//.test(c.url || ""), `${name}: Quell-Link fehlt oder ist nicht https`);
+    const host = new URL(c.url).hostname;
+    assert.ok(host === c.src || host.endsWith("." + c.src), `${name}: Link zeigt auf ${host}, angezeigt wird aber ${c.src}`);
+  }
+});
+
 test("jeder Reederei-Typ trifft einen echten Containertyp", () => {
   for (const [name, c] of Object.entries(CARRIERS)) {
     for (const typ of Object.keys(c.eq)) {
