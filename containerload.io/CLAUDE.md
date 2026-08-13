@@ -83,7 +83,9 @@ Special Equipment (Open Top, Flat Rack, Platform) und „Custom" bleiben von der
 
 **Es gibt genau eine Ergebnisanzeige** — die Leiste unter der 3D-Ansicht. Die früher darüber schwebende Karte zeigte dieselben Zahlen ein zweites Mal. Im 3D-Bild bleibt nur, was räumlich dazugehört: Tür-Warnung, Übermaß-Kasten, Empfehlungsbanner. Wer eine neue Kennzahl einbaut, baut sie in die Leiste.
 
-**Gestaltungsregeln, die den Unterschied machen:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. In der Kopfzeile stehen nur die zwei Wege nach draußen (Ladevorschlag, Teilen) plus „…" für den Rest.
+**Gestaltungsregeln, die den Unterschied machen:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. Und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche. Monospace trägt Zahlen (dafür ist sie da), Fußnoten und Hinweise stehen in der normalen Schrift.
+
+**In der Kopfzeile steht rechts nur „Teilen".** Alles andere (Ladevorschlag, Zur Seite, Export, Bild, Meine Pläne) liegt hinter „…". Die Einheit cm/mm sitzt im Kopf der Ladungsliste — dort, wo man Zahlen eintippt, nicht in der Kopfzeile. Die Reederei-Auswahl steht immer sichtbar, auch bei zugeklapptem Container: Sie wechselt öfter als der Containertyp.
 
 Ab `lg` ist der Rahmen **genau ein Fenster hoch** (`lg:h-screen lg:overflow-hidden`): Kopfzeile, 3D-Ansicht, Statuszeile und Fußzeile stehen fest, gescrollt wird nur **innen** in der Seitenleiste (`lg:min-h-0 lg:overflow-y-auto`, **keine** feste `maxHeight`). Wer der Seitenleiste wieder eine eigene Höhe gibt oder dem äußeren Rahmen das `overflow-hidden` nimmt, holt sich das alte Problem zurück: die Seite wird höher als das Fenster und die Statuszeile rutscht darunter. Unter `lg` (Telefon) scrollt die Seite bewusst normal.
 
