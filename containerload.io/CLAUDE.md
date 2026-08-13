@@ -77,6 +77,14 @@ Drei Regeln, die dabei nicht kippen dürfen:
 Special Equipment (Open Top, Flat Rack, Platform) und „Custom" bleiben von der Reederei-Wahl unberührt. Die Wahl steckt **nicht** im `?c=`-Link — die Maße selbst reisen dort ohnehin mit; gemerkt wird sie lokal unter `containerload.carrier.v1`.
 
 ### Layout des Rechners (`app.html`)
+**Drei Spalten ab 1440 px:** links Container und Werkzeuge, in der Mitte die 3D-Ansicht, rechts die Ladung. Darunter fällt es auf zwei Spalten zurück und die Ladung rückt unter den Container. Diese Entscheidung trifft **JavaScript** (`wide` per `matchMedia`), nicht ein Tailwind-Breakpoint — der Ladungsbereich wechselt die Spalte, und das kann CSS nur, wenn man ihn zweimal in die Seite schreibt. Deshalb liegt er als `cargoEl` in einer Variablen (dasselbe Muster wie `railEl`).
+
+**Die Container-Spalte steht zusammengeklappt.** Sichtbar ist die Maßkarte; „Ändern" holt Typ, Länge, Höhe und Reederei zurück und lässt sie offen, bis man „Fertig" drückt. Grund: Der Container wird einmal je Plan gewählt, die Ladung dreißigmal bearbeitet. Nichts klappt von selbst zu, während jemand arbeitet.
+
+**Es gibt genau eine Ergebnisanzeige** — die Leiste unter der 3D-Ansicht. Die früher darüber schwebende Karte zeigte dieselben Zahlen ein zweites Mal. Im 3D-Bild bleibt nur, was räumlich dazugehört: Tür-Warnung, Übermaß-Kasten, Empfehlungsbanner. Wer eine neue Kennzahl einbaut, baut sie in die Leiste.
+
+**Gestaltungsregeln, die den Unterschied machen:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. In der Kopfzeile stehen nur die zwei Wege nach draußen (Ladevorschlag, Teilen) plus „…" für den Rest.
+
 Ab `lg` ist der Rahmen **genau ein Fenster hoch** (`lg:h-screen lg:overflow-hidden`): Kopfzeile, 3D-Ansicht, Statuszeile und Fußzeile stehen fest, gescrollt wird nur **innen** in der Seitenleiste (`lg:min-h-0 lg:overflow-y-auto`, **keine** feste `maxHeight`). Wer der Seitenleiste wieder eine eigene Höhe gibt oder dem äußeren Rahmen das `overflow-hidden` nimmt, holt sich das alte Problem zurück: die Seite wird höher als das Fenster und die Statuszeile rutscht darunter. Unter `lg` (Telefon) scrollt die Seite bewusst normal.
 
 In der Ladungsliste ist **genau eine Position aufgeklappt** (`openCargo`); die übrigen stehen als einzeilige Zusammenfassung da (`cargoSummary`). Neu angelegte Positionen klappen automatisch auf.
