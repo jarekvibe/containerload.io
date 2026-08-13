@@ -1379,6 +1379,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stVol: "Volumen", stPay: "Nutzlast", stDoor: "T\xFCr\xF6ffn.", stDeck: "Deck", stOpen: "Offen",
       openRoof: "Dach", openSides: "Seiten", openAll: "rundum", ftUnit: "Fu\xDF", adjHint: (u) => `${u} \xB7 eigene Ma\xDFe → schaltet auf „Custom“`,
       cargo: "Ladung",
+      // Vorgabename einer neuen Position. NICHT identisch mit V2_DEFAULT_NAME: das ist eine
+      // Konstante des Teilen-Formats und muss "Packstück" bleiben, sonst aendert sich, was alte
+      // Links anzeigen. Hier geht es nur darum, was in der Oberflaeche steht.
+      itemDefault: "Packst\xFCck",
+      planName: "Plan benennen", planNameTitle: "Name dieses Plans \u2013 erscheint in „Meine Pl\xE4ne“, im Ladevorschlag und in den Dateinamen",
       addItem: "+ Packst\xFCck",
       qty: "Anzahl",
       weightPer: "Gewicht / St. (kg)",
@@ -1553,6 +1558,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stVol: "Volume", stPay: "Payload", stDoor: "Door", stDeck: "Deck", stOpen: "Open",
       openRoof: "roof", openSides: "sides", openAll: "all sides", ftUnit: "ft", adjHint: (u) => `${u} \xB7 custom size → switches to “Custom”`,
       cargo: "Cargo",
+      itemDefault: "Package",
+      planName: "Name this plan", planNameTitle: "Name of this plan \u2013 shows up in “My plans”, in the load proposal and in the file names",
       addItem: "+ Item",
       qty: "Qty",
       weightPer: "Weight / unit (kg)",
@@ -1753,6 +1760,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var V2_ROAD_CODES = { "A": 1, "B": 1, "C": 1, "D": 1, "E": 1, "Z": 1 };
   var V2_EQ = { d: "dry", o: "opentop", f: "flatrack", p: "platform", r: "reefer" };
   var V2_EQ_OF = { dry: "d", opentop: "o", flatrack: "f", platform: "p", reefer: "r" };
+  // Konstante des Teilen-Formats, NICHT der Vorgabename der Oberflaeche (der ist T.itemDefault
+  // und heisst auf Englisch "Package"). Wer diesen Wert aendert, aendert, was in jedem bereits
+  // geteilten Link ohne Namensfeld angezeigt wird – der Name reist naemlich nur mit, wenn er
+  // von diesem Wert abweicht.
   var V2_DEFAULT_NAME = "Packstück";
   var v2num = (n) => {
     var s = String(+n);
@@ -3510,9 +3521,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { className: "flex justify-between mb-1", style: { fontFamily: MONO, fontSize: 9.5 } }, /* @__PURE__ */ React.createElement("span", { style: { letterSpacing: "0.12em", textTransform: "none", color: C.dim } }, label), /* @__PURE__ */ React.createElement("span", { style: { color: c, fontWeight: 600 } }, text, over ? " \xB7 zu schwer" : "")), /* @__PURE__ */ React.createElement("div", { className: "rounded-full overflow-hidden", style: { height: 6, background: "#101723", border: "1px solid #1E2A36" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-full", style: { height: "100%", width: `${w}%`, background: over ? C.bad : `linear-gradient(90deg, ${hexA(c, 0.65)}, ${c})`, transition: "width .55s cubic-bezier(.4,0,.2,1)" } })));
   };
   // Dialog "Meine Plaene" – speichern/laden/teilen/loeschen lokaler Plaene. Modal-Muster wie Teilen/Import.
-  function PlansDialog({ plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, onClose, setToast, T }) {
+  function PlansDialog({ plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, onClose, setToast, T, planName }) {
     const dstr = (ts) => { try { return new Date(ts).toLocaleDateString(LANG === "en" ? "en-US" : "de-DE", { day: "2-digit", month: "short" }); } catch (e) { return ""; } };
-    const defName = preset + " \xB7 " + dstr(Date.now());
+    const defName = (planName && planName.trim()) || preset + " \xB7 " + dstr(Date.now());
     const [name, setName] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState("");
@@ -3522,7 +3533,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setName("");
       setToast(T.plansSaved);
     };
-    const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d); onClose(); setToast(T.plansLoaded); };
+    const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d, pl.name); onClose(); setToast(T.plansLoaded); };
     const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
     const removePlan = (id) => setPlans(deletePlanFromStore(id));
     const startRename = (pl) => { setEditingId(pl.id); setEditName(pl.name); };
@@ -3564,7 +3575,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, fontFamily: MONO, fontSize: 9, lineHeight: 1.5, color: C.faint, letterSpacing: "0.02em" } }, T.plansFoot))));
   }
   function App() {
-    const INIT_CARGO = SHARED ? SHARED.cargo : QIMPORT || [{ id: uid(), name: "Packst\xFCck", l: 120, w: 80, h: 110, weight: 300, qty: 1, stackable: true, rotatable: true }];
+    const INIT_CARGO = SHARED ? SHARED.cargo : QIMPORT || [{ id: uid(), name: T.itemDefault, l: 120, w: 80, h: 110, weight: 300, qty: 1, stackable: true, rotatable: true }];
     // Geteilter Link schlaegt die gemerkte Reederei: im Link stehen die Masse, mit denen der
     // Absender gerechnet hat – die duerfen sich beim Empfaenger nicht still veraendern.
     const INIT_CARRIER = SHARED ? "" : loadCarrier();
@@ -3690,6 +3701,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Aktionen, die man selten braucht, liegen hinter "…". Sichtbar bleiben Ladevorschlag und
     // Teilen: acht gleich aussehende Knoepfe nebeneinander sagen niemandem, was wichtig ist.
     const [menuOpen, setMenuOpen] = useState(false);
+    // Name des Plans. Leer heisst unbenannt – dann bleibt alles beim bisherigen Verhalten.
+    const [planName, setPlanName] = useState("");
+    // Fuer Dateinamen: Umlaute ausschreiben, alles andere auf Bindestriche. Leer -> null,
+    // damit die Aufrufer beim alten Namen bleiben koennen.
+    const planSlug = () => {
+      const t = planName.trim().toLowerCase()
+        .replace(/\xE4/g, "ae").replace(/\xF6/g, "oe").replace(/\xFC/g, "ue").replace(/\xDF/g, "ss")
+        .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48);
+      return t || null;
+    };
     // Drei Spalten erst ab 1440 px. Darunter ruecken Container und Ladung wieder untereinander
     // in die linke Spalte. Das entscheidet JavaScript und nicht ein Tailwind-Breakpoint, weil der
     // Ladungsbereich dabei die SPALTE WECHSELT und nicht nur seine Breite aendert – das kann CSS
@@ -3841,7 +3862,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setCargo((cs) => cs.map((c) => c.id === id ? { ...c, ...patch } : c));
     };
     const addCargo = () => {
-      const it = { id: uid(), name: "Packst\xFCck", l: 120, w: 80, h: 110, weight: 300, qty: 1, stackable: true, rotatable: true };
+      const it = { id: uid(), name: T.itemDefault, l: 120, w: 80, h: 110, weight: 300, qty: 1, stackable: true, rotatable: true };
       setCargo((cs) => [...cs, it]);
       setOpenCargo(it.id); // neu heisst: sofort ausgefuellt werden wollen
     };
@@ -4056,7 +4077,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `containerload-ansicht-${nowStamp()}.png`;
+      a.download = `${planSlug() || "containerload-ansicht"}-${nowStamp()}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -4100,12 +4121,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const now = /* @__PURE__ */ new Date();
       const p2 = (n) => String(n).padStart(2, "0");
       const stamp = `${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}`;
-      const ok = downloadText(`containerload-ladeliste-${stamp}.csv`, csv, "text/csv");
+      const ok = downloadText(`${planSlug() || "containerload-ladeliste"}-${stamp}.csv`, csv, "text/csv");
       setToast(ok ? T.exportDone : LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
     };
     // Plan aus einem gespeicherten State in den Rechner laden (gleiche Setter wie SHARED-Initialzustand).
-    const applyPlan = (d) => {
+    const applyPlan = (d, name) => {
       if (!d) return;
+      if (typeof name === "string") setPlanName(name);
       setDomain(d.domain || "sea");
       setPreset(d.preset);
       setContainer(d.container);
@@ -4305,7 +4327,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const planURL = encodePlanURL(preset, container, cargo, forceCentered, domain);
         const qr = makeQR(planURL);
         const pageHTML = LV_PAGE({
-          REF: ref,
+          REF: ref + (planName.trim() ? " \xB7 " + planName.trim() : ""),
           DATUM: datum,
           // Mit Reederei-Wahl gehoert deren Name ins Dokument: die Innenmasse darunter sind ihre.
           CONTAINER_LABEL: "1\xD7 " + pl + (carrier && carrierSpec(carrier, preset) ? " \xB7 " + carrier : ""),
@@ -4380,7 +4402,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         @keyframes clspin{to{transform:rotate(360deg)}}
         /* Die Balken-Animation (cl-bar, clload, clload2) ist entfallen. Sie gehoerte zu
            einem frueheren Zeichen — einem Container mit Balken. Hier steht laengst der
-           Wuerfel aus favicon.svg, und kein Element trug die Klasse noch. */`), /* @__PURE__ */ React.createElement("header", { className: "flex items-center justify-between px-5 py-3 relative", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-0 left-0 h-px w-2/5", style: { background: `linear-gradient(90deg, ${C.accent}, transparent)` } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("a", { href: EMBEDDED ? void 0 : homeHref, className: "brandlogo flex items-center gap-2.5", style: EMBEDDED ? void 0 : { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 rounded-lg flex items-center justify-center", style: { background: C.accent } }, /* @__PURE__ */ React.createElement("svg", { width: "19", height: "19", viewBox: "0 0 24 24", fill: "none" }, /* @__PURE__ */ React.createElement("polygon", { className: "cl-cube", points: "12,3.4 19.6,7.8 12,12.2 4.4,7.8", fill: "#0A2B46" }), /* @__PURE__ */ React.createElement("polygon", { points: "4.4,7.8 12,12.2 12,20.6 4.4,16.2", fill: "#165780" }), /* @__PURE__ */ React.createElement("polygon", { points: "19.6,7.8 12,12.2 12,20.6 19.6,16.2", fill: "#0F3C60" }))), /* @__PURE__ */ React.createElement("div", { className: "leading-none" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em" } }, "Container", /* @__PURE__ */ React.createElement("span", { style: { background: `linear-gradient(90deg, ${C.accent}, ${C.teal})`, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } }, "Load")), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginTop: 3 } }, T.sub))), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#0F1721", border: "1px solid #1E2A36" } }, ["de", "en"].map((l) => { const on = (LANG === "en" ? "en" : "de") === l; return /* @__PURE__ */ React.createElement("button", { key: l, onClick: on ? void 0 : () => setLangTo(l), title: l === "en" ? "English" : "Deutsch", style: { padding: "4px 9px", borderRadius: 5, border: 0, cursor: on ? "default" : "pointer", fontFamily: SANS, fontSize: 11, fontWeight: on ? 700 : 600, background: on ? hexA(C.accent, 0.16) : "transparent", color: on ? "#DBE8FF" : C.faint, transition: ".15s" } }, l.toUpperCase()); }))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: manualMode ? void 0 : doShare, disabled: manualMode, title: manualMode ? T.manualExportOff : T.shareTitle, className: "flex items-center gap-1 px-2.5 py-1 rounded-md transition hover:brightness-125", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 600, letterSpacing: "0.01em", color: "#08111C", background: C.accent, border: `1px solid ${C.accent}`, fontWeight: 700, opacity: manualMode ? 0.4 : 1, cursor: manualMode ? "default" : "pointer" } }, /* @__PURE__ */ React.createElement("svg", { width: "11", height: "11", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), T.shareBtn), /* @__PURE__ */ React.createElement("span", { style: { position: "relative", display: "inline-flex" } },
+           Wuerfel aus favicon.svg, und kein Element trug die Klasse noch. */`), /* @__PURE__ */ React.createElement("header", { className: "flex items-center justify-between px-5 py-3 relative", style: { borderBottom: "1px solid #16212D" } }, /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-0 left-0 h-px w-2/5", style: { background: `linear-gradient(90deg, ${C.accent}, transparent)` } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("a", { href: EMBEDDED ? void 0 : homeHref, className: "brandlogo flex items-center gap-2.5", style: EMBEDDED ? void 0 : { cursor: "pointer" } }, /* @__PURE__ */ React.createElement("div", { className: "w-8 h-8 rounded-lg flex items-center justify-center", style: { background: C.accent } }, /* @__PURE__ */ React.createElement("svg", { width: "19", height: "19", viewBox: "0 0 24 24", fill: "none" }, /* @__PURE__ */ React.createElement("polygon", { className: "cl-cube", points: "12,3.4 19.6,7.8 12,12.2 4.4,7.8", fill: "#0A2B46" }), /* @__PURE__ */ React.createElement("polygon", { points: "4.4,7.8 12,12.2 12,20.6 4.4,16.2", fill: "#165780" }), /* @__PURE__ */ React.createElement("polygon", { points: "19.6,7.8 12,12.2 12,20.6 19.6,16.2", fill: "#0F3C60" }))), /* @__PURE__ */ React.createElement("div", { className: "leading-none" }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 16, fontWeight: 800, letterSpacing: "-0.02em" } }, "Container", /* @__PURE__ */ React.createElement("span", { style: { background: `linear-gradient(90deg, ${C.accent}, ${C.teal})`, WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent" } }, "Load")), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginTop: 3 } }, T.sub))), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#0F1721", border: "1px solid #1E2A36" } }, ["de", "en"].map((l) => { const on = (LANG === "en" ? "en" : "de") === l; return /* @__PURE__ */ React.createElement("button", { key: l, onClick: on ? void 0 : () => setLangTo(l), title: l === "en" ? "English" : "Deutsch", style: { padding: "4px 9px", borderRadius: 5, border: 0, cursor: on ? "default" : "pointer", fontFamily: SANS, fontSize: 11, fontWeight: on ? 700 : 600, background: on ? hexA(C.accent, 0.16) : "transparent", color: on ? "#DBE8FF" : C.faint, transition: ".15s" } }, l.toUpperCase()); }))), /* @__PURE__ */ React.createElement("div", { className: "flex-1 flex justify-center px-6 min-w-0" }, /* @__PURE__ */ React.createElement("input", { value: planName, onChange: (e) => setPlanName(e.target.value.slice(0, 60)), placeholder: T.planName, title: T.planNameTitle, spellCheck: false, className: "text-center rounded-lg px-3 py-1 min-w-0", style: { width: "100%", maxWidth: 340, background: "transparent", border: "1px solid transparent", color: C.text, fontFamily: SANS, fontSize: 13.5, fontWeight: 600, outline: "none", transition: "border-color .15s, background .15s" }, onFocus: (e) => { e.target.style.borderColor = hexA(C.accent, 0.5); e.target.style.background = C.field; }, onBlur: (e) => { e.target.style.borderColor = "transparent"; e.target.style.background = "transparent"; } })), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: manualMode ? void 0 : doShare, disabled: manualMode, title: manualMode ? T.manualExportOff : T.shareTitle, className: "flex items-center gap-1 px-2.5 py-1 rounded-md transition hover:brightness-125", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 600, letterSpacing: "0.01em", color: "#08111C", background: C.accent, border: `1px solid ${C.accent}`, fontWeight: 700, opacity: manualMode ? 0.4 : 1, cursor: manualMode ? "default" : "pointer" } }, /* @__PURE__ */ React.createElement("svg", { width: "11", height: "11", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), T.shareBtn), /* @__PURE__ */ React.createElement("span", { style: { position: "relative", display: "inline-flex" } },
       /* @__PURE__ */ React.createElement("button", { onClick: () => setMenuOpen((o) => !o), title: T.moreMenu, "aria-expanded": menuOpen, className: "px-2.5 py-1 rounded-md transition hover:brightness-125", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 700, letterSpacing: "0.06em", lineHeight: 1.35, color: menuOpen ? "#bcd9ff" : C.dim, background: menuOpen ? hexA(C.accent, 0.1) : "transparent", border: `1px solid ${menuOpen ? hexA(C.accent, 0.4) : "#1E2A36"}`, cursor: "pointer" } }, "\u2026"),
       menuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null,
         /* @__PURE__ */ React.createElement("div", { onClick: () => setMenuOpen(false), style: { position: "fixed", inset: 0, zIndex: 40 } }),
@@ -4436,7 +4458,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.45, color: "#d4dce5" } }, comboBody),
                 recData.combo.type === "equip" ? /* @__PURE__ */ React.createElement("button", { onClick: () => { applyPreset(recData.combo.name); setRecOpen(false); }, className: "mt-3 px-3 py-1.5 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: 12, fontWeight: 700 } }, T.recApply) : null) : null,
               /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, fontFamily: MONO, fontSize: 9.5, color: C.faint, letterSpacing: "0.04em" } }, T.recFoot)))));
-    })(), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, onClose: () => setPlansOpen(false), setToast, T }), toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-2.5 rounded-xl", style: { background: hexA("#0F1721", 0.95), border: `1px solid ${hexA(C.accent, 0.45)}`, color: "#cfe6ff", fontSize: 12.5, fontWeight: 600, boxShadow: "0 12px 40px -10px rgba(0,0,0,0.7)" } }, toast)));
+    })(), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, onClose: () => setPlansOpen(false), setToast, T }), toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-2.5 rounded-xl", style: { background: hexA("#0F1721", 0.95), border: `1px solid ${hexA(C.accent, 0.45)}`, color: "#cfe6ff", fontSize: 12.5, fontWeight: 600, boxShadow: "0 12px 40px -10px rgba(0,0,0,0.7)" } }, toast)));
   }
   var SectionTitle = ({ children, noMargin }) => /* @__PURE__ */ React.createElement("div", { className: noMargin ? "" : "mb-2.5", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: "#8190a3" } }, children);
   var Stat = ({ label, value, sub, accent }) => /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 relative", style: { borderRight: "1px solid #111824" } }, /* @__PURE__ */ React.createElement("span", { className: "absolute top-0 left-4 right-4", style: { height: 1, background: `linear-gradient(90deg, ${accent}, transparent)`, opacity: 0.5 } }), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 10.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: "#7f8da0", marginBottom: 6 } }, label), /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline gap-1.5" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 23, fontWeight: 700, color: accent, textShadow: `0 0 18px ${hexA(accent, 0.35)}` } }, value), sub && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 10.5, color: C.faint } }, sub)));
