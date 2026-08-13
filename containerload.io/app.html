@@ -3687,12 +3687,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [openCargo, setOpenCargo] = useState(() => (INIT_CARGO[0] ? INIT_CARGO[0].id : null));
     // Zugeklappte Zeile: was man beim Durchsehen wirklich braucht – Menge, Mass, Gewicht, und
     // eine Stapel-Einschraenkung nur dann, wenn es eine gibt.
-    const cargoSummary = (c) => [
-      Math.max(0, Math.floor(num(c.qty))) + "\xD7",
-      `${num(c.l)}\xD7${num(c.w)}\xD7${num(c.h)} cm`,
-      num(c.weight) > 0 ? fmtDE(c.weight) + " kg" : null,
-      c.stackable === false ? T.notStackable : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
-    ].filter(Boolean).join(" \xB7 ");
+    const cargoSummary = (c) => {
+      // Dieselbe Einheit wie die Eingabefelder darueber: stuenden hier cm, waehrend die offene
+      // Position daneben in mm rechnet, muesste man bei jeder Zeile neu ueberlegen, was gilt.
+      // Umgerechnet wird wie in Num – gerundet, sonst macht 120,4 x 10 daraus 1203,9999999.
+      const uf = unit === "mm" ? 10 : 1;
+      const m = (v) => Math.round(num(v) * uf * 1e6) / 1e6;
+      return [
+        Math.max(0, Math.floor(num(c.qty))) + "\xD7",
+        `${m(c.l)}\xD7${m(c.w)}\xD7${m(c.h)} ${unit}`,
+        num(c.weight) > 0 ? fmtDE(c.weight) + " kg" : null,
+        c.stackable === false ? T.notStackable : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
+      ].filter(Boolean).join(" \xB7 ");
+    };
     // Farbauflösung zentral: eigene Farbe (item.color) oder indexbasierte Palettenfarbe.
     const colorOf = (item, i) => item.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length];
     // Gewichtsverteilungs-Indikator: aufklappbar, standardmaessig zu.
