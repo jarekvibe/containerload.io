@@ -89,7 +89,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     "40' Flat Rack": { l: 1198, w: 240, h: 205, payload: 39000, kind: "flatrack", gauge: { l: 1219, w: 244, h: 259 } },
     // Platform (nur Deck, alles offen; h = nur visuelle Deckhoehe, KEIN Ladungslimit)
     "20' Platform": { l: 606, w: 244, h: 30, payload: 31000, kind: "platform", gauge: { l: 606, w: 244, h: 259 } },
-    "40' Platform": { l: 1219, w: 244, h: 40, payload: 40000, kind: "platform", gauge: { l: 1219, w: 244, h: 259 } }
+    "40' Platform": { l: 1219, w: 244, h: 40, payload: 40000, kind: "platform", gauge: { l: 1219, w: 244, h: 259 } },
+    // Reefer (isoliert, geschlossener Korpus wie dry — daher kein eigenes gauge). Innenmasse
+    // fallen wegen Isolierung + Kuehlaggregat kleiner aus als GP/HC gleicher Laenge, die
+    // Zuladung entsprechend niedriger (schwereres Tara durchs Aggregat). WERTE SIND EIN
+    // RICHTWERT (Web-Recherche, nicht gegen ein einzelnes Reederei-Datenblatt abgeglichen) -
+    // wie bei VEHICLES ueber "Masse anpassen" korrigierbar. 40' faktisch immer High-Cube-Bauart.
+    "20' Reefer": { l: 544, w: 228, h: 220, payload: 27400, door: { w: 228, h: 218 }, kind: "reefer" },
+    "40' Reefer": { l: 1158, w: 228, h: 242, payload: 28200, door: { w: 228, h: 219 }, kind: "reefer" }
   };
   var META = {
     "20' GP": "General Purpose",
@@ -220,7 +227,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     dry: { panels: { sides: true, ends: true, roof: true } },
     opentop: { panels: { sides: true, ends: true, roof: false } },
     flatrack: { panels: { sides: false, ends: true, roof: false } },
-    platform: { panels: { sides: false, ends: false, roof: false } }
+    platform: { panels: { sides: false, ends: false, roof: false } },
+    reefer: { panels: { sides: true, ends: true, roof: true } }
   };
   var panelsFor = (k) => (EQUIP[k] || EQUIP.dry).panels;
   // Container-Auswahl: Struktur rein aus PRESETS ableiten (kind + Laenge + GP/HC).
