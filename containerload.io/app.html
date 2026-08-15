@@ -4194,13 +4194,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // beides ohnehin als "belegt / gesamt", die Differenz muss niemand doppelt gezeigt bekommen.
     const loadFrontCm = (result.placed || []).reduce((m, p) => Math.max(m, (+p.x || 0) + (+p.dx || 0)), 0);
     const freeLenM = Math.max(0, num(container.l) - loadFrontCm) / 100;
+    // primaryMeter/railColor stehen VOR statCards: die Auslastung ist jetzt eine Karte darin,
+    // und eine const, die erst darunter berechnet wird, gibt es beim Rendern noch nicht.
+    const primaryMeter = domain === "road"
+      ? { label: T.ldmUtil, pct: Math.min(ldmPct, 100), color: AC, text: `${ldmPct.toFixed(0)}%` }
+      : { label: T.volUtil, pct: result.util, color: utilColor, text: `${result.util.toFixed(0)}%` };
+    const railHot = Math.max(primaryMeter.pct || 0, payPct || 0) >= 90;
+    const railColor = payPct > 100 ? C.bad : railHot ? C.warn : primaryMeter.color;
+    // Die Auslastung stand frueher als 26px-Zahl mit eigenem Trennstrich vor der Leiste – ein
+    // Sonderfall, der nur deshalb groesser war, weil er der erste war. Sie ist eine Kennzahl
+    // wie die anderen und steht jetzt auch so da.
     const statCards = domain === "road" ? [
+      { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor },
       { label: T.loaded, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn },
       { label: T.ldm, value: nf(ldmBelegt, 2), sub: `/ ${nf(ldmTotal, 2)} ldm` },
       { label: T.volume, value: nf(result.usedVol, 2), sub: "cbm" },
       { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor },
       { label: T.spots, value: `${floorSpots}`, sub: T.spotsSub }
     ] : [
+      { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor },
       { label: T.loaded, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn },
       // Freie Laenge bis zur Tuer stand vorher in der schwebenden Karte im 3D-Bild. Sie ist die
       // einzige Zahl von dort, die sich nicht aus der Leiste ergibt (freies Volumen und freie
@@ -4211,9 +4223,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor },
       { label: T.layers, value: `${result.boxes === 0 ? 0 : result.single ? result.layers : Math.max(1, result.layers)}`, sub: result.single ? T.stacked : T.mixed }
     ];
-    const primaryMeter = domain === "road"
-      ? { label: T.ldmUtil, pct: Math.min(ldmPct, 100), color: AC, text: `${ldmPct.toFixed(0)}%` }
-      : { label: T.volUtil, pct: result.util, color: utilColor, text: `${result.util.toFixed(0)}%` };
     // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
     // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
     const cog = computeLongCog(result.placed || [], (ti) => num(cargo[ti] && cargo[ti].weight), num(container.l));
@@ -4221,17 +4230,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
-    const railHot = Math.max(primaryMeter.pct || 0, payPct || 0) >= 90;
-    const railColor = payPct > 100 ? C.bad : railHot ? C.warn : primaryMeter.color;
     const statusColor = payPct > 100 ? C.bad : railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: "14px 20px" } },
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline gap-2", style: { paddingRight: 20, whiteSpace: "nowrap" } },
-          /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 26, fontWeight: 700, color: railColor, lineHeight: 1, fontVariantNumeric: "tabular-nums" } }, Math.round(primaryMeter.pct), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 13.5, color: C.faint, fontWeight: 500 } }, "%")),
-          /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, T.railFull)
-        ),
-        /* @__PURE__ */ React.createElement("div", { className: "hidden sm:block", style: { width: 1, height: 32, background: "#232C38", flexShrink: 0 } }),
-        /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: "10px 18px", padding: "0 18px" } },
+        /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: "10px 18px", paddingRight: 18 } },
           statCards.map((s, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i },
             i > 0 && /* @__PURE__ */ React.createElement("div", { className: "hidden sm:block", style: { width: 1, alignSelf: "stretch", background: "#232C38" } }),
             /* @__PURE__ */ React.createElement("div", { className: "min-w-0" },
