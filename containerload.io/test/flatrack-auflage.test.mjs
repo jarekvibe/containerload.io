@@ -18,7 +18,7 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const L = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8").split("\n");
 
 const ps = L.findIndex((l) => l.includes("function makeFloorPacker"));
-const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("layers: base.layers || 1"));
+const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("single: false"));
 const presets = L.findIndex((l) => l.includes("var PRESETS = {"));
 const equipEnd = L.findIndex((l, i) => i > presets && l.includes("var panelsFor"));
 assert.ok(ps > 0 && pe > ps && presets > 0 && equipEnd > presets, "Code-Ausschnitte nicht gefunden");
@@ -67,6 +67,34 @@ test("zwei Stuecke stehen buendig, ohne Luecke", () => {
   const [a, b] = [...r.placed].sort((p, q) => p.x - q.x);
   const luecke = b.x - (a.x + a.dx);
   assert.ok(Math.abs(luecke) < 1e-6, `Luecke von ${luecke} cm zwischen den Stuecken`);
+});
+
+test("was nebeneinander nicht passt, darf uebereinander", () => {
+  // 6x 500x300x110 auf 5,85 m Deck: pro Lage passt genau EIN Stueck. Ohne zweite Lage endet
+  // der Flat Rack bei 1 von 6, obwohl die Ware ausdruecklich stapelbar und flach ist.
+  const r = packKind(RACK, stueck(500, 300, 110, 6), {}, false);
+  const lagen = [...new Set(r.placed.map((p) => p.y))].sort((a, b) => a - b);
+  assert.deepStrictEqual(lagen, [0, 110], `Lagen bei y = ${lagen.join(", ")}`);
+  assert.strictEqual(r.placed.length, 2);
+  // Deckungsgleich gestapelt heisst: exakt buendig, nicht irgendwie darueber.
+  const [u, o] = [...r.placed].sort((a, b) => a.y - b.y);
+  assert.strictEqual(o.x, u.x);
+  assert.strictEqual(o.z, u.z);
+});
+
+test("die Stapelhoehe endet am Huellmass der Zelle", () => {
+  // Drei Lagen waeren 330 cm – das ISO-Huellmass des 20'-Slots ist 259 cm hoch.
+  const r = packKind(RACK, stueck(500, 300, 110, 6), {}, false);
+  const oberkante = Math.max(...r.placed.map((p) => p.y + p.dy));
+  assert.ok(oberkante <= RACK.gauge.h, `Oberkante ${oberkante} cm ueber Huellmass ${RACK.gauge.h} cm`);
+});
+
+test("nicht stapelbare Ware wird nicht gestapelt", () => {
+  const cargo = stueck(500, 300, 110, 6);
+  cargo[0].stackable = false;
+  const r = packKind(RACK, cargo, {}, false);
+  assert.strictEqual(r.placed.length, 1, "ohne Stapeln passt genau eins aufs Deck");
+  assert.strictEqual(r.placed[0].y, 0);
 });
 
 test("Ueberstand bleibt erlaubt – ein Flat Rack ist genau dafuer da", () => {

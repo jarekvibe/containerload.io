@@ -1032,6 +1032,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const mx = c.x + c.dx / 2, mz = c.z + c.dz / 2;
       return anteil >= 0.5 - 1e-9 && mx >= -1e-9 && mx <= CL + 1e-9 && mz >= -1e-9 && mz <= CW + 1e-9;
     };
+    // Deckel fuer eine zweite Lage: bei offenem Dach das Huellmass der Zelle, sonst die
+    // Innenhoehe. Was schon einzeln darueber hinausragt, liegt weiter auf dem Deck – nur
+    // STAPELN darf man nicht ins Unendliche.
+    const deckel = !panels.roof && Ct.gauge ? num(Ct.gauge.h) : num(Ct.h);
     for (const [dx, dz] of oris) {
       const zCentered = (CW - dz) / 2;
       const zEdge = !panels.sides && dz > CW && !forceCentered ? CW - dz : zCentered;
@@ -1047,6 +1051,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const cand = { x, y: 0, z, dx, dy, dz };
           if (!fitsPanels(cand, CL, CW, panels)) continue;
           if (!traegt(cand)) continue;
+          if (!(placed || []).some((b) => boxesOverlap(cand, b))) return cand;
+        }
+      }
+      // Kein Platz mehr auf dem Deck: auf ein deckungsgleiches Stueck derselben Art stapeln.
+      // Gleicher Grundriss, exakt buendig – die Auflage ist damit vollstaendig, ohne dass
+      // irgendwo eine Prozentregel greifen muesste.
+      if (dims.stapel !== 0) {
+        const saeulen = {};
+        for (const b of placed || []) {
+          if (b.ti !== dims.ti || b.dx !== dx || b.dz !== dz) continue;
+          const k = b.x + "|" + b.z;
+          (saeulen[k] = saeulen[k] || []).push(b);
+        }
+        const kandidaten = Object.values(saeulen)
+          .map((bs) => ({ bs, oben: bs.reduce((m, b) => Math.max(m, b.y + b.dy), 0) }))
+          .sort((a, b) => a.oben - b.oben);
+        for (const { bs, oben } of kandidaten) {
+          if (bs.length + 1 > dims.stapel) continue;          // Lagen-Obergrenze der Ware
+          if (oben + dy > deckel + 1e-6) continue;            // Huellmass bzw. Innenhoehe
+          const cand = { x: bs[0].x, y: oben, z: bs[0].z, dx, dy, dz };
           if (!(placed || []).some((b) => boxesOverlap(cand, b))) return cand;
         }
       }
@@ -1096,7 +1120,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const overL = l > CL && (w > CW || l > CW), overW = Math.min(l, w) > CW, overH = h > CH;
       const placeable = (!overL || !panels.ends) && (!overW || !panels.sides) && (!overH || !panels.roof);
       // rot wandert mit: nicht drehbare Ware darf auch beim Uebermass nicht quer gelegt werden.
-      if (placeable) { overTi.add(ti); for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot: t.rotatable !== false }); }
+      if (placeable) {
+        overTi.add(ti);
+        const stapel = t.stackable === false ? 0 : isFinite(t.stackMax) && +t.stackMax >= 2 ? +t.stackMax : Infinity;
+        for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot: t.rotatable !== false, stapel });
+      }
     });
     const masked = cargo.map((t, ti) => overTi.has(ti) ? { ...t, qty: 0 } : t);
     const base = packCargo(Ct, masked, { ...opts, noHint: true });
@@ -1118,7 +1146,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     let usedVol = 0;
     placed.forEach((p) => usedVol += p.dx * p.dy * p.dz / 1e6);
     const totalBoxes = cargo.reduce((s, t) => s + Math.max(0, Math.floor(num(t.qty))), 0);
-    return { placed, perType: perType2, contVol, usedVol, util: contVol > 0 ? usedVol / contVol * 100 : 0, weight, boxes: placed.length, totalBoxes, layers: base.layers || 1, single: false, rotHint: false, rotHintAll: false };
+    // Lagen zaehlen die tatsaechlichen Hoehenstufen mit: seit Uebermass-Stuecke stapeln duerfen,
+    // haette "1 Lage" bei zwei uebereinander liegenden Kisten schlicht nicht gestimmt.
+    return { placed, perType: perType2, contVol, usedVol, util: contVol > 0 ? usedVol / contVol * 100 : 0, weight, boxes: placed.length, totalBoxes, layers: Math.max(base.layers || 1, new Set(placed.map((p) => p.y)).size), single: false, rotHint: false, rotHintAll: false };
   }
   // Bildet ein Stueck, das in keinen Standard passt, auf den passenden Special-Typ ab.
   // Entscheidend: der Typ muss das Stueck PHYSISCH tragen koennen – in GESCHLOSSENEN
