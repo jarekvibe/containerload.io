@@ -36,7 +36,7 @@ Langfristig soll das Projekt wachsen und auch monetarisierbare Funktionen tragen
 | Datei | Rolle |
 |---|---|
 | `index.html` | Landingpage. Hero, Features, FAQ, CTA. Bindet `app.html` per iframe ein. Zweisprachig. |
-| `app.html` | **Herzstück.** Der React+Three.js-Rechner. Enthält Container-Presets, Pack-/Stau-Algorithmus, Teilen-Kodierung, QR-Bibliothek, Text-Import. Mit Abstand die größte Datei (~1300 Zeilen) — hier mit Bedacht arbeiten. |
+| `app.html` | **Herzstück.** Der React+Three.js-Rechner. Enthält Container-Presets, Pack-/Stau-Algorithmus, Teilen-Kodierung, QR-Bibliothek, Text-Import. Mit Abstand die größte Datei (mehrere tausend Zeilen, Tendenz stetig wachsend) — hier mit Bedacht arbeiten. |
 | `share.html` | Branded Zwischenseite. Liest den `?p=`-Parameter und leitet nach ~450 ms per `location.replace` auf `app.html` mit demselben Query-String weiter. |
 | `Ladevorschlag-Render.html` | Druck-/PDF-Vorlage (`@media print`, `window.print()`). Enthält den QR-Code zurück zum 3D-Plan und mehrere Haftungs-Hinweise. |
 | `impressum.html`, `datenschutz.html` | Rechtsseiten. Inhaltliche Änderungen nur mit Rücksprache. |
@@ -114,8 +114,7 @@ In der Ladungsliste ist **genau eine Position aufgeklappt** (`openCargo`); die �
 
 ## 6. Bekannte Punkte / Backlog
 
-- **OG-Image in `share.html`:** Vorschaubild und Referenz sind auf `share-og.png` (mit Bindestrich) vereinheitlicht; `share.html` (`og:image`/`twitter:image`) zeigt korrekt auf die tatsächlich im Repo vorhandene Datei `share-og.png`. (Frühere Doku nannte die Datei fälschlich `shareog.png` ohne Bindestrich — korrigiert.)
-- **Netlify-Auto-Deploy:** Soll künftig aus diesem Repo deployen (statt manuellem Upload). Ggf. eine `netlify.toml` und/oder `_redirects` ergänzen — aber erst nach Rücksprache, da sich dadurch ändert, *wie* die Live-Seite gebaut wird.
+- **Netlify-Deploy:** `_redirects` (saubere URLs, u. a. für `/app`, `/share`, `/ratgeber/:slug`) und `_headers` (Security-Header) liegen bereits im Repo. Offen: ob der Live-Deploy inzwischen automatisch aus diesem Repo läuft (Push auf `main` → Auto-Deploy) oder noch manuell hochgeladen wird, und ob eine `netlify.toml` sinnvoll wäre. Änderungen an der Deploy-Konfiguration weiterhin erst nach Rücksprache, da sich dadurch ändert, *wie* die Live-Seite gebaut wird.
 
 ---
 
