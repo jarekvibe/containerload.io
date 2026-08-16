@@ -83,7 +83,21 @@ Special Equipment (Open Top, Flat Rack, Platform) und „Custom" bleiben von der
 
 **Es gibt genau eine Ergebnisanzeige** — die Leiste unter der 3D-Ansicht. Die früher darüber schwebende Karte zeigte dieselben Zahlen ein zweites Mal. Im 3D-Bild bleibt nur, was räumlich dazugehört: Tür-Warnung, Übermaß-Kasten, Empfehlungsbanner. Wer eine neue Kennzahl einbaut, baut sie in die Leiste.
 
-**Gestaltungsregeln, die den Unterschied machen:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. Und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche. Monospace trägt Zahlen (dafür ist sie da), Fußnoten und Hinweise stehen in der normalen Schrift.
+### Das Regelwerk (gilt für `app.html` wie für `index.html`)
+PR #57 hat die Landingpage entschlackt, PR #68 dieselben Regeln in den Rechner gezogen. `test/design-system.test.mjs` hält sie fest — der Test schlägt fehl, sobald sich neue Zwischentöne, Radien oder Größen ansammeln. Wer eine Stufe wirklich braucht, trägt sie dort mit Begründung ein; dann ist es eine Entscheidung und kein Versehen.
+
+| | |
+|---|---|
+| Flächen | **sechs Stufen**, Grundton `#0E1116` (identisch mit der Landingpage — sie bindet den Rechner per iframe ein) |
+| Radien | **8** klein · **12** Karte · **16** Dialog · **999** Pille |
+| Schriftgrößen | **11 · 12,5 · 13,5 · 15 · 17** plus Kennzahlen — nichts unter 11 px |
+| Gewichte | bis **700**, nicht darüber |
+| Monospace | **nur an Zahlen** (ab 12,5 px) und am Teilen-Link. Sie hat einen Zweck: Ziffern bleiben untereinander stehen. Als Kleintext ist sie Kostüm |
+| Farbe | neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Zahlen | über `nf()` / `fmtDE()`, nie `toFixed()` in der Anzeige — sonst steht in der deutschen Oberfläche „0.03 m" |
+| Emoji | keine. Linien-SVG oder das Wort |
+
+**Weitere Gestaltungsregeln:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. Und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche. Monospace trägt Zahlen (dafür ist sie da), Fußnoten und Hinweise stehen in der normalen Schrift.
 
 **In der Mitte der Kopfzeile steht der Name des Plans** (`planName`) — leer zeigt er die Einladung „Plan benennen". Er ist keine Dekoration: Er füllt den Vorschlag in „Meine Pläne", steht im Ladevorschlag neben der Referenznummer und bildet den Dateinamen von CSV- und Bild-Export (`planSlug()`). Bewusst **nicht** im `?c=`-Link — dafür bräuchte das Format ein neues Feld, und das ist eine eigene Entscheidung.
 

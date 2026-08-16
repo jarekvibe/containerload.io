@@ -15,7 +15,7 @@ const L = html.split("\n");
 // Grosse Code-Extraktion: von makeFloorPacker (Zeile ~407) bis zum Ende von packKind (Zeile ~912)
 // Das enthaelt alle abhaengigen Funktionen.
 const ps = L.findIndex((l) => l.includes("function makeFloorPacker"));
-const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("layers: base.layers || 1"));
+const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("single: false"));
 
 const codeSlice = L.slice(ps, pe + 1).join("\n");
 

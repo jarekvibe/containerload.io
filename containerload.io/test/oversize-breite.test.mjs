@@ -40,7 +40,7 @@ const L = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8").split("\n");
 const cs = L.findIndex((l) => l.includes("var PRESETS = {"));
 const ce = L.findIndex((l, i) => i > cs && l.includes("var panelsFor"));
 const ps = L.findIndex((l) => l.includes("function makeFloorPacker"));
-const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("layers: base.layers || 1"));
+const pe = L.findIndex((l, i) => i > ps && l.trim() === "}" && L[i - 1].includes("single: false"));
 
 assert.ok(cs >= 0 && ce > cs && ps >= 0 && pe > ps, "Code-Ausschnitt aus app.html nicht gefunden — Anker geprueft?");
 
