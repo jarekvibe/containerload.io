@@ -25,7 +25,7 @@ const AUSNAHMEN = new Set([
   "#1a0f08",                                     // warmer Grund der Tuer-Warnung
   // Die 3D-Buehne: Verlaufsstops, Stahltoene und Kantenlinien des Containers. Sie sind keine
   // Flaechenstufen der Oberflaeche, sondern das Bild darin - eigene Treppe, eigener Zweck.
-  "#14161a", "#0c1622", "#0d1726", "#08111c", "#1a1a1a", "#1b1b1b", "#202020", "#2d2d2d",
+  "#14161a", "#17181c", "#0c1622", "#0d1726", "#08111c", "#1a1a1a", "#1b1b1b", "#202020", "#2d2d2d",
   "#3f3f3f", "#434343", "#444444", "#474747", "#4d4d4d",
   "#000000"
 ]);

@@ -3,7 +3,7 @@
        seinen Kontrast selbst mitbringen – die drei Flaechen sind darum im Markenrot
        abgestuft und nicht in einem dunklen Ton, der auf einer dunklen Tableiste
        verschwaende. So traegt das Zeichen auf hellem wie auf dunklem Grund. -->
-  <polygon points="256,20 464,140 256,260 48,140" fill="#E8836B"/>
-  <polygon points="48,140 256,260 256,491 48,371" fill="#C8402C"/>
-  <polygon points="464,140 256,260 256,491 464,371" fill="#8F2C1E"/>
+  <polygon points="256,20 464,140 256,260 48,140" fill="#E8515A"/>
+  <polygon points="48,140 256,260 256,491 48,371" fill="#C50619"/>
+  <polygon points="464,140 256,260 256,491 464,371" fill="#8E040F"/>
 </svg>

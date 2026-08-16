@@ -70,10 +70,10 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
 .timeline{position:absolute;left:50%;bottom:3%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:0;
   padding:6px 8px;border-radius:13px;background:rgba(10,15,24,.7);border:1px solid var(--line2);backdrop-filter:blur(10px)}
 .step{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:9px;transition:.35s}
-.step .sd{width:8px;height:8px;border-radius:50%;background:#2a3646;transition:.35s;flex-shrink:0}
+.step .sd{width:8px;height:8px;border-radius:50%;background:#343434;transition:.35s;flex-shrink:0}
 .step .sl{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--faint);transition:.35s;white-space:nowrap}
 .step.on .sl{color:var(--text)}
-.sep{width:16px;height:1px;background:#222d3b;margin:0 2px}
+.sep{width:16px;height:1px;background:#2b2b2b;margin:0 2px}
 @media(max-width:520px){.step .sl{display:none}.step{padding:5px}}
 .note{position:relative;z-index:10;max-width:1240px;margin:0 auto;padding:0 28px 40px;font-size:13px;color:var(--faint);line-height:1.6}
 .note b{color:var(--dim)} .note hr{border:0;border-top:1px solid var(--line);margin:0 0 16px}
@@ -143,7 +143,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   camera.position.set(CAM_BASE.x,CAM_BASE.y,CAM_BASE.z);
 
   var pivot=new THREE.Object3D(); scene.add(pivot);
-  scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+  scene.add(new THREE.AmbientLight(0xb3b3b3,0.6));
   var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
   var fill=new THREE.PointLight(0xC50619,0.7,40); fill.position.set(-5,2,-2); scene.add(fill);
 
@@ -181,7 +181,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat);
     end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2a3a4f,0x16212d);
+    var grid=new THREE.GridHelper(L0,5,0x383838,0x1f1f1f);
     grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
     pivot.add(grp);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
@@ -272,7 +272,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   function setTimeline(active){
     Object.keys(tlSteps).forEach(function(k){
       var on=(k===active),st=tlSteps[k];st.classList.toggle('on',on);
-      var col= active==='conflict'&&k==='conflict'?'#ff6b78':active==='solve'&&k==='solve'?'#2596be':active==='done'&&k==='done'?'#37d39f':on?'#c50619':'#2a3646';
+      var col= active==='conflict'&&k==='conflict'?'#ff6b78':active==='solve'&&k==='solve'?'#2596be':active==='done'&&k==='done'?'#37d39f':on?'#c50619':'#343434';
       var sd=st.querySelector('.sd'); sd.style.background=col; sd.style.boxShadow=on?('0 0 10px '+col):'none';
     });
   }

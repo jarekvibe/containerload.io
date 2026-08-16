@@ -2180,7 +2180,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="padding:10px 18px 3px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
           <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.top} <span style="color:#909090;letter-spacing:.06em;">\xB7 ${L.topSub}</span></div>
-          <div style="${MONO}font-size:9px;color:#aab4c2;">${L.topHint}</div>
+          <div style="${MONO}font-size:9px;color:#b3b3b3;">${L.topHint}</div>
         </div>
         ${top}
       </div>
@@ -2188,7 +2188,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="padding:8px 18px 10px;">
         <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:2px;">
           <div style="${MONO}font-size:10px;letter-spacing:.16em;color:#0c1320;font-weight:600;">${L.side} <span style="color:#909090;letter-spacing:.06em;">\xB7 ${L.sideSub}</span></div>
-          <div style="${MONO}font-size:9px;color:#aab4c2;">${L.sideHint}</div>
+          <div style="${MONO}font-size:9px;color:#b3b3b3;">${L.sideHint}</div>
         </div>
         ${side}
       </div>
@@ -2398,7 +2398,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     <!-- FOOTER -->
     <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center; gap:20px; padding:18px 44px; border-top:1px solid #eceef2; margin-top:24px;">
       <p style="font-size:9.5px; line-height:1.5; color:#909090; margin:0; max-width:480px;">${P.footer}</p>
-        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#696969; text-align:right; white-space:nowrap;">containerload.io<br><span style="color:#aab4c2;">${P.page}</span></div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#696969; text-align:right; white-space:nowrap;">containerload.io<br><span style="color:#b3b3b3;">${P.page}</span></div>
     </div>
 
   </div>`;
@@ -2456,7 +2456,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       renderer.domElement.style.display = "block";
       renderer.domElement.style.touchAction = "none";
       mount.appendChild(renderer.domElement);
-      scene.add(new THREE.HemisphereLight(12572415, 658964, 0.7));
+      scene.add(new THREE.HemisphereLight(14474461, 921870, 0.7));
       const key = new THREE.DirectionalLight(16777215, 1.05);
       key.position.set(7, 17, 9);
       key.castShadow = true;
@@ -2472,7 +2472,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       scene.add(keyTarget);
       key.target = keyTarget;
       scene.add(key);
-      const fill = new THREE.DirectionalLight(7317759, 0.34);
+      const fill = new THREE.DirectionalLight(11842740, 0.34);
       fill.position.set(-9, 5, -7);
       scene.add(fill);
       const group = new THREE.Group();
@@ -3200,9 +3200,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (isRoad) {
         const darkMat = new THREE.MeshStandardMaterial({ color: STEEL, roughness: 0.6, metalness: 0.5 });
         const tireM = new THREE.MeshStandardMaterial({ color: 0x0e141d, roughness: 0.85, metalness: 0.1 });
-        const hubM = new THREE.MeshStandardMaterial({ color: 0x3a4658, roughness: 0.4, metalness: 0.7 });
-        const glass = new THREE.MeshStandardMaterial({ color: 0x9fd4ff, transparent: true, opacity: 0.5, roughness: 0.15, side: THREE.DoubleSide, emissive: 0x18384f, emissiveIntensity: 0.45 });
-        const cabMat = new THREE.MeshStandardMaterial({ color: 0x5b6e94, roughness: 0.5, metalness: 0.5 });
+        const hubM = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.4, metalness: 0.7 });
+        const glass = new THREE.MeshStandardMaterial({ color: 0xd4d6d8, transparent: true, opacity: 0.5, roughness: 0.15, side: THREE.DoubleSide, emissive: 0x2a2c2e, emissiveIntensity: 0.45 });
+        const cabMat = new THREE.MeshStandardMaterial({ color: 0x6d6d6d, roughness: 0.5, metalness: 0.5 });
         const lampM = new THREE.MeshStandardMaterial({ color: 0xffe9b0, emissive: 0xffcf6a, emissiveIntensity: 0.9, roughness: 0.4 });
         // Baut EIN Fahrzeug (Kabine/Zugmaschine + Raeder + Fahrgestell) am lokalen Ursprung
         // (x=0 = Vorderkante der Ladeflaeche). Solofahrzeug (Kabine direkt am Kasten) vs. Sattelzug
@@ -4101,11 +4101,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           rr(barX, barY, barW, barH, px(16)); g.fillStyle = "rgba(10,15,22,0.5)"; g.fill();
           g.strokeStyle = "rgba(255,255,255,0.14)"; g.lineWidth = Math.max(1, S); rr(barX + 0.5, barY + 0.5, barW - 1, barH - 1, px(16)); g.stroke();
           accentLine(barX + px(16), barY, barW - px(32));
-          mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
+          mutedCol = "#c7c7c7"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
           drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(barX + barW - px(20), midY);
-          g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#BCC9D6"; g.textAlign = "center"; g.textBaseline = "alphabetic";
+          g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = "#c7c7c7"; g.textAlign = "center"; g.textBaseline = "alphabetic";
           g.fillText(String(T.shotFoot).toUpperCase(), barX + barW / 2, barY + barH - px(11));
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
@@ -4459,7 +4459,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "rounded-lg transition flex items-center gap-1", style: { height: 31, padding: "0 12px", fontSize: 11, fontWeight: on ? 600 : 500, background: on ? hexA(C.accent, 0.15) : "#1E2126", border: `1px solid ${on ? hexA(C.accent, 0.6) : "#262A30"}`, color: on ? C.accent : C.dim } }, "\u21BB 90\xB0");
       })())));
     })));
-    return /* @__PURE__ */ React.createElement("div", { className: "w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col", style: { fontFamily: SANS, color: C.text, background: "radial-gradient(1300px 700px at 85% -10%, #0d1726 0%, #0B0C0E 60%)" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+    return /* @__PURE__ */ React.createElement("div", { className: "w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col", style: { fontFamily: SANS, color: C.text, background: "radial-gradient(1300px 700px at 85% -10%, #17181C 0%, #0B0C0E 60%)" } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         html,body,#root{font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif!important;}
         /* Das aufgeklappte Menue eines <select> zeichnet das Betriebssystem, nicht diese Seite.
            Ohne diesen Hinweis kommt es in Windows-Hellgrau ueber die dunkle Oberflaeche.

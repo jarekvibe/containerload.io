@@ -48,9 +48,9 @@
   --bg:#0B0C0E; --card:#151A21; --card2:#1A212A;
   --line:#232B35; --line2:#303A46;
   /* Text: drei Stufen, mehr braucht es nicht */
-  /* --faint war #6D7784 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
+  /* --faint war #757575 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
      von 4,5:1 (WCAG AA). #767F8C liegt bei 4,67:1 und bleibt genauso zurueckhaltend. */
-  --text:#E9ECF1; --dim:#9BA5B2; --faint:#767F8C;
+  --text:#E9ECF1; --dim:#a3a3a3; --faint:#767F8C;
   /* EIN Akzent — kein Verlauf, kein zweiter Markenton */
   --accent:#C50619;--accent-text:#e8515a; --accent-soft:rgba(197, 6, 25,.10); --accent-line:rgba(197, 6, 25,.34);
   /* Diese drei tragen Bedeutung und werden nie als Dekoration verwendet */
@@ -192,7 +192,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
 .sc-pdf-h{font-weight:700;font-size:11.5px;letter-spacing:-.01em}
 .sc-l{height:5px;border-radius:2px;background:#dbe2ec;margin-top:6px}
 .sc-l.s{width:70%}.sc-l.xs{width:45%}
-.sc-pdf-meta{margin-top:8px;font-size:9px;color:#8b96a6}
+.sc-pdf-meta{margin-top:8px;font-size:9px;color:#959595}
 .sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:4px}
 .sc-qr i{background:#0b1320;border-radius:1px}
 .sc-qr i.o{background:transparent}
@@ -882,7 +882,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    var grid=new THREE.GridHelper(L0,5,0x2A2C30,0x1A1B1E); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
     pivot.add(grp);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
       setLength:function(L){grp.scale.x=L/L0; grp.position.x=XL+L/2;},
@@ -898,9 +898,9 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     scene=new THREE.Scene();
     camera=new THREE.PerspectiveCamera(42,1,0.1,100); camera.position.set(CAM_BASE.x,CAM_BASE.y,CAM_BASE.z);
     pivot=new THREE.Object3D(); scene.add(pivot);
-    scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+    scene.add(new THREE.AmbientLight(0xD8DADD,0.6));
     var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
-    var fillL=new THREE.PointLight(0xC50619,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
+    var fillL=new THREE.PointLight(0xFFFFFF,0.5,40); fillL.position.set(-5,2,-2); scene.add(fillL);
 
     CONT=makeContainer(); CONT.setLength(L0);
     shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
@@ -911,7 +911,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var final40=packPositions(1.25,5.0,14);
     for(var i=0;i<TOTAL;i++){
       var geo=new THREE.BoxGeometry(BL,BH,BW);
-      var mat=new THREE.MeshStandardMaterial({color:0x2A2036,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+      var mat=new THREE.MeshStandardMaterial({color:0xD9DCE0,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
       var m=new THREE.Mesh(geo,mat);
       var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
       m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em)); pivot.add(m);
@@ -963,20 +963,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     if(name==='outro')fade=1-smooth(p);
 
     if(name==='intro'){
-      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x2A2036);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);b.mesh.scale.setScalar(1);});
       CONT.setColor(C_BLUEEDGE); applyStatus('intro',0,t);
     } else if(name==='pack'){
       var stag=0.17,dur=1.05,tt=p*PH[1].d;
       boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
         b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
         if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
-        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0x453620:0x2A2036);});
+        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0xE4D6B8:0xD9DCE0);});
       CONT.setColor(C_BLUEEDGE); applyStatus('pack',placed,t);
     } else if(name==='overflow'){
       var pulse=0.5+0.5*Math.sin(t*5.0);
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);
-        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);b.mesh.scale.setScalar(1+pulse*0.04);}
-        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x2A2036);b.mesh.scale.setScalar(1);}});
+        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0xE4D6B8);b.mesh.scale.setScalar(1+pulse*0.04);}
+        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);b.mesh.scale.setScalar(1);}});
       CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus('over',placed,t);
     } else if(name==='solve'){
       dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
@@ -984,7 +984,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       scanGroup.visible=true; scanGroup.scale.setScalar(lerp(1.16,1.0,smooth(clamp01(p/0.4))));
       var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0); bracketMat.opacity=inn*pl; bboxMat.opacity=inn*0.20;
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
-        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x2A2036);}});
+        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0xE4D6B8);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);}});
       CONT.setColor(C_WARN); applyStatus('solve',0,t);
     } else if(name==='grow'||name==='repack'){
       var growP=name==='grow'?smooth(p):1;
@@ -996,18 +996,18 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       boxes.forEach(function(b,i){var rank=repackRank[i],lp=clamp01((winT-rank*stag2)/dur2);
         lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
         b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
-        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);placed++;}
-        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0x453620:0x2A2036);}});
+        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);placed++;}
+        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0xE4D6B8:0xD9DCE0);}});
       applyStatus('repack',placed,t);
     } else if(name==='success'){
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx;
       var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
       CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);b.mesh.scale.setScalar(1);});
       placed=TOTAL; applyStatus('done',placed,t);
     } else {
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);}); placed=TOTAL;
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);}); placed=TOTAL;
     }
 
     CONT.setLength(L); placeShadow(L);
