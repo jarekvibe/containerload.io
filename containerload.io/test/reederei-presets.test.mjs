@@ -41,10 +41,13 @@ test("die angezeigte Domain fuehrt auch dorthin, wo sie hinzeigt", () => {
 });
 
 test("jeder Reederei-Typ trifft einen echten Containertyp", () => {
+  // Reefer darf Reederei-Masse haben (geschlossener Korpus wie dry, nur isoliert) - Open Top/
+  // Flat Rack/Platform bleiben ausgeschlossen (zu variabel, dafuer gibt es keine Reederei-Masse).
   for (const [name, c] of Object.entries(CARRIERS)) {
     for (const typ of Object.keys(c.eq)) {
       assert.ok(PRESETS[typ], `${name}: "${typ}" ist kein Typ aus PRESETS (Tippfehler?)`);
-      assert.ok(!PRESETS[typ].kind, `${name}: "${typ}" ist Special Equipment — dafuer gibt es keine Reederei-Masse`);
+      const kind = PRESETS[typ].kind;
+      assert.ok(!kind || kind === "reefer", `${name}: "${typ}" ist Special Equipment — dafuer gibt es keine Reederei-Masse`);
     }
   }
 });
