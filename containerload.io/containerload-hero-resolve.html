@@ -10,10 +10,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 :root{
-  --bg:#070a0f; --card:#0c111a; --line:#19222f; --line2:#26313f;
-  --text:#eef2f7; --dim:#9aa7b8; --faint:#67748a;
-  --accent:#2f9bff; --teal:#38e0c8; --good:#37d39f; --warn:#ffb454; --bad:#ff6b78;
-  --grad:linear-gradient(90deg,#2f9bff,#38e0c8);
+  --bg:#0b0c0e; --card:#121316; --line:#262a30; --line2:#333840;
+  --text:#ecedef; --dim:#9ea4ac; --faint:#7a828b;
+  --accent:#c50619;--accent-text:#e8515a; --teal:#2596be;--teal-text:#2596be; --good:#37d39f; --warn:#ffb454; --bad:#ff6b78;
+  --grad:linear-gradient(90deg,#c50619,#2596be);
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
@@ -28,7 +28,7 @@ body{background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,sy
   mask-image:radial-gradient(120% 90% at 70% 10%,#000 25%,transparent 78%);}
 .glow{position:fixed;border-radius:50%;filter:blur(100px);z-index:0;pointer-events:none}
 .spot{position:fixed;z-index:0;pointer-events:none;width:900px;height:900px;border-radius:50%;
-  right:-180px;top:-160px;background:radial-gradient(circle at center,rgba(47,155,255,.16),rgba(56,224,200,.06) 40%,transparent 66%)}
+  right:-180px;top:-160px;background:radial-gradient(circle at center,rgba(197, 6, 25,.16),rgba(37, 150, 190,.06) 40%,transparent 66%)}
 .mocklabel{position:fixed;top:14px;left:14px;z-index:40;display:inline-flex;align-items:center;gap:8px;
   font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--faint);
   border:1px solid var(--line2);border-radius:999px;padding:5px 11px;background:rgba(10,15,24,.6);backdrop-filter:blur(8px);text-transform:uppercase}
@@ -51,10 +51,10 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
 .status .meta{font-family:var(--mono);font-size:10.5px;color:var(--faint);margin-top:2px}
 .cta-row{margin-top:26px;display:flex;flex-wrap:wrap;gap:12px}
 .btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;border-radius:12px;cursor:pointer;white-space:nowrap;text-decoration:none;transition:.18s;font-size:15px;padding:14px 22px}
-.btn-primary{background:var(--grad);color:#04101f;box-shadow:0 8px 30px -8px rgba(47,155,255,.6)}
+.btn-primary{background:var(--grad);color:#fff6f2;box-shadow:0 8px 30px -8px rgba(197, 6, 25,.6)}
 .btn-primary:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .btn-ghost{background:rgba(255,255,255,.03);border:1px solid var(--line2);color:var(--text)}
-.btn-ghost:hover{border-color:rgba(47,155,255,.5)}
+.btn-ghost:hover{border-color:rgba(197, 6, 25,.5)}
 .trust{margin-top:24px;display:flex;gap:18px;font-family:var(--mono);font-size:12px;color:var(--faint);flex-wrap:wrap}
 .stage{position:relative;width:100%;aspect-ratio:1.18/1;min-height:380px}
 @media(max-width:920px){.stage{aspect-ratio:1.05/1;margin-top:20px}}
@@ -70,10 +70,10 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
 .timeline{position:absolute;left:50%;bottom:3%;transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:0;
   padding:6px 8px;border-radius:13px;background:rgba(10,15,24,.7);border:1px solid var(--line2);backdrop-filter:blur(10px)}
 .step{display:flex;align-items:center;gap:7px;padding:5px 9px;border-radius:9px;transition:.35s}
-.step .sd{width:8px;height:8px;border-radius:50%;background:#2a3646;transition:.35s;flex-shrink:0}
+.step .sd{width:8px;height:8px;border-radius:50%;background:#343434;transition:.35s;flex-shrink:0}
 .step .sl{font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--faint);transition:.35s;white-space:nowrap}
 .step.on .sl{color:var(--text)}
-.sep{width:16px;height:1px;background:#222d3b;margin:0 2px}
+.sep{width:16px;height:1px;background:#2b2b2b;margin:0 2px}
 @media(max-width:520px){.step .sl{display:none}.step{padding:5px}}
 .note{position:relative;z-index:10;max-width:1240px;margin:0 auto;padding:0 28px 40px;font-size:13px;color:var(--faint);line-height:1.6}
 .note b{color:var(--dim)} .note hr{border:0;border-top:1px solid var(--line);margin:0 0 16px}
@@ -82,8 +82,8 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
 <body>
 <div class="grid-bg"></div>
 <div class="spot"></div>
-<div class="glow" style="width:520px;height:520px;background:#2f9bff;top:-140px;left:60%;opacity:.16"></div>
-<div class="glow" style="width:460px;height:460px;background:#38e0c8;top:420px;left:-140px;opacity:.12"></div>
+<div class="glow" style="width:520px;height:520px;background:#c50619;top:-140px;left:60%;opacity:.16"></div>
+<div class="glow" style="width:460px;height:460px;background:#2596be;top:420px;left:-140px;opacity:.12"></div>
 <div class="mocklabel">● Prototyp · Re-Solve v2 · noch nicht final</div>
 
 <section class="hero">
@@ -100,7 +100,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
     </div>
     <div class="cta-row">
       <a class="btn btn-primary" href="#">Tool öffnen – kostenlos</a>
-      <a class="btn btn-ghost" href="#">So funktioniert's <span style="color:var(--accent)">↓</span></a>
+      <a class="btn btn-ghost" href="#">So funktioniert's <span style="color:var(--accent-text)">↓</span></a>
     </div>
     <div class="trust"><span>✓ Ohne Account</span><span>✓ 0 € Setup</span><span>✓ ISO 668</span></div>
   </div>
@@ -129,7 +129,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
 (function(){
   "use strict";
   var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var C_TEAL=0x38e0c8, C_GOOD=0x37d39f, C_WARN=0xffb454, C_BLUEEDGE=0x4fa8ff;
+  var C_TEAL=0xC50619, C_GOOD=0x37d39f, C_WARN=0xffb454, C_BLUEEDGE=0xE8515A;
 
   var canvas=document.getElementById('scene');
   var renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
@@ -143,9 +143,9 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   camera.position.set(CAM_BASE.x,CAM_BASE.y,CAM_BASE.z);
 
   var pivot=new THREE.Object3D(); scene.add(pivot);
-  scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+  scene.add(new THREE.AmbientLight(0xb3b3b3,0.6));
   var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
-  var fill=new THREE.PointLight(0x2f9bff,0.7,40); fill.position.set(-5,2,-2); scene.add(fill);
+  var fill=new THREE.PointLight(0xC50619,0.7,40); fill.position.set(-5,2,-2); scene.add(fill);
 
   function clamp01(x){return x<0?0:x>1?1:x;}
   function lerp(a,b,t){return a+(b-a)*t;}
@@ -181,7 +181,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat);
     end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2a3a4f,0x16212d);
+    var grid=new THREE.GridHelper(L0,5,0x383838,0x1f1f1f);
     grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
     pivot.add(grp);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
@@ -215,7 +215,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   var boxes=[];
   for(var i=0;i<TOTAL;i++){
     var geo=new THREE.BoxGeometry(BL,BH,BW);
-    var mat=new THREE.MeshStandardMaterial({color:0x1a3e5f,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+    var mat=new THREE.MeshStandardMaterial({color:0x2A2036,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
     var m=new THREE.Mesh(geo,mat);
     var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
     var edge=new THREE.LineSegments(new THREE.EdgesGeometry(geo),em); m.add(edge);
@@ -272,7 +272,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   function setTimeline(active){
     Object.keys(tlSteps).forEach(function(k){
       var on=(k===active),st=tlSteps[k];st.classList.toggle('on',on);
-      var col= active==='conflict'&&k==='conflict'?'#ff6b78':active==='solve'&&k==='solve'?'#38e0c8':active==='done'&&k==='done'?'#37d39f':on?'#2f9bff':'#2a3646';
+      var col= active==='conflict'&&k==='conflict'?'#ff6b78':active==='solve'&&k==='solve'?'#2596be':active==='done'&&k==='done'?'#37d39f':on?'#c50619':'#343434';
       var sd=st.querySelector('.sd'); sd.style.background=col; sd.style.boxShadow=on?('0 0 10px '+col):'none';
     });
   }
@@ -280,7 +280,7 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
   function setStatus(key,txt,meta,ic,col,tlKey,typeTxt,fitTxt,fitCol){
     if(key!==lastStatus){
       statusTxt.textContent=txt; statusTxt.style.color=col; statusMeta.textContent=meta;
-      statusIc.textContent=ic; statusIc.style.background=col; statusIc.style.color='#04101f';
+      statusIc.textContent=ic; statusIc.style.background=col; statusIc.style.color='#fff6f2';
       statusBox.style.borderColor=col; statusBox.style.boxShadow='0 0 26px -10px '+col;
       pillType.lastChild.textContent=' '+typeTxt; pillType.querySelector('.dot').style.background=col;
       pillFit.innerHTML='<span class="dot" style="background:'+fitCol+'"></span> '+fitTxt;
@@ -298,9 +298,9 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
     if(name==='outro') fade=1-smooth(p);
 
     if(name==='intro'){
-      boxes.forEach(function(b){ b.mesh.position.copy(b.intro); b.edge.color.setHex(C_BLUEEDGE); b.mat.color.setHex(0x1a3e5f); b.mesh.scale.setScalar(1); });
+      boxes.forEach(function(b){ b.mesh.position.copy(b.intro); b.edge.color.setHex(C_BLUEEDGE); b.mat.color.setHex(0x2A2036); b.mesh.scale.setScalar(1); });
       CONT.setColor(C_BLUEEDGE);
-      setStatus('intro','Ladung wird vorbereitet…','20′ GP · live','…','#2f9bff','load','20′ GP','prüfe…','#ffb454');
+      setStatus('intro','Ladung wird vorbereitet…','20′ GP · live','…','#c50619','load','20′ GP','prüfe…','#ffb454');
     }
     else if(name==='pack'){
       var stag=0.17,dur=1.05,tt=p*PH[1].d;
@@ -310,16 +310,16 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
         if(lp>=1 && !b.isOver) placed++;
         b.mesh.scale.setScalar(1);
         b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE);
-        b.mat.color.setHex(b.isOver&&lp>=1?0x55401d:0x1a3e5f);
+        b.mat.color.setHex(b.isOver&&lp>=1?0x55401d:0x2A2036);
       });
       CONT.setColor(C_BLUEEDGE);
-      setStatus('pack','Packe in den 20′ GP…',placed+' / '+TOTAL+' verstaut','▣','#2f9bff','load','20′ GP','lädt…','#2f9bff');
+      setStatus('pack','Packe in den 20′ GP…',placed+' / '+TOTAL+' verstaut','▣','#c50619','load','20′ GP','lädt…','#c50619');
     }
     else if(name==='overflow'){
       var pulse=0.5+0.5*Math.sin(t*5.0);
       boxes.forEach(function(b){ b.mesh.position.copy(b.staged);
         if(b.isOver){ b.mesh.position.y=b.staged.y+pulse*0.05; b.edge.color.setHex(C_WARN); b.mat.color.setHex(0x55401d); b.mesh.scale.setScalar(1+pulse*0.04); }
-        else { b.edge.color.setHex(C_BLUEEDGE); b.mat.color.setHex(0x1a3e5f); b.mesh.scale.setScalar(1); } });
+        else { b.edge.color.setHex(C_BLUEEDGE); b.mat.color.setHex(0x2A2036); b.mesh.scale.setScalar(1); } });
       CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW;
       setStatus('over',OVERFLOW+' Packstücke passen nicht','20′ GP · zu klein','✕','#ff6b78','conflict','20′ GP','✕ '+OVERFLOW+' außerhalb','#ff6b78');
     }
@@ -335,10 +335,10 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
       var inn=smooth(clamp01(p/0.22)), pl=0.78+0.22*Math.sin(t*5.0);
       bracketMat.opacity=inn*pl; bboxMat.opacity=inn*0.20;
       boxes.forEach(function(b){ b.mesh.position.copy(b.staged); b.mesh.scale.setScalar(1);
-        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x55401d);} else {b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1a3e5f);} });
+        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x55401d);} else {b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x2A2036);} });
       CONT.setColor(C_WARN);
       var dots='.'.repeat(1+Math.floor((t*3)%3));
-      setStatus('solve','Passender Container wird gesucht','rechnet'+dots,'⟳','#38e0c8','solve','rechnet…','⟳ vermesse','#38e0c8');
+      setStatus('solve','Passender Container wird gesucht','rechnet'+dots,'⟳','#2596be','solve','rechnet…','⟳ vermesse','#2596be');
       lastStatus='solve'; statusMeta.textContent='rechnet'+dots;
     }
     else if(name==='grow'||name==='repack'){
@@ -354,8 +354,8 @@ h1{font-weight:800;line-height:1.0;letter-spacing:-.025em;font-size:clamp(40px,5
         lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
         b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
         if(lp>=1){ b.edge.color.setHex(C_GOOD); b.mat.color.setHex(0x1d4a48); placed++; }
-        else { b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver?0x55401d:0x1a3e5f); } });
-      setStatus('repack','Container wird zum 40′ GP',placed+' / '+TOTAL+' verstaut','→','#38e0c8','done','40′ GP','passt rein…','#38e0c8');
+        else { b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver?0x55401d:0x2A2036); } });
+      setStatus('repack','Container wird zum 40′ GP',placed+' / '+TOTAL+' verstaut','→','#2596be','done','40′ GP','passt rein…','#2596be');
       lastStatus='repack'; statusMeta.textContent=placed+' / '+TOTAL+' verstaut';
     }
     else if(name==='success'){

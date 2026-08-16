@@ -26,7 +26,7 @@ test("shade veraendert die Farbe, liefert gueltigen Hex und clamped", () => {
 // verschiedenen Markentoenen existiert nicht mehr.
 test("exportAccentStops: immer Farbe + Abdunklung, auch im Standard", () => {
   const [sa, sb] = exportAccentStops(null);
-  assert.strictEqual(sa, "#2E8FFF", "standard = Markenakzent");
+  assert.strictEqual(sa, "#C50619", "standard = Markenakzent");
   assert.ok(/^#[0-9a-f]{6}$/i.test(sb), "zweiter Stop ist gueltiger Hex");
   assert.notStrictEqual(sb.toLowerCase(), sa.toLowerCase(), "zweiter Stop ist wirklich dunkler, kein Verlauf ins Nichts");
   const [a, b] = exportAccentStops("#0057a3");

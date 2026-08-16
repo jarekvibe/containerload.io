@@ -20,12 +20,13 @@ const app = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 // Werte, die absichtlich ausserhalb der Reihe stehen, mit Grund.
 const AUSNAHMEN = new Set([
   "#0c1320", "#0b1119",                          // Strichfarben der Druckvorlage auf weissem Papier
-  "#0a2b46", "#165780", "#0f3c60",               // die drei Wuerfelflaechen der Marke
-  "#04121a", "#0b0616",                          // Text auf Akzent- bzw. Hinweisflaeche
+  "#c50619", "#8e040f",                          // Markenakzent und die dunkle Wuerfelflaeche
+  "#fff6f2",                                     // Text auf Akzent- bzw. Hinweisflaeche
   "#1a0f08",                                     // warmer Grund der Tuer-Warnung
-  "#0f1c2e", "#0c1622", "#0e2438", "#15334e", "#0d1726", "#0b1f33", "#08111c", // 3D-Buehne
-  "#101a2b",                                     // oberer Stop des Verlaufs hinter der 3D-Ansicht
-  "#2c4358", "#384557", "#3a4a5e", "#33475e",    // Linien im 3D-Bild
+  // Die 3D-Buehne: Verlaufsstops, Stahltoene und Kantenlinien des Containers. Sie sind keine
+  // Flaechenstufen der Oberflaeche, sondern das Bild darin - eigene Treppe, eigener Zweck.
+  "#14161a", "#17181c", "#0c1622", "#0d1726", "#08111c", "#1a1a1a", "#1b1b1b", "#202020", "#2d2d2d",
+  "#3f3f3f", "#434343", "#444444", "#474747", "#4d4d4d",
   "#000000"
 ]);
 

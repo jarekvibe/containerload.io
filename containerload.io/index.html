@@ -18,7 +18,7 @@
 <meta name="twitter:title" content="ContainerLoad — Jede Ladung, im richtigen Container." />
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
-<meta name="theme-color" content="#0E1116" />
+<meta name="theme-color" content="#0B0C0E" />
 <!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch,
      /?lang=en ist englisch. Beide zeigen aufeinander, damit Suchmaschinen wissen,
      dass es dieselbe Seite in zwei Sprachen ist und keine doppelten Inhalte.
@@ -40,25 +40,25 @@
 /* ============================================================
    ContainerLoad — Landingpage
    Ein Akzent, feste Flaechenstufen, Bewegung nur wo sie etwas erklaert.
-   Der Akzent (#2E8FFF) und die Schrift (Archivo) sind identisch mit app.html,
+   Der Akzent (#C50619) und die Schrift (Archivo) sind identisch mit app.html,
    damit Landingpage und Rechner wie ein Produkt wirken.
    ============================================================ */
 :root{
   /* Flaechen: vom Grund nach oben, jede Stufe eine Spur heller */
-  --bg:#0E1116; --card:#151A21; --card2:#1A212A;
+  --bg:#0B0C0E; --card:#151A21; --card2:#1A212A;
   --line:#232B35; --line2:#303A46;
   /* Text: drei Stufen, mehr braucht es nicht */
-  /* --faint war #6D7784 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
+  /* --faint war #757575 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
      von 4,5:1 (WCAG AA). #767F8C liegt bei 4,67:1 und bleibt genauso zurueckhaltend. */
-  --text:#E9ECF1; --dim:#9BA5B2; --faint:#767F8C;
+  --text:#E9ECF1; --dim:#a3a3a3; --faint:#767F8C;
   /* EIN Akzent — kein Verlauf, kein zweiter Markenton */
-  --accent:#2E8FFF; --accent-soft:rgba(46,143,255,.10); --accent-line:rgba(46,143,255,.34);
+  --accent:#C50619;--accent-text:#e8515a; --accent-soft:rgba(197, 6, 25,.10); --accent-line:rgba(197, 6, 25,.34);
   /* Diese drei tragen Bedeutung und werden nie als Dekoration verwendet */
   --good:#35BE87; --warn:#DDA24C; --bad:#E4636F;
   /* Kompatibilitaet: Das EN-Woerterbuch und Alt-Markup referenzieren --teal
      und --grad noch. Beide zeigen jetzt auf den einen Akzent statt auf einen
      Verlauf — dadurch bleibt die englische Fassung unveraendert lauffaehig. */
-  --teal:#2E8FFF; --grad:#2E8FFF;
+  --teal:#C50619; --grad:#C50619;
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
   --r-s:6px; --r-m:10px; --r-l:14px;
 }
@@ -84,15 +84,15 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 
 /* Die Namen grad-text/grad-bg bleiben (das EN-Woerterbuch setzt sie per innerHTML),
    tragen aber keinen Verlauf mehr — nur noch den einen Akzent. */
-.grad-text{color:var(--accent);-webkit-text-fill-color:var(--accent)}
-.grad-bg{background:var(--accent)}
+.grad-text{color:var(--accent-text);-webkit-text-fill-color:var(--accent-text)}
+.grad-bg{background:transparent}
 
 /* --- Schaltflaechen --- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
   font-weight:600;border-radius:var(--r-m);cursor:pointer;white-space:nowrap;
   text-decoration:none;transition:background-color .14s,border-color .14s,color .14s}
 .btn-primary{background:var(--accent);color:#08111C;border:1px solid var(--accent)}
-.btn-primary:hover{background:#4CA2FF;border-color:#4CA2FF}
+.btn-primary:hover{background:#E8515A;border-color:#E8515A}
 .btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--text)}
 .btn-ghost:hover{background:var(--card2);border-color:var(--faint)}
 
@@ -130,7 +130,7 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
   background:var(--card2);border:1px solid var(--line2);box-shadow:0 8px 24px rgba(0,0,0,.45);
   font-size:13.5px;color:var(--dim);max-width:calc(100vw - 24px)}
 .langbar.on{display:flex}
-.langbar a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.langbar a{color:var(--accent-text);font-weight:600;text-decoration:none;white-space:nowrap}
 .langbar a:hover{text-decoration:underline}
 .langbar button{color:var(--faint);background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
 .langbar button:hover{color:var(--text)}
@@ -148,7 +148,7 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 /* --- Kleinteile --- */
 .eyebrow{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:0}
 .feature-ic{width:34px;height:34px;border-radius:var(--r-s);display:flex;align-items:center;
-  justify-content:center;border:1px solid var(--line2);color:var(--accent)}
+  justify-content:center;border:1px solid var(--line2);color:var(--accent-text)}
 details>summary{list-style:none;cursor:pointer}
 details>summary::-webkit-details-marker{display:none}
 details[open] .faq-plus{transform:rotate(45deg)}
@@ -192,7 +192,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
 .sc-pdf-h{font-weight:700;font-size:11.5px;letter-spacing:-.01em}
 .sc-l{height:5px;border-radius:2px;background:#dbe2ec;margin-top:6px}
 .sc-l.s{width:70%}.sc-l.xs{width:45%}
-.sc-pdf-meta{margin-top:8px;font-size:9px;color:#8b96a6}
+.sc-pdf-meta{margin-top:8px;font-size:9px;color:#959595}
 .sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:4px}
 .sc-qr i{background:#0b1320;border-radius:1px}
 .sc-qr i.o{background:transparent}
@@ -257,7 +257,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
   <nav id="nav" class="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-xl glass-nav pl-3.5 pr-2 py-2">
     <a href="#top" class="brandlogo flex items-center gap-2.5" style="text-decoration:none;color:var(--text)">
       <span class="w-8 h-8 rounded-md grad-bg flex items-center justify-center">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polygon class="cl-face f3" points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon class="cl-face f1" points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon class="cl-face f2" points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polygon class="cl-face f3" points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#E8515A"/><polygon class="cl-face f1" points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#C50619"/><polygon class="cl-face f2" points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#8E040F"/></svg>
       </span>
       <span class="font-bold text-[16px] tracking-tight">Container<span class="grad-text">Load</span></span>
     </a>
@@ -386,13 +386,13 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <span class="sc-tag" data-i18n="sc1_tag">Eingabe</span>
         <div class="sc-form">
           <div class="sc-fm-row">
-            <span class="sc-ic" style="background:#2E8FFF"></span>
+            <span class="sc-ic" style="background:#C50619"></span>
             <span class="sc-nm" data-i18n="sc1_row1">EUR-Palette</span>
             <span class="sc-dims">120×80×105</span>
             <span class="sc-qty">×22</span>
           </div>
           <div class="sc-fm-row">
-            <span class="sc-ic" style="background:#2E8FFF"></span>
+            <span class="sc-ic" style="background:#C50619"></span>
             <span class="sc-nm" data-i18n="sc1_row2">Kiste Motorteile</span>
             <span class="sc-dims">240×110×95</span>
             <span class="sc-qty">×2</span>
@@ -600,7 +600,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
   <div class="max-w-7xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
     <div class="md:col-span-1">
       <div class="brandlogo flex items-center gap-2.5 mb-3">
-        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#E8515A"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#C50619"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#8E040F"/></svg></span>
         <span class="font-bold text-[15px]">Container<span class="grad-text">Load</span></span>
       </div>
       <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Kein Excel. Kein Schätzen.<br>Nur der richtige Container.<br><span style="white-space:nowrap">Bremen, Deutschland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
@@ -766,19 +766,19 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // ---------- i18n strings (folgt document.documentElement.lang) ----------
   function lang(){ return (document.documentElement.lang==='en')?'en':'de'; }
   var STA={
-    intro:{ic:'…',col:'#2E8FFF',tl:'load',fitCol:'#DDA24C',
+    intro:{ic:'…',col:'#C50619',tl:'load',fitCol:'#DDA24C',
       txt:{de:'Ladung wird vorbereitet…',en:'Preparing cargo…'},
       meta:{de:'20′ GP · live',en:'20′ GP · live'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'prüfe…',en:'checking…'}},
-    pack:{ic:'▣',col:'#2E8FFF',tl:'load',fitCol:'#2E8FFF',
+    pack:{ic:'▣',col:'#C50619',tl:'load',fitCol:'#C50619',
       txt:{de:'Packe in den 20′ GP…',en:'Loading the 20′ GP…'},
       meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'lädt…',en:'loading…'}},
     over:{ic:'✕',col:'#E4636F',tl:'conflict',fitCol:'#E4636F',
       txt:{de:'{O} Packstücke passen nicht',en:"{O} items don't fit"},
       meta:{de:'20′ GP · zu klein',en:'20′ GP · too small'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'✕ {O} außerhalb',en:'✕ {O} outside'}},
-    solve:{ic:'⟳',col:'#2E8FFF',tl:'solve',fitCol:'#2E8FFF',
+    solve:{ic:'⟳',col:'#C50619',tl:'solve',fitCol:'#C50619',
       txt:{de:'Passender Container wird gesucht',en:'Finding the right container'},
       meta:{de:'rechnet{dots}',en:'calculating{dots}'}, type:{de:'rechnet…',en:'calculating…'}, fit:{de:'⟳ vermesse',en:'⟳ measuring'}},
-    repack:{ic:'→',col:'#2E8FFF',tl:'done',fitCol:'#2E8FFF',
+    repack:{ic:'→',col:'#C50619',tl:'done',fitCol:'#C50619',
       txt:{de:'Container wird zum 40′ GP',en:'Container grows to 40′ GP'},
       meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'passt rein…',en:'fitting…'}},
     done:{ic:'✓',col:'#35BE87',tl:'done',fitCol:'#35BE87',
@@ -796,7 +796,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function setTimeline(active){
     Object.keys(tlSteps).forEach(function(k){
       var on=(k===active),st=tlSteps[k];st.classList.toggle('on',on);
-      var col= active==='conflict'&&k==='conflict'?'#E4636F':active==='solve'&&k==='solve'?'#2E8FFF':active==='done'&&k==='done'?'#35BE87':on?'#2E8FFF':'#303A46';
+      var col= active==='conflict'&&k==='conflict'?'#E4636F':active==='solve'&&k==='solve'?'#C50619':active==='done'&&k==='done'?'#35BE87':on?'#C50619':'#303A46';
       var sd=st.querySelector('.clh-sd'); if(sd){sd.style.background=col;}
     });
   }
@@ -841,7 +841,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var boxes=[],repackRank=[],lbMin,lbMax,bc,bs;
   // Farbfuehrung der Animation: Akzent = arbeitet, Gelb = Konflikt, Gruen = geloest.
   // C_TEAL heisst historisch so, traegt jetzt aber den einen Akzent (kein zweiter Markenton).
-  var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF;
+  var C_TEAL=0xC50619,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0xE8515A;
   var CAM_BASE={x:0.0,y:1.4,z:6.0,lx:0.0}, CAM_WIDE={x:1.0,y:1.7,z:8.7,lx:1.25};
   var XL=-1.25,L0=2.5,W=1.0,H=1.16,BL=0.62,BH=0.52,BW=0.46,DROP=5.4;
   var _ca,_cb,_tmp;
@@ -882,7 +882,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    var grid=new THREE.GridHelper(L0,5,0x2A2C30,0x1A1B1E); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
     pivot.add(grp);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
       setLength:function(L){grp.scale.x=L/L0; grp.position.x=XL+L/2;},
@@ -898,9 +898,9 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     scene=new THREE.Scene();
     camera=new THREE.PerspectiveCamera(42,1,0.1,100); camera.position.set(CAM_BASE.x,CAM_BASE.y,CAM_BASE.z);
     pivot=new THREE.Object3D(); scene.add(pivot);
-    scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+    scene.add(new THREE.AmbientLight(0xD8DADD,0.6));
     var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
-    var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
+    var fillL=new THREE.PointLight(0xFFFFFF,0.5,40); fillL.position.set(-5,2,-2); scene.add(fillL);
 
     CONT=makeContainer(); CONT.setLength(L0);
     shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
@@ -911,7 +911,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var final40=packPositions(1.25,5.0,14);
     for(var i=0;i<TOTAL;i++){
       var geo=new THREE.BoxGeometry(BL,BH,BW);
-      var mat=new THREE.MeshStandardMaterial({color:0x1B2E45,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+      var mat=new THREE.MeshStandardMaterial({color:0xD9DCE0,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
       var m=new THREE.Mesh(geo,mat);
       var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
       m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em)); pivot.add(m);
@@ -963,20 +963,20 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     if(name==='outro')fade=1-smooth(p);
 
     if(name==='intro'){
-      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);b.mesh.scale.setScalar(1);});
       CONT.setColor(C_BLUEEDGE); applyStatus('intro',0,t);
     } else if(name==='pack'){
       var stag=0.17,dur=1.05,tt=p*PH[1].d;
       boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
         b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
         if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
-        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0x453620:0x1B2E45);});
+        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0xE4D6B8:0xD9DCE0);});
       CONT.setColor(C_BLUEEDGE); applyStatus('pack',placed,t);
     } else if(name==='overflow'){
       var pulse=0.5+0.5*Math.sin(t*5.0);
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);
-        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);b.mesh.scale.setScalar(1+pulse*0.04);}
-        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);}});
+        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0xE4D6B8);b.mesh.scale.setScalar(1+pulse*0.04);}
+        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);b.mesh.scale.setScalar(1);}});
       CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus('over',placed,t);
     } else if(name==='solve'){
       dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
@@ -984,7 +984,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       scanGroup.visible=true; scanGroup.scale.setScalar(lerp(1.16,1.0,smooth(clamp01(p/0.4))));
       var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0); bracketMat.opacity=inn*pl; bboxMat.opacity=inn*0.20;
       boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
-        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);}});
+        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0xE4D6B8);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0xD9DCE0);}});
       CONT.setColor(C_WARN); applyStatus('solve',0,t);
     } else if(name==='grow'||name==='repack'){
       var growP=name==='grow'?smooth(p):1;
@@ -996,18 +996,18 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
       boxes.forEach(function(b,i){var rank=repackRank[i],lp=clamp01((winT-rank*stag2)/dur2);
         lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
         b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
-        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);placed++;}
-        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0x453620:0x1B2E45);}});
+        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);placed++;}
+        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0xE4D6B8:0xD9DCE0);}});
       applyStatus('repack',placed,t);
     } else if(name==='success'){
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx;
       var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
       CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);b.mesh.scale.setScalar(1);});
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);b.mesh.scale.setScalar(1);});
       placed=TOTAL; applyStatus('done',placed,t);
     } else {
       L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);}); placed=TOTAL;
+      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0xC6DCCB);}); placed=TOTAL;
     }
 
     CONT.setLength(L); placeShadow(L);
@@ -1091,7 +1091,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
   var wire='rgba(120,170,230,.55)', wireDim='rgba(120,170,230,.20)';
   // Boden + Gitter
-  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(46,143,255,.05)',wireDim,1);
+  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(197, 6, 25,.05)',wireDim,1);
   for(var g=1;g<5;g++){ line([L*g/5,0,0],[L*g/5,W,0],wireDim,0.8); }
   line([0,W/2,0],[L,W/2,0],wireDim,0.8);
   // hintere Pfosten + hintere Deckenschienen (faint, hinter Ladung)
@@ -1107,8 +1107,8 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var sx=(L-usedL)/2, sy=(W-usedW)/2;
   // Zwei Lagen, eine Farbfamilie: die obere Lage heller. Der Unterschied zeigt
   // die Stapelung an — er ist Information, nicht Dekoration.
-  var blue={top:'#2C6296',left:'#24507B',right:'#1C3F62'};   // untere Lage
-  var teal={top:'#4E9BE8',left:'#3C7EC0',right:'#2F6499'};   // obere Lage
+  var blue={top:'#FFFFFF',left:'#DADDE2',right:'#B4B9C0'};   // untere Lage
+  var teal={top:'#C9CDD4',left:'#A8ADB5',right:'#878D96'};   // obere Lage
   var edge='rgba(4,16,31,.5)';
   var boxes=[];
   for(var lay=0;lay<2;lay++)

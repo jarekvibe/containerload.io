@@ -17,7 +17,7 @@
 <meta name="twitter:title" content="Container-Maße & Innenmaße: 20′, 40′, 45′ in der Übersicht — ContainerLoad" />
 <meta name="twitter:description" content="Innenmaße und Zuladung von 20-Fuß-, 40-Fuß- und 45-Fuß-Containern (Standard & High Cube) in einer Tabelle. Live in 3D beladen." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
-<meta name="theme-color" content="#070a0f" />
+<meta name="theme-color" content="#0b0c0e" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
@@ -25,11 +25,11 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <style>
-:root{--bg:#070a0f;--card:#0c111a;--line:#19222f;--line2:#26313f;--text:#eef2f7;--dim:#9aa7b8;--faint:#67748a;--accent:#2f9bff;--teal:#38e0c8;--good:#37d39f;--warn:#ffb454;--grad:linear-gradient(90deg,#2f9bff,#38e0c8);--mono:'JetBrains Mono',ui-monospace,monospace}
+:root{--bg:#0b0c0e;--card:#121316;--line:#262a30;--line2:#333840;--text:#ecedef;--dim:#9ea4ac;--faint:#7a828b;--accent:#c50619;--accent-text:#e8515a;--teal:#2596be;--teal-text:#2596be;--good:#37d39f;--warn:#ffb454;--grad:linear-gradient(90deg,#c50619,#2596be);--mono:'JetBrains Mono',ui-monospace,monospace}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
 body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,sans-serif;line-height:1.6;overflow-x:hidden}
-a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+a{color:var(--accent-text);text-decoration:none}a:hover{text-decoration:underline}
 .mono{font-family:var(--mono)}
 .grad-text{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
 .wrap{max-width:820px;margin:0 auto;padding:0 20px}
@@ -39,10 +39,10 @@ header.nav{position:sticky;top:0;z-index:20;background:rgba(9,13,20,.72);border-
 .brand:hover{text-decoration:none}
 .mark{width:28px;height:28px;border-radius:8px;background:var(--grad);display:flex;align-items:center;justify-content:center}
 .btn{display:inline-flex;align-items:center;gap:.5rem;font-weight:700;border-radius:12px;transition:.18s;cursor:pointer;white-space:nowrap;padding:.7rem 1.1rem;font-size:14px}
-.btn-primary{background:var(--grad);color:#04101f;box-shadow:0 8px 30px -8px rgba(47,155,255,.6)}
+.btn-primary{background:var(--grad);color:#fff6f2;box-shadow:0 8px 30px -8px rgba(197, 6, 25,.6)}
 .btn-primary:hover{filter:brightness(1.08);text-decoration:none}
 .btn-ghost{background:rgba(255,255,255,.03);border:1px solid var(--line2);color:var(--text)}
-.btn-ghost:hover{border-color:rgba(47,155,255,.6);text-decoration:none}
+.btn-ghost:hover{border-color:rgba(197, 6, 25,.6);text-decoration:none}
 main{position:relative;z-index:1;padding:46px 0 40px}
 .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);margin-bottom:12px}
 h1{font-size:clamp(26px,4.4vw,38px);font-weight:800;letter-spacing:-.02em;line-height:1.12;margin:0 0 18px}
@@ -58,8 +58,8 @@ th{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:
 td.num{font-family:var(--mono);text-align:right}
 .note{font-size:12.5px;color:var(--faint);border-top:1px solid var(--line);margin-top:30px;padding-top:16px;line-height:1.6}
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
-.related a{font-size:13px;background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:#bcd9ff}
-.related a:hover{border-color:rgba(47,155,255,.6);text-decoration:none}
+.related a{font-size:13px;background:rgba(255,255,255,.03);border:1px solid var(--line2);border-radius:10px;padding:8px 12px;color:#f0c9bd}
+.related a:hover{border-color:rgba(197, 6, 25,.6);text-decoration:none}
 footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0;color:var(--faint);font-size:13px}
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
 footer a{color:var(--dim)}
@@ -69,7 +69,7 @@ footer a{color:var(--dim)}
 <body>
 <header class="nav">
   <div class="nav-in">
-    <a class="brand" href="/"><span class="mark"><svg width="16" height="13" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="17" height="13" rx="1.5" stroke="#04101f" stroke-opacity=".9"/><line x1="5" y1="1" x2="5" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="9" y1="1" x2="9" y2="13" stroke="#04101f" stroke-opacity=".9"/><line x1="13" y1="1" x2="13" y2="13" stroke="#04101f" stroke-opacity=".9"/></svg></span>Container<span class="grad-text">Load</span></a>
+    <a class="brand" href="/"><span class="mark"><svg width="16" height="13" viewBox="0 0 18 14" fill="none"><rect x="0.5" y="0.5" width="17" height="13" rx="1.5" stroke="#fff6f2" stroke-opacity=".9"/><line x1="5" y1="1" x2="5" y2="13" stroke="#fff6f2" stroke-opacity=".9"/><line x1="9" y1="1" x2="9" y2="13" stroke="#fff6f2" stroke-opacity=".9"/><line x1="13" y1="1" x2="13" y2="13" stroke="#fff6f2" stroke-opacity=".9"/></svg></span>Container<span class="grad-text">Load</span></a>
     <a class="btn btn-primary" style="margin-left:auto" href="/app?q=10%20Kisten%20100x120x110%20stapelbar%20400kg">3D-Rechner öffnen</a>
   </div>
 </header>

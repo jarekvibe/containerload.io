@@ -88,12 +88,13 @@ PR #57 hat die Landingpage entschlackt, PR #68 dieselben Regeln in den Rechner g
 
 | | |
 |---|---|
-| Flächen | **sechs Stufen**, Grundton `#0E1116` (identisch mit der Landingpage — sie bindet den Rechner per iframe ein) |
+| Flächen | **sechs Stufen**, Grundton `#0A0E16` (identisch mit der Landingpage — sie bindet den Rechner per iframe ein) |
 | Radien | **8** klein · **12** Karte · **16** Dialog · **999** Pille |
 | Schriftgrößen | **11 · 12,5 · 13,5 · 15 · 17** plus Kennzahlen — nichts unter 11 px |
 | Gewichte | bis **700**, nicht darüber |
 | Monospace | **nur an Zahlen** (ab 12,5 px) und am Teilen-Link. Sie hat einen Zweck: Ziffern bleiben untereinander stehen. Als Kleintext ist sie Kostüm |
-| Farbe | neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Farbe | neutral = eine Zahl · grün = passt · orange = wird knapp · **magenta** = Grenze überschritten · **Akzentrot** = Auswahl, **nie** eine Kennzahl |
+| Marke | Akzent `#C8402C` als **Fläche**, `#E2705A` als **Schrift** auf dunklem Grund (das satte Rot kommt als Text nur auf 3,9:1). Text auf der Akzentfläche: `#FFF6F2`. Zweitton Steel-Navy `#2F4A72`, als Schrift `#6E8CB8` |
 | Zahlen | über `nf()` / `fmtDE()`, nie `toFixed()` in der Anzeige — sonst steht in der deutschen Oberfläche „0.03 m" |
 | Emoji | keine. Linien-SVG oder das Wort |
 
