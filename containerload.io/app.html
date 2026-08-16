@@ -1020,19 +1020,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Die gelieferte Ausrichtung bleibt vorne, damit sich bei OFFENEN Seiten nichts aendert:
     // dort ist der Ueberstand gewollt und die OOG-Vermessung rechnet mit ihm.
     const oris = l === w || dims.rot === false ? [[l, w]] : [[l, w], [w, l]];
+    // Auflage: In offenen Richtungen darf Ware ueberstehen – das ist der Sinn eines Flat Racks.
+    // Sie muss aber auf dem Deck LIEGEN. Ohne diese Pruefung fand der Packer fuer ein zweites
+    // ueberbreites Stueck einen "freien" Platz vollstaendig NEBEN dem Deck; im 3D-Bild schwebte
+    // es dann in der Luft. Verlangt werden zwei Dinge, die beide anschaulich sind: der
+    // Schwerpunkt liegt ueber dem Deck, und mindestens die Haelfte der Standflaeche auch.
+    const traegt = (c) => {
+      const ueberlappX = Math.max(0, Math.min(c.x + c.dx, CL) - Math.max(c.x, 0));
+      const ueberlappZ = Math.max(0, Math.min(c.z + c.dz, CW) - Math.max(c.z, 0));
+      const anteil = c.dx * c.dz > 0 ? ueberlappX * ueberlappZ / (c.dx * c.dz) : 0;
+      const mx = c.x + c.dx / 2, mz = c.z + c.dz / 2;
+      return anteil >= 0.5 - 1e-9 && mx >= -1e-9 && mx <= CL + 1e-9 && mz >= -1e-9 && mz <= CW + 1e-9;
+    };
     for (const [dx, dz] of oris) {
       const zCentered = (CW - dz) / 2;
       const zEdge = !panels.sides && dz > CW && !forceCentered ? CW - dz : zCentered;
-      const xCandidates = [xc - dx / 2, 0, CL - dx];
+      // Buendig ans schon Liegende ZUERST, dann die Grundplaetze. Vorher stand hier ein
+      // Spreiz-Platz (xc) vorn, der jedem Stueck sein eigenes Laengsdrittel gab – dadurch
+      // standen zwei Stuecke mit Luecke auf dem Deck, obwohl sie aneinander passen.
+      const nachbarnX = (placed || []).map((b) => b.x + b.dx).sort((a, b) => a - b);
+      const xCandidates = [0, ...nachbarnX, ...(placed || []).map((b) => b.x - dx), CL - dx, xc - dx / 2];
       const zCandidates = [zEdge, zCentered, 0, CW - dz];
-      for (const b of placed || []) {
-        xCandidates.push(b.x + b.dx, b.x - dx);
-        zCandidates.push(b.z + b.dz, b.z - dz);
-      }
+      for (const b of placed || []) zCandidates.push(b.z + b.dz, b.z - dz);
       for (const x of xCandidates) {
         for (const z of zCandidates) {
           const cand = { x, y: 0, z, dx, dy, dz };
           if (!fitsPanels(cand, CL, CW, panels)) continue;
+          if (!traegt(cand)) continue;
           if (!(placed || []).some((b) => boxesOverlap(cand, b))) return cand;
         }
       }
@@ -3790,7 +3804,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (any) {
             r.oog = oog;
             r.oogBlocked = blockedSlots(oog);
-            r.oogBox = placeOversize({ l: md.l, w: md.w, h: md.h }, container, panels, forceCentered, 0, 1);
+            // Die Markierung gehoert an die Ladung, die wirklich liegt. Vorher wurde sie aus
+            // einer GEDACHTEN Platzierung der groessten Masse berechnet – die lag dann neben
+            // den Kisten, und im Bild schwebte eine gelbe Flaeche im Nichts.
+            const draussen = (r.placed || []).filter((p) => p.x < 0 || p.z < 0 || p.x + p.dx > num(container.l) || p.z + p.dz > num(container.w) || p.dy > num(container.h));
+            const bezug = draussen.length ? draussen : (r.placed || []);
+            r.oogBox = bezug.length
+              ? bezug.reduce((a, p) => ({
+                  x: Math.min(a.x, p.x), z: Math.min(a.z, p.z), y: 0,
+                  dx: Math.max(a.x + a.dx, p.x + p.dx) - Math.min(a.x, p.x),
+                  dz: Math.max(a.z + a.dz, p.z + p.dz) - Math.min(a.z, p.z),
+                  dy: Math.max(a.dy, p.dy)
+                }), { x: bezug[0].x, z: bezug[0].z, y: 0, dx: bezug[0].dx, dz: bezug[0].dz, dy: bezug[0].dy })
+              : placeOversize({ l: md.l, w: md.w, h: md.h }, container, panels, forceCentered, 0, 1);
             r.gauge = gauge;
           }
         }
