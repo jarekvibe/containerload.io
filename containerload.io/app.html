@@ -1159,7 +1159,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   //   Platform  (alles offen)                 -> traegt jede Geometrie (Ueberstand erlaubt)
   // So wird z. B. ein zu hohes Stueck, das aber laenger als das OT-Deck ist, korrekt zur
   // Platform geroutet statt zum Open Top, auf den es lengthwise gar nicht passt.
-  function suggestEquipment(piece) {
+  function suggestEquipment(piece, cargo) {
     const std = Object.entries(PRESETS).filter(([n, p]) => !p.kind || p.kind === "dry").map(([n, p]) => p);
     const stdW = Math.max(...std.map((p) => p.w)), stdH = Math.max(...std.map((p) => p.h)), stdLen = Math.max(...std.map((p) => p.l));
     const pl = num(piece.l), pw = num(piece.w), ph = num(piece.h);
@@ -1170,7 +1170,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     else if (pl <= maxOf("flatrack", "l")) kind = "flatrack";
     else kind = "platform";
     const cand = Object.entries(PRESETS).filter(([n, p]) => p.kind === kind).map(([name, p]) => ({ name, p })).sort((a, b) => a.p.l - b.p.l);
-    const hit = cand.find(({ p }) => pl <= p.l + 1e-6) || cand[cand.length - 1];
+    // Erst muss der Typ das STUECK tragen (Laenge aufs Deck), dann die MENGE. Vorher endete
+    // die Suche beim ersten Deck, auf das ein einzelnes Stueck passt – acht 250er bekamen so
+    // einen 20' Flat Rack empfohlen, auf den nur vier gehen.
+    const tragen = cand.filter(({ p }) => pl <= p.l + 1e-6);
+    const auswahl = tragen.length ? tragen : cand;
+    const menge = (cargo || []).reduce((n, t) => n + Math.max(0, Math.floor(num(t.qty))), 0);
+    const hit = menge > 0
+      ? auswahl.find(({ p }) => packKind(p, cargo, { noHint: true, quick: true }, false).boxes >= menge) || auswahl[auswahl.length - 1]
+      : auswahl[0];
     if (!hit) return null;
     // Grund passend zur Wahl: Platform = (zu) lang fuer geschlossene Stirnseiten,
     // Flat Rack = zu breit, Open Top = zu hoch. cm = Ueberstand ueber Standard (<=0 -> ohne cm).
@@ -1215,7 +1223,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           // "zu gross" gemeldet (z. B. 1 Palette mit 30 t).
           const oneDim = packCargo({ ...absLargest.p, payload: 0 }, [{ ...t, qty: 1 }], { noHint: true, quick: true });
           if (oneDim.boxes === 0) {
-            const eq = suggestEquipment({ l: num(t.l), w: num(t.w), h: num(t.h) });
+            const eq = suggestEquipment({ l: num(t.l), w: num(t.w), h: num(t.h) }, cargo);
             if (eq) return { type: "equip", name: eq.name, kind: eq.kind, item: t.name, reason: eq.reason };
             return { type: "toobig", name: absLargest.name, item: t.name };
           }
@@ -2832,7 +2840,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const matDeck = new THREE.MeshStandardMaterial({ color: 0x222a36, roughness: 0.85, metalness: 0.25 });
       const castMat = new THREE.MeshStandardMaterial({ color: 0x2a3340, roughness: 0.6, metalness: 0.55 });
       const geoCast = new THREE.BoxGeometry(cs, cs, cs);
-      const oogMat = new THREE.MeshStandardMaterial({ color: 0xffb454, transparent: true, opacity: 0.42, depthWrite: false });
       // Container-Kette der 3D-Ansicht (Slot 0 = gewählter Container, Folge-Container ggf. anderer Typ).
       const dimsOf = (c) => ({ CL: num(c.preset.l) / 100, CH: num(c.preset.h) / 100, CW: num(c.preset.w) / 100 });
       // Manueller Modus: immer genau EIN Hauptcontainer, keine Auto-Kette/-Kisten – die platzierten
@@ -3036,36 +3043,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         cg.position.x = xpos[ci];
         if (isRoad) cg.position.y = BASE_Y; // Auflieger + Ladung anheben; placed-Koordinaten unberuehrt.
         addShell(cg, S, ckind, isRoad ? group : cg, ci === chain.length - 1);
-        // ── Buchungsgrenze (gauge.h) sichtbar machen: das gauge-Huellmass ist NICHT die
-        //    sichtbare Huelle (z. B. Flat-Rack-Stirnwand 218 < gauge.h 259). Linie als Bezug,
-        //    damit die Amber-Markierung nicht "im Leeren" zu schweben scheint. ──
-        if (ckind !== "dry" && c.preset && c.preset.gauge) {
-          const GH = num(c.preset.gauge.h) / 100;
-          const lp = new THREE.PlaneGeometry(d.CL, d.CW);
-          const limEdge = new THREE.LineSegments(new THREE.EdgesGeometry(lp), new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.3 }));
-          lp.dispose();
-          limEdge.rotation.x = -Math.PI / 2;
-          limEdge.position.set(d.CL / 2, GH, d.CW / 2);
-          cg.add(limEdge);
-        }
-        // ── Out-of-Gauge: Uebermass amber hervorheben (nur Hauptcontainer) ──
-        if (ci === 0 && result && result.oog && result.oogBox && result.gauge) {
-          const b = result.oogBox, ga = result.gauge;
-          const gL = num(ga.l) / 100, gW = num(ga.w) / 100, gH = num(ga.h) / 100;
-          const bx = b.x / 100, bz = b.z / 100, sx = b.dx / 100, sy = b.dy / 100, sz = b.dz / 100;
-          const slab = (mnx, mxx, mny, mxy, mnz, mxz) => {
-            const w = mxx - mnx, ht = mxy - mny, dp = mxz - mnz;
-            if (w <= 1e-3 || ht <= 1e-3 || dp <= 1e-3) return;
-            const m = new THREE.Mesh(new THREE.BoxGeometry(w, ht, dp), oogMat);
-            m.position.set(mnx + w / 2, mny + ht / 2, mnz + dp / 2);
-            cg.add(m);
-          };
-          if (sy > gH) slab(bx, bx + sx, gH, sy, bz, bz + sz);                       // ueber Hoehe (Deckel)
-          if (bz + sz > gW) slab(bx, bx + sx, 0, Math.min(sy, gH), gW, bz + sz);     // ueber Breite +z
-          if (bz < 0) slab(bx, bx + sx, 0, Math.min(sy, gH), bz, 0);                 // ueber Breite -z
-          if (bx + sx > gL) slab(gL, bx + sx, 0, Math.min(sy, gH), Math.max(bz, 0), Math.min(bz + sz, gW)); // ueber Laenge vorn
-          if (bx < 0) slab(bx, 0, 0, Math.min(sy, gH), Math.max(bz, 0), Math.min(bz + sz, gW));             // ueber Laenge hinten
-        }
+        // Die Buchungsgrenze (gauge.h) stand hier als orange Linie ueber dem Equipment. Sie
+        // war ein Bezug fuer die amberfarbenen Uebermass-Flaechen – und die gibt es nicht mehr.
+        // Uebrig blieb ein Rechteck, das ueber dem Container schwebt und nichts erklaert.
+        // Die Zahlen stehen im Kasten "Out of Gauge", in Zentimetern und damit belastbar.
+        // Hier standen amberfarbene Flaechen, die den Ueberstand ueber das Huellmass zeigten.
+        // Sie lasen sich wie Ladung, nicht wie Markierung, und im leeren Equipment blieben zwei
+        // gelbe Balken stehen. Der Kasten "Out of Gauge" sagt dasselbe in Zentimetern.
         // ── Tuer-Konflikt: Oeffnung in Warnfarbe rahmen + kritisches Packstueck als Ghost am Tuerspalt.
         //    Nur Hauptcontainer (ci===0) und nur dry. Tuer-Fit ist reine Mass-Pruefung (fitsThroughDoor). ──
         if (ci === 0 && ckind === "dry") {
@@ -3834,19 +3818,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (any) {
             r.oog = oog;
             r.oogBlocked = blockedSlots(oog);
-            // Die Markierung gehoert an die Ladung, die wirklich liegt. Vorher wurde sie aus
-            // einer GEDACHTEN Platzierung der groessten Masse berechnet – die lag dann neben
-            // den Kisten, und im Bild schwebte eine gelbe Flaeche im Nichts.
-            const draussen = (r.placed || []).filter((p) => p.x < 0 || p.z < 0 || p.x + p.dx > num(container.l) || p.z + p.dz > num(container.w) || p.dy > num(container.h));
-            const bezug = draussen.length ? draussen : (r.placed || []);
-            r.oogBox = bezug.length
-              ? bezug.reduce((a, p) => ({
-                  x: Math.min(a.x, p.x), z: Math.min(a.z, p.z), y: 0,
-                  dx: Math.max(a.x + a.dx, p.x + p.dx) - Math.min(a.x, p.x),
-                  dz: Math.max(a.z + a.dz, p.z + p.dz) - Math.min(a.z, p.z),
-                  dy: Math.max(a.dy, p.dy)
-                }), { x: bezug[0].x, z: bezug[0].z, y: 0, dx: bezug[0].dx, dz: bezug[0].dz, dy: bezug[0].dy })
-              : placeOversize({ l: md.l, w: md.w, h: md.h }, container, panels, forceCentered, 0, 1);
+            // r.oogBox gab es nur fuer die amberfarbene Flaeche im 3D-Bild. Die ist entfallen,
+            // die Rechnung dafuer damit auch. Die Zahlen im Kasten kommen aus computeOOG.
             r.gauge = gauge;
           }
         }
