@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <!-- Tab-Zeichen: freigestellter Wuerfel, keine Kachel. Ohne Untergrund muss der Wuerfel
-       seinen Kontrast selbst mitbringen – die drei Flaechen sind darum in Markenblau
-       abgestuft und nicht mehr im dunklen Marineblau, das auf einer dunklen Tableiste
+       seinen Kontrast selbst mitbringen – die drei Flaechen sind darum im Markenrot
+       abgestuft und nicht in einem dunklen Ton, der auf einer dunklen Tableiste
        verschwaende. So traegt das Zeichen auf hellem wie auf dunklem Grund. -->
-  <polygon points="256,20 464,140 256,260 48,140" fill="#6FB8FF"/>
-  <polygon points="48,140 256,260 256,491 48,371" fill="#2E8FFF"/>
-  <polygon points="464,140 256,260 256,491 464,371" fill="#1A5FBF"/>
+  <polygon points="256,20 464,140 256,260 48,140" fill="#E8836B"/>
+  <polygon points="48,140 256,260 256,491 48,371" fill="#C8402C"/>
+  <polygon points="464,140 256,260 256,491 464,371" fill="#8F2C1E"/>
 </svg>
