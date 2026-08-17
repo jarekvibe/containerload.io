@@ -3411,7 +3411,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const pickKind = (k) => { const ls = lensOf(k); const L = ls.includes(cur.len) ? cur.len : ls.includes("40'") ? "40'" : ls[0]; applyPreset(resolve(k, L, cur.hv || "HC")); };
     const pickLen = (L) => applyPreset(resolve(cur.kind, L, cur.hv || "HC"));
     const pickHv = (hv) => applyPreset(resolve("dry", cur.len, hv));
-    const segWrap = { display: "flex", gap: 5, background: "#161D27", border: "1px solid #232C38", borderRadius: 12, padding: 4, flex: 1 };
+    // flexWrap: mit Reefer sind es jetzt fuenf Typ-Kacheln - bei "flex:1 + nowrap" in einer
+    // Reihe reicht die Breite auf schmalen/mittleren Viewports nicht mehr, die Reihe lief ueber
+    // den Rand hinaus und die letzte(n) Kachel(n) wurden abgeschnitten (nicht klickbar). Bricht
+    // jetzt sauber auf eine zweite Zeile um, sobald der Platz nicht reicht.
+    const segWrap = { display: "flex", flexWrap: "wrap", gap: 5, background: "#161D27", border: "1px solid #232C38", borderRadius: 12, padding: 4, flex: 1 };
     const segRow = { display: "flex", alignItems: "center", gap: 10, marginBottom: 9 };
     const segKey = { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, width: 46, flexShrink: 0 };
     const pill = (on, dis) => ({ flex: 1, border: 0, cursor: dis ? "not-allowed" : "pointer", lineHeight: 1.15, background: on ? hexA(C.accent, 0.18) : "transparent", color: on ? "#DBE8FF" : C.dim, fontFamily: SANS, fontWeight: 700, fontSize: 12.5, padding: "8px 3px", borderRadius: 8, transition: ".18s", opacity: dis ? 0.3 : 1, boxShadow: on ? `inset 0 0 0 1px ${hexA(C.accent, 0.5)}` : "none", whiteSpace: "nowrap" });
