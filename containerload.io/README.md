@@ -18,7 +18,7 @@ Das Ergebnis ist eine rein **geometrische** Abschätzung der Stauung. Schwerpunk
 
 - **3D-Rechner in Echtzeit** — Packstückmaße frei eingeben und direkt daneben sehen, wie die Ladung im Container sitzt. Drehen, zoomen, prüfen.
 - **Palettengenaue Logik** — bei einer Palettensorte rechnet das Tool palettengenau (z. B. 11 EUR-Paletten im 20-Fuß, wie in den Speditionstabellen), inklusive gedrehter Lademuster. Bei gemischter Ladung sucht ein Algorithmus die beste Stauung.
-- **Karton auf Palette** — die Vorstufe: Kartonmaße und Gesamtmenge eingeben, das Tool legt das Lagenmuster, zählt Lagen und Kartons je Palette und sagt, wie viele Paletten dabei herauskommen (inklusive Restpalette). Die fertigen Paletten wandern per Klick in den Container-/LKW-Rechner — Karton → Palette → Container in einem Durchgang.
+- **Karton auf Palette** — die Vorstufe: Kartonmaße und Gesamtmenge eingeben, das Tool legt das Lagenmuster, zählt Lagen und Kartons je Palette und sagt, wie viele Paletten dabei herauskommen (inklusive Restpalette). Mehrere Kartontypen gehen entweder auf eigene Paletten oder lagenweise auf eine gemischte — schwere Lagen nach unten. Die fertigen Paletten wandern per Klick in den Container-/LKW-Rechner — Karton → Palette → Container in einem Durchgang.
 - **Container-Empfehlung** — passt nicht alles rein, schlägt das Tool die günstigste Kombination vor (z. B. 1× 45' + 1× 20' statt 2× 45').
 - **Dreh- & Stapelregeln je Packstück** — stapelbar / nicht stapelbar / um 90° drehbar.
 - **Gewicht & Zuladung** — die maximale Zuladung jedes Containers ist hinterlegt; Warnung vor Überladung.

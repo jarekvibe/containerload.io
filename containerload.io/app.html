@@ -675,6 +675,137 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cap, totalCartons: total
     };
   }
+  // Mehrere Kartontypen. Zwei Betriebsarten, weil es an der Rampe zwei verschiedene
+  // Vorgaenge sind:
+  //   "separate" – jeder Typ auf eigene Paletten. Der haeufigere Fall.
+  //   "layered"  – ein Stapel, aber JEDE LAGE gehoert genau einem Typ. So wird eine
+  //                Mischpalette tatsaechlich gebaut: schwer und grossflaechig unten.
+  //
+  // Bewusst NICHT gebaut: Kartons verschiedener Groesse INNERHALB einer Lage verschachteln.
+  // Das ergaebe Muster, die niemand nachbaut — und eine Zahl, der man an der Rampe nicht
+  // folgen kann, ist schlechter als keine Zahl.
+  //
+  // Die Reihenfolge in `cartons` IST die Stapelreihenfolge: erster Eintrag unten.
+  //
+  // Rueckgabe: builds = die verschiedenen Palettenaufbauten, jeder mit seiner Stueckzahl.
+  // Bei einem Typ und einer Restpalette sind das genau zwei — dieselbe Aussage wie bisher.
+  function palletizeMulti(pal, cartons, opts = {}) {
+    const mode = opts.mode === "layered" ? "layered" : "separate";
+    const over = Math.max(0, num(opts.over));
+    const maxTotalH = num(opts.maxTotalH);
+    const PL = num(pal && pal.l), PW = num(pal && pal.w), PH = num(pal && pal.h);
+    const tare = Math.max(0, num(pal && pal.tare));
+    const payload = num(pal && pal.payload) > 0 ? num(pal.payload) : Infinity;
+
+    const list = (cartons || []).map((c, ti) => ({
+      ti, l: num(c.l), w: num(c.w), h: num(c.h),
+      weight: Math.max(0, num(c.weight)), qty: Math.max(0, Math.floor(num(c.qty))),
+      rotatable: c.rotatable !== false
+    })).filter((c) => c.l > 0 && c.w > 0 && c.h > 0 && c.qty > 0);
+
+    // Lagenmuster je Typ — derselbe Guillotine-Packer wie im Einzelfall.
+    for (const c of list) {
+      const fl = makeFloorPacker(c.l, c.w, c.rotatable)(PL + 2 * over, PW + 2 * over);
+      c.perLayer = fl.count;
+      let ex = 0, ez = 0;
+      for (const r of fl.rects) { ex = Math.max(ex, r.x + r.dx); ez = Math.max(ez, r.z + r.dz); }
+      c.overL = Math.max(0, (ex - PL) / 2);
+      c.overW = Math.max(0, (ez - PW) / 2);
+      c.rects = fl.rects.map((r) => ({ ...r, x: r.x - c.overL, z: r.z - c.overW }));
+      c.outL = Math.max(PL, ex);
+      c.outW = Math.max(PW, ez);
+    }
+    const noFit = list.filter((c) => !c.perLayer).map((c) => c.ti);
+    const good = list.filter((c) => c.perLayer > 0);
+    const types = {};
+    for (const c of list) types[c.ti] = c;
+    // Menge der Typen, die auf diese Palette in keiner Ausrichtung passen. Sie faellt
+    // aus der Rechnung heraus, DARF aber nicht aus der Bilanz fallen: was nicht verladen
+    // ist, ist uebrig. Sonst meldet das Tool eine Sendung als vollstaendig, die es nicht ist.
+    const lostNoFit = list.filter((c) => !c.perLayer).reduce((s, c) => s + c.qty, 0);
+    const base = { mode, builds: [], perType: [], types, totalPallets: 0, unplaced: 0, noFit };
+    if (!good.length) return { ...base, unplaced: lostNoFit };
+
+    const usableH = maxTotalH > 0 ? maxTotalH - PH : Infinity;
+    const maxLay = num(opts.maxLayers) > 0 ? Math.floor(num(opts.maxLayers)) : Infinity;
+    // Lagen eines Typs: volle Lagen und, wenn etwas uebrig bleibt, eine angebrochene.
+    const layersOf = (c, total) => {
+      const out = [];
+      let left = total;
+      while (left > 0) {
+        const n = Math.min(c.perLayer, left);
+        out.push({ ti: c.ti, count: n, h: c.h, kg: n * c.weight });
+        left -= n;
+      }
+      return out;
+    };
+
+    if (mode === "separate") {
+      const builds = [], perType = [];
+      let unplaced = 0;
+      for (const c of good) {
+        const r = palletize(pal, { l: c.l, w: c.w, h: c.h, weight: c.weight, qty: c.qty, rotatable: c.rotatable }, opts);
+        const placed = r.perPallet * r.full + r.rest;
+        perType.push({ ti: c.ti, perLayer: r.perLayer, layers: r.layers, placed, total: c.qty, cap: r.cap });
+        unplaced += c.qty - placed;
+        if (r.full > 0) builds.push({ ti: c.ti, qty: r.full, rest: false, layers: layersOf(c, r.perPallet), totalH: r.fullH, totalKg: r.fullKg, outL: r.outL, outW: r.outW });
+        if (r.rest > 0) builds.push({ ti: c.ti, qty: 1, rest: true, layers: layersOf(c, r.rest), totalH: r.restH, totalKg: r.restKg, outL: r.outL, outW: r.outW });
+      }
+      return { ...base, builds, perType, unplaced: unplaced + lostNoFit, totalPallets: builds.reduce((s, b) => s + b.qty, 0) };
+    }
+
+    // layered: alle Lagen in der Reihenfolge der Typen, dann der Reihe nach auf Paletten.
+    // Eine Lage wird NICHT zwischen zwei Paletten geteilt — sie ist die kleinste Einheit,
+    // die jemand am Stueck baut.
+    const queue = [];
+    for (const c of good) for (const L of layersOf(c, c.qty)) queue.push(L);
+    const pallets = [];
+    let curr = null, unplaced = 0;
+    for (const L of queue) {
+      if (L.h > usableH + 1e-6 || L.kg > payload + 1e-6) { unplaced += L.count; continue; }
+      if (!curr) curr = { layers: [], h: 0, kg: 0 };
+      if (curr.layers.length >= maxLay || curr.h + L.h > usableH + 1e-6 || curr.kg + L.kg > payload + 1e-6) {
+        pallets.push(curr);
+        curr = { layers: [], h: 0, kg: 0 };
+      }
+      curr.layers.push(L); curr.h += L.h; curr.kg += L.kg;
+    }
+    if (curr && curr.layers.length) pallets.push(curr);
+
+    // Gleich aufgebaute Paletten zaehlen statt sie einzeln aufzulisten: In der Ladung
+    // steht sonst dreissigmal dasselbe Packstueck.
+    const byKey = /* @__PURE__ */ new Map();
+    for (const pt of pallets) {
+      const key = pt.layers.map((l) => l.ti + ":" + l.count).join("|");
+      const seen = byKey.get(key);
+      if (seen) { seen.qty++; continue; }
+      byKey.set(key, {
+        key, qty: 1, ti: null, rest: false, layers: pt.layers,
+        totalH: PH + pt.h, totalKg: tare + pt.kg,
+        outL: Math.max(PL, ...pt.layers.map((l) => types[l.ti].outL)),
+        outW: Math.max(PW, ...pt.layers.map((l) => types[l.ti].outW))
+      });
+    }
+    const builds = [...byKey.values()];
+    // Die letzte, angebrochene Palette als solche kennzeichnen — sie ist die einzige,
+    // die sich von den uebrigen unterscheidet.
+    if (builds.length > 1) builds[builds.length - 1].rest = true;
+    const placedBy = {};
+    for (const pt of pallets) for (const l of pt.layers) placedBy[l.ti] = (placedBy[l.ti] || 0) + l.count;
+    const perType = good.map((c) => ({ ti: c.ti, perLayer: c.perLayer, layers: Math.ceil(c.qty / c.perLayer), placed: placedBy[c.ti] || 0, total: c.qty, cap: null }));
+    return { ...base, builds, perType, unplaced: unplaced + lostNoFit, totalPallets: pallets.length };
+  }
+  // Vorschlag fuer die Stapelreihenfolge: schwerste Lage nach unten. Das Lagengewicht
+  // (Kartons je Lage x Stueckgewicht) ist dafuer das ehrlichere Mass als das Stueckgewicht —
+  // viele leichte Kartons koennen eine schwerere Lage ergeben als wenige schwere.
+  function layerOrder(pal, cartons, opts = {}) {
+    const r = palletizeMulti(pal, cartons, { ...opts, mode: "separate" });
+    const kgOf = (i) => {
+      const t = r.types[i];
+      return t && t.perLayer ? t.perLayer * t.weight : -1;
+    };
+    return cartons.map((c, i) => i).sort((a, b) => kgOf(b) - kgOf(a));
+  }
   function emsContains(A, B) {
     return A.x <= B.x + 1e-6 && A.y <= B.y + 1e-6 && A.z <= B.z + 1e-6 && B.x + B.dx <= A.x + A.dx + 1e-6 && B.y + B.dy <= A.y + A.dy + 1e-6 && B.z + B.dz <= A.z + A.dz + 1e-6;
   }
@@ -1716,6 +1847,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       recBadge: "Empfehlung",
       palBtn: "Karton auf Palette",
       palAddBtn: "+ Palette",
+      palModeSep: "Getrennt",
+      palModeMix: "Eine Palette",
+      palModeSepHint: "Jeder Kartontyp bekommt eigene Paletten.",
+      palModeMixHint: "Ein Stapel, jede Lage ein Typ. Reihenfolge von unten nach oben — schwere Lagen gehören nach unten.",
+      palAddType: "+ Kartontyp",
+      palOrderWeight: "Schwerste Lage nach unten",
+      palPos: "Lage",
+      palUp: "Weiter nach unten",
+      palDown: "Weiter nach oben",
+      palStackOrder: "Stapelreihenfolge (unten → oben)",
+      palChip: (q, h) => q + "\xD7 \xB7 " + h + " cm",
+      palTileCap: (n, t, k) => (n > 1 ? n + " Lagen" : "1 Lage") + (t ? " \xB7 Typ " + t : "") + " \xB7 " + k + " Kartons",
+      palNoFit: (t) => "Typ " + t + " passt in keiner Ausrichtung auf diese Palette.",
+      palLeft: (n) => n + " Kartons bleiben übrig — Bauhöhe, Überstand oder Palettentyp prüfen.",
+      palBreak: (q, k, h) => q + "\xD7 à " + k + " Kartons (" + h + " cm)",
+      palItemT: (t, n) => "Palette " + t + " \xB7 " + n + " Kartons",
+      palItemRestT: (t, n) => "Restpalette " + t + " \xB7 " + n + " Kartons",
+      palItemMix: (n) => "Mischpalette \xB7 " + n + " Kartons",
+      palItemMixRest: (n) => "Mischpalette (Rest) \xB7 " + n + " Kartons",
       palTitle: "Karton auf Palette",
       palDesc: "Vorstufe: Kartons auf eine Palette rechnen und die fertigen Paletten in die Ladung übernehmen.",
       palPallet: "Palette",
@@ -1933,6 +2083,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       recBadge: "Recommended",
       palBtn: "Cartons on pallet",
       palAddBtn: "+ Pallet",
+      palModeSep: "Separate",
+      palModeMix: "One pallet",
+      palModeSepHint: "Each carton type gets its own pallets.",
+      palModeMixHint: "One stack, one type per layer. Order runs bottom to top — heavy layers belong at the bottom.",
+      palAddType: "+ Carton type",
+      palOrderWeight: "Heaviest layer at the bottom",
+      palPos: "Layer",
+      palUp: "Move down",
+      palDown: "Move up",
+      palStackOrder: "Stacking order (bottom → top)",
+      palChip: (q, h) => q + "\xD7 \xB7 " + h + " cm",
+      palTileCap: (n, t, k) => (n > 1 ? n + " layers" : "1 layer") + (t ? " \xB7 type " + t : "") + " \xB7 " + k + " cartons",
+      palNoFit: (t) => "Type " + t + " does not fit this pallet in any orientation.",
+      palLeft: (n) => n + " cartons left over — check stack height, overhang or pallet type.",
+      palBreak: (q, k, h) => q + "\xD7 at " + k + " cartons (" + h + " cm)",
+      palItemT: (t, n) => "Pallet " + t + " \xB7 " + n + " cartons",
+      palItemRestT: (t, n) => "Part pallet " + t + " \xB7 " + n + " cartons",
+      palItemMix: (n) => "Mixed pallet \xB7 " + n + " cartons",
+      palItemMixRest: (n) => "Mixed pallet (part) \xB7 " + n + " cartons",
       palTitle: "Cartons on pallet",
       palDesc: "Pre-step: build cartons onto a pallet, then hand the finished pallets over to the load.",
       palPallet: "Pallet",
@@ -4144,11 +4313,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // colorOf vergibt die Kennfarbe sonst nach dem Listenindex, also zwangslaeufig zwei
       // verschiedene fuer zwei Positionen. Beide bekommen deshalb ausdruecklich dieselbe
       // Farbe und dieselbe Gruppenkennung.
+      // Gleiche Ware = gleiche Kennfarbe, verschiedene Ware = verschiedene. Der Dialog
+      // liefert dafuer je Position einen colorKey: bei getrennten Paletten der Kartontyp
+      // (volle Paletten und Restpalette desselben Typs teilen ihn), bei Mischpaletten ein
+      // gemeinsamer Schluessel, weil es dort keinen einzelnen Typ mehr gibt.
       const grp = uid();
+      const keys = [...new Set(items.map((it) => it.colorKey || "x"))];
       const withId = items.map((it) => ({ ...it, id: uid(), grp }));
       setCargo((cs) => {
-        const col = TYPE_COLORS_AUTO[cs.length % TYPE_COLORS_AUTO.length];
-        return [...cs, ...withId.map((it) => ({ ...it, color: col }))];
+        const colFor = {};
+        keys.forEach((k, n) => { colFor[k] = TYPE_COLORS_AUTO[(cs.length + n) % TYPE_COLORS_AUTO.length]; });
+        return [...cs, ...withId.map(({ colorKey, ...it }) => ({ ...it, color: colFor[colorKey || "x"] }))];
       });
       setPalOpen(false);
       setOpenCargo(null);
@@ -4760,17 +4935,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // hier, und ein zweiter Aufrufer haette jede kuenftige Aenderung dort zur Fallunterscheidung
   // gemacht. Kamerafuehrung, Beleuchtung und Materialien sind bewusst dieselben, damit sich der
   // Dialog anfuehlt wie der Rechner: ziehen dreht, scrollen zoomt, im Leerlauf dreht es weiter.
-  function PalletScene({ pal, res, cartonH }) {
+  //
+  // build = EIN Palettenaufbau ({ layers: [{ti, count}] }); types = Muster und Masse je Typ.
+  // Eine angebrochene Lage zeichnet nur ihre Kartons — man sieht der Restpalette an, dass
+  // oben etwas fehlt.
+  function PalletScene({ pal, build, types }) {
     const mountRef = useRef(null);
     const ctl = useRef({});
     const dataRef = useRef({});
     const [spin, setSpin] = useState(true);
     const spinRef = useRef(true);
     spinRef.current = spin;
-    dataRef.current = { pal, res, cartonH };
+    dataRef.current = { pal, build, types };
+    const sig = build ? build.layers.map((l) => l.ti + ":" + l.count).join("|") : "";
 
-    // Mount-Once: Renderer, Kamera, Steuerung, Dauerlauf. Der Inhalt kommt aus dem zweiten
-    // Effekt — sonst baut jede Zahlenaenderung im Formular die halbe Grafikkarte neu auf.
     useEffect(() => {
       const mount = mountRef.current;
       if (!mount || !window.THREE) return;
@@ -4860,7 +5038,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       window.addEventListener("resize", onResize);
       tick();
-      ctl.current = { group, target, sph, cur, reset: () => { sph.r = ctl.current.fitR || 3.4; sph.theta = -0.92; sph.phi = 1; lastInteract = 0; } };
+      ctl.current = { group, target, sph, reset: () => { sph.r = ctl.current.fitR || 3.4; sph.theta = -0.92; sph.phi = 1; lastInteract = 0; } };
 
       return () => {
         cancelAnimationFrame(raf);
@@ -4877,7 +5055,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
     }, []);
 
-    // Inhalt neu bauen, sobald sich Muster, Lagenzahl oder Palette aendern.
     useEffect(() => {
       const g = ctl.current.group;
       if (!g || !window.THREE) return;
@@ -4886,9 +5063,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         c.geometry?.dispose?.();
         if (Array.isArray(c.material)) c.material.forEach((m) => m.dispose?.()); else c.material?.dispose?.();
       }
-      const { pal: P, res: R, cartonH: CH } = dataRef.current;
-      if (!P || !R || !(R.perLayer > 0) || !(R.layers > 0)) return;
-      const L = P.l / 100, W = P.w / 100, PH = P.h / 100, ch = CH / 100;
+      const { pal: P, build: B, types: TY } = dataRef.current;
+      if (!P || !B || !B.layers || !B.layers.length) return;
+      const L = P.l / 100, W = P.w / 100, PH = P.h / 100;
 
       // Palette: Deckbrett, neun Kloetze, drei Bodenbretter — zusammen genau die 14,4 cm.
       const wood = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
@@ -4902,32 +5079,34 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         for (const dz of [-W / 2 + 0.05, 0, W / 2 - 0.05]) addBox(0.1, blk, 0.1, dx, bT + blk / 2, dz, wood);
       for (const dz of [-W / 2 + 0.05, 0, W / 2 - 0.05]) addBox(L, bT, 0.1, 0, bT / 2, dz, wood);
 
-      // Kartons: eine Kennfarbe, denn es ist EIN Typ. Die Lagen trennt die Kantenlinie,
-      // nicht ein zweiter Farbton — Farbe traegt hier keine zusaetzliche Information.
-      const cMat = new THREE.MeshStandardMaterial({ color: new THREE.Color(TYPE_COLORS_AUTO[0]), roughness: 0.62, metalness: 0.08 });
-      const eMat = new THREE.LineBasicMaterial({ color: 1712194, transparent: true, opacity: 0.65 });
-      const withEdges = R.perLayer * R.layers <= 400;
-      for (let ly = 0; ly < R.layers; ly++) {
-        for (const q of R.rects) {
-          const w = q.dx / 100, d = q.dz / 100;
-          const x = (q.x + q.dx / 2 - P.l / 2) / 100, z = (q.z + q.dz / 2 - P.w / 2) / 100;
-          const y = PH + ly * ch + ch / 2;
-          const m = addBox(w, ch, d, x, y, z, cMat);
+      // Je Kartontyp eine Kennfarbe — dieselbe Bedeutung wie in der Ladungsliste.
+      const mats = {}, eMat = new THREE.LineBasicMaterial({ color: 1712194, transparent: true, opacity: 0.65 });
+      const matFor = (ti) => mats[ti] || (mats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length]), roughness: 0.62, metalness: 0.08 }));
+      let total = 0;
+      for (const lay of B.layers) total += lay.count;
+      const withEdges = total <= 400;
+      let y = PH;
+      for (const lay of B.layers) {
+        const t = TY[lay.ti];
+        if (!t) continue;
+        const ch = t.h / 100;
+        for (let k = 0; k < lay.count && k < t.rects.length; k++) {
+          const q = t.rects[k];
+          const m = addBox(q.dx / 100, ch, q.dz / 100,
+            (q.x + q.dx / 2 - P.l / 2) / 100, y + ch / 2, (q.z + q.dz / 2 - P.w / 2) / 100, matFor(lay.ti));
           if (withEdges) {
             const e = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), eMat);
             e.position.copy(m.position); g.add(e);
           }
         }
+        y += ch;
       }
 
-      // Blick auf die tatsaechliche Bauhoehe einstellen: eine flache Palette soll nicht
-      // verloren in der Ferne stehen, eine hohe nicht oben aus dem Bild ragen.
-      const totH = PH + R.layers * ch;
-      const fitR = Math.max(1.6, 2.05 * Math.max(L, W, totH));
-      ctl.current.target.set(0, totH * 0.45, 0);
+      const fitR = Math.max(1.6, 2.05 * Math.max(L, W, y));
+      ctl.current.target.set(0, y * 0.45, 0);
       ctl.current.sph.r = fitR;
       ctl.current.fitR = fitR;
-    }, [pal.l, pal.w, res.perLayer, res.layers, res.rects, cartonH]);
+    }, [pal.l, pal.w, sig, types]);
 
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full", style: { height: 230 } },
       /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { borderRadius: 8, overflow: "hidden", background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }),
@@ -4940,38 +5119,50 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // rechnet der bestehende Rechner weiter. Eine eigene Domain haette eine zweite
   // Ergebnisleiste und ein zweites 3D-Bild bedeutet, also genau die Doppelung, die das
   // Regelwerk in CLAUDE.md abgeschafft hat.
-  //
-  // Die Lage steht als DRAUFSICHT, nicht in 3D: ein Lagenmuster ist eine Flaechenaussage,
-  // und die uebrigen Lagen sind dieselbe Zeichnung noch einmal. Wie die fertige Palette
-  // raeumlich steht, zeigt nach der Uebernahme ohnehin die 3D-Ansicht.
   function PalletDialog({ container, preset, onApply, onClose, T }) {
     const [palKey, setPalKey] = useState("EUR");
     const [pl, setPl] = useState(120), [pw, setPw] = useState(80);
-    const [cl, setCl] = useState(60), [cw, setCw] = useState(40), [chh, setChh] = useState(40);
-    const [ckg, setCkg] = useState(12), [qty, setQty] = useState(100);
+    const [rows, setRows] = useState([{ id: uid(), l: 60, w: 40, h: 40, weight: 12, qty: 100, rotatable: true }]);
+    const [mode, setMode] = useState("separate");
     const [maxH, setMaxH] = useState(180), [over, setOver] = useState(0), [maxLay, setMaxLay] = useState(0);
-    const [rot, setRot] = useState(true), [stack, setStack] = useState(true);
-    // 3D als Vorgabe: das ist der Blick, den der Rechner sonst auch zeigt. Die Draufsicht
-    // bleibt erreichbar — sie ist der eigentliche Palettierplan und spaeter die Druckvorlage.
+    const [stack, setStack] = useState(true);
     const [view, setView] = useState("3d");
+    const [sel, setSel] = useState(0);
 
     const pal = palKey === "FREE"
       ? { l: num(pl), w: num(pw), h: 14.4, tare: 25, payload: 1500 }
       : PALLETS[palKey];
-    const r = palletize(pal, { l: num(cl), w: num(cw), h: num(chh), weight: num(ckg), qty: num(qty), rotatable: rot }, { maxTotalH: num(maxH), over: num(over), maxLayers: num(maxLay) });
+    const opts = { maxTotalH: num(maxH), over: num(over), maxLayers: num(maxLay), mode };
+    const R = palletizeMulti(pal, rows, opts);
+    const builds = R.builds;
+    const build = builds[Math.min(sel, Math.max(0, builds.length - 1))] || null;
+    const letter = (ti) => String.fromCharCode(65 + ti);
+    const colOf = (ti) => TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length];
 
-    // Vorschlag fuer die Bauhoehe aus dem gewaehlten Container/Fahrzeug: eine oder zwei
-    // Palettenlagen uebereinander. Mehr als zwei Etagen sind zwar rechnerisch moeglich,
-    // aber in der Praxis kaum — deshalb steht hier keine Zahl, die nie jemand nutzt.
+    const upd = (i, k, v) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r));
+    const addRow = () => setRows((rs) => [...rs, { id: uid(), l: 40, w: 30, h: 30, weight: 5, qty: 50, rotatable: true }]);
+    const delRow = (i) => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs);
+    const moveRow = (i, d) => setRows((rs) => {
+      const j = i + d;
+      if (j < 0 || j >= rs.length) return rs;
+      const out = rs.slice();
+      out[i] = rs[j]; out[j] = rs[i];
+      return out;
+    });
+    const sortByWeight = () => setRows((rs) => layerOrder(pal, rs, opts).map((i) => rs[i]));
+
     const fitH = (() => {
-      const CH = num(container && container.h), minH = pal.h + num(chh);
+      const CH = num(container && container.h);
+      const minCarton = rows.reduce((m, r) => Math.min(m, num(r.h) > 0 ? num(r.h) : Infinity), Infinity);
+      const minH = pal.h + (isFinite(minCarton) ? minCarton : 0);
       if (!(CH > 0) || !(minH > 0) || CH < minH) return null;
       const n = stack && CH >= 2 * minH ? 2 : 1;
       return Math.floor(CH / n);
     })();
 
-    const capTxt = { height: T.palCapHeight, weight: T.palCapWeight, layers: T.palCapLayers, footprint: T.palCapFootprint }[r.cap] || null;
-    const ok = r.perPallet > 0;
+    const totalCartons = rows.reduce((s, r) => s + Math.max(0, Math.floor(num(r.qty))), 0);
+    const placed = totalCartons - R.unplaced;
+    const multi = rows.length > 1;
 
     const box = (label, val, set, suffix) => /* @__PURE__ */ React.createElement("label", { style: { display: "block" } },
       /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.faint, marginBottom: 4 } }, label),
@@ -4983,33 +5174,64 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: 8, border: `1px solid ${on ? C.accent : C.faint}`, background: on ? C.accent : "transparent", display: "inline-block" } }),
       /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 600, color: on ? C.text : C.dim } }, label));
 
-    const stat = (label, value, sub, accent) => /* @__PURE__ */ React.createElement("div", { style: { flex: "1 1 30%", minWidth: 88 } },
+    const stat = (label, value, sub, accent) => /* @__PURE__ */ React.createElement("div", { style: { flex: "1 1 30%", minWidth: 84 } },
       /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.faint, marginBottom: 2 } }, label),
       /* @__PURE__ */ React.createElement("div", { style: { display: "flex", alignItems: "baseline", gap: 3 } },
         /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 17, fontWeight: 700, color: accent || C.text } }, value),
         sub ? /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, color: C.faint } }, sub) : null));
 
-    // Draufsicht einer Lage. Die Palette steht gestrichelt, die Kartons liegen darauf —
-    // ragt etwas ueber die Kante, sieht man es an dieser Zeichnung sofort.
-    const plan = (() => {
-      if (!r.rects.length) return null;
-      let x0 = 0, x1 = pal.l, z0 = 0, z1 = pal.w;
-      for (const q of r.rects) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x + q.dx); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z + q.dz); }
-      const m = 3;
-      return /* @__PURE__ */ React.createElement("svg", { viewBox: `${x0 - m} ${z0 - m} ${x1 - x0 + 2 * m} ${z1 - z0 + 2 * m}`, style: { width: "100%", height: 150, display: "block" }, preserveAspectRatio: "xMidYMid meet" },
-        /* @__PURE__ */ React.createElement("rect", { x: 0, y: 0, width: pal.l, height: pal.w, fill: "none", stroke: C.faint, strokeWidth: 1.2, strokeDasharray: "5 4" }),
-        r.rects.map((q, i) => /* @__PURE__ */ React.createElement("rect", { key: i, x: q.x, y: q.z, width: q.dx, height: q.dz, fill: hexA(C.accent, 0.18), stroke: C.accent, strokeWidth: 0.9 })));
+    // Draufsicht: je VERSCHIEDENER Lage im gewaehlten Aufbau eine Zeichnung. Bei einem Typ
+    // ist das eine — die uebrigen Lagen sind dieselbe Zeichnung noch einmal.
+    const planTiles = (() => {
+      if (!build) return null;
+      const seen = /* @__PURE__ */ new Map();
+      for (const lay of build.layers) {
+        const k = lay.ti + ":" + lay.count;
+        if (seen.has(k)) seen.get(k).n++; else seen.set(k, { ...lay, n: 1 });
+      }
+      return [...seen.values()].map((lay, idx) => {
+        const t = R.types[lay.ti];
+        if (!t) return null;
+        const rects = t.rects.slice(0, lay.count);
+        let x0 = 0, x1 = pal.l, z0 = 0, z1 = pal.w;
+        for (const q of t.rects) { x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x + q.dx); z0 = Math.min(z0, q.z); z1 = Math.max(z1, q.z + q.dz); }
+        const m = 3;
+        return /* @__PURE__ */ React.createElement("div", { key: idx, style: { flex: "1 1 40%", minWidth: 130 } },
+          /* @__PURE__ */ React.createElement("svg", { viewBox: `${x0 - m} ${z0 - m} ${x1 - x0 + 2 * m} ${z1 - z0 + 2 * m}`, style: { width: "100%", height: 118, display: "block" }, preserveAspectRatio: "xMidYMid meet" },
+            /* @__PURE__ */ React.createElement("rect", { x: 0, y: 0, width: pal.l, height: pal.w, fill: "none", stroke: C.faint, strokeWidth: 1.2, strokeDasharray: "5 4" }),
+            rects.map((q, i) => /* @__PURE__ */ React.createElement("rect", { key: i, x: q.x, y: q.z, width: q.dx, height: q.dz, fill: hexA(colOf(lay.ti), 0.18), stroke: colOf(lay.ti), strokeWidth: 0.9 }))),
+          /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.faint, textAlign: "center", marginTop: 2 } },
+            T.palTileCap(lay.n, multi ? letter(lay.ti) : null, lay.count)));
+      });
     })();
 
     const apply = () => {
-      const items = [];
-      if (r.full > 0) items.push({ name: T.palItem(r.perPallet), l: r.outL, w: r.outW, h: r.fullH, weight: r.fullKg, qty: r.full, stackable: stack, rotatable: true });
-      if (r.rest > 0) items.push({ name: T.palItemRest(r.rest), l: r.outL, w: r.outW, h: r.restH, weight: r.restKg, qty: 1, stackable: stack, rotatable: true });
+      const items = builds.map((b) => {
+        const cartons = b.layers.reduce((s, l) => s + l.count, 0);
+        const mixed = new Set(b.layers.map((l) => l.ti)).size > 1;
+        const name = mixed
+          ? (b.rest ? T.palItemMixRest(cartons) : T.palItemMix(cartons))
+          : multi
+            ? (b.rest ? T.palItemRestT(letter(b.layers[0].ti), cartons) : T.palItemT(letter(b.layers[0].ti), cartons))
+            : (b.rest ? T.palItemRest(cartons) : T.palItem(cartons));
+        return {
+          name, l: b.outL, w: b.outW, h: b.totalH, weight: b.totalKg, qty: b.qty,
+          stackable: stack, rotatable: true,
+          // Gleiche Ware = gleiche Kennfarbe. Bei getrennten Paletten ist das der Kartontyp,
+          // bei Mischpaletten der ganze Aufbau — dort gibt es keinen einzelnen Typ mehr.
+          colorKey: mixed ? "mix" : "t" + b.layers[0].ti
+        };
+      });
       if (items.length) onApply(items);
     };
 
+    const gridCols = mode === "layered" && multi
+      ? "42px 1fr 1fr 1fr 1fr 1fr 28px 24px"
+      : "1fr 1fr 1fr 1fr 1fr 28px 24px";
+    const cell = (r, i, k, ph) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => upd(i, k, e.target.value), inputMode: "decimal", className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontFamily: MONO, fontSize: 12.5, padding: "5px 2px", outline: "none" } });
+
     return /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: onClose },
-      /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 560, maxHeight: "92vh", overflowY: "auto", background: "#161D27", borderRadius: 16, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } },
+      /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), className: "w-full clrise", style: { maxWidth: 640, maxHeight: "92vh", overflowY: "auto", background: "#161D27", borderRadius: 16, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #1C2531", position: "sticky", top: 0, background: "#161D27", zIndex: 1 } },
           /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
             /* @__PURE__ */ React.createElement("rect", { x: "3", y: "14", width: "18", height: "6", rx: "1" }),
@@ -5032,19 +5254,51 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           palKey === "FREE" ? /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 14 } },
             box(T.len, pl, setPl, "cm"), box(T.wid, pw, setPw, "cm")) : null,
 
-          /* @__PURE__ */ React.createElement(SectionTitle, null, T.palCarton),
-          /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr 1fr", gap: 8, marginBottom: 14 } },
-            box(T.len, cl, setCl, "cm"), box(T.wid, cw, setCw, "cm"), box(T.hei, chh, setChh, "cm"), box(T.palWeight, ckg, setCkg, "kg"), box(T.palQty, qty, setQty, null)),
+          /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 8 } },
+            /* @__PURE__ */ React.createElement(SectionTitle, { noMargin: true }, T.palCarton),
+            multi ? /* @__PURE__ */ React.createElement("div", { className: "ml-auto", style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#121821", border: "1px solid #232C38" } },
+              [["separate", T.palModeSep], ["layered", T.palModeMix]].map(([m, lbl]) => {
+                const on = mode === m;
+                return /* @__PURE__ */ React.createElement("button", { key: m, onClick: () => { setMode(m); setSel(0); }, style: { border: 0, cursor: "pointer", padding: "3px 9px", borderRadius: 8, background: on ? hexA(C.accent, 0.14) : "transparent", color: on ? C.text : C.dim, fontFamily: SANS, fontSize: 11, fontWeight: 600, transition: ".18s" } }, lbl);
+              })) : null),
+          multi ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginBottom: 8, lineHeight: 1.4 } }, mode === "layered" ? T.palModeMixHint : T.palModeSepHint) : null,
+
+          /* @__PURE__ */ React.createElement("div", { className: "grid gap-1.5 px-1", style: { gridTemplateColumns: gridCols, fontFamily: SANS, fontSize: 11, color: C.faint, marginBottom: 4 } },
+            mode === "layered" && multi ? /* @__PURE__ */ React.createElement("span", null, T.palPos) : null,
+            /* @__PURE__ */ React.createElement("span", { style: { textAlign: "center" } }, T.len),
+            /* @__PURE__ */ React.createElement("span", { style: { textAlign: "center" } }, T.wid),
+            /* @__PURE__ */ React.createElement("span", { style: { textAlign: "center" } }, T.hei),
+            /* @__PURE__ */ React.createElement("span", { style: { textAlign: "center" } }, "kg"),
+            /* @__PURE__ */ React.createElement("span", { style: { textAlign: "center" } }, T.palQty),
+            /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null)),
+          /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-1.5", style: { marginBottom: 10 } },
+            rows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: r.id, className: "grid items-center gap-1.5", style: { gridTemplateColumns: gridCols } },
+              mode === "layered" && multi ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1" },
+                /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 700, color: colOf(i) } }, letter(i)),
+                /* @__PURE__ */ React.createElement("button", { onClick: () => moveRow(i, -1), title: T.palUp, disabled: i === 0, style: { border: 0, background: "transparent", cursor: i === 0 ? "default" : "pointer", color: i === 0 ? C.faint : C.dim, fontSize: 11, padding: 0, lineHeight: 1 } }, "↑"),
+                /* @__PURE__ */ React.createElement("button", { onClick: () => moveRow(i, 1), title: T.palDown, disabled: i === rows.length - 1, style: { border: 0, background: "transparent", cursor: i === rows.length - 1 ? "default" : "pointer", color: i === rows.length - 1 ? C.faint : C.dim, fontSize: 11, padding: 0, lineHeight: 1 } }, "↓")) : null,
+              ["l", "w", "h", "weight", "qty"].map((k) => cell(r, i, k)),
+              /* @__PURE__ */ React.createElement("button", { onClick: () => upd(i, "rotatable", !r.rotatable), title: T.palRot, className: "rounded-lg transition", style: { height: 28, background: r.rotatable ? hexA(C.accent, 0.14) : C.field, border: `1px solid ${r.rotatable ? hexA(C.accent, 0.45) : "#2E3A49"}`, color: r.rotatable ? C.text : C.faint, fontSize: 11 } }, "↻"),
+              /* @__PURE__ */ React.createElement("button", { onClick: () => delRow(i), disabled: rows.length < 2, className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: "transparent", border: 0, color: rows.length < 2 ? "#2E3A49" : C.faint, fontSize: 15, cursor: rows.length < 2 ? "default" : "pointer" } }, "\xD7")))),
+          /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 14 } },
+            /* @__PURE__ */ React.createElement("button", { onClick: addRow, className: "px-3 py-1.5 rounded-lg transition hover:brightness-110", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontFamily: SANS, fontSize: 11, fontWeight: 600, cursor: "pointer" } }, T.palAddType),
+            mode === "layered" && multi ? /* @__PURE__ */ React.createElement("button", { onClick: sortByWeight, className: "transition hover:brightness-125", style: { background: "transparent", border: 0, padding: 0, cursor: "pointer", fontFamily: SANS, fontSize: 11, color: C.accent } }, T.palOrderWeight) : null),
 
           /* @__PURE__ */ React.createElement(SectionTitle, null, T.palLimits),
           /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 } },
             box(T.palMaxH, maxH, setMaxH, "cm"), box(T.palOver, over, setOver, "cm"), box(T.palMaxLay, maxLay, setMaxLay, null)),
           fitH ? /* @__PURE__ */ React.createElement("button", { onClick: () => setMaxH(fitH), className: "transition hover:brightness-125", style: { background: "transparent", border: 0, padding: 0, cursor: "pointer", fontFamily: SANS, fontSize: 11, color: C.accent, marginBottom: 12 } }, T.palFit(preset, fitH)) : null,
+          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, marginTop: 4 } }, toggle(stack, setStack, T.palStack)),
 
-          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 16, marginTop: 4 } },
-            toggle(rot, setRot, T.palRot), toggle(stack, setStack, T.palStack)),
-
-          ok ? /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}`, padding: 14 } },
+          build ? /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}`, padding: 14 } },
+            builds.length > 1 ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1.5", style: { flexWrap: "wrap", marginBottom: 10 } },
+              builds.map((b, i) => {
+                const on = i === Math.min(sel, builds.length - 1);
+                const single = new Set(b.layers.map((l) => l.ti)).size === 1;
+                return /* @__PURE__ */ React.createElement("button", { key: i, onClick: () => setSel(i), className: "flex items-center gap-1.5 rounded-lg transition", style: { padding: "4px 9px", background: on ? hexA(C.accent, 0.14) : "#121821", border: `1px solid ${on ? hexA(C.accent, 0.5) : "#232C38"}`, cursor: "pointer" } },
+                  /* @__PURE__ */ React.createElement("span", { style: { width: 9, height: 9, borderRadius: 999, background: single ? colOf(b.layers[0].ti) : C.dim, display: "inline-block" } }),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, color: on ? C.text : C.dim } }, T.palChip(fmtDE(b.qty), nf(b.totalH, 1))));
+              })) : null,
             /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 8 } },
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, color: C.faint } }, view === "3d" ? T.palTitle : T.palLayerTop),
               /* @__PURE__ */ React.createElement("div", { className: "ml-auto", style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#161D27", border: "1px solid #232C38" } },
@@ -5053,28 +5307,35 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                   return /* @__PURE__ */ React.createElement("button", { key: v, onClick: () => setView(v), style: { border: 0, cursor: "pointer", padding: "3px 9px", borderRadius: 8, background: on ? hexA(C.accent, 0.14) : "transparent", color: on ? C.text : C.dim, fontFamily: SANS, fontSize: 11, fontWeight: 600, transition: ".18s" } }, lbl);
                 }))),
             view === "3d"
-              ? /* @__PURE__ */ React.createElement(PalletScene, { pal, res: r, cartonH: num(chh) })
-              : plan,
-            /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14, marginBottom: 4 } },
-              stat(T.palPerLayer, fmtDE(r.perLayer), null, null),
-              stat(T.palLayers, fmtDE(r.layers), null, null),
-              stat(T.palPerPallet, fmtDE(r.perPallet), null, C.accent),
-              stat(T.palTotalH, nf(r.fullH, 1), "cm", null),
-              stat(T.palPalWeight, fmtDE(r.fullKg), "kg", null)),
-            capTxt ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.faint, marginTop: 8 } }, capTxt) : null,
-            r.overL > 0 || r.overW > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palOverWarn(nf(r.overL, 1), nf(r.overW, 1))) : null)
-            : /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, background: C.field, border: `1px solid ${hexA(C.warn, 0.4)}`, padding: 14, color: "#ffd9a8", fontSize: 12.5, lineHeight: 1.45 } }, capTxt || T.palEmpty),
+              ? /* @__PURE__ */ React.createElement(PalletScene, { pal, build, types: R.types })
+              : /* @__PURE__ */ React.createElement("div", { className: "flex gap-3", style: { flexWrap: "wrap" } }, planTiles),
+            (() => {
+              const cartons = build.layers.reduce((s, l) => s + l.count, 0);
+              const single = new Set(build.layers.map((l) => l.ti)).size === 1;
+              const t = single ? R.types[build.layers[0].ti] : null;
+              return /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 14, marginBottom: 4 } },
+                single ? stat(T.palPerLayer, fmtDE(t ? t.perLayer : 0), null, null) : null,
+                stat(T.palLayers, fmtDE(build.layers.length), null, null),
+                stat(T.palPerPallet, fmtDE(cartons), null, C.accent),
+                stat(T.palTotalH, nf(build.totalH, 1), "cm", null),
+                stat(T.palPalWeight, fmtDE(build.totalKg), "kg", null));
+            })(),
+            !((new Set(build.layers.map((l) => l.ti))).size === 1) ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.dim, marginTop: 6, lineHeight: 1.45 } },
+              T.palStackOrder + ": " + build.layers.map((l) => letter(l.ti)).join(" → ")) : null,
+            R.noFit.length ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palNoFit(R.noFit.map((i) => letter(i)).join(", "))) : null,
+            R.unplaced > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palLeft(fmtDE(R.unplaced))) : null)
+            : /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, background: C.field, border: `1px solid ${hexA(C.warn, 0.4)}`, padding: 14, color: "#ffd9a8", fontSize: 12.5, lineHeight: 1.45 } }, R.noFit.length ? T.palCapFootprint : T.palEmpty),
 
-          ok && r.pallets > 0 ? /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 12, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}` } },
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: "#dbe8ff", lineHeight: 1.4 } }, T.palResult(fmtDE(r.totalCartons), fmtDE(r.pallets))),
+          R.totalPallets > 0 ? /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 12, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}` } },
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: "#dbe8ff", lineHeight: 1.4 } }, T.palResult(fmtDE(placed), fmtDE(R.totalPallets))),
             /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.45 } },
-              r.rest > 0 ? T.palSplit(fmtDE(r.full), fmtDE(r.perPallet), fmtDE(r.rest), nf(r.restH, 1)) : T.palSplitFull(fmtDE(r.full), fmtDE(r.perPallet)))) : null,
+              builds.map((b) => T.palBreak(fmtDE(b.qty), fmtDE(b.layers.reduce((s, l) => s + l.count, 0)), nf(b.totalH, 1))).join(" \xB7 "))) : null,
 
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginTop: 14, lineHeight: 1.45 } }, T.palFoot)),
 
         /* @__PURE__ */ React.createElement("div", { style: { padding: "15px 20px", borderTop: "1px solid #1C2531", background: "#121821", display: "flex", justifyContent: "flex-end", gap: 8, position: "sticky", bottom: 0 } },
           /* @__PURE__ */ React.createElement("button", { onClick: onClose, className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: "transparent", color: C.dim, fontWeight: 600, fontSize: 13.5, cursor: "pointer" } }, T.palCancel),
-          /* @__PURE__ */ React.createElement("button", { onClick: r.pallets > 0 ? apply : void 0, disabled: !(r.pallets > 0), className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: r.pallets > 0 ? C.accent : "#1C2531", color: r.pallets > 0 ? "#04121A" : C.faint, fontWeight: 700, fontSize: 13.5, cursor: r.pallets > 0 ? "pointer" : "default" } }, T.palApply))));
+          /* @__PURE__ */ React.createElement("button", { onClick: R.totalPallets > 0 ? apply : void 0, disabled: !(R.totalPallets > 0), className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: R.totalPallets > 0 ? C.accent : "#1C2531", color: R.totalPallets > 0 ? "#04121A" : C.faint, fontWeight: 700, fontSize: 13.5, cursor: R.totalPallets > 0 ? "pointer" : "default" } }, T.palApply))));
   }
   var SectionTitle = ({ children, noMargin }) => /* @__PURE__ */ React.createElement("div", { className: noMargin ? "" : "mb-2.5", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: "#8190a3" } }, children);
   var Stat = ({ label, value, sub, accent }) => /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 relative", style: { borderRight: "1px solid #232C38" } }, /* @__PURE__ */ React.createElement("span", { className: "absolute top-0 left-4 right-4", style: { height: 1, background: `linear-gradient(90deg, ${accent}, transparent)`, opacity: 0.5 } }), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: "#7f8da0", marginBottom: 6 } }, label), /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline gap-1.5" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 23, fontWeight: 700, color: accent, textShadow: `0 0 18px ${hexA(accent, 0.35)}` } }, value), sub && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, color: C.faint } }, sub)));
