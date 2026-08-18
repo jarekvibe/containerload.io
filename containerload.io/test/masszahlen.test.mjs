@@ -58,3 +58,39 @@ test("keine Massangabe wird mehr aus einer Rohzahl zusammengebaut", () => {
   });
   assert.deepStrictEqual(treffer, [], `Massangabe aus Rohzahlen — dimDE() nehmen:\n${treffer.join("\n")}`);
 });
+
+// --- Einzahl/Mehrzahl -------------------------------------------------------------
+// Aufgefallen, als die Vorgabemenge im Palettier-Dialog von 100 auf 4 ging: das Ergebnis
+// meldete "4 Kartons -> 1 Paletten". Ein Wortfehler in der Kopfzeile des Ergebnisses
+// faellt mehr auf als eine falsche Nachkommastelle.
+const pluLine = app.split("\n").find((l) => l.includes("var plu ="));
+assert.ok(pluLine, "plu nicht gefunden");
+const { plu } = new Function(
+  'var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;var LOC=()=>"de-DE";var fmtDE=(n)=>Math.round(num(n,0)).toLocaleString(LOC());\n'
+  + pluLine + "\nreturn { plu };"
+)();
+
+test("genau eins bekommt die Einzahl", () => {
+  assert.strictEqual(plu(1, "Palette", "Paletten"), "1 Palette");
+  assert.strictEqual(plu(1, "Karton", "Kartons"), "1 Karton");
+});
+
+test("alles andere bekommt die Mehrzahl — auch die Null", () => {
+  assert.strictEqual(plu(0, "Palette", "Paletten"), "0 Paletten");
+  assert.strictEqual(plu(2, "Palette", "Paletten"), "2 Paletten");
+  assert.strictEqual(plu(9, "Karton", "Kartons"), "9 Kartons");
+});
+
+test("grosse Zahlen behalten ihre Tausenderpunkte", () => {
+  assert.strictEqual(plu(1240, "Karton", "Kartons"), "1.240 Kartons");
+});
+
+test("kein Ergebnistext baut die Menge noch von Hand zusammen", () => {
+  // Die Aufrufstellen muessen ROHE Zahlen uebergeben — kommt dort ein fertig formatierter
+  // Text an, kann plu() die Einzahl nicht mehr erkennen und die Zahl steht doppelt.
+  const treffer = [];
+  app.split("\n").forEach((z, i) => {
+    if (/T\.pal(Result|Left|Break)\(\s*fmtDE\(/.test(z)) treffer.push(`Zeile ${i + 1}`);
+  });
+  assert.deepStrictEqual(treffer, [], `formatierter Text an plu-Baustein uebergeben:\n${treffer.join("\n")}`);
+});

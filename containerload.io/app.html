@@ -1858,14 +1858,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palDown: "Weiter nach oben",
       palStackOrder: "Stapelreihenfolge (unten → oben)",
       palChip: (q, h) => q + "\xD7 \xB7 " + h + " cm",
-      palTileCap: (n, t, k) => (n > 1 ? n + " Lagen" : "1 Lage") + (t ? " \xB7 Typ " + t : "") + " \xB7 " + k + " Kartons",
+      palTileCap: (n, t, k) => plu(n, "Lage", "Lagen") + (t ? " \xB7 Typ " + t : "") + " \xB7 " + plu(k, "Karton", "Kartons"),
       palNoFit: (t) => "Typ " + t + " passt in keiner Ausrichtung auf diese Palette.",
-      palLeft: (n) => n + " Kartons bleiben übrig — Bauhöhe, Überstand oder Palettentyp prüfen.",
-      palBreak: (q, k, h) => q + "\xD7 à " + k + " Kartons (" + h + " cm)",
-      palItemT: (t, n) => "Palette " + t + " \xB7 " + n + " Kartons",
-      palItemRestT: (t, n) => "Restpalette " + t + " \xB7 " + n + " Kartons",
-      palItemMix: (n) => "Mischpalette \xB7 " + n + " Kartons",
-      palItemMixRest: (n) => "Mischpalette (Rest) \xB7 " + n + " Kartons",
+      palLeft: (n) => plu(n, "Karton bleibt", "Kartons bleiben") + " übrig — Bauhöhe, Überstand oder Palettentyp prüfen.",
+      palBreak: (q, k, h) => fmtDE(q) + "\xD7 à " + plu(k, "Karton", "Kartons") + " (" + h + " cm)",
+      palItemT: (t, n) => "Palette " + t + " \xB7 " + plu(n, "Karton", "Kartons"),
+      palItemRestT: (t, n) => "Restpalette " + t + " \xB7 " + plu(n, "Karton", "Kartons"),
+      palItemMix: (n) => "Mischpalette \xB7 " + plu(n, "Karton", "Kartons"),
+      palItemMixRest: (n) => "Mischpalette (Rest) \xB7 " + plu(n, "Karton", "Kartons"),
       palTitle: "Karton auf Palette",
       palDesc: "Vorstufe: Kartons auf eine Palette rechnen und die fertigen Paletten in die Ladung übernehmen.",
       palPallet: "Palette",
@@ -1896,15 +1896,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palCapFootprint: "Der Karton passt in keiner Ausrichtung auf diese Palette — Maße oder Überstand prüfen.",
       palOverWarn: (l, w) => "Überstand " + l + " cm längs, " + w + " cm quer — mit diesen Außenmaßen geht die Palette in die Ladung.",
       palEmpty: "Mit diesen Maßen entsteht keine Lage.",
-      palResult: (n, p) => n + " Kartons \u2192 " + p + " Paletten",
+      palResult: (n, p) => plu(n, "Karton", "Kartons") + " \u2192 " + plu(p, "Palette", "Paletten"),
       palSplit: (f, pp, rest, rh) => f + " volle à " + pp + " Kartons + 1 Restpalette mit " + rest + " (" + rh + " cm hoch)",
       palSplitFull: (f, pp) => f + " volle Paletten à " + pp + " Kartons",
       palFoot: "Rein geometrisch · kein Lagenverbund, keine Ladungssicherung · Palettengewicht und Tragfähigkeit sind Richtwerte",
       palCancel: "Abbrechen",
       palApply: "In die Ladung übernehmen",
-      palItem: (n) => "Palette · " + n + " Kartons",
-      palItemRest: (n) => "Restpalette · " + n + " Kartons",
-      palAdded: (n) => n + " Positionen in die Ladung übernommen"
+      palItem: (n) => "Palette · " + plu(n, "Karton", "Kartons"),
+      palItemRest: (n) => "Restpalette · " + plu(n, "Karton", "Kartons"),
+      palAdded: (n) => plu(n, "Position", "Positionen") + " in die Ladung übernommen"
     },
     en: {
       sub: "3D load calculator",
@@ -2094,14 +2094,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palDown: "Move up",
       palStackOrder: "Stacking order (bottom → top)",
       palChip: (q, h) => q + "\xD7 \xB7 " + h + " cm",
-      palTileCap: (n, t, k) => (n > 1 ? n + " layers" : "1 layer") + (t ? " \xB7 type " + t : "") + " \xB7 " + k + " cartons",
+      palTileCap: (n, t, k) => plu(n, "layer", "layers") + (t ? " \xB7 type " + t : "") + " \xB7 " + plu(k, "carton", "cartons"),
       palNoFit: (t) => "Type " + t + " does not fit this pallet in any orientation.",
-      palLeft: (n) => n + " cartons left over — check stack height, overhang or pallet type.",
-      palBreak: (q, k, h) => q + "\xD7 at " + k + " cartons (" + h + " cm)",
-      palItemT: (t, n) => "Pallet " + t + " \xB7 " + n + " cartons",
-      palItemRestT: (t, n) => "Part pallet " + t + " \xB7 " + n + " cartons",
-      palItemMix: (n) => "Mixed pallet \xB7 " + n + " cartons",
-      palItemMixRest: (n) => "Mixed pallet (part) \xB7 " + n + " cartons",
+      palLeft: (n) => plu(n, "carton is", "cartons are") + " left over — check stack height, overhang or pallet type.",
+      palBreak: (q, k, h) => fmtDE(q) + "\xD7 at " + plu(k, "carton", "cartons") + " (" + h + " cm)",
+      palItemT: (t, n) => "Pallet " + t + " \xB7 " + plu(n, "carton", "cartons"),
+      palItemRestT: (t, n) => "Part pallet " + t + " \xB7 " + plu(n, "carton", "cartons"),
+      palItemMix: (n) => "Mixed pallet \xB7 " + plu(n, "carton", "cartons"),
+      palItemMixRest: (n) => "Mixed pallet (part) \xB7 " + plu(n, "carton", "cartons"),
       palTitle: "Cartons on pallet",
       palDesc: "Pre-step: build cartons onto a pallet, then hand the finished pallets over to the load.",
       palPallet: "Pallet",
@@ -2132,15 +2132,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palCapFootprint: "The carton does not fit this pallet in any orientation — check dimensions or overhang.",
       palOverWarn: (l, w) => "Overhang " + l + " cm lengthwise, " + w + " cm crosswise — the pallet enters the load with these outer dimensions.",
       palEmpty: "No layer can be built from these dimensions.",
-      palResult: (n, p) => n + " cartons \u2192 " + p + " pallets",
+      palResult: (n, p) => plu(n, "carton", "cartons") + " \u2192 " + plu(p, "pallet", "pallets"),
       palSplit: (f, pp, rest, rh) => f + " full at " + pp + " cartons + 1 part pallet with " + rest + " (" + rh + " cm high)",
       palSplitFull: (f, pp) => f + " full pallets at " + pp + " cartons",
       palFoot: "Purely geometric · no interlocking pattern, no load securing · pallet weight and capacity are guide values",
       palCancel: "Cancel",
       palApply: "Add to load",
-      palItem: (n) => "Pallet · " + n + " cartons",
-      palItemRest: (n) => "Part pallet · " + n + " cartons",
-      palAdded: (n) => n + " positions added to the load"
+      palItem: (n) => "Pallet · " + plu(n, "carton", "cartons"),
+      palItemRest: (n) => "Part pallet · " + plu(n, "carton", "cartons"),
+      palAdded: (n) => plu(n, "position", "positions") + " added to the load"
     }
   };
   var T = I18N[LANG];
@@ -2358,6 +2358,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Ohne das stand in der deutschen Oberflaeche "120x80x164.4 cm" — aufgefallen, als die
   // Palettier-Vorstufe erstmals Hoehen mit Nachkomma liefert (Palettenhoehe 14,4 cm). Auch die
   // Reederei-Presets fuehren Millimeter, brachten den Punkt aber nur in Felder, nicht in Text.
+  var plu = (n, one, many) => fmtDE(n) + " " + (Math.abs(num(n)) === 1 ? one : many);
   var dimDE = (v, loc) => num(v).toLocaleString(loc || LOC(), { maximumFractionDigits: 2, useGrouping: false });
   var fmt1DE = (n) => num(n, 0).toLocaleString(LOC(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   var escHTML = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -5114,6 +5115,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("button", { onClick: () => setSpin((v) => !v), className: "absolute top-2 right-11 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 11 } }, spin ? "⏸" : "▶"),
       /* @__PURE__ */ React.createElement("button", { onClick: () => ctl.current.reset && ctl.current.reset(), className: "absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 11 } }, "⟳"));
   }
+  // Vorgabe einer Kartonzeile. Bewusst EINE Stelle: vorher stand in der ersten Zeile ein
+  // anderes Mass und eine andere Menge als in jeder weiteren, und beim Hinzufuegen sprangen
+  // die Zahlen, ohne dass jemand etwas eingegeben hatte.
+  //
+  // Menge 4 statt einer runden Grosszahl: 60x40 ergibt auf der Europalette vier Kartons je
+  // Lage. Die Vorschau zeigt damit beim Oeffnen genau EINE volle Lage — eine Palette, die
+  // man noch nachzaehlen kann, statt eines fertigen Stapels, in dem man nichts mehr erkennt.
+  var CARTON_DEFAULT = { l: 60, w: 40, h: 40, weight: 12, qty: 4, rotatable: true };
   // Karton-auf-Palette: bewusst ein DIALOG und keine dritte Domain. Der Schritt ist eine
   // Vorstufe — er endet damit, dass fertige Paletten in der Ladungsliste stehen; danach
   // rechnet der bestehende Rechner weiter. Eine eigene Domain haette eine zweite
@@ -5122,7 +5131,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   function PalletDialog({ container, preset, onApply, onClose, T }) {
     const [palKey, setPalKey] = useState("EUR");
     const [pl, setPl] = useState(120), [pw, setPw] = useState(80);
-    const [rows, setRows] = useState([{ id: uid(), l: 60, w: 40, h: 40, weight: 12, qty: 100, rotatable: true }]);
+    const [rows, setRows] = useState([{ id: uid(), ...CARTON_DEFAULT }]);
     const [mode, setMode] = useState("separate");
     const [maxH, setMaxH] = useState(180), [over, setOver] = useState(0), [maxLay, setMaxLay] = useState(0);
     const [stack, setStack] = useState(true);
@@ -5140,7 +5149,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const colOf = (ti) => TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length];
 
     const upd = (i, k, v) => setRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r));
-    const addRow = () => setRows((rs) => [...rs, { id: uid(), l: 40, w: 30, h: 30, weight: 5, qty: 50, rotatable: true }]);
+    const addRow = () => setRows((rs) => [...rs, { id: uid(), ...CARTON_DEFAULT }]);
     const delRow = (i) => setRows((rs) => rs.length > 1 ? rs.filter((_, j) => j !== i) : rs);
     const moveRow = (i, d) => setRows((rs) => {
       const j = i + d;
@@ -5323,13 +5332,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             !((new Set(build.layers.map((l) => l.ti))).size === 1) ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.dim, marginTop: 6, lineHeight: 1.45 } },
               T.palStackOrder + ": " + build.layers.map((l) => letter(l.ti)).join(" → ")) : null,
             R.noFit.length ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palNoFit(R.noFit.map((i) => letter(i)).join(", "))) : null,
-            R.unplaced > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palLeft(fmtDE(R.unplaced))) : null)
+            R.unplaced > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palLeft(R.unplaced)) : null)
             : /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, background: C.field, border: `1px solid ${hexA(C.warn, 0.4)}`, padding: 14, color: "#ffd9a8", fontSize: 12.5, lineHeight: 1.45 } }, R.noFit.length ? T.palCapFootprint : T.palEmpty),
 
           R.totalPallets > 0 ? /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, padding: "12px 14px", borderRadius: 12, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}` } },
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: "#dbe8ff", lineHeight: 1.4 } }, T.palResult(fmtDE(placed), fmtDE(R.totalPallets))),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 700, color: "#dbe8ff", lineHeight: 1.4 } }, T.palResult(placed, R.totalPallets)),
             /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.dim, marginTop: 4, lineHeight: 1.45 } },
-              builds.map((b) => T.palBreak(fmtDE(b.qty), fmtDE(b.layers.reduce((s, l) => s + l.count, 0)), nf(b.totalH, 1))).join(" \xB7 "))) : null,
+              builds.map((b) => T.palBreak(b.qty, b.layers.reduce((s, l) => s + l.count, 0), nf(b.totalH, 1))).join(" \xB7 "))) : null,
 
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginTop: 14, lineHeight: 1.45 } }, T.palFoot)),
 
