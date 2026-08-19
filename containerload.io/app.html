@@ -1175,8 +1175,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // obwohl nur ein Packstueck auf dem Boden steht.
       const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
       const fl = makeFloorPacker(t.l, t.w, t.rotatable)(CL, CW);
-      outer: for (let ly = 0; ly < capLay; ly++) {
-        for (const r of fl.rects) {
+      // Reihenfolge: STELLPLATZ zuerst, dann in die Hoehe. Frueher andersherum — erst der
+      // ganze Boden, dann die zweite Etage. Die Zahl war in beiden Faellen dieselbe (die
+      // Kapazitaet ist Stellplaetze x Etagen), aber bei wenigen Packstuecken stand alles
+      // nebeneinander, obwohl der Benutzer die Bauhoehe gerade auf zwei Etagen abgestimmt
+      // hatte. Wer stapeln darf, soll das auch sehen.
+      //
+      // Nur wenn Stapeln ueberhaupt erlaubt ist: bei stackable=false ist capLay ohnehin 1,
+      // und dann sind beide Reihenfolgen identisch.
+      const spots = fl.rects, colFirst = capLay > 1;
+      outer: for (let a = 0; a < (colFirst ? spots.length : capLay); a++) {
+        for (let b = 0; b < (colFirst ? capLay : spots.length); b++) {
+          const ly = colFirst ? b : a, r = spots[colFirst ? a : b];
           if (loaded[t.ti] >= t.qty) break outer;
           if (weight + t.weight > pay + 1e-6) break outer;
           placed.push({ x: r.x, y: ly * t.h, z: r.z, dx: r.dx, dy: t.h, dz: r.dz, ti: t.ti });

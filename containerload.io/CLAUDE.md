@@ -107,6 +107,11 @@ Ab `lg` ist der Rahmen **genau ein Fenster hoch** (`lg:h-screen lg:overflow-hidd
 
 In der Ladungsliste ist **genau eine Position aufgeklappt** (`openCargo`); die übrigen stehen als einzeilige Zusammenfassung da (`cargoSummary`). Neu angelegte Positionen klappen automatisch auf.
 
+### Füllreihenfolge im Einzeltyp-Pfad
+Bei **genau einem** Packstücktyp füllt `packCargo` **Stellplatz zuerst, dann in die Höhe** — nicht erst den ganzen Boden. Die Kapazität ist in beiden Reihenfolgen dieselbe (Stellplätze × erlaubte Etagen); `test/stapeln-reihenfolge.test.mjs` prüft das über 180 Fälle in geschlossener Form. Der Unterschied zeigt sich nur bei wenigen Packstücken: vorher standen zwei stapelbare Paletten nebeneinander, obwohl jemand die Bauhöhe gerade auf zwei Etagen abgestimmt hatte.
+
+Der **gemischte Pfad** (`emsSearch`, ab zwei Typen) bleibt unangetastet. Er ist eine Suche mit Neustarts, die auf Füllgrad optimiert, und stapelt von selbst, sobald er den Platz braucht. Eine Vorliebe fürs Stapeln hineinzudrehen würde Füllgrad gegen ein hübscheres Bild tauschen — und der Füllgrad ist das Produkt. **Wer das ändern will, misst vorher** über viele zufällige Ladungen, ob dabei Kisten verloren gehen.
+
 ### Karton auf Palette (Vorstufe)
 `palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
 
