@@ -107,6 +107,47 @@ Ab `lg` ist der Rahmen **genau ein Fenster hoch** (`lg:h-screen lg:overflow-hidd
 
 In der Ladungsliste ist **genau eine Position aufgeklappt** (`openCargo`); die übrigen stehen als einzeilige Zusammenfassung da (`cargoSummary`). Neu angelegte Positionen klappen automatisch auf.
 
+### Füllreihenfolge im Einzeltyp-Pfad
+Bei **genau einem** Packstücktyp füllt `packCargo` **Stellplatz zuerst, dann in die Höhe** — nicht erst den ganzen Boden. Die Kapazität ist in beiden Reihenfolgen dieselbe (Stellplätze × erlaubte Etagen); `test/stapeln-reihenfolge.test.mjs` prüft das über 180 Fälle in geschlossener Form. Der Unterschied zeigt sich nur bei wenigen Packstücken: vorher standen zwei stapelbare Paletten nebeneinander, obwohl jemand die Bauhöhe gerade auf zwei Etagen abgestimmt hatte.
+
+Im **gemischten Pfad** (`emsSearch`, ab zwei Typen) entscheidet die **Höhensumme den Gleichstand** — erst wenn Anzahl *und* Volumen gleich sind. Die Suche läuft ohnehin viele Varianten; unter den gleich guten wird die gestapelte genommen. Das kostet per Konstruktion keinen Füllgrad, weil an Anzahl und Volumen nichts getauscht wird. Das Volumen wird dabei mit Toleranz verglichen: dieselbe Kistenmenge in anderer Reihenfolge aufsummiert ist in Gleitkomma nicht bitgleich, und ein Gleichstand, den die letzte Stelle verhindert, wäre keiner.
+
+**Wer an `emsSearch` oder `emsPackOnce` etwas ändert, misst vorher und nachher** — `node test/bench/fuellgrad.mjs app.html` über 300 deterministische Ladungen. Verladene Packstücke und belegtes Volumen dürfen **nicht sinken**; alles andere ist Geschmack. Für den Gleichstand-Entscheid oben lag beides auf die dritte Nachkommastelle identisch (15.189 Packstücke, 5.547,979 m³), während die Ladungen mit mehr als einer Etage von 187 auf 295 von 300 stiegen. Der Messstand liegt bewusst außerhalb von `test/`, weil die CI dort mit `node --test test/*.mjs` greift und 30 Sekunden nicht in jeden Pull Request gehören.
+
+### Karton auf Palette (Vorstufe)
+`palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
+
+Vier Entscheidungen, die dabei nicht kippen dürfen:
+
+- **Es ist ein Dialog, keine dritte Domain.** Eine eigene Domain hieße eine zweite Ergebnisleiste und ein zweites 3D-Bild — genau die Doppelung, die das Regelwerk oben abgeschafft hat.
+- **Volle Paletten und Restpalette gehen als ZWEI Positionen** in die Ladung. Eine einzige wäre bequemer, aber dann rechnet der Container mit einer Restpalette, die so hoch und so schwer wäre wie eine volle — und daran hängt, ob der letzte Container noch zugeht.
+- **Das Palettenleergewicht fährt mit** (EUR 25 kg, Industrie 30 kg). Bei 34 Paletten sind das über 800 kg, die sonst in der Zuladung fehlen.
+- **Übergeben werden die tatsächlichen Außenmaße**, nicht das Palettenmaß. Ragt die Ware über die Kante, sieht der Container das, was wirklich ankommt.
+
+**Der Knopf steht im Kopf der Ladungsliste**, als Geschwister von „+ Packstück". Beide legen eine Position an — die eine tippt man, die andere lässt man ausrechnen. In der linken Spalte stand er falsch: dort steht, **wohin** geladen wird, nicht **was**.
+
+`PalletScene` ist eine **eigene, kleine Three.js-Szene**, nicht `Viewport`. Der große Blick hängt an Kette, Übermaß, Türprüfung und manuellem Modus — nichts davon gibt es hier, und ein zweiter Aufrufer hätte jede künftige Änderung dort zur Fallunterscheidung gemacht. Kamerawinkel, Dämpfung (0,12) und Leerlaufdrehung (nach 2,8 s) sind bewusst dieselben, damit sich der Dialog anfühlt wie der Rechner. **Der WebGL-Kontext wird beim Schließen ausdrücklich freigegeben** (`forceContextLoss`) — sonst hält jedes Öffnen einen weiteren fest und der Browser gibt nach einigen Malen keinen mehr her.
+
+Das Lagenmuster kommt aus `makeFloorPacker` — demselben Guillotine-Packer, der im Container die Bodenlage legt. Er mischt Ausrichtungen (Kreuzverband); **echte Windmühlenmuster sind nicht guillotine-schneidbar und entstehen daher nicht.** Das ist eine bekannte Lücke, kein Fehler.
+
+**Mehrere Kartontypen** rechnet `palletizeMulti()` in zwei Betriebsarten, weil es an der Rampe zwei verschiedene Vorgänge sind:
+
+- **`separate`** — jeder Typ auf eigene Paletten. Der häufigere Fall und die Voreinstellung.
+- **`layered`** — ein Stapel, aber **jede Lage gehört genau einem Typ**. So wird eine Mischpalette tatsächlich gebaut. Die Reihenfolge der Kartontypen *ist* die Stapelreihenfolge (erster Eintrag unten); `layerOrder()` schlägt sie nach Lagengewicht vor (schwerste unten) — das Lagengewicht, nicht das Stückgewicht, denn viele leichte Kartons können eine schwerere Lage ergeben als wenige schwere.
+
+**Nicht gebaut, und zwar bewusst:** Kartons verschiedener Größe *innerhalb* einer Lage verschachteln. Das ergäbe Muster, die niemand nachbaut — und eine Zahl, der man an der Rampe nicht folgen kann, ist schlechter als keine Zahl.
+
+Zwei Invarianten hält `test/palettierer-multi.test.mjs` fest: **es darf unterwegs kein Karton verschwinden** (verladen + übrig = eingegeben, auch wenn ein Typ auf die Palette gar nicht passt), und **eine Lage wird nie zwischen zwei Paletten geteilt** — sie ist die kleinste Einheit, die jemand am Stück baut. Gleich aufgebaute Paletten werden gezählt, nicht einzeln aufgelistet, sonst steht in der Ladung dreißigmal dasselbe Packstück.
+
+**Die Palette bleibt im Container eine Palette.** Übergebene Positionen tragen einen Bauplan (`pal: { b, ly }` — Palettenhöhe und die Lagen mit ihrer Kennfarbe). Der Viewport zeichnet daraus je Lage ein eigenes Band plus die Holzpalette darunter, statt einer glatten Kiste; sonst verliert die Ladung beim Übernehmen genau das Bild, das man gerade gebaut hat. **Auf die Rechnung hat das keinen Einfluss** — die zählt weiter das Außenmaß. Die Bänder werden auf die tatsächliche Höhe der Position skaliert: wer sie in der Ladungsliste ändert, bekommt kein Band, das über die Kiste hinausragt.
+
+`pal` und `grp` bleiben **lokal** und stehen nicht im Teilen-Format. Ein geteilter Link zeigt die Palette also wieder als einfache Kiste — die Maße und die Kennfarbe (`cl`) reisen mit, der Aufbau nicht. Das im `?p=` zu ergänzen wäre eine eigene Entscheidung.
+
+**Kennfarben bei der Übergabe:** Der Dialog liefert je Position einen `colorKey`. Gleiche Ware bekommt dieselbe Farbe (volle Paletten und Restpalette desselben Typs), verschiedene Ware verschiedene. Mischpaletten teilen sich einen Schlüssel — dort gibt es keinen einzelnen Typ mehr.
+
+### Maßangaben im Fließtext
+Ein Maß, das als **Text** erscheint, läuft über `dimDE()` — nie über die Rohzahl. `${num(it.l)} × ${num(it.w)}` schreibt in der deutschen Oberfläche „164.4" mit Punkt. Solange alle Maße ganze Zentimeter waren, fiel das nicht auf; die Palettenhöhe 14,4 cm hat es sichtbar gemacht (die Reederei-Innenmaße in Millimetern hätten es auch getan). `test/masszahlen.test.mjs` fängt das Muster ab.
+
 ### Zweisprachigkeit (DE/EN)
 - **Deutsch ist die Ausgangssprache.** Texte stehen direkt im HTML mit `data-i18n="key"`-Attributen.
 - Englisch wird über ein `EN = { key: … }`-Wörterbuch im Inline-JS überlagert. Sprachwahl in `localStorage` unter `cl_lang`.
