@@ -148,6 +148,13 @@ Zwei Invarianten hält `test/palettierer-multi.test.mjs` fest: **es darf unterwe
 ### Maßangaben im Fließtext
 Ein Maß, das als **Text** erscheint, läuft über `dimDE()` — nie über die Rohzahl. `${num(it.l)} × ${num(it.w)}` schreibt in der deutschen Oberfläche „164.4" mit Punkt. Solange alle Maße ganze Zentimeter waren, fiel das nicht auf; die Palettenhöhe 14,4 cm hat es sichtbar gemacht (die Reederei-Innenmaße in Millimetern hätten es auch getan). `test/masszahlen.test.mjs` fängt das Muster ab.
 
+### Container-Wissen (`/ratgeber/`)
+Die neun Frageseiten und ihre Übersicht teilen sich **eine** Gestaltung: `ratgeber/wissen.css`. Vorher trug jede Seite ihre eigene Kopie derselben Regeln — sie mussten auseinanderlaufen, und sie taten es: eigener Grundton (`#070a0f` statt `#0E1116`), eigener Akzent (`#2f9bff` statt `#2E8FFF`), ein Türkis, das es im Produkt nicht mehr gibt, Inter statt Archivo, Gewicht 800 und Radien 10/14. Nah genug, um für dieselbe Marke gehalten zu werden — daneben genug, um fremd zu wirken.
+
+Es gilt dort dasselbe Regelwerk wie im Rechner: ein Markenton, **keine Farbverläufe**, Radien aus der Reihe, Gewichte bis 700. `test/container-wissen.test.mjs` hält das fest und liest Akzent- und Textfarbe **aus `app.html`**, statt sie abzuschreiben — eine abgeschriebene Zahl wäre die nächste Kopie, die wegdriftet.
+
+**Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
+
 ### Zweisprachigkeit (DE/EN)
 - **Deutsch ist die Ausgangssprache.** Texte stehen direkt im HTML mit `data-i18n="key"`-Attributen.
 - Englisch wird über ein `EN = { key: … }`-Wörterbuch im Inline-JS überlagert. Sprachwahl in `localStorage` unter `cl_lang`.
