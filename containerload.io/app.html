@@ -3216,6 +3216,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const boxGeo = new THREE.BoxGeometry(1, 1, 1);
       const typeMats = {};
       const typeMat = (ti) => typeMats[ti] || (typeMats[ti] = new THREE.MeshStandardMaterial({ color: new THREE.Color(cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length]), roughness: 0.62, metalness: 0.08 }));
+      // Palettierte Positionen: Holz fuer die Palette, je Lagenfarbe ein Material.
+      const palWoodMat = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
+      const colMats = {};
+      const colMat = (hex) => colMats[hex] || (colMats[hex] = new THREE.MeshStandardMaterial({ color: new THREE.Color(hex || TYPE_COLORS_AUTO[0]), roughness: 0.62, metalness: 0.08 }));
       // Special-Equipment-Ressourcen (dimensionsunabhaengig, einmal pro Build).
       const dT = 0.14, cs = 0.16;
       const matDeck = new THREE.MeshStandardMaterial({ color: 0x222a36, roughness: 0.85, metalness: 0.25 });
@@ -3478,16 +3482,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const byType = {};
         (c.placed || []).forEach((p) => (byType[p.ti] = byType[p.ti] || []).push(p));
         const boxMeshes = [];
-        Object.entries(byType).forEach(([ti, arr]) => {
-          const inst = new THREE.InstancedMesh(boxGeo, typeMat(ti), arr.length);
+        const s = ci === 0 && willAnimate ? 1e-4 : 1;
+        // Ein Instanzsatz in die Szene. Als eigene Funktion, weil eine palettierte Position
+        // mehrere davon braucht (Palette + je Lage einen) und die Aufbau-Animation ohnehin
+        // ueber boxMeshes laeuft — sie kommt mit beliebig vielen Saetzen klar.
+        const addInst = (mat, list) => {
+          const inst = new THREE.InstancedMesh(boxGeo, mat, list.length);
           inst.castShadow = true;
           inst.receiveShadow = true;
-          const boxes = arr.map((p) => {
-            const dx = p.dx / 100, dy = p.dy / 100, dz = p.dz / 100;
-            return { cx: p.x / 100 + dx / 2, cy: p.y / 100 + dy / 2, cz: p.z / 100 + dz / 2, sx: Math.max(dx - gap, 0.01), sy: Math.max(dy - gap, 0.01), sz: Math.max(dz - gap, 0.01) };
-          });
-          const s = ci === 0 && willAnimate ? 1e-4 : 1;
-          boxes.forEach((b, i) => {
+          list.forEach((b, i) => {
             dummy.position.set(b.cx, b.cy, b.cz);
             dummy.scale.set(b.sx * s, b.sy * s, b.sz * s);
             dummy.updateMatrix();
@@ -3495,7 +3498,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           });
           inst.instanceMatrix.needsUpdate = true;
           cg.add(inst);
-          boxMeshes.push({ inst, boxes, dummy });
+          boxMeshes.push({ inst, boxes: list, dummy });
+        };
+        Object.entries(byType).forEach(([ti, arr]) => {
+          // pal = Bauplan aus dem Palettier-Dialog: Palettenhoehe und die Lagen mit ihrer
+          // Kennfarbe. Ohne ihn bleibt es bei der einen Kiste wie bisher.
+          const pd = cargo && cargo[ti] && cargo[ti].pal;
+          const segs = pd && pd.ly && pd.ly.length
+            ? [{ h: num(pd.b), mat: palWoodMat, in: 0.05 }].concat(pd.ly.map((l) => ({ h: num(l.h), mat: colMat(l.c), in: 0 })))
+            : null;
+          const tot = segs ? segs.reduce((t, x) => t + x.h, 0) : 0;
+          if (!segs || !(tot > 0)) {
+            addInst(typeMat(ti), arr.map((p) => {
+              const dx = p.dx / 100, dy = p.dy / 100, dz = p.dz / 100;
+              return { cx: p.x / 100 + dx / 2, cy: p.y / 100 + dy / 2, cz: p.z / 100 + dz / 2, sx: Math.max(dx - gap, 0.01), sy: Math.max(dy - gap, 0.01), sz: Math.max(dz - gap, 0.01) };
+            }));
+            return;
+          }
+          // Palette und Lagen als eigene Baender — damit im Container wiederzuerkennen ist,
+          // was der Dialog gebaut hat. Die Baender werden auf die TATSAECHLICHE Hoehe der
+          // Position skaliert: wer sie in der Ladungsliste aendert, bekommt kein Band, das
+          // ueber die Kiste hinausragt oder darunter Luft laesst.
+          let off = 0;
+          for (const sg of segs) {
+            const o = off;
+            off += sg.h;
+            addInst(sg.mat, arr.map((p) => {
+              const dx = p.dx / 100, dy = p.dy / 100, dz = p.dz / 100;
+              const y0 = p.y / 100 + dy * (o / tot), hy = dy * (sg.h / tot);
+              return { cx: p.x / 100 + dx / 2, cy: y0 + hy / 2, cz: p.z / 100 + dz / 2,
+                sx: Math.max(dx - gap - sg.in, 0.01), sy: Math.max(hy - 4e-3, 6e-3), sz: Math.max(dz - gap - sg.in, 0.01) };
+            }));
+          }
         });
         // Schwarze Trennkanten um jedes Packstueck: klare Abgrenzung – auch bei gleicher Farbe und
         // direkt aneinandergrenzenden/gestapelten Stuecken. Eine zusammengefuehrte LineSegments-
@@ -5226,6 +5260,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         return {
           name, l: b.outL, w: b.outW, h: b.totalH, weight: b.totalKg, qty: b.qty,
           stackable: stack, rotatable: true,
+          // Bauplan fuer die 3D-Ansicht im Rechner: Palettenhoehe und die Lagen mit ihrer
+          // Kennfarbe. Damit steht die Palette dort als Palette und nicht als glatte Kiste —
+          // sonst verliert die Ladung beim Uebernehmen genau das Bild, das man gerade gebaut
+          // hat. Auf die RECHNUNG hat das keinen Einfluss: die zaehlt weiter das Aussenmass.
+          pal: { b: pal.h, ly: b.layers.map((l) => ({ h: R.types[l.ti] ? R.types[l.ti].h : 0, c: colOf(l.ti) })) },
           // Gleiche Ware = gleiche Kennfarbe. Bei getrennten Paletten ist das der Kartontyp,
           // bei Mischpaletten der ganze Aufbau — dort gibt es keinen einzelnen Typ mehr.
           colorKey: mixed ? "mix" : "t" + b.layers[0].ti
