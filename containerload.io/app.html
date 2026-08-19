@@ -1144,10 +1144,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const orderN = big > 300 ? 2 : 4;
     const rs = big > 400 ? Math.min(restarts, 6) : restarts;
     const vol = (p) => p.reduce((s, b) => s + b.dx * b.dy * b.dz, 0);
-    let best = { placed: [], weight: 0, n: -1, v: -1 };
+    // Hoehensumme als DRITTES Kriterium — erst wenn Anzahl UND Volumen gleich sind. Die
+    // Suche laeuft ohnehin viele Varianten; unter denen, die gleich viel unterbringen, ist
+    // die gestapelte die anschaulichere: wer die Bauhoehe auf zwei Etagen abgestimmt hat,
+    // will die zweite Etage auch sehen. Per Konstruktion kostet das keinen Fuellgrad —
+    // an Anzahl und Volumen wird nichts getauscht, es entscheidet nur den Gleichstand.
+    //
+    // Volumen wird mit Toleranz verglichen: dieselbe Kistenmenge in anderer Reihenfolge
+    // aufsummiert ergibt in Gleitkomma nicht bitgleich dasselbe, und ein Gleichstand, den
+    // die letzte Stelle verhindert, waere keiner.
+    const yTot = (p) => p.reduce((s, b) => s + b.y, 0);
+    let best = { placed: [], weight: 0, n: -1, v: -1, y: -1 };
     const consider = (res) => {
-      const v = vol(res.placed);
-      if (res.placed.length > best.n || res.placed.length === best.n && v > best.v) best = { placed: res.placed, weight: res.weight, n: res.placed.length, v };
+      const v = vol(res.placed), n = res.placed.length;
+      if (n < best.n) return;
+      const gleichV = Math.abs(v - best.v) <= 1e-6 * Math.max(1, Math.abs(v));
+      const besser = n > best.n || (!gleichV && v > best.v) || (gleichV && yTot(res.placed) > best.y);
+      if (besser) best = { placed: res.placed, weight: res.weight, n, v, y: yTot(res.placed) };
     };
     for (const sf of sorts) for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sf(units), o, pay, cap));
     for (let r = 0; r < rs; r++) {
