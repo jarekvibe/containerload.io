@@ -82,3 +82,26 @@ test("Adressen, Fragen-Titel und Beschreibungen bleiben unberuehrt", () => {
     assert.ok(/<title>.{15,}<\/title>/.test(s), `${f}: Titel fehlt`);
   }
 });
+
+test("das Markenzeichen ist dasselbe wie auf der Startseite", () => {
+  // Zwei Fehler auf einmal waren hier drin: ein voellig anderes Symbol (Container mit
+  // Streben statt des Marken-Wuerfels), und ein sichtbarer Spalt im Schriftzug, weil
+  // "Container" und der Load-Span zwei Flex-Kinder von .brand waren — das gap:9px zog
+  // sie auseinander, und aus ContainerLoad wurde "Container Load".
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  const flaechen = [...new Set([...start.matchAll(/fill="(#0[AaFf]2[Bb]46|#165780|#0[Ff]3[Cc]60)"/g)].map((m) => m[1].toUpperCase()))];
+  assert.strictEqual(flaechen.length, 3, "die drei Wuerfelflaechen stehen nicht mehr in index.html");
+  for (const f of seiten) {
+    const s = lies(f);
+    for (const flaeche of flaechen) {
+      assert.ok(s.toUpperCase().includes(flaeche), `${f}: Wuerfelflaeche ${flaeche} fehlt — anderes Zeichen?`);
+    }
+    assert.ok(/<span class="brand-name">Container<span class="brand-load">Load<\/span><\/span>/.test(s),
+      `${f}: Schriftzug ist nicht EIN Element — der Abstand zerreisst ihn`);
+  }
+});
+
+test("der Abstand steht zwischen Zeichen und Schriftzug, nicht im Wort", () => {
+  assert.ok(/\.brand\{[^}]*gap:/.test(css), ".brand hat keinen Abstand mehr");
+  assert.ok(/\.brand-name\{/.test(css), "brand-name ist nicht gesetzt");
+});

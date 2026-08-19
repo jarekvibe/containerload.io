@@ -153,6 +153,8 @@ Die neun Frageseiten und ihre Übersicht teilen sich **eine** Gestaltung: `ratge
 
 Es gilt dort dasselbe Regelwerk wie im Rechner: ein Markenton, **keine Farbverläufe**, Radien aus der Reihe, Gewichte bis 700. `test/container-wissen.test.mjs` hält das fest und liest Akzent- und Textfarbe **aus `app.html`**, statt sie abzuschreiben — eine abgeschriebene Zahl wäre die nächste Kopie, die wegdriftet.
 
+**Das Markenzeichen ist dasselbe wie auf der Startseite**: der isometrische Würfel (drei Flächen `#0A2B46` / `#165780` / `#0F3C60` — im Regelwerk als Ausnahmen geführt) auf Akzentgrund, daneben der Schriftzug mit „Load" im Markenton. Der Schriftzug ist **ein** Element: stünden „Container" und der `Load`-Span einzeln im Flex-Kasten der Marke, zöge dessen `gap` sie auseinander und aus ContainerLoad würde sichtbar „Container Load". Nebenbei: `grad-bg` und `grad-text` auf der Startseite sind **keine Verläufe** mehr — die Klassennamen stammen aus der Zeit davor, dahinter steht seit PR #57 der eine Markenton.
+
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
 ### Zweisprachigkeit (DE/EN)
