@@ -109,3 +109,25 @@ test("die Uebersichtskarten der Startseite nennen die gerechneten Zahlen", () =>
         `Karte ${key} (${was}) sagt "${txt.trim()}", der Packer rechnet ${echt}`);
   }
 });
+
+// Der Beweis-Satz der Startseite: "11 EUR-Paletten statt 8". Die 11 stand immer, die
+// Vergleichszahl war erfunden — sie soll das Ergebnis OHNE Erkennung gedrehter Muster
+// nennen, und das sind 8, nicht 9. Ausgerechnet der Satz, mit dem das Werkzeug seine
+// Genauigkeit belegt, war die einzige Zahl auf der Seite, die niemand nachrechnen
+// konnte. Beide Zahlen kommen jetzt aus demselben Packer, mit und ohne Drehung.
+test("die Vergleichszahl im Merkmal 'palettengenau' stimmt", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  const C = PRESETS["20' GP"];
+  const mit = makeFloorPacker(120, 80, true)(C.l, C.w).count;
+  const ohne = makeFloorPacker(120, 80, false)(C.l, C.w).count;
+  assert.ok(mit > ohne, "ohne Drehung duerfte nicht mehr passen als mit");
+  for (const [was, txt] of [
+    ["deutsch", (start.match(/data-i18n="f2_p"[^>]*>(.*?)<\/p>/s) || [])[1]],
+    ["englisch", (start.match(/"f2_p": "(.*?)", "f3_h"/s) || [])[1]]
+  ]) {
+    assert.ok(txt, `${was}: Merkmal f2_p nicht gefunden`);
+    const zahlen = (txt.match(/\d+/g) || []).map(Number);
+    assert.ok(zahlen.includes(mit), `${was}: die gerechnete Zahl ${mit} fehlt in "${txt}"`);
+    assert.ok(zahlen.includes(ohne), `${was}: die Vergleichszahl muesste ${ohne} sein — im Text steht ${zahlen.join(", ")}`);
+  }
+});
