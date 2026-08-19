@@ -55,11 +55,17 @@ header.nav{
   backdrop-filter:blur(14px);
 }
 .nav-in{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
-.brand{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:16px;color:var(--text)}
+/* Das Markenzeichen ist dasselbe wie auf der Startseite: isometrischer Wuerfel auf
+   Akzentgrund, daneben der Schriftzug mit "Load" im Markenton. Der Abstand gehoert
+   zwischen Zeichen und Schriftzug — deshalb ist der Schriftzug EIN Element. Stuenden
+   "Container" und der Load-Span einzeln in diesem Flex-Kasten, zoege das gap sie
+   auseinander, und aus ContainerLoad wuerde sichtbar "Container Load". */
+.brand{display:inline-flex;align-items:center;gap:10px;color:var(--text)}
 .brand:hover{text-decoration:none}
+.brand-name{font-weight:700;font-size:16px;letter-spacing:-.01em}
 .brand-load{color:var(--accent)}
 .mark{
-  width:28px;height:28px;border-radius:var(--r-s);background:var(--accent);
+  width:32px;height:32px;border-radius:var(--r-s);background:var(--accent);
   display:flex;align-items:center;justify-content:center;flex:none;
 }
 
