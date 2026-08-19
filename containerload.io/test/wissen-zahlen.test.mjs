@@ -80,3 +80,32 @@ test("26 Europaletten sind im 40-Fuss geometrisch unmoeglich", () => {
   assert.ok(restBreite < 80, `${restBreite} cm Restbreite — da ginge doch noch eine Palette`);
   assert.ok(restLaenge < 80, `${restLaenge} cm Restlaenge — da ginge doch noch eine Palette`);
 });
+
+// Die Startseite hat genau denselben Fehler getragen und ist beim ersten Mal
+// durchgerutscht, weil oben nur der Ordner ratgeber/ durchsucht wurde. Die
+// Uebersichtskarte verlinkt aber auf die Seite, der sie widersprochen hat — und die
+// englische Fassung im EN-Woerterbuch gleich mit. Deshalb steht die Startseite jetzt
+// mit im Netz.
+test("auch die Startseite traegt keine widerlegte Angabe mehr", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  const raus = ["25–26", "25-26", "24–25", "9–10"];
+  const treffer = raus.filter((r) => start.includes(r));
+  assert.deepStrictEqual(treffer, [], `index.html nennt wieder: ${treffer.join(", ")}`);
+});
+
+// Und die Karte muss die Zahl nennen, die auch der Packer rechnet — nicht bloss
+// keine falsche. Sonst haette ein Loeschen des Satzes den Test schon zufriedengestellt.
+test("die Uebersichtskarten der Startseite nennen die gerechneten Zahlen", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  // [i18n-Schluessel der Karte, Preset, Packstueckmass]
+  const KARTEN = [["rg1_p", "20' GP", [120, 80]], ["rg2_p", "40' GP", [120, 80]]];
+  for (const [key, preset, [l, w]] of KARTEN) {
+    const echt = stellplaetze(preset, l, w);
+    const de = start.match(new RegExp(`data-i18n="${key}"[^>]*>([^<]*)<`));
+    const en = start.match(new RegExp(`"${key}": "([^"]*)"`));
+    assert.ok(de && en, `${key}: deutsche oder englische Fassung nicht gefunden`);
+    for (const [was, txt] of [["deutsch", de[1]], ["englisch", en[1]]])
+      assert.ok(new RegExp(`\\b${echt}\\b`).test(txt),
+        `Karte ${key} (${was}) sagt "${txt.trim()}", der Packer rechnet ${echt}`);
+  }
+});
