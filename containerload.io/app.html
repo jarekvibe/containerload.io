@@ -1981,6 +1981,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palFree: "Freies Maß",
       palCarton: "Karton",
       close: "Schlie\xDFen",
+      cargoReset: "Leeren",
+      cargoDelete: "Position entfernen",
+      cargoResetTitle: "Ganze Ladung entfernen \xB7 l\xE4sst sich r\xFCckg\xE4ngig machen",
+      cargoEmpty: "Noch kein Packst\xFCck",
+      cargoEmptyHint: "\xDCber \u201E+ Packst\xFCck\u201C anlegen, eine Packliste einf\xFCgen oder Kartons palettieren.",
+      undoBtn: "R\xFCckg\xE4ngig",
+      undone: "R\xFCckg\xE4ngig gemacht",
+      cargoCleared: (n) => n === 1 ? "1 Position entfernt" : `${n} Positionen entfernt`,
+      itemDeleted: "Position entfernt",
+      draftBack: "Entwurf von zuletzt wiederhergestellt",
+      noCargo: "Noch keine Ladung",
       plansTitle: "Nur in diesem Browser gespeichert",
       palQty: "Menge",
       palLimits: "Grenzen",
@@ -2218,6 +2229,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palFree: "Custom size",
       palCarton: "Carton",
       close: "Close",
+      cargoReset: "Clear",
+      cargoDelete: "Remove item",
+      cargoResetTitle: "Remove the whole cargo list \xB7 can be undone",
+      cargoEmpty: "No items yet",
+      cargoEmptyHint: "Add one with \u201C+ Item\u201D, paste a packing list, or palletise cartons.",
+      undoBtn: "Undo",
+      undone: "Undone",
+      cargoCleared: (n) => n === 1 ? "1 item removed" : `${n} items removed`,
+      itemDeleted: "Item removed",
+      draftBack: "Restored your last draft",
+      noCargo: "No cargo yet",
       plansTitle: "Saved in this browser only",
       palQty: "Quantity",
       palLimits: "Limits",
@@ -2431,6 +2453,41 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   };
   // localStorage-Persistenz fuer "Meine Plaene" – nur lokal im Browser. Alles defensiv: Safari-
   // Privatmodus / Quota koennen werfen; kaputte Eintraege werden uebersprungen; max. 50 Plaene.
+  // Der Entwurf: der Arbeitsstand, an dem gerade jemand sitzt. Bis hierher ueberlebte
+  // NICHTS davon einen Reload -- gemerkt wurden nur Sprache, Einheit, Reederei und die
+  // ausdruecklich gespeicherten Plaene. Wer vierzig Positionen eingetippt hatte und
+  // versehentlich F5 drueckte, fing von vorne an. Genau so gemeldet.
+  //
+  // Bewusst ein eigener Schluessel und NICHT "Meine Plaene": ein Plan ist etwas, das
+  // jemand benennt und behalten will. Ein Entwurf ist das, was ohnehin gerade dasteht.
+  // Beides zu vermischen hiesse, die Liste der Plaene mit Halbfertigem zu fluten.
+  //
+  // Alles bleibt auf dem Geraet. Es geht nichts an einen Server.
+  var DRAFT_KEY = "containerload.draft.v1";
+  // stackMax traegt Infinity, und JSON macht daraus null. Beim Lesen zurueckdrehen,
+  // sonst wird aus "frei stapelbar" beim naechsten Oeffnen "nicht stapelbar".
+  var draftOut = (cs) => cs.map((c) => ({ ...c, stackMax: isFinite(c.stackMax) ? c.stackMax : null }));
+  var draftIn = (cs) => cs.map((c) => ({ ...c, id: uid(), stackMax: c.stackMax == null ? Infinity : c.stackMax }));
+  var loadDraft = () => {
+    try {
+      const raw = window.localStorage.getItem(DRAFT_KEY);
+      if (!raw) return null;
+      const d = JSON.parse(raw);
+      if (!d || d.v !== 1 || !Array.isArray(d.cargo)) return null;
+      return { ...d, cargo: draftIn(d.cargo) };
+    } catch (e) { return null; }
+  };
+  var saveDraft = (d) => {
+    try {
+      const roh = JSON.stringify({ v: 1, ...d, cargo: draftOut(d.cargo) });
+      // Ein Entwurf mit vierzig Positionen wiegt rund 6 KB. Wer die Grenze reisst, hat
+      // etwas eingefuegt, das hier nicht hingehoert -- dann lieber nichts merken als den
+      // Speicher des Browsers sprengen und dabei auch die Plaene gefaehrden.
+      if (roh.length > 400000) return;
+      window.localStorage.setItem(DRAFT_KEY, roh);
+    } catch (e) { }
+  };
+  var clearDraft = () => { try { window.localStorage.removeItem(DRAFT_KEY); } catch (e) { } };
   var PLANS_KEY = "containerload.plans.v1";
   var loadPlans = () => {
     try {
@@ -4149,16 +4206,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, fontFamily: SANS, fontSize: 11, lineHeight: 1.5, color: C.faint, letterSpacing: "0.02em" } }, T.plansFoot))));
   }
   function App() {
-    const INIT_CARGO = SHARED ? SHARED.cargo : QIMPORT || [{ id: uid(), name: T.itemDefault, l: 120, w: 80, h: 110, weight: 300, qty: 1, stackable: true, rotatable: true }];
+    // Rangfolge beim Start: geteilter Link, dann ?q=-Import, dann der eigene Entwurf,
+    // dann nichts. Der Link steht ganz oben - sonst wuerde der eigene Arbeitsstand den
+    // Plan ueberschreiben, den jemand einem gerade geschickt hat.
+    const DRAFT = SHARED || QIMPORT ? null : loadDraft();
+    // Und LEER, wenn es nichts gibt. Vorher stand hier ein erfundenes Packstueck
+    // 120x80x110, 300 kg - das musste jeder erst von Hand wegloeschen, bevor er die
+    // eigene Ladung eintippen konnte.
+    const INIT_CARGO = SHARED ? SHARED.cargo : QIMPORT || (DRAFT && DRAFT.cargo) || [];
     // Geteilter Link schlaegt die gemerkte Reederei: im Link stehen die Masse, mit denen der
     // Absender gerechnet hat – die duerfen sich beim Empfaenger nicht still veraendern.
     const INIT_CARRIER = SHARED ? "" : loadCarrier();
-    const INIT_CONTAINER = SHARED ? SHARED.container : { ...applyCarrier(PRESETS["20' GP"], INIT_CARRIER, "20' GP") };
-    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : "sea");
-    const [preset, setPreset] = useState(SHARED ? SHARED.preset : "20' GP");
+    const INIT_CONTAINER = SHARED ? SHARED.container
+      : DRAFT && DRAFT.container ? DRAFT.container
+      : { ...applyCarrier(PRESETS["20' GP"], INIT_CARRIER, "20' GP") };
+    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : DRAFT && DRAFT.domain || "sea");
+    const [preset, setPreset] = useState(SHARED ? SHARED.preset : DRAFT && DRAFT.preset || "20' GP");
     const [carrier, setCarrier] = useState(INIT_CARRIER);
     const [container, setContainer] = useState(INIT_CONTAINER);
     const [cargo, setCargo] = useState(INIT_CARGO);
+    // Frueherer Stand der Ladungsliste, fuer Strg+Z und den Rueckgaengig-Knopf im Hinweis.
+    const [hist, setHist] = useState([]);
+    // Was der Hinweis unten anbieten darf (z. B. "Rueckgaengig"), sonst null.
+    const [toastAct, setToastAct] = useState(null);
     // Maßeinheit fuer die Eingabefelder (L/B/H) - reine Anzeige-/Eingabe-Bequemlichkeit, wie
     // Sprache in localStorage gemerkt, aber OHNE Reload: intern bleibt alles in cm (Presets,
     // Packalgorithmus, ?p=-Vertrag unangetastet), nur Num-Felder rechnen bei "mm" mit Faktor 10 um.
@@ -4179,7 +4249,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [exportOpen, setExportOpen] = useState(false); // Bild-Export-Dialog
     const [exportTransparent, setExportTransparent] = useState(false); // transparenter Hintergrund im Export-Bild
     const [customLogo, setCustomLogo] = useState(null); // Custom Firmenlogo fuer Export (Data-URL oder Image-Objekt)
-    const [forceCentered, setForceCentered] = useState(SHARED ? !!SHARED.forceCentered : false);
+    const [forceCentered, setForceCentered] = useState(SHARED ? !!SHARED.forceCentered : !!(DRAFT && DRAFT.forceCentered));
     const [result, setResult] = useState(() => packKind(INIT_CONTAINER, INIT_CARGO, {}, SHARED ? !!SHARED.forceCentered : false));
     const [chainOverride, setChainOverride] = useState({});
     // ── Manuelles Platzieren (Slice 2): eigener Modus, unabhaengig vom Auto-Packer. Nur fuer den
@@ -4276,7 +4346,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Teilen: acht gleich aussehende Knoepfe nebeneinander sagen niemandem, was wichtig ist.
     const [menuOpen, setMenuOpen] = useState(false);
     // Name des Plans. Leer heisst unbenannt – dann bleibt alles beim bisherigen Verhalten.
-    const [planName, setPlanName] = useState("");
+    const [planName, setPlanName] = useState(DRAFT && DRAFT.planName || "");
     // Fuer Dateinamen: Umlaute ausschreiben, alles andere auf Bindestriche. Leer -> null,
     // damit die Aufrufer beim alten Namen bleiben koennen.
     // Speichern ohne Umweg ueber den Dialog. Gibt es bereits einen Plan mit genau diesem Namen,
@@ -4400,11 +4470,46 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       window.addEventListener("keydown", onKey);
       return () => window.removeEventListener("keydown", onKey);
     }, [palOpen, recOpen, exportOpen, shareOpen, importOpen, plansOpen, menuOpen]);
+    // Entwurf merken. Der erste Durchlauf wird uebersprungen: beim Oeffnen steht hier
+    // noch der Anfangszustand, und wer einen geteilten Link aufmacht, soll damit nicht
+    // seinen eigenen Arbeitsstand ueberschreiben, bevor er ueberhaupt etwas getan hat.
+    // Gespeichert wird verzoegert, sonst schreibt jeder Tastendruck in ein Zahlenfeld.
+    const ersterLauf = useRef(true);
+    useEffect(() => {
+      if (ersterLauf.current) { ersterLauf.current = false; return; }
+      const t = setTimeout(() => {
+        if (!cargo.length && !planName) clearDraft();
+        else saveDraft({ preset, container, cargo, domain, forceCentered, planName });
+      }, 400);
+      return () => clearTimeout(t);
+    }, [cargo, container, preset, domain, forceCentered, planName]);
+    // Strg+Z / Cmd+Z. NICHT, wenn der Fokus in einem Eingabefeld steht - dort gehoert das
+    // Rueckgaengig dem Browser, und das erwartet auch jeder so.
+    useEffect(() => {
+      const onKey = (e) => {
+        if (!(e.key === "z" || e.key === "Z") || !(e.ctrlKey || e.metaKey) || e.shiftKey) return;
+        const t2 = e.target && e.target.tagName;
+        if (t2 === "INPUT" || t2 === "TEXTAREA" || t2 === "SELECT" || (e.target && e.target.isContentEditable)) return;
+        if (!hist.length) return;
+        e.preventDefault();
+        undo();
+      };
+      window.addEventListener("keydown", onKey);
+      return () => window.removeEventListener("keydown", onKey);
+    }, [hist]);
+    // Beim Oeffnen sagen, dass etwas wiederhergestellt wurde. Sonst sitzt jemand vor einer
+    // Ladung, die er nicht eingegeben hat, und weiss nicht, woher sie kommt - auf einem
+    // geteilten Rechner ist das der Normalfall.
+    useEffect(() => {
+      if (DRAFT && DRAFT.cargo && DRAFT.cargo.length) setToast(T.draftBack);
+    }, []);
     useEffect(() => {
       if (!toast) return;
-      const t = setTimeout(() => setToast(""), 2600);
+      // Mit Angebot laenger stehen lassen: wer gerade etwas geloescht hat, braucht einen
+      // Moment, um zu merken, dass es das Falsche war.
+      const t = setTimeout(() => { setToast(""); setToastAct(null); }, toastAct ? 6000 : 2600);
       return () => clearTimeout(t);
-    }, [toast]);
+    }, [toast, toastAct]);
     useEffect(() => {
       try {
         window.localStorage.setItem("cl_lang", LANG);
@@ -4483,6 +4588,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // ob der letzte Container noch zugeht.
     const applyPallets = (items) => {
       if (!items.length) return;
+      merk(cargo);
       // Volle Paletten und Restpalette sind DIESELBE Ware — nur die letzte ist angebrochen.
       // colorOf vergibt die Kennfarbe sonst nach dem Listenindex, also zwangslaeufig zwei
       // verschiedene fuer zwei Positionen. Beide bekommen deshalb ausdruecklich dieselbe
@@ -4503,13 +4609,46 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setOpenCargo(null);
       setToast(T.palAdded(withId.length));
     };
-    const del = (id) => setCargo((cs) => cs.filter((c) => c.id !== id));
-    const enableAllRotate = () => setCargo((cs) => cs.map((c) => ({ ...c, rotatable: true })));
+    // ── Rueckgaengig ──────────────────────────────────────────────────────────
+    // Nur STRUKTURELLE Aenderungen kommen auf den Stapel: loeschen, leeren, eine Liste
+    // einfuegen, Paletten uebernehmen, alles drehbar setzen. Nicht jeder Tastendruck in
+    // einem Zahlenfeld - dort macht der Browser sein eigenes Rueckgaengig, und ein
+    // Stapel mit tausend Zwischenstaenden waere fuer niemanden zu bedienen.
+    const merk = (cs) => setHist((h) => [...h.slice(-29), cs]);
+    const undo = () => {
+      setHist((h) => {
+        if (!h.length) return h;
+        setCargo(h[h.length - 1]);
+        sag(T.undone);
+        return h.slice(0, -1);
+      });
+    };
+    // Ein Hinweis, der etwas anbieten kann. Bisher war er nur Text.
+    //
+    // Das doppelte Pfeilchen ist kein Schnoerkel: setToastAct(fn) wuerde React als
+    // UPDATER lesen und fn(bisherigerZustand) AUFRUFEN, statt fn zu speichern. Genau das
+    // ist beim Bauen passiert -- das Loeschen machte sich selbst sofort wieder
+    // rueckgaengig, ohne eine einzige Fehlermeldung. Wer eine Funktion in einen Zustand
+    // legt, muss sie in eine zweite verpacken.
+    const sag = (msg, akt) => { setToast(msg); setToastAct(() => akt || null); };
+    const del = (id) => { merk(cargo); setCargo((cs) => cs.filter((c) => c.id !== id)); sag(T.itemDeleted, undo); };
+    // Ganze Ladung weg. Ohne Rueckfrage - dafuer mit Rueckgaengig im Hinweis. Ein Dialog,
+    // den man wegklickt, schuetzt niemanden; ein Rueckgaengig, das danebensteht, schon.
+    const resetCargo = () => {
+      if (!cargo.length) return;
+      const n2 = cargo.length;
+      merk(cargo);
+      setCargo([]);
+      setOpenCargo(null);
+      sag(T.cargoCleared(n2), undo);
+    };
+    const enableAllRotate = () => { merk(cargo); setCargo((cs) => cs.map((c) => ({ ...c, rotatable: true }))); };
     const updImportRow = (i, k, v) => setImportRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r));
     const delImportRow = (i) => setImportRows((rs) => rs.filter((_, j) => j !== i));
     const applyImport = (replace) => {
       const items = (importRows || []).map((r) => ({ id: uid(), name: r.name || "Position", l: Math.max(1, num(r.l, 1)), w: Math.max(1, num(r.w, 1)), h: Math.max(1, num(r.h, 1)), weight: Math.max(0, num(r.weight, 0)), qty: Math.max(1, parseInt(r.qty, 10) || 1), stackable: r.stackable !== false, rotatable: r.rotatable !== false }));
       if (!items.length) return;
+      merk(cargo);
       setCargo((cs) => replace ? items : [...cs, ...items]);
       setImportOpen(false);
       setImportRows(null);
@@ -4778,6 +4917,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const unplaced = result.totalBoxes - result.boxes;
     const allFit = unplaced <= 0 && result.totalBoxes > 0;
+    // Leer ist kein Fehler, sondern der Anfang. Ohne diese Unterscheidung stuende beim
+    // Oeffnen "0 offen" in Orange da, bevor ueberhaupt etwas eingegeben wurde.
+    const leer = result.totalBoxes === 0;
     // Gruen erst, wenn der Container wirklich gut genutzt ist. Darunter neutral: eine Sendung
     // mit 13 % ist nicht kaputt, sie ist klein. Was dagegen zu tun waere, sagt die Empfehlung.
     const utilColor = result.util > 80 ? C.good : C.text;
@@ -4828,7 +4970,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Ohne diesen Zusatz las man "62 / 92 verladen" neben einem Bild, in dem alle 92 stehen.
     const slot1 = result.chain && result.chain.length > 1 ? " \xB7 " + (domain === "road" ? "F1" : "C1") : "";
     const kpiFull = { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor };
-    const kpiLoaded = { label: T.loaded + slot1, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn };
+    // Bei leerer Ladung neutral: "0 / 0" in Orange behauptet ein Problem, wo noch gar
+    // nichts eingegeben wurde.
+    const kpiLoaded = { label: T.loaded + slot1, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: leer ? C.text : allFit ? C.good : C.warn };
     const kpiWeight = { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor };
     const kpiVol = domain === "road"
       ? { label: T.volume, value: nf(result.usedVol, 2), sub: "cbm" }
@@ -4859,7 +5003,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
     // dreissig Packstuecke gar nicht in den Container gingen. Daneben stand "30 offen", und
     // zwar in Gruen. Was nicht drin ist, ist kein guter Zustand.
-    const statusColor = payPct > 100 || overweight ? C.bad : !allFit || railHot ? C.warn : C.good;
+    const statusColor = payPct > 100 || overweight ? C.bad : leer ? C.faint : !allFit || railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: "14px 20px" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: "10px 18px", paddingRight: 18 } },
@@ -4875,7 +5019,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: { paddingLeft: 18 } },
           /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { color: statusColor, fontSize: 12.5, whiteSpace: "nowrap" } },
             /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "currentColor", flexShrink: 0 } }),
-            /* @__PURE__ */ React.createElement("span", null, allFit ? T.allLoaded : T.open(unplaced))
+            /* @__PURE__ */ React.createElement("span", null, leer ? T.noCargo : allFit ? T.allLoaded : T.open(unplaced))
           ),
           overweight && /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, padding: "2px 9px", background: hexA(C.bad, 0.12), color: C.bad, border: `1px solid ${hexA(C.bad, 0.32)}` } }, T.overCap(fmtDE(overKg))),
           /* @__PURE__ */ React.createElement("button", { onClick: () => setCogOpen((o) => !o), "aria-expanded": cogOpen ? "true" : "false", className: "flex items-center gap-1.5 rounded-lg transition hover:brightness-125", style: { background: "transparent", border: "1px solid #232C38", color: C.dim, padding: "6px 11px", fontFamily: SANS, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" } },
@@ -5047,16 +5191,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Ladungsbereich als eigener Baustein – er steht je nach Fensterbreite in der rechten
     // Spalte oder unten in der linken. Als Variable statt als Komponente, damit er auf dieselben
     // Zustaende zugreift wie bisher und keine zwanzig Eigenschaften durchgereicht werden muessen.
-    const cargoEl = /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(SectionTitle, { noMargin: true }, T.cargo), /* @__PURE__ */ React.createElement("span", { className: "h-px flex-1", style: { background: "linear-gradient(90deg,#232C38,transparent)" } }), /* @__PURE__ */ React.createElement("div", { title: unit === "mm" ? T.unitToCm : T.unitToMm, style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#161D27", border: "1px solid #232C38" } }, ["cm", "mm"].map((u) => { const on = unit === u; return /* @__PURE__ */ React.createElement("button", { key: u, onClick: on ? void 0 : () => setUnitTo(u), style: { padding: "4px 9px", borderRadius: 8, border: 0, cursor: on ? "default" : "pointer", fontFamily: SANS, fontSize: 11, fontWeight: on ? 700 : 600, background: on ? hexA(C.accent, 0.16) : "transparent", color: on ? "#DBE8FF" : C.faint, transition: ".15s" } }, u); }))), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch gap-2 mb-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
+    const cargoEl = /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-2.5" }, /* @__PURE__ */ React.createElement(SectionTitle, { noMargin: true }, T.cargo), /* @__PURE__ */ React.createElement("span", { className: "h-px flex-1", style: { background: "linear-gradient(90deg,#232C38,transparent)" } }),
+        // Nur da, wenn es etwas zu leeren gibt. Ein Knopf, der nichts tun kann, ist Ballast.
+        cargo.length > 0 ? /* @__PURE__ */ React.createElement("button", { onClick: resetCargo, title: T.cargoResetTitle, style: { background: "transparent", border: "1px solid #232C38", borderRadius: 8, color: C.faint, fontFamily: SANS, fontSize: 11, fontWeight: 600, padding: "4px 9px", cursor: "pointer", whiteSpace: "nowrap" }, onMouseOver: (e) => { e.currentTarget.style.color = C.text; e.currentTarget.style.borderColor = "#2E3A49"; }, onMouseOut: (e) => { e.currentTarget.style.color = C.faint; e.currentTarget.style.borderColor = "#232C38"; } }, T.cargoReset) : null,
+        /* @__PURE__ */ React.createElement("div", { title: unit === "mm" ? T.unitToCm : T.unitToMm, style: { display: "flex", gap: 2, padding: 3, borderRadius: 8, background: "#161D27", border: "1px solid #232C38" } }, ["cm", "mm"].map((u) => { const on = unit === u; return /* @__PURE__ */ React.createElement("button", { key: u, onClick: on ? void 0 : () => setUnitTo(u), style: { padding: "4px 9px", borderRadius: 8, border: 0, cursor: on ? "default" : "pointer", fontFamily: SANS, fontSize: 11, fontWeight: on ? 700 : 600, background: on ? hexA(C.accent, 0.16) : "transparent", color: on ? "#DBE8FF" : C.faint, transition: ".15s" } }, u); }))), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch gap-2 mb-3" }, /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setImportText("");
       setImportRows(null);
       setImportOpen(true);
-    }, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110 flex items-center justify-center", style: { background: hexA(C.teal, 0.1), border: `1px solid ${hexA(C.teal, 0.32)}`, fontSize: 11, fontWeight: 600, color: C.text, whiteSpace: "nowrap" } }, T.impBtn), /* @__PURE__ */ React.createElement("button", { onClick: addCargo, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110", style: { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, fontSize: 11, fontWeight: 700, color: "#bcd9ff", whiteSpace: "nowrap" } }, T.addItem), /* @__PURE__ */ React.createElement("button", { onClick: () => setPalOpen(true), title: T.palBtn, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110", style: { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, fontSize: 11, fontWeight: 700, color: "#bcd9ff", whiteSpace: "nowrap" } }, T.palAddBtn)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3" }, cargo.map((c, i) => {
+    }, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110 flex items-center justify-center", style: { background: hexA(C.teal, 0.1), border: `1px solid ${hexA(C.teal, 0.32)}`, fontSize: 11, fontWeight: 600, color: C.text, whiteSpace: "nowrap" } }, T.impBtn), /* @__PURE__ */ React.createElement("button", { onClick: addCargo, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110", style: { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, fontSize: 11, fontWeight: 700, color: "#bcd9ff", whiteSpace: "nowrap" } }, T.addItem), /* @__PURE__ */ React.createElement("button", { onClick: () => setPalOpen(true), title: T.palBtn, className: "flex-1 px-2 py-1.5 rounded-lg transition hover:brightness-110", style: { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, fontSize: 11, fontWeight: 700, color: "#bcd9ff", whiteSpace: "nowrap" } }, T.palAddBtn)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3" },
+        // Der Rechner startet leer. Ohne diesen Kasten stuende hier eine weisse Flaeche,
+        // und niemand wuesste, dass die drei Knoepfe darueber der Anfang sind.
+        cargo.length === 0 ? /* @__PURE__ */ React.createElement("div", { style: { borderRadius: 12, border: "1px dashed #2E3A49", padding: "18px 16px", textAlign: "center" } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.dim } }, T.cargoEmpty),
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginTop: 5, lineHeight: 1.45 } }, T.cargoEmptyHint)) : null,
+        cargo.map((c, i) => {
       const pt = result.perType[i];
       const done = pt && pt.total > 0 && pt.loaded >= pt.total;
       const col = colorOf(c, i);
       const open = openCargo === c.id;
-      return /* @__PURE__ */ React.createElement("div", { key: c.id, className: open ? "rounded-xl p-3.5" : "rounded-xl px-3.5 py-3", style: { background: "#161D27", border: `1px solid ${open ? "#2E3A49" : "#232C38"}`, ...(c.grp ? { borderLeft: `2px solid ${hexA(col, 0.6)}` } : null), transition: "border-color .15s" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5", style: open ? { paddingBottom: 11, marginBottom: 12, borderBottom: "1px solid #1C2531" } : null }, /* @__PURE__ */ React.createElement("span", { style: { position: "relative", flexShrink: 0, display: "inline-flex" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setColorPickFor(colorPickFor === c.id ? null : c.id), title: T.colorTitle, style: { width: 14, height: 14, borderRadius: 8, background: col, border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", padding: 0 } }), colorPickFor === c.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setColorPickFor(null), style: { position: "fixed", inset: 0, zIndex: 40 } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: 20, left: 0, zIndex: 41, background: "#0c1320", border: "1px solid #2E3A49", borderRadius: 12, padding: 8, width: 132 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 } }, TYPE_COLORS.map((hex) => /* @__PURE__ */ React.createElement("button", { key: hex, onClick: () => { upd(c.id, "color", hex); setColorPickFor(null); }, style: { width: 22, height: 22, borderRadius: 8, background: hex, cursor: "pointer", border: (c.color || col) === hex ? "2px solid #E9F0F7" : "1px solid rgba(255,255,255,0.15)", padding: 0 } }))), /* @__PURE__ */ React.createElement("button", { onClick: () => { upd(c.id, "color", null); setColorPickFor(null); }, style: { marginTop: 8, width: "100%", fontFamily: SANS, fontSize: 11, letterSpacing: "0.08em", color: C.dim, background: "#1C2531", border: "1px solid #232C38", borderRadius: 8, padding: "5px 0", cursor: "pointer" } }, T.colorAuto)))), /* @__PURE__ */ React.createElement("input", { value: c.name, onChange: (e) => upd(c.id, "name", e.target.value), className: "flex-1 min-w-0 bg-transparent focus:outline-none", style: { fontSize: 13.5, fontWeight: 600, color: C.text, borderBottom: "1px solid transparent", paddingBottom: 2 }, onFocus: (e) => e.target.style.borderBottomColor = hexA(C.accent, 0.6), onBlur: (e) => e.target.style.borderBottomColor = "transparent" }), pt && /* @__PURE__ */ React.createElement("span", { className: "px-2 py-0.5 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, background: hexA(done ? C.good : C.warn, 0.14), color: done ? C.good : C.warn } }, pt.loaded, "/", pt.total), doorCheck.idx.has(i) && /* @__PURE__ */ React.createElement("span", { title: T.doorHint(doorOpening.w, doorOpening.h), className: "px-2 py-0.5 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, background: hexA(C.warn, 0.16), color: C.warn } }, T.doorChip), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(open ? null : c.id), title: T.cargoToggle, "aria-expanded": open ? "true" : "false", style: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: 8, background: open ? hexA(C.accent, 0.1) : "transparent", border: `1px solid ${open ? hexA(C.accent, 0.4) : "#2E3A49"}`, color: open ? "#bcd9ff" : C.dim, fontSize: 12.5, lineHeight: 1, cursor: "pointer", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" } }, "▾"), cargo.length > 1 && /* @__PURE__ */ React.createElement("button", { onClick: () => del(c.id), style: { color: C.faint, fontSize: 17, lineHeight: 1 }, onMouseOver: (e) => e.target.style.color = C.bad, onMouseOut: (e) => e.target.style.color = C.faint }, "\xD7")),
+      return /* @__PURE__ */ React.createElement("div", { key: c.id, className: open ? "rounded-xl p-3.5" : "rounded-xl px-3.5 py-3", style: { background: "#161D27", border: `1px solid ${open ? "#2E3A49" : "#232C38"}`, ...(c.grp ? { borderLeft: `2px solid ${hexA(col, 0.6)}` } : null), transition: "border-color .15s" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2.5", style: open ? { paddingBottom: 11, marginBottom: 12, borderBottom: "1px solid #1C2531" } : null }, /* @__PURE__ */ React.createElement("span", { style: { position: "relative", flexShrink: 0, display: "inline-flex" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setColorPickFor(colorPickFor === c.id ? null : c.id), title: T.colorTitle, style: { width: 14, height: 14, borderRadius: 8, background: col, border: "1px solid rgba(255,255,255,0.25)", cursor: "pointer", padding: 0 } }), colorPickFor === c.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setColorPickFor(null), style: { position: "fixed", inset: 0, zIndex: 40 } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: 20, left: 0, zIndex: 41, background: "#0c1320", border: "1px solid #2E3A49", borderRadius: 12, padding: 8, width: 132 } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 } }, TYPE_COLORS.map((hex) => /* @__PURE__ */ React.createElement("button", { key: hex, onClick: () => { upd(c.id, "color", hex); setColorPickFor(null); }, style: { width: 22, height: 22, borderRadius: 8, background: hex, cursor: "pointer", border: (c.color || col) === hex ? "2px solid #E9F0F7" : "1px solid rgba(255,255,255,0.15)", padding: 0 } }))), /* @__PURE__ */ React.createElement("button", { onClick: () => { upd(c.id, "color", null); setColorPickFor(null); }, style: { marginTop: 8, width: "100%", fontFamily: SANS, fontSize: 11, letterSpacing: "0.08em", color: C.dim, background: "#1C2531", border: "1px solid #232C38", borderRadius: 8, padding: "5px 0", cursor: "pointer" } }, T.colorAuto)))), /* @__PURE__ */ React.createElement("input", { value: c.name, onChange: (e) => upd(c.id, "name", e.target.value), className: "flex-1 min-w-0 bg-transparent focus:outline-none", style: { fontSize: 13.5, fontWeight: 600, color: C.text, borderBottom: "1px solid transparent", paddingBottom: 2 }, onFocus: (e) => e.target.style.borderBottomColor = hexA(C.accent, 0.6), onBlur: (e) => e.target.style.borderBottomColor = "transparent" }), pt && /* @__PURE__ */ React.createElement("span", { className: "px-2 py-0.5 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, background: hexA(done ? C.good : C.warn, 0.14), color: done ? C.good : C.warn } }, pt.loaded, "/", pt.total), doorCheck.idx.has(i) && /* @__PURE__ */ React.createElement("span", { title: T.doorHint(doorOpening.w, doorOpening.h), className: "px-2 py-0.5 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, background: hexA(C.warn, 0.16), color: C.warn } }, T.doorChip), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(open ? null : c.id), title: T.cargoToggle, "aria-expanded": open ? "true" : "false", style: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: 24, height: 24, borderRadius: 8, background: open ? hexA(C.accent, 0.1) : "transparent", border: `1px solid ${open ? hexA(C.accent, 0.4) : "#2E3A49"}`, color: open ? "#bcd9ff" : C.dim, fontSize: 12.5, lineHeight: 1, cursor: "pointer", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" } }, "▾"), cargo.length > 0 && /* @__PURE__ */ React.createElement("button", { "aria-label": T.cargoDelete, title: T.cargoDelete, onClick: () => del(c.id), style: { color: C.faint, fontSize: 17, lineHeight: 1 }, onMouseOver: (e) => e.target.style.color = C.bad, onMouseOut: (e) => e.target.style.color = C.faint }, "\xD7")),
       !open && /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(c.id), style: { display: "block", width: "100%", textAlign: "left", marginTop: 7, padding: 0, background: "transparent", border: 0, cursor: "pointer", fontFamily: SANS, fontSize: 11, lineHeight: 1.4, letterSpacing: "0.02em", color: C.faint } }, cargoSummary(c)),
       open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-2.5 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: 32, color: C.dim, fontSize: 17 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: 13.5, fontWeight: 600, color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: "8px 0" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: 32, color: C.dim, fontSize: 17 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: 31, padding: "0 8px", fontSize: 11, fontWeight: 600, background: "#1C2531", border: "1px solid #232C38", color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
         const on = c.rotatable !== false;
@@ -5138,7 +5291,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement("div", { style: { fontSize: 12.5, lineHeight: 1.45, color: "#d4dce5" } }, comboBody),
                 recData.combo.type === "equip" ? /* @__PURE__ */ React.createElement("button", { onClick: () => { applyPreset(recData.combo.name); setRecOpen(false); }, className: "mt-3 px-3 py-1.5 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: 12.5, fontWeight: 700 } }, T.recApply) : null) : null,
               /* @__PURE__ */ React.createElement("div", { style: { marginTop: 14, fontFamily: SANS, fontSize: 11, color: C.faint, letterSpacing: "0.04em" } }, T.recFoot)))));
-    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { container, preset, T, onClose: () => setPalOpen(false), onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, onClose: () => setPlansOpen(false), setToast, T }), toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-2.5 rounded-xl", style: { background: hexA("#161D27", 0.95), border: `1px solid ${hexA(C.accent, 0.45)}`, color: "#cfe6ff", fontSize: 12.5, fontWeight: 600, boxShadow: "0 12px 40px -10px rgba(0,0,0,0.7)" } }, toast)));
+    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { container, preset, T, onClose: () => setPalOpen(false), onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, onClose: () => setPlansOpen(false), setToast, T }), toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 50 } }, /* @__PURE__ */ React.createElement("div", { className: "px-4 py-2.5 rounded-xl", style: { background: hexA("#161D27", 0.95), border: `1px solid ${hexA(C.accent, 0.45)}`, color: "#cfe6ff", fontSize: 12.5, fontWeight: 600, boxShadow: "0 12px 40px -10px rgba(0,0,0,0.7)", display: "flex", alignItems: "center", gap: 12 } },
+      /* @__PURE__ */ React.createElement("span", null, toast),
+      toastAct ? /* @__PURE__ */ React.createElement("button", { onClick: () => { toastAct(); }, style: { background: hexA(C.accent, 0.16), border: `1px solid ${hexA(C.accent, 0.5)}`, borderRadius: 8, color: "#dbe8ff", fontFamily: SANS, fontSize: 12.5, fontWeight: 700, padding: "4px 11px", cursor: "pointer" } }, T.undoBtn) : null)));
   }
   // Die fertige Palette in 3D. Bewusst eine eigene, kleine Szene statt Viewport: der grosse
   // Blick haengt an Kette, Uebermass, Tuerpruefung und manuellem Modus — nichts davon gibt es

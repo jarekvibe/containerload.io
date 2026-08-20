@@ -161,6 +161,26 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Der Entwurf, das Rückgängig und der leere Start
+**Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.
+
+**Der Arbeitsstand überlebt einen Reload** (`containerload.draft.v1`). Gemeldet von einem Spediteur: man tippt vierzig Positionen ein, drückt versehentlich F5 und fängt von vorne an. Bis dahin überlebte nichts davon — gemerkt wurden nur Sprache, Einheit, Reederei und die ausdrücklich gespeicherten Pläne.
+
+Drei Dinge daran dürfen nicht kippen:
+- **Rangfolge beim Start:** geteilter Link → `?q=`-Import → eigener Entwurf → leer. Der Link steht oben, sonst überschriebe der eigene Arbeitsstand den Plan, den jemand einem gerade geschickt hat.
+- **Der erste Effektlauf speichert nicht.** Wer einen geteilten Link öffnet, soll damit nicht seinen eigenen Entwurf löschen, bevor er überhaupt etwas getan hat.
+- **`stackMax` trägt `Infinity`, und JSON macht daraus `null`.** Ohne `draftIn`/`draftOut` würde aus „frei stapelbar" beim nächsten Öffnen „nicht stapelbar" — eine stille Änderung an der Rechnung, ausgelöst durch einen Reload.
+
+Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalten will, ein Entwurf ist das, was ohnehin gerade dasteht. Deshalb ein eigener Schlüssel und nicht „Meine Pläne" — sonst flutet Halbfertiges die Liste.
+
+**Rückgängig** (`hist`, Strg+Z und der Knopf im Hinweis) fängt nur **strukturelle** Änderungen ab: löschen, leeren, eine Liste einfügen, Paletten übernehmen, alles drehbar setzen. Nicht jeden Tastendruck in einem Zahlenfeld — dort gehört das Rückgängig dem Browser, und ein Stapel mit tausend Zwischenständen wäre für niemanden zu bedienen. Deshalb greift der Tastaturweg auch nicht, solange der Fokus in einem Eingabefeld steht.
+
+**„Leeren" fragt nicht nach.** Ein Dialog, den man wegklickt, schützt niemanden; ein Rückgängig, das danebensteht, schon. Der Hinweis bleibt dafür 6 statt 2,6 Sekunden stehen.
+
+> **Die Falle, die eine Stunde gekostet hat:** `setToastAct(fn)` liest React als **Updater** und **ruft `fn(bisherigerZustand)` auf**, statt `fn` zu speichern. Das Löschen machte sich dadurch sofort selbst rückgängig — ohne eine einzige Fehlermeldung, ohne Konsolenausgabe, ohne dass ein Render stattfand. Wer eine Funktion in einen Zustand legt, muss sie verpacken: `setToastAct(() => fn)`. `test/entwurf-und-undo.test.mjs` hält das fest.
+
+**Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
+
 ### Die Container-Kette: zwei Grenzen, zwei Fragen
 `MAXCHAIN = 24` wird **gerechnet**, `MAXDRAW = 8` wird **gezeichnet**. Vorher galt für beides 4 — an zwei Stellen unabhängig voneinander als Literal. Wer 39 Paletten eingab, sah vier Hüllen und darunter „15 offen · weitere Container nötig", ohne je zu erfahren, wie viele. Es sind sieben.
 
