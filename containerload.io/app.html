@@ -1669,6 +1669,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // gewählt, der den Rest aufnimmt (weniger ungenutzter Raum – eine Wahl nach Größe,
   // nicht nach Preis), bzw. per overrides[slot] manuell übersteuert. Es wird nur
   // packCargo (unverändert) erneut angewendet – keine Änderung an der Pack-Logik.
+  // Wie weit die Kette GERECHNET wird und wie viele Huellen davon GEZEICHNET werden --
+  // zwei verschiedene Zahlen, weil es zwei verschiedene Fragen sind. "Wie viele Container
+  // brauche ich" beantwortet man mit einer Zahl, "wie steht die Ladung" mit einem Bild.
+  //
+  // Vorher galt fuer beides 4. Wer 39 Paletten eingab, sah vier Huellen und darunter
+  // "15 offen - weitere Container noetig", ohne je zu erfahren, wie viele. Es sind sieben.
+  //
+  // Gerechnet wird bis 24. Das kostet fast nichts, weil jeder Folgecontainer weniger Rest
+  // zu packen hat: gemessen 92 ms fuer die 39 Paletten (bei Grenze 4 waren es 133 -- es
+  // wird schneller) und 727 ms im schlimmsten nachgestellten Fall, 1.900 Packstuecke auf
+  // zehn Container. Gezeichnet werden 8; darueber wird jede Huelle im Bild zum Strich.
+  var MAXCHAIN = 24, MAXDRAW = 8;
   function chainContainers(container0, preset0, cargo, slot0, overrides, MAXVIS, carrier) {
     // Auto-Folgecontainer nur aus Standard-Typen; Special Equipment nur per manueller Wahl.
     // Folgecontainer kommen von derselben Reederei wie der erste – eine Buchung, ein Equipment-Pool.
@@ -1901,7 +1913,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualExportOff: "Im manuellen Modus nicht verf\xFCgbar – zur\xFCck zur Automatik wechseln.",
       manualBadge: "MANUELL",
       autoCont: "Auto",
-      openMore: (n) => `${n} offen \xB7 weitere Container n\xF6tig`,
+      chainN: (n) => `${n} Container \xB7 mit dieser Wahl`,
+      chainNRoad: (n) => `${n} Fahrzeuge \xB7 mit dieser Wahl`,
+      chainMore: (n) => `+ ${n} weitere \xB7 nicht gezeichnet`,
+      openMore: (n, c) => `${n} offen \xB7 mehr als ${c} Container`,
       forceCenter: "mittig stauen erzwingen",
       oogTitle: "Out of Gauge (Sch\xE4tzung)",
       oogH: "\xDCberh\xF6he",
@@ -2135,7 +2150,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualExportOff: "Not available in manual mode – switch back to automatic.",
       manualBadge: "MANUAL",
       autoCont: "Auto",
-      openMore: (n) => `${n} open \xB7 more containers needed`,
+      chainN: (n) => `${n} containers \xB7 with this pick`,
+      chainNRoad: (n) => `${n} vehicles \xB7 with this pick`,
+      chainMore: (n) => `+ ${n} more \xB7 not drawn`,
+      openMore: (n, c) => `${n} open \xB7 more than ${c} containers`,
       forceCenter: "force centered stow",
       oogTitle: "Out of Gauge (estimate)",
       oogH: "Over height",
@@ -3323,7 +3341,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const dimsOf = (c) => ({ CL: num(c.preset.l) / 100, CH: num(c.preset.h) / 100, CW: num(c.preset.w) / 100 });
       // Manueller Modus: immer genau EIN Hauptcontainer, keine Auto-Kette/-Kisten – die platzierten
       // Kisten werden nach der Huellen-Schleife separat (einzeln anklickbar) gezeichnet.
-      let chain = (result && result.chain && result.chain.length ? result.chain : [{ name: null, preset: container, placed: result?.placed || [] }]).slice(0, 4);
+      let chain = (result && result.chain && result.chain.length ? result.chain : [{ name: null, preset: container, placed: result?.placed || [] }]).slice(0, MAXDRAW);
       if (manualMode) chain = [{ name: preset, preset: container, placed: [] }];
       const d0 = dimsOf(chain[0]);
       if (d0.CL <= 0 || d0.CH <= 0 || d0.CW <= 0) return;
@@ -3821,7 +3839,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px] pointer-events-none", style: { fontFamily: SANS, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } }, result.chain.map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })), result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: 11, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 12.5 }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px] pointer-events-none", style: { fontFamily: SANS, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-1.5", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
+            // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
+            // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
+            /* @__PURE__ */ React.createElement("div", { key: "n", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: 11, fontWeight: 700, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, 0.45)}`, borderRadius: 8, padding: "4px 9px" } },
+              (result.remainingBoxes > 0 ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
+            result.chain.slice(0, MAXDRAW).map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })),
+            result.chain.length > MAXDRAW && /* @__PURE__ */ React.createElement("div", { key: "rest", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: 11, color: C.faint, background: hexA("#161D27", 0.82), border: "1px solid #2E3A49", borderRadius: 8, padding: "4px 9px" } }, T.chainMore(result.chain.length - MAXDRAW)),
+            result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: 11, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: 8, padding: "4px 9px" } }, T.openMore(result.remainingBoxes, MAXCHAIN))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: 12.5 }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   var Label = ({ children }) => /* @__PURE__ */ React.createElement("span", { className: "block mb-1.5", style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.dim } }, children);
   // factor: reine Anzeige-/Eingabe-Umrechnung (z.B. 10 fuer cm->mm). Intern bleibt IMMER cm
@@ -4340,7 +4365,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
         // 3D-Ansicht: Container-Kette aufbauen (Slot 0 = gewählter Container; Folge-Container
         // automatisch kleinster passender Typ oder manuell übersteuert). Gedeckelt auf 4 Hüllen.
-        const MAXVIS = 4;
+        const MAXVIS = MAXCHAIN;
         if (r.boxes < r.totalBoxes && r.totalBoxes > 0) {
           const ch = domain === "road"
             ? chainVehicles(container, preset, cargo, r, chainOverride, MAXVIS)

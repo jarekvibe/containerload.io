@@ -161,6 +161,15 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Die Container-Kette: zwei Grenzen, zwei Fragen
+`MAXCHAIN = 24` wird **gerechnet**, `MAXDRAW = 8` wird **gezeichnet**. Vorher galt für beides 4 — an zwei Stellen unabhängig voneinander als Literal. Wer 39 Paletten eingab, sah vier Hüllen und darunter „15 offen · weitere Container nötig", ohne je zu erfahren, wie viele. Es sind sieben.
+
+„Wie viele Container brauche ich" beantwortet man mit einer **Zahl**, „wie steht die Ladung" mit einem **Bild** — und ein Bild mit zwanzig Hüllen nebeneinander sagt nichts mehr. Deshalb steht die Zahl jetzt als erste Pille über der Slot-Liste, und gezeichnet werden die ersten acht.
+
+Weiter zu rechnen kostet fast nichts, weil jeder Folgecontainer weniger Rest zu packen hat: gemessen **92 ms** für die 39 Paletten (bei Grenze 4 waren es 133 — es wird *schneller*) und **727 ms** im schlimmsten nachgestellten Fall, 1.900 Packstücke auf zehn Container.
+
+**Die Kette und die Empfehlung antworten auf verschiedene Fragen** und dürfen deshalb verschiedene Zahlen nennen: die Kette beginnt beim **gewählten** Container und hängt Folgecontainer an, die Empfehlung rechnet die günstigste Kombination frei aus. Damit nicht zwei Zahlen unkommentiert nebeneinanderstehen, nennt die Pille ihre Grundlage: „6 Container · mit dieser Wahl".
+
 ### Was `stackMax` bedeutet — und was nicht
 **Es ist eine Tragfähigkeit.** Der Selektor sagt es wörtlich: „1× stapelbar" = *eine zusätzliche Lage obendrauf* (`stackMax` 2). Daraus folgen drei Dinge, die alle drei gelten müssen:
 
