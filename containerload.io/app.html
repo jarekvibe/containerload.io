@@ -980,21 +980,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   }
   // Baut/prueft eine vollstaendige Platzierung fuer "item" (aus cargo) an (px,pz), inkl. Rotation,
   // Container-Grenzen, Stapelbarkeit und Zuladung. px/pz werden auf gueltigen Bereich geklemmt.
-  // Zaehlt, wie viele Stuecke gleicher Bauhoehe an dieser Stelle unmittelbar untereinander
-  // stehen -- das neue Stueck eingerechnet. Das ist die Zahl, die stackMax begrenzt.
+  // Zaehlt, wie viele Stuecke an dieser Stelle unmittelbar untereinanderstehen -- das neue
+  // Stueck eingerechnet. Das ist die Zahl, die stackMax begrenzt.
   //
-  // Dieselbe Regel wie im Auto-Packer (emsPackOnce fuehrt sie als b.tower mit, was dort
-  // billiger ist, weil die Zahl beim Platzieren schon feststeht). Beide MUESSEN dasselbe
-  // ergeben, sonst verhaelt sich Ziehen von Hand anders als automatisches Packen --
-  // test/stackmax-manuell.test.mjs prueft genau das.
+  // Dieselbe Regel wie im Auto-Packer (emsPackOnce fuehrt sie beim Platzieren als b.pos mit,
+  // was dort billiger ist). Beide MUESSEN dasselbe ergeben, sonst verhaelt sich Ziehen von
+  // Hand anders als automatisches Packen -- test/stackmax-manuell.test.mjs prueft das.
   //
   // Nicht die absolute Hoehe im Container: sonst koennte eine flache Kiste nie auf einer
   // hohen stehen, weil deren Hoehe die Grenze schon aufbraucht.
+  //
+  // Und ausdruecklich OHNE Ruecksicht auf die Bauhoehe der Stuecke darunter. Frueher zaehlte
+  // nur mit, was genau gleich hoch war -- ein Behelf fuer "gleiche Sorte". Bei Paletten von
+  // 41 bis 52 cm, jede einzeln erfasst, war keine zwei gleich hoch: der Turm blieb bei 1 und
+  // die Grenze griff nie. stackMax ist eine Tragfaehigkeit; was obendrauf steht, ist ihr egal.
   function towerAt(px, pz, dx, dz, dy, y, placed) {
     let n = 1, cur = y;
     for (let guard = 0; guard <= placed.length; guard++) {
       const below = placed.find((b) =>
-        Math.abs(b.dy - dy) < 1e-3 && Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.abs(b.y + b.dy - cur) < 1e-3 &&
         Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
         Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
       if (!below) break;
@@ -1092,38 +1096,62 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
             const px = S.x, py = S.y, pz = S.z;
             if (py > 1e-4 && supportRatio(px, pz, dx, dz, py, placed) < SUPPORT_MIN) continue; // nicht genug Auflage -> nicht schweben lassen
-            // Stapel-Obergrenze: zaehlt die Lagen im EIGENEN TURM -- Stuecke, die unmittelbar
-            // untereinanderstehen UND dieselbe Bauhoehe haben wie das Stueck selbst (dieselbe
-            // Sorte hat immer dieselbe Hoehe, daher deckt das den Normalfall "eigene Sorte" ab;
-            // steht darunter eine andersartige, andershohe Kiste, beginnt der Turm bei dieser
-            // Lage neu). Nicht die absolute Hoehe im Container -- sonst blockiert eine hohe
-            // fremde Kiste am Boden faelschlich schon die erste eigene Lage weiter oben
-            // (siehe test/pack-stackmax-mixed.test.mjs). Gleich hohe fremde Sorten zaehlen
-            // dagegen weiter mit (test/pack-stackmax.test.mjs, Misch-Ladung-Fall).
-            let tower = 1;
+            // Stapel-Obergrenze. stackMax ist eine TRAGFAEHIGKEIT: "1x stapelbar" heisst,
+            // dass auf dieses Stueck genau ein weiteres darf -- unabhaengig davon, WAS
+            // daraufkommt und wie hoch es ueber dem Containerboden steht.
+            //
+            // Daraus folgen zwei Dinge, die beide gelten muessen:
+            //   * Die Grenze zaehlt AB DEM STUECK SELBST nach oben, nicht ab dem
+            //     Containerboden. Sonst blockiert eine hohe fremde Kiste am Boden schon
+            //     die erste eigene Lage darueber (test/pack-stackmax-mixed.test.mjs).
+            //   * Sie gilt fuer JEDES Stueck unter mir, nicht nur fuer meine eigene Sorte.
+            //     Vorher zaehlte der Turm nur Stuecke GLEICHER BAUHOEHE mit -- ein Behelf
+            //     fuer "gleiche Sorte". Bei 39 Paletten mit 41 bis 52 cm Hoehe, jede
+            //     einzeln erfasst und jede "1x stapelbar", war keine zwei gleich hoch:
+            //     der Turm blieb bei 1, die Grenze griff nie, und der Rechner stapelte
+            //     fuenf hoch. Genau so gemeldet.
+            //
+            // Umgesetzt ohne Suche: jedes gesetzte Stueck traegt seine Lage im Turm (pos)
+            // und die hoechste Lage, die sein Turm nach ALLEN Traegern darunter erreichen
+            // darf (lim = min ueber pos + Tragfaehigkeit - 1). Beim Aufsetzen genuegt der
+            // Vergleich mit dem unmittelbaren Untergrund.
+            let pos = 1, lim = Infinity;
             if (py > 1e-4) {
+              let untenPos = 0, untenLim = Infinity;
               for (const b of placed) {
-                if (Math.abs(b.dy - dy) > 1e-3 || Math.abs(b.y + b.dy - py) > 1e-3) continue;
+                if (Math.abs(b.y + b.dy - py) > 1e-3) continue;
                 const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
                 if (ox <= 1e-6) continue;
                 const oz = Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z);
                 if (oz <= 1e-6) continue;
-                tower = Math.max(tower, (b.tower || 1) + 1);
+                untenPos = Math.max(untenPos, b.pos || 1);
+                untenLim = Math.min(untenLim, b.lim === void 0 ? Infinity : b.lim);
               }
-              if (isFinite(u.stackMax) && tower > u.stackMax) continue;
+              pos = untenPos + 1;
+              if (pos > untenLim) continue;   // eines der Stuecke darunter traegt nicht so viel
+              lim = untenLim;
             }
+            // WICHTIG, und bewusst so: "nicht stapelbar" heisst in diesem Rechner seit jeher
+            // "ICH darf auf nichts stehen" (die Pruefung oben, S.y > 1e-6) -- NICHT "auf mich
+            // darf nichts". Ein nicht stapelbares Stueck traegt hier also weiterhin. Das ist
+            // eine fachliche Festlegung, keine Folge dieser Korrektur, und wird von
+            // test/pack-order.test.mjs festgehalten (11 nicht stapelbare am Boden, 11
+            // stapelbare darueber). stackCapOf liefert fuer solche Stuecke 1 -- das gilt fuer
+            // ihre eigene Lage, nicht fuer ihre Tragfaehigkeit.
+            const tragCap = u.stackable === false ? Infinity : u.stackMax;
+            if (isFinite(tragCap)) lim = Math.min(lim, pos + tragCap - 1);
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
             else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
             else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
-            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, tower };
+            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim };
           }
         }
       }
       if (!best) continue;
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti, tower: best.tower });
+      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim });
       weight += u.weight;
       const next = [];
       for (const S of ems) {
