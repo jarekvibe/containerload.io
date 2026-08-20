@@ -1,6 +1,9 @@
 // Regressionstest fuer die Stapel-Obergrenze (stackMax / stackCapOf).
-// Semantik: stackMax = maximale GESAMT-Lagen eines eigenen Turms.
-//   nicht stapelbar -> 1, "frei" (fehlend/Infinity) -> unbegrenzt, 2 -> zwei hoch, usw.
+// Semantik: stackMax ist eine TRAGFAEHIGKEIT. Der Selektor sagt es woertlich —
+//   "1x stapelbar" = eine zusaetzliche Lage obendrauf, also stackMax 2. Die Grenze zaehlt
+//   AB DEM STUECK SELBST nach oben, nicht ab dem Containerboden, und sie gilt unabhaengig
+//   davon, WAS obendrauf steht.
+//   nicht stapelbar -> das Stueck darf auf nichts stehen; "frei" -> unbegrenzt.
 // Extrahiert packCargo UND manualCandidate aus app.html (gleiche Slice-Mechanik wie die
 // uebrigen Packer-Tests) und prueft, dass die Obergrenze im Auto- wie im Manuell-Pfad greift.
 import fs from "node:fs";
@@ -45,12 +48,29 @@ test("Single-Typ: stackMax=3 -> max. 3 Lagen", () => {
 });
 
 // 3) Misch-Ladung: gekappter Typ ueberschreitet seine Obergrenze nie, freier Typ darf hoeher.
-test("Misch-Ladung: gekappter Typ bleibt unter seiner Obergrenze", () => {
+// Diese Pruefung hat frueher gefordert, dass eine gekappte Kiste NIE hoeher als Lage 2
+// ueber dem Containerboden liegt. Das war die falsche Frage. "1x stapelbar" heisst, dass
+// EINE Lage obendrauf darf — es sagt nichts darueber, wie hoch die Kiste selbst stehen
+// darf. Ganz oben auf zwei freien Kisten traegt sie gar nichts, und nichts ist verletzt.
+// Die alte Fassung hat dafuer Ladung liegenlassen, ohne dass es dafuer einen Grund an der
+// Rampe gab. Gefragt ist: liegt auf einer gekappten Kiste je mehr, als sie tragen darf.
+test("Misch-Ladung: auf einer gekappten Kiste liegt nie mehr, als sie tragen darf", () => {
+  const CAP = 2;
   const r = packCargo(CT, [
-    { name: "Capped", l: 100, w: 80, h: H, weight: 5, qty: 40, stackable: true, rotatable: true, stackMax: 2 },
+    { name: "Capped", l: 100, w: 80, h: H, weight: 5, qty: 40, stackable: true, rotatable: true, stackMax: CAP },
     { name: "Free", l: 100, w: 80, h: H, weight: 5, qty: 40, stackable: true, rotatable: true },
   ], { intensive: true });
-  r.placed.filter((p) => p.ti === 0).forEach((p) => assert.ok(p.y <= (2 - 1) * H + 1e-3, `gekappte Kiste bei y=${p.y} ueber Obergrenze`));
+  // Wie viele Stuecke stehen ueber dieser Kiste in derselben Saeule?
+  const darueber = (p) => r.placed.filter((q) =>
+    q.y > p.y + 1e-3 &&
+    Math.min(p.x + p.dx, q.x + q.dx) - Math.max(p.x, q.x) > 1e-6 &&
+    Math.min(p.z + p.dz, q.z + q.dz) - Math.max(p.z, q.z) > 1e-6).length;
+  for (const p of r.placed.filter((q) => q.ti === 0)) {
+    const oben = darueber(p);
+    assert.ok(oben <= CAP - 1,
+      `gekappte Kiste bei y=${p.y} traegt ${oben} Stueck, erlaubt ist ${CAP - 1}`);
+  }
+  assert.ok(r.placed.some((p) => p.ti === 0), "es sollte ueberhaupt eine gekappte Kiste verladen sein");
 });
 
 // 4) Manuelles Ablegen: 3. Lage eines stackMax=2-Stuecks wird abgelehnt, "frei" erlaubt.
