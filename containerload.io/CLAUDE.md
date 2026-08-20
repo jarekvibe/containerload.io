@@ -161,6 +161,17 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Was `stackMax` bedeutet — und was nicht
+**Es ist eine Tragfähigkeit.** Der Selektor sagt es wörtlich: „1× stapelbar" = *eine zusätzliche Lage obendrauf* (`stackMax` 2). Daraus folgen drei Dinge, die alle drei gelten müssen:
+
+- Die Grenze zählt **ab dem Stück selbst nach oben**, nicht ab dem Containerboden. Sonst blockiert eine hohe fremde Kiste am Boden schon die erste eigene Lage darüber (`test/pack-stackmax-mixed.test.mjs`).
+- Sie gilt für **jedes** Stück darunter, unabhängig von Sorte und Bauhöhe. Bis August 2026 zählte der Turm nur Stücke *gleicher Bauhöhe* mit — ein Behelf für „gleiche Sorte". Bei 39 Paletten von 41 bis 52 cm, jede einzeln erfasst und jede „1× stapelbar", war keine zwei gleich hoch: der Turm blieb bei 1, die Grenze griff nie, der Rechner stapelte fünf hoch. So gemeldet, so nachgestellt.
+- Ein Stück ganz oben trägt nichts und verletzt deshalb nichts — auch wenn es auf Lage 3 liegt. Die frühere Fassung verbot das und ließ dafür Ladung liegen.
+
+Umgesetzt ohne Suche: jedes gesetzte Stück trägt seine Lage im Turm (`pos`) und die höchste Lage, die sein Turm nach **allen** Trägern darunter erreichen darf (`lim = min(pos + Tragfähigkeit − 1)`). Beim Aufsetzen genügt der Vergleich mit dem unmittelbaren Untergrund. `towerAt` im manuellen Pfad folgt derselben Regel — `test/stackmax-manuell.test.mjs` verlangt, dass Ziehen von Hand und automatisches Packen dasselbe ergeben.
+
+**„Nicht stapelbar" ist etwas anderes** und bleibt, wie es war: das Stück darf **auf nichts stehen** (`S.y > 1e-6` in `emsPackOnce`). Es trägt in diesem Rechner weiterhin — `test/pack-order.test.mjs` hält das fest (11 nicht stapelbare am Boden, 11 stapelbare darüber). Ob das dem Verständnis an der Rampe entspricht, ist eine **offene fachliche Frage** und nicht beiläufig zu ändern.
+
 ### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
 Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:
 
