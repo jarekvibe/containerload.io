@@ -128,3 +128,15 @@ test("beide Sprachen kennen die neuen Texte", () => {
     assert.strictEqual(n, 2, `${k}: ${n} Eintraege statt je einem in DE und EN`);
   }
 });
+
+test("die Datenschutzseite kennt den Entwurf", () => {
+  // Die Seite zaehlt namentlich auf, was lokal gespeichert wird. Kommt ein Schluessel
+  // dazu und die Seite schweigt, behauptet sie etwas, was nicht mehr stimmt — bei einem
+  // Werkzeug, dessen ganzer Wert auf Nachpruefbarkeit beruht, ist das kein Formalismus.
+  const dsg = fs.readFileSync(path.join(dir, "..", "datenschutz.html"), "utf8");
+  assert.match(dsg, /automatisch im Speicher deines Browsers behalten/,
+    "der Entwurf wird gespeichert, steht aber nicht in der Datenschutzerklaerung");
+  assert.match(dsg, /localStorage/, "die Speicherart wird nicht benannt");
+  // Und der Weg, es wieder loszuwerden, muss dort auch stehen.
+  assert.match(dsg, /„Leeren“|Leeren/, "der Weg zum Entfernen fehlt");
+});
