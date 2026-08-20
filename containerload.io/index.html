@@ -225,6 +225,12 @@ details[open] .faq-plus{transform:rotate(45deg)}
 .clh-step.on .clh-sl{color:var(--text)}
 .clh-sep{width:14px;height:1px;background:var(--line);margin:0 2px}
 @media(max-width:520px){.clh-step .clh-sl{display:none}.clh-step{padding:5px}}
+.clh-acts{display:flex;align-items:center;gap:7px;padding:0 4px 0 6px}
+.clh-ad{width:7px;height:7px;border-radius:50%;background:var(--line2);border:0;padding:0;
+  cursor:pointer;flex:none;transition:background-color .3s,transform .2s}
+.clh-ad:hover{transform:scale(1.3)}
+.clh-ad.on{background:var(--accent)}
+.clh-vsep{width:1px;height:16px;background:var(--line);margin:0 4px 0 2px;flex:none}
 /* Statuszeile: sagt in Worten, was die Animation gerade zeigt */
 .clh-status{margin-top:20px;display:flex;align-items:center;gap:12px;max-width:480px;
   border:1px solid var(--line);border-radius:var(--r-m);padding:11px 13px;
@@ -356,13 +362,21 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <canvas id="clhScene"></canvas>
 
       <div class="clh-timeline" id="clhTimeline">
-        <div class="clh-step" data-k="load"><span class="clh-sd"></span><span class="clh-sl">Laden</span></div>
+        <!-- Drei Punkte = drei Szenen. Sie sagen, dass nach dieser noch zwei kommen,
+             und erlauben den Sprung — sonst sieht wer frueh weiterscrollt nur die erste. -->
+        <div class="clh-acts" id="clhActs" role="tablist" aria-label="Szene wählen">
+          <button type="button" class="clh-ad on" role="tab" aria-current="true" aria-label="Szene 1: Ladung und Container"></button>
+          <button type="button" class="clh-ad" role="tab" aria-current="false" aria-label="Szene 2: Überhöhe und Open Top"></button>
+          <button type="button" class="clh-ad" role="tab" aria-current="false" aria-label="Szene 3: Kartons auf Palette"></button>
+        </div>
+        <div class="clh-vsep"></div>
+        <div class="clh-step"><span class="clh-sd"></span><span class="clh-sl">Laden</span></div>
         <div class="clh-sep"></div>
-        <div class="clh-step" data-k="conflict"><span class="clh-sd"></span><span class="clh-sl">Konflikt</span></div>
+        <div class="clh-step"><span class="clh-sd"></span><span class="clh-sl">Konflikt</span></div>
         <div class="clh-sep"></div>
-        <div class="clh-step" data-k="solve"><span class="clh-sd"></span><span class="clh-sl">Lösen</span></div>
+        <div class="clh-step"><span class="clh-sd"></span><span class="clh-sl">Lösen</span></div>
         <div class="clh-sep"></div>
-        <div class="clh-step on" data-k="done"><span class="clh-sd" style="background:#35BE87"></span><span class="clh-sl">Gelöst</span></div>
+        <div class="clh-step on"><span class="clh-sd" style="background:#35BE87"></span><span class="clh-sl">Gelöst</span></div>
       </div>
       </div>
     </div>
@@ -748,11 +762,27 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   }
 })();
 </script>
-<!-- Hero "Re-Solve" 3D-Animation: eigenstaendiges Modul, laedt Three.js r128 lazy -->
+<!-- Hero-Animation: eigenstaendiges Modul, laedt Three.js r128 lazy -->
 <script>
-/* ContainerLoad — Hero "Re-Solve" Animation (production module)
-   Selbstständig, kein Build-Step. Three.js r128 wird lazy nachgeladen.
-   Greift NICHT in ?p=, app.html oder die i18n-Logik ein. */
+/* ContainerLoad — Hero-Animation, drei Akte im Wechsel (production module)
+   Selbststaendig, kein Build-Step. Three.js r128 wird lazy nachgeladen.
+   Greift NICHT in ?p=, app.html oder die i18n-Logik ein.
+
+   AUFBAU: Ein Regisseur, drei Akte. Jeder Akt bringt seine eigenen Phasen, seine
+   eigenen Texte und seine eigene Kamera mit; Renderer, Szene, Statuszeile, Pillen
+   und Fortschrittsleiste teilen sich alle. Ist ein Akt durch, kommt der naechste,
+   nach dem letzten wieder der erste.
+
+     1 Re-Solve   — Ladung passt nicht, groesserer Container, passt.
+     2 Ueberhoehe — Maschine zu hoch fuer jeden Standardcontainer, Open Top,
+                    Verladung von oben mit dem Kran.
+     3 Palette    — Kartons zum Lagenmuster, Lagen zur Palette, Paletten in den
+                    Container.
+
+   Die Zahlen in den Texten sind KEINE Erfindung: sie stammen aus denselben
+   Funktionen, mit denen der Rechner arbeitet, und werden von
+   test/hero-animation.test.mjs nachgerechnet. Wer hier eine Zahl aendert, muss
+   sie dort nachweisen koennen. */
 (function(){
   "use strict";
   var canvas=document.getElementById('clhScene');
@@ -767,67 +797,666 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var MINSIDE = Math.min(window.innerWidth || 0, window.innerHeight || 0);
   if(REDUCED || MINSIDE < 600) return;
 
-  var TOTAL=14, OVERFLOW=3;
-
-  // ---------- i18n strings (folgt document.documentElement.lang) ----------
   function lang(){ return (document.documentElement.lang==='en')?'en':'de'; }
-  var STA={
-    intro:{ic:'…',col:'#2E8FFF',tl:'load',fitCol:'#DDA24C',
-      txt:{de:'Ladung wird vorbereitet…',en:'Preparing cargo…'},
-      meta:{de:'20′ GP · live',en:'20′ GP · live'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'prüfe…',en:'checking…'}},
-    pack:{ic:'▣',col:'#2E8FFF',tl:'load',fitCol:'#2E8FFF',
-      txt:{de:'Packe in den 20′ GP…',en:'Loading the 20′ GP…'},
-      meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'lädt…',en:'loading…'}},
-    over:{ic:'✕',col:'#E4636F',tl:'conflict',fitCol:'#E4636F',
-      txt:{de:'{O} Packstücke passen nicht',en:"{O} items don't fit"},
-      meta:{de:'20′ GP · zu klein',en:'20′ GP · too small'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'✕ {O} außerhalb',en:'✕ {O} outside'}},
-    solve:{ic:'⟳',col:'#2E8FFF',tl:'solve',fitCol:'#2E8FFF',
-      txt:{de:'Passender Container wird gesucht',en:'Finding the right container'},
-      meta:{de:'rechnet{dots}',en:'calculating{dots}'}, type:{de:'rechnet…',en:'calculating…'}, fit:{de:'⟳ vermesse',en:'⟳ measuring'}},
-    repack:{ic:'→',col:'#2E8FFF',tl:'done',fitCol:'#2E8FFF',
-      txt:{de:'Container wird zum 40′ GP',en:'Container grows to 40′ GP'},
-      meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'passt rein…',en:'fitting…'}},
-    done:{ic:'✓',col:'#35BE87',tl:'done',fitCol:'#35BE87',
-      txt:{de:'Alles verstaut',en:'All stowed'},
-      meta:{de:'1× 40′ GP · gelöst',en:'1× 40′ GP · solved'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'✓ passt',en:'✓ fits'}}
-  };
-  var TLL={load:{de:'Laden',en:'Load'},conflict:{de:'Konflikt',en:'Conflict'},solve:{de:'Lösen',en:'Solve'},done:{de:'Gelöst',en:'Solved'}};
 
-  // ---------- DOM ----------
+  // ====================== gemeinsame Rechenhilfen ======================
+  function clamp01(x){return x<0?0:x>1?1:x;}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function smooth(t){t=clamp01(t);return t*t*(3-2*t);}
+  function easeOutBack(x){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
+  function easeInOut(x){return x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;}
+  function gravityBounce(x){x=clamp01(x); if(x<0.86){var t=x/0.86;return t*t*(3-2*t);} var u=(x-0.86)/0.14; return 1-Math.sin(u*Math.PI)*0.025;}
+
+  // Farbfuehrung aller drei Akte: Akzent = arbeitet, Gelb = Konflikt, Gruen = geloest.
+  // Ein Markenton, kein zweiter — dieselbe Regel wie im Rechner.
+  var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF,C_WOOD=0x8A674A;
+  var F_IDLE=0x1B2E45, F_WARN=0x453620, F_GOOD=0x1B3B31;
+
+  // ====================== Texte ======================
+  // Jeder Akt liefert STA (Zustaende) und TL (vier Beschriftungen der Leiste).
+  // Platzhalter in geschweiften Klammern werden aus dem vars-Objekt gefuellt;
+  // {dots} laeuft immer mit und macht aus "rechnet" ein wanderndes "rechnet…".
+  var ACT_TEXT=[
+  { // ---- 1 Re-Solve ----
+    tl:[{de:'Laden',en:'Load'},{de:'Konflikt',en:'Conflict'},{de:'Lösen',en:'Solve'},{de:'Gelöst',en:'Solved'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_WARN,
+        txt:{de:'Ladung wird vorbereitet…',en:'Preparing cargo…'},
+        meta:{de:'20′ GP · live',en:'20′ GP · live'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'prüfe…',en:'checking…'}},
+      pack:{ic:'▣',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Packe in den 20′ GP…',en:'Loading the 20′ GP…'},
+        meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'lädt…',en:'loading…'}},
+      over:{ic:'✕',col:0xE4636F,tl:1,fitCol:0xE4636F,
+        txt:{de:'{O} Packstücke passen nicht',en:"{O} items don't fit"},
+        meta:{de:'20′ GP · zu klein',en:'20′ GP · too small'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'✕ {O} außerhalb',en:'✕ {O} outside'}},
+      solve:{ic:'⟳',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Passender Container wird gesucht',en:'Finding the right container'},
+        meta:{de:'rechnet{dots}',en:'calculating{dots}'}, type:{de:'rechnet…',en:'calculating…'}, fit:{de:'⟳ vermesse',en:'⟳ measuring'}},
+      repack:{ic:'→',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Container wird zum 40′ GP',en:'Container grows to 40′ GP'},
+        meta:{de:'{n} / {T} verstaut',en:'{n} / {T} stowed'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'passt rein…',en:'fitting…'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'Alles verstaut',en:'All stowed'},
+        meta:{de:'1× 40′ GP · gelöst',en:'1× 40′ GP · solved'}, type:{de:"40′ GP",en:"40′ GP"}, fit:{de:'✓ passt',en:'✓ fits'}}
+    }},
+  { // ---- 2 Ueberhoehe / Open Top ----
+    tl:[{de:'Messen',en:'Measure'},{de:'Überhöhe',en:'Over-height'},{de:'Open Top',en:'Open Top'},{de:'Verladen',en:'Loaded'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Maschine steht bereit',en:'Machine standing by'},
+        meta:{de:'{L} × {W} × {H} cm',en:'{L} × {W} × {H} cm'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'prüfe…',en:'checking…'}},
+      measure:{ic:'⟳',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Höhe wird geprüft{dots}',en:'Checking the height{dots}'},
+        meta:{de:'{H} cm gegen 270 cm',en:'{H} cm against 270 cm'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'⟳ vermesse',en:'⟳ measuring'}},
+      over:{ic:'✕',col:C_WARN,tl:1,fitCol:C_WARN,
+        txt:{de:'{U} cm zu hoch für jeden Standardcontainer',en:'{U} cm too tall for any standard container'},
+        meta:{de:'höchster Standard: 270 cm',en:'tallest standard: 270 cm'}, type:{de:"20′ GP",en:"20′ GP"}, fit:{de:'✕ Überhöhe {U} cm',en:'✕ over-height {U} cm'}},
+      swap:{ic:'⇪',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Open Top: das Dach kommt ab',en:'Open Top: the roof comes off'},
+        meta:{de:'Plane und Dachspriegel abnehmbar',en:'tarpaulin and roof bows removable'}, type:{de:"20′ Open Top",en:"20′ Open Top"}, fit:{de:'Dach offen',en:'roof open'}},
+      crane:{ic:'⇩',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Verladung von oben',en:'Loading from above'},
+        meta:{de:'Kran statt Stapler{dots}',en:'crane instead of forklift{dots}'}, type:{de:"20′ Open Top",en:"20′ Open Top"}, fit:{de:'⇩ hebt ein',en:'⇩ lowering'}},
+      set:{ic:'▣',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Maschine steht auf dem Deck',en:'Machine down on the deck'},
+        meta:{de:'{R} cm ragen über den Rahmen',en:'{R} cm above the frame'}, type:{de:"20′ Open Top",en:"20′ Open Top"}, fit:{de:'Überhöhe {U} cm',en:'over-height {U} cm'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'1× 20′ Open Top',en:'1× 20′ Open Top'},
+        meta:{de:'Überhöhe {U} cm · anmeldepflichtig',en:'over-height {U} cm · must be declared'}, type:{de:"20′ Open Top",en:"20′ Open Top"}, fit:{de:'✓ Equipment passt',en:'✓ equipment fits'}}
+    }},
+  { // ---- 3 Palette bauen ----
+    tl:[{de:'Kartons',en:'Cartons'},{de:'Lage',en:'Layer'},{de:'Stapeln',en:'Stack'},{de:'Paletten',en:'Pallets'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'{Q} Kartons, sonst nichts',en:'{Q} cartons, nothing else'},
+        meta:{de:'{cl} × {cw} × {ch} cm · je {ckg} kg',en:'{cl} × {cw} × {ch} cm · {ckg} kg each'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'prüfe…',en:'checking…'}},
+      layer:{ic:'▦',col:C_TEAL,tl:1,fitCol:C_TEAL,
+        txt:{de:'Lagenmuster wird gelegt',en:'Building the layer pattern'},
+        meta:{de:'{n} / {P} je Lage · quer und längs',en:'{n} / {P} per layer · crossed'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'▦ {P} je Lage',en:'▦ {P} per layer'}},
+      stack:{ic:'▤',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Lagen werden gestapelt',en:'Stacking the layers'},
+        meta:{de:'{n} / {S} Lagen',en:'{n} / {S} layers'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'▤ {nL}',en:'▤ {nL}'}},
+      measure:{ic:'⟳',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Palette ist voll',en:'Pallet is full'},
+        meta:{de:'{HD} cm hoch · {KG} kg',en:'{HE} cm high · {KG} kg'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'{PP} Kartons',en:'{PP} cartons'}},
+      rest:{ic:'▣',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Der Rest kommt auf eine zweite',en:'The remainder goes on a second one'},
+        meta:{de:'{R} Kartons · {RL} Lagen',en:'{R} cartons · {RL} layers'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'angebrochen',en:'part-filled'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'{Q} Kartons → {N} Paletten',en:'{Q} cartons → {N} pallets'},
+        meta:{de:'1 volle, 1 angebrochene',en:'1 full, 1 part-filled'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'✓ {N} Paletten',en:'✓ {N} pallets'}}
+    }}
+  ];
+
+  // ====================== Statuszeile, Pillen, Leiste ======================
   var statusBox=document.getElementById('clhStatus'),statusIc=document.getElementById('clhStatusIc'),
       statusTxt=document.getElementById('clhStatusTxt'),statusMeta=document.getElementById('clhStatusMeta'),
-      pillType=document.getElementById('clhPillType'),pillFit=document.getElementById('clhPillFit'),tlSteps={};
-  document.querySelectorAll('#clhTimeline .clh-step').forEach(function(s){tlSteps[s.getAttribute('data-k')]=s;});
-  var lastKey='',lastLang='';
-  function setTimeline(active){
-    Object.keys(tlSteps).forEach(function(k){
-      var on=(k===active),st=tlSteps[k];st.classList.toggle('on',on);
-      var col= active==='conflict'&&k==='conflict'?'#E4636F':active==='solve'&&k==='solve'?'#2E8FFF':active==='done'&&k==='done'?'#35BE87':on?'#2E8FFF':'#303A46';
-      var sd=st.querySelector('.clh-sd'); if(sd){sd.style.background=col;}
+      pillType=document.getElementById('clhPillType'),pillFit=document.getElementById('clhPillFit'),tlSteps=[];
+  document.querySelectorAll('#clhTimeline .clh-step').forEach(function(s){tlSteps.push(s);});
+  var lastKey='',lastLang='',lastActTL=-1;
+  function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
+  function setTimeline(active,doneCol){
+    tlSteps.forEach(function(st,i){
+      var on=(i===active);st.classList.toggle('on',on);
+      var sd=st.querySelector('.clh-sd'); if(sd) sd.style.background= on?hex(doneCol):'#303A46';
     });
   }
-  function applyStatus(key,n,t){
-    var L=lang(),s=STA[key],dots='.'.repeat(1+Math.floor((t*3)%3));
-    function fill(x){return x.replace('{n}',n).replace('{T}',TOTAL).replace('{O}',OVERFLOW).replace('{dots}',dots);}
+  function applyStatus(act,key,vars,t){
+    var L=lang(),T=ACT_TEXT[act],s=T.sta[key],dots='.'.repeat(1+Math.floor((t*3)%3));
+    function fill(x){ return x.replace(/\{(\w+)\}/g,function(m,k){ return k==='dots'?dots:(vars&&vars[k]!==undefined?vars[k]:m); }); }
     if(statusTxt) statusTxt.textContent=fill(s.txt[L]);
     if(statusMeta) statusMeta.textContent=fill(s.meta[L]);
-    if(pillType&&pillType.lastChild) pillType.lastChild.textContent=' '+s.type[L];
-    if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+s.fitCol+'"></span> '+fill(s.fit[L]);
-    if(key!==lastKey){
-      if(statusTxt) statusTxt.style.color=s.col;
-      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=s.col; statusIc.style.color='#08111C';}
-      if(statusBox){statusBox.style.borderColor=s.col;}
-      if(pillType){var d=pillType.querySelector('.clh-dot'); if(d)d.style.background=s.col;}
-      setTimeline(s.tl); lastKey=key;
+    if(pillType&&pillType.lastChild) pillType.lastChild.textContent=' '+fill(s.type[L]);
+    if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+hex(s.fitCol)+'"></span> '+fill(s.fit[L]);
+    var id=act+':'+key;
+    if(id!==lastKey){
+      var col=hex(s.col);
+      if(statusTxt) statusTxt.style.color=col;
+      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=col; statusIc.style.color='#08111C';}
+      if(statusBox){statusBox.style.borderColor=col;}
+      if(pillType){var d=pillType.querySelector('.clh-dot'); if(d)d.style.background=col;}
+      setTimeline(s.tl,s.col); lastKey=id;
     }
-    if(L!==lastLang){ Object.keys(tlSteps).forEach(function(k){var sl=tlSteps[k].querySelector('.clh-sl'); if(sl&&TLL[k])sl.textContent=TLL[k][L];}); lastLang=L; }
+    // Beschriftungen der Leiste haengen am Akt UND an der Sprache — beides kann sich
+    // aendern, ohne dass der Zustandsschluessel wechselt.
+    if(L!==lastLang||act!==lastActTL){
+      tlSteps.forEach(function(st,i){var sl=st.querySelector('.clh-sl'); if(sl&&T.tl[i])sl.textContent=T.tl[i][L];});
+      lastLang=L; lastActTL=act;
+    }
   }
 
-  // ---------- lazy-load three r128, init on first view ----------
-  var started=false, raf=0, running=false;
+  // ====================== gemeinsame Bausteine ======================
+  var renderer,scene,camera,pivot,clock,_ca,_cb,_tmp;
+  function colLerp(target,a,b,t){_ca.setHex(a);_cb.setHex(b);target.copy(_ca).lerp(_cb,clamp01(t));}
+  function lerpV(out,a,b,t){out.set(lerp(a.x,b.x,t),lerp(a.y,b.y,t),lerp(a.z,b.z,t));}
+
+  function shadowTex(){var c=document.createElement('canvas');c.width=c.height=128;var g=c.getContext('2d');
+    var grd=g.createRadialGradient(64,64,0,64,64,64);grd.addColorStop(0,'rgba(0,0,0,.5)');grd.addColorStop(.6,'rgba(0,0,0,.18)');grd.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=grd;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+  function sweepTex(){var s=96,c=document.createElement('canvas');c.width=c.height=s;var g=c.getContext('2d');
+    var img=g.createImageData(s,s);
+    for(var y=0;y<s;y++){for(var x=0;x<s;x++){var u=Math.abs(x/(s-1)-0.5)*2,v=Math.abs(y/(s-1)-0.5)*2;
+      var au=Math.max(0,1-u*u),av=Math.max(0,1-Math.pow(v,0.6)),a=Math.pow(av,2.2)*au,i=(y*s+x)*4;
+      img.data[i]=120;img.data[i+1]=180;img.data[i+2]=255;img.data[i+3]=Math.round(a*255);}}
+    g.putImageData(img,0,0);return new THREE.CanvasTexture(c);}
+
+  // Bodenschatten unter einem Koerper der Laenge L an der Stelle x.
+  function makeShadow(root){
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
+    m.rotation.x=-Math.PI/2; m.position.y=-0.004; root.add(m);
+    return {mesh:m,place:function(L,x){m.scale.x=L*1.35;m.position.x=x;},op:function(o){m.material.opacity=0.8*o;}};
+  }
+
+  // Messwinkel um einen Quader: acht Ecken, je drei kurze Arme. Dieselbe Formensprache
+  // wie die Masshilfen im Rechner — und in allen drei Akten dieselbe.
+  function makeBrackets(root,size,arm){
+    var V=[],hx=size.x/2,hy=size.y/2,hz=size.z/2;
+    for(var sx=0;sx<2;sx++)for(var sy=0;sy<2;sy++)for(var sz=0;sz<2;sz++){
+      var X=sx?hx:-hx,Y=sy?hy:-hy,Z=sz?hz:-hz,dx=sx?-1:1,dy=sy?-1:1,dz=sz?-1:1;
+      V.push(X,Y,Z,X+dx*arm,Y,Z, X,Y,Z,X,Y+dy*arm,Z, X,Y,Z,X,Y,Z+dz*arm);
+    }
+    var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));
+    var mB=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0}),
+        mX=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0});
+    var grp=new THREE.Group();
+    grp.add(new THREE.LineSegments(g,mB));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x,size.y,size.z)),mX));
+    grp.visible=false; root.add(grp);
+    return {grp:grp,mB:mB,mX:mX,
+      show:function(o,scl){grp.visible=o>0.02;mB.opacity=o;mX.opacity=o*0.24;grp.scale.setScalar(scl===undefined?1:scl);},
+      hide:function(){grp.visible=false;mB.opacity=0;mX.opacity=0;},
+      color:function(c){mB.color.setHex(c);mX.color.setHex(c);}};
+  }
+
+  // Senkrechtes Massband mit Endstrichen — traegt in Akt 2 die Ueberhoehe und in
+  // Akt 3 die Palettenhoehe. Ein Bild sagt "zu hoch", diese Linie sagt "wie viel".
+  function makeDimV(root){
+    var mat=new THREE.LineBasicMaterial({color:C_WARN,transparent:true,opacity:0});
+    var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(18),3));
+    var ls=new THREE.LineSegments(g,mat); ls.visible=false; root.add(ls);
+    var tick=0.08;
+    return {mat:mat,
+      set:function(x,z,y0,y1,o,col){
+        var a=g.attributes.position.array;
+        a[0]=x;a[1]=y0;a[2]=z; a[3]=x;a[4]=y1;a[5]=z;
+        a[6]=x-tick;a[7]=y0;a[8]=z; a[9]=x+tick;a[10]=y0;a[11]=z;
+        a[12]=x-tick;a[13]=y1;a[14]=z; a[15]=x+tick;a[16]=y1;a[17]=z;
+        g.attributes.position.needsUpdate=true;
+        mat.opacity=o; if(col!==undefined)mat.color.setHex(col); ls.visible=o>0.02;
+      },
+      hide:function(){mat.opacity=0;ls.visible=false;}};
+  }
+
+  // Ein Packstueck: Koerper plus Kantenlinien. Ueberall gleich gebaut, damit alle
+  // drei Akte aus demselben Material bestehen.
+  function makeBox(root,l,h,w){
+    var geo=new THREE.BoxGeometry(l,h,w);
+    var mat=new THREE.MeshStandardMaterial({color:F_IDLE,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+    var m=new THREE.Mesh(geo,mat);
+    var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em));
+    root.add(m);
+    return {mesh:m,mat:mat,edge:em,
+      tone:function(edgeC,faceC){em.color.setHex(edgeC);mat.color.setHex(faceC);},
+      op:function(o){mat.opacity=o;em.opacity=0.78*o;}};
+  }
+
+  // Containerhuelle als Kantenmodell — in allen drei Akten dieselbe.
+  // Der obere Rahmen bleibt auch am Open Top stehen (das Coaming ist Teil der Box);
+  // abgenommen wird in Akt 2 nur die Plane samt Spriegeln.
+  function makeContainer(root,L0,H,W){
+    var grp=new THREE.Group(); root.add(grp);
+    var edgeMat=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.55});
+    var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
+    var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
+    var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
+    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
+      setLength:function(L,cx){grp.scale.x=L/L0; grp.position.x=(cx===undefined?0:cx);},
+      setColor:function(hx){edgeMat.color.setHex(hx); endMat.color.setHex(hx);},
+      setOpacity:function(o){edgeMat.opacity=0.55*o; endMat.opacity=0.6*o; grid.material.opacity=0.42*o;}};
+  }
+
+  // ====================== AKT 1 — Re-Solve ======================
+  // Ladung wird in einen 20′ GP gepackt, drei Stuecke bleiben draussen, der Rechner
+  // vermisst die Ladung und schlaegt den 40′ GP vor, dort passt alles.
+  var ACT1=(function(){
+    var TOTAL=14,OVERFLOW=3;
+    var CAM_BASE={x:0.0,y:1.4,z:6.0,lx:0.0}, CAM_WIDE={x:1.0,y:1.7,z:8.7,lx:1.25};
+    var XL=-1.25,L0=2.5,W=1.0,H=1.16,BL=0.62,BH=0.52,BW=0.46,DROP=5.4;
+    var root,CONT,shadow,sweep,scan,boxes=[],repackRank=[],lbMin,lbMax,bc,bs;
+
+    function packPositions(cx,lengthU,n){
+      var bl=0.62,zc=[-0.26,0.26],yc=[0.28,0.82];
+      var usable=lengthU-0.18,step=bl+0.04,cols=Math.max(1,Math.floor(usable/step)),startX=cx-(cols-1)*step/2,out=[];
+      for(var c=0;c<cols;c++){var x=startX+c*step;for(var l=0;l<2;l++){for(var z=0;z<2;z++){out.push(new THREE.Vector3(x,yc[l],zc[z]));}}}
+      return out.slice(0,n);
+    }
+    return {
+      id:'resolve',
+      PH:[{n:'intro',d:1.1},{n:'pack',d:3.6},{n:'overflow',d:1.5},{n:'solve',d:1.2},
+          {n:'grow',d:1.1},{n:'repack',d:2.4},{n:'success',d:2.0},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r;
+        CONT=makeContainer(root,L0,H,W); CONT.setLength(L0,XL+L0/2);
+        shadow=makeShadow(root);
+        var inside20=packPositions(0,2.5,12).slice(0,11);
+        var over=[new THREE.Vector3(1.80,0.30,-0.22),new THREE.Vector3(2.20,0.30,0.24),new THREE.Vector3(1.98,0.84,0.02)];
+        var final40=packPositions(1.25,5.0,14);
+        for(var i=0;i<TOTAL;i++){
+          var b=makeBox(root,BL,BH,BW);
+          var staged=i<11?inside20[i].clone():over[i-11].clone();
+          b.intro=new THREE.Vector3(staged.x,staged.y+DROP,staged.z);
+          b.staged=staged; b.finalT=final40[i].clone(); b.isOver=(i>=11);
+          boxes.push(b);
+        }
+        var order=boxes.map(function(b,i){return i;}).sort(function(a,b){return (boxes[a].finalT.x-boxes[b].finalT.x)||(boxes[a].finalT.y-boxes[b].finalT.y);});
+        order.forEach(function(idx,rank){repackRank[idx]=rank;});
+        lbMin=new THREE.Vector3(1e9,1e9,1e9); lbMax=new THREE.Vector3(-1e9,-1e9,-1e9);
+        boxes.forEach(function(b){var s=b.staged;
+          lbMin.x=Math.min(lbMin.x,s.x-BL/2);lbMax.x=Math.max(lbMax.x,s.x+BL/2);
+          lbMin.y=Math.min(lbMin.y,s.y-BH/2);lbMax.y=Math.max(lbMax.y,s.y+BH/2);
+          lbMin.z=Math.min(lbMin.z,s.z-BW/2);lbMax.z=Math.max(lbMax.z,s.z+BW/2);});
+        var MG=0.07; lbMin.x-=MG;lbMax.x+=MG;lbMin.y-=MG;lbMax.y+=MG;lbMin.z-=MG;lbMax.z+=MG;
+        bc=new THREE.Vector3().addVectors(lbMin,lbMax).multiplyScalar(0.5);
+        bs=new THREE.Vector3().subVectors(lbMax,lbMin);
+        scan=makeBrackets(root,bs,0.24); scan.grp.position.copy(bc);
+        sweep=new THREE.Mesh(new THREE.PlaneGeometry(bs.x+0.5,0.16),new THREE.MeshBasicMaterial({map:sweepTex(),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+        sweep.position.set(bc.x,bc.y,0.05); root.add(sweep);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,dim=1,sweepOp=0,L=L0,placed=0;
+        FR.camX=CAM_BASE.x;FR.camY=CAM_BASE.y;FR.camZ=CAM_BASE.z;FR.camLx=CAM_BASE.lx;FR.camLy=0.5;
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        if(name==='intro'){
+          boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.tone(C_BLUEEDGE,F_IDLE);b.mesh.scale.setScalar(1);});
+          CONT.setColor(C_BLUEEDGE); applyStatus(0,'intro',{n:0,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='pack'){
+          var stag=0.17,dur=1.05,tt=p*3.6;
+          boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
+            b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
+            if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
+            b.tone(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE, b.isOver&&lp>=1?F_WARN:F_IDLE);});
+          CONT.setColor(C_BLUEEDGE); applyStatus(0,'pack',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='overflow'){
+          var pulse=0.5+0.5*Math.sin(t*5.0);
+          boxes.forEach(function(b){b.mesh.position.copy(b.staged);
+            if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.tone(C_WARN,F_WARN);b.mesh.scale.setScalar(1+pulse*0.04);}
+            else{b.tone(C_BLUEEDGE,F_IDLE);b.mesh.scale.setScalar(1);}});
+          CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus(0,'over',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='solve'){
+          dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
+          var sp=easeInOut(clamp01(p/0.78)); sweep.position.y=lerp(lbMax.y+0.45,lbMin.y-0.25,sp); sweepOp=Math.sin(clamp01(p/0.78)*Math.PI);
+          var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0);
+          scan.color(C_TEAL); scan.show(inn*pl, lerp(1.16,1.0,smooth(clamp01(p/0.4))));
+          boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
+            b.tone(b.isOver?C_WARN:C_BLUEEDGE, b.isOver?F_WARN:F_IDLE);});
+          CONT.setColor(C_WARN); applyStatus(0,'solve',{n:0,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='grow'||name==='repack'){
+          var growP=name==='grow'?smooth(p):1;
+          if(name==='grow'){var go=1-smooth(clamp01(p/0.3)); scan.show(go*0.8);} else scan.hide();
+          L=lerp(2.5,5.0,growP);
+          FR.camX=lerp(CAM_BASE.x,CAM_WIDE.x,growP);FR.camY=lerp(CAM_BASE.y,CAM_WIDE.y,growP);
+          FR.camZ=lerp(CAM_BASE.z,CAM_WIDE.z,growP);FR.camLx=lerp(CAM_BASE.lx,CAM_WIDE.lx,growP);
+          colLerp(_ca,C_WARN,C_TEAL,growP); CONT.edgeMat.color.copy(_ca); CONT.endMat.color.copy(_ca);
+          var winT=(name==='repack'?1.1:0)+p*(name==='grow'?1.1:2.4),stag2=0.15,dur2=0.6;
+          boxes.forEach(function(b,i){var lp=clamp01((winT-repackRank[i]*stag2)/dur2);
+            lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
+            b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
+            if(lp>=1){b.tone(C_GOOD,F_GOOD);placed++;} else b.tone(b.isOver?C_WARN:C_BLUEEDGE, b.isOver?F_WARN:F_IDLE);});
+          applyStatus(0,'repack',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='success'){
+          L=5.0;FR.camX=CAM_WIDE.x;FR.camY=CAM_WIDE.y;FR.camZ=CAM_WIDE.z;FR.camLx=CAM_WIDE.lx;
+          var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
+          CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
+          boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.tone(C_GOOD,F_GOOD);b.mesh.scale.setScalar(1);});
+          placed=TOTAL; applyStatus(0,'done',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else {
+          L=5.0;FR.camX=CAM_WIDE.x;FR.camY=CAM_WIDE.y;FR.camZ=CAM_WIDE.z;FR.camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
+          boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.tone(C_GOOD,F_GOOD);}); placed=TOTAL;
+          applyStatus(0,'done',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        }
+        CONT.setLength(L,XL+L/2); shadow.place(L,XL+L/2);
+        var f=fade*dim;
+        if(name!=='success')CONT.setOpacity(f); else {CONT.edgeMat.opacity*=fade;CONT.endMat.opacity*=fade;CONT.gridMat.opacity=0.42*fade;}
+        boxes.forEach(function(b){b.op(f);});
+        shadow.op(fade);
+        if(name!=='solve'&&name!=='grow')scan.hide(); else {scan.mB.opacity*=fade;scan.mX.opacity*=fade;}
+        sweep.material.opacity=sweepOp*0.85*fade;
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== AKT 2 — Ueberhoehe / Open Top ======================
+  // Eine Maschine von 240 x 220 x 300 cm. Kein Standardcontainer ist innen hoeher als
+  // 270 cm, also 30 cm Ueberhoehe — genau die Zahl, die suggestEquipment() im Rechner
+  // meldet. Der Weg heisst Open Top: Plane und Spriegel ab, Verladung von oben.
+  // Im 20′ Open Top (239 cm innen) ragt die Maschine 61 cm ueber den Rahmen.
+  var ACT2=(function(){
+    var ML=240,MW=220,MH=300,STD=270,INNER=239;         // cm — die Zahlen der Texte
+    var UEBER=MH-STD, RAHMEN=MH-INNER;                  // 30 cm ueber Standard, 61 ueber den Rahmen
+    var SX=2.5/590, SZ=1.0/235, SY=1.16/239;            // cm -> Szeneneinheiten, je Achse
+    var L0=2.5,W=1.0,H=1.16,XL=-1.25,CX=XL+L0/2;
+    var mL=ML*SX,mW=MW*SZ,mH=MH*SY,yStd=STD*SY;
+    var CAM_BOTH={x:0.75,y:1.95,z:8.90,lx:0.62,ly:0.62},
+        CAM_BOX ={x:0.10,y:1.70,z:7.10,lx:0.02,ly:0.60};
+    function camMix(a,b,t){FR.camX=lerp(a.x,b.x,t);FR.camY=lerp(a.y,b.y,t);
+      FR.camZ=lerp(a.z,b.z,t);FR.camLx=lerp(a.lx,b.lx,t);FR.camLy=lerp(a.ly,b.ly,t);}
+    var X_OUT=2.05, X_IN=CX-0.28;                       // draussen daneben / drinnen auf dem Deck
+    var root,CONT,shadow,crate,roofGrp,roofMat,bowMat,ropes,ropeGeo,spreader,scan,dimA,dimB,ref,refMat;
+
+    function setRopes(sx,sy,sz,cx,cy,cz,hw,hz){
+      var a=ropeGeo.attributes.position.array,i=0;
+      function seg(x1,y1,z1,x2,y2,z2){a[i++]=x1;a[i++]=y1;a[i++]=z1;a[i++]=x2;a[i++]=y2;a[i++]=z2;}
+      seg(sx-0.02,sy,sz-hz,sx-0.02,sy+6.0,sz-hz);       // zwei Hubseile nach oben aus dem Bild
+      seg(sx+0.02,sy,sz+hz,sx+0.02,sy+6.0,sz+hz);
+      seg(sx,sy,sz-hz,cx-hw,cy,cz-hz);                  // vier Anschlagmittel zur Kiste
+      seg(sx,sy,sz+hz,cx-hw,cy,cz+hz);
+      seg(sx,sy,sz-hz,cx+hw,cy,cz-hz);
+      seg(sx,sy,sz+hz,cx+hw,cy,cz+hz);
+      ropeGeo.attributes.position.needsUpdate=true;
+    }
+    return {
+      id:'opentop',
+      PH:[{n:'intro',d:1.0},{n:'measure',d:2.1},{n:'over',d:1.5},{n:'swap',d:1.5},
+          {n:'crane',d:2.9},{n:'set',d:1.6},{n:'success',d:1.8},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r;
+        CONT=makeContainer(root,L0,H,W); CONT.setLength(L0,CX);
+        shadow=makeShadow(root); shadow.place(L0,CX);
+        // Plane und Dachspriegel — das, was am Open Top abgenommen wird.
+        roofGrp=new THREE.Group(); root.add(roofGrp);
+        roofMat=new THREE.MeshBasicMaterial({color:0x202B3A,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthWrite:false});
+        var tarp=new THREE.Mesh(new THREE.PlaneGeometry(L0,W),roofMat); tarp.rotation.x=-Math.PI/2; tarp.position.set(CX,H,0); roofGrp.add(tarp);
+        var BV=[]; for(var i=1;i<=4;i++){var bx=CX-L0/2+i*L0/5; BV.push(bx,H,-W/2, bx,H,W/2);}
+        BV.push(CX-L0/2,H,0, CX+L0/2,H,0);
+        var bg=new THREE.BufferGeometry(); bg.setAttribute('position',new THREE.Float32BufferAttribute(BV,3));
+        bowMat=new THREE.LineBasicMaterial({color:0x55677D,transparent:true,opacity:0.95});
+        roofGrp.add(new THREE.LineSegments(bg,bowMat));
+        // Die Maschine.
+        crate=makeBox(root,mL,mH,mW);
+        // Kran: Traverse plus Seile. Beides zusammen erklaert, warum es von oben gehen muss.
+        spreader=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.055,mW*1.16),
+          new THREE.MeshStandardMaterial({color:0x2A3340,metalness:0.5,roughness:0.5,transparent:true,opacity:1}));
+        root.add(spreader);
+        ropeGeo=new THREE.BufferGeometry(); ropeGeo.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(36),3));
+        ropes=new THREE.LineSegments(ropeGeo,new THREE.LineBasicMaterial({color:0x6E7F92,transparent:true,opacity:0.9})); root.add(ropes);
+        // Messwerkzeug: Winkel um die Maschine, senkrechtes Mass, waagerechte Grenzlinie.
+        scan=makeBrackets(root,new THREE.Vector3(mL+0.12,mH+0.12,mW+0.12),0.2);
+        dimA=makeDimV(root); dimB=makeDimV(root);
+        refMat=new THREE.LineBasicMaterial({color:C_WARN,transparent:true,opacity:0});
+        var rg=new THREE.BufferGeometry(); rg.setAttribute('position',new THREE.Float32BufferAttribute([XL-0.35,yStd,0, X_OUT+mL/2+0.45,yStd,0],3));
+        ref=new THREE.LineSegments(rg,refMat); ref.visible=false; root.add(ref);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,V={L:ML,W:MW,H:MH,U:UEBER,R:RAHMEN};
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        var cx=X_OUT,cy=mH/2,roofOp=1,refOp=0,scanOp=0,ropeOp=0,sy=0;
+
+        if(name==='intro'){
+          crate.tone(C_BLUEEDGE,F_IDLE); applyStatus(1,'intro',V,t);
+        } else if(name==='measure'){
+          var inn=smooth(clamp01(p/0.3));
+          scanOp=inn*(0.78+0.22*Math.sin(t*5.0)); refOp=inn*0.5;
+          var g=smooth(clamp01((p-0.15)/0.6));
+          dimA.set(cx-mL/2-0.16,0,0,mH*g,inn*0.9,C_TEAL);
+          crate.tone(C_BLUEEDGE,F_IDLE); applyStatus(1,'measure',V,t);
+        } else if(name==='over'){
+          var pu=0.5+0.5*Math.sin(t*5.0);
+          scanOp=0.55+0.35*pu; refOp=0.85; scan.color(C_WARN);
+          dimA.set(cx-mL/2-0.16,0,0,mH,0.5,C_TEAL);
+          dimB.set(cx-mL/2-0.30,0,yStd,mH,0.7+0.3*pu,C_WARN);   // nur das Stueck ueber der Grenze
+          crate.tone(C_WARN,F_WARN); CONT.setColor(C_WARN);
+          applyStatus(1,'over',V,t);
+        } else if(name==='swap'){
+          var o=smooth(p);
+          roofOp=1-o;
+          roofGrp.position.set(o*1.5,o*1.1,0);                   // Plane und Spriegel gehen ab
+          refOp=0.85*(1-o); scanOp=0.5*(1-o);
+          dimA.set(cx-mL/2-0.16,0,0,mH,0.5*(1-o),C_TEAL);
+          dimB.set(cx-mL/2-0.30,0,yStd,mH,0.7*(1-o),C_WARN);
+          colLerp(_ca,C_WARN,C_TEAL,o); CONT.edgeMat.color.copy(_ca); CONT.endMat.color.copy(_ca);
+          crate.tone(C_WARN,F_WARN); applyStatus(1,'swap',V,t);
+        } else if(name==='crane'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0); CONT.setColor(C_TEAL);
+          // Drei Zuege: anheben, hinueberfahren, absetzen.
+          var lift=smooth(clamp01(p/0.30)), move=smooth(clamp01((p-0.28)/0.42)), down=smooth(clamp01((p-0.68)/0.32));
+          var yTop=H+mH/2+0.55;
+          cx=lerp(X_OUT,X_IN,move);
+          cy=lerp(mH/2,yTop,lift); cy=lerp(cy,mH/2,down);
+          ropeOp=1; crate.tone(C_TEAL,F_IDLE); applyStatus(1,'crane',V,t);
+        } else if(name==='set'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0); CONT.setColor(C_TEAL);
+          cx=X_IN;
+          ropeOp=1-smooth(clamp01(p/0.45)); sy=smooth(clamp01(p/0.45))*2.4;   // Seile fahren hoch
+          var m=smooth(clamp01((p-0.25)/0.5));
+          dimB.set(cx-mL/2-0.24,0,H,lerp(H,mH,m),0.9,C_WARN);   // vom Rahmen bis Oberkante
+          refOp=0; crate.tone(C_TEAL,F_IDLE); applyStatus(1,'set',V,t);
+        } else if(name==='success'||name==='outro'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0);
+          cx=X_IN; ropeOp=0; sy=2.4;
+          var gl=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
+          CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*gl)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*gl)+0.2;
+          crate.tone(C_GOOD,F_GOOD);
+          dimB.set(cx-mL/2-0.24,0,H,mH,0.75,C_GOOD);
+          applyStatus(1,'done',V,t);
+        }
+
+        // Der Schwenk beginnt, sobald der Kran die Maschine hinuebertraegt.
+        var heran = name==='crane' ? smooth(clamp01((p-0.24)/0.5))
+                  : (name==='set'||name==='success'||name==='outro') ? 1 : 0;
+        camMix(CAM_BOTH,CAM_BOX,heran);
+
+        crate.mesh.position.set(cx,cy,0);
+        spreader.position.set(cx,cy+mH/2+0.42+sy,0);
+        spreader.material.opacity=ropeOp*fade; spreader.visible=ropeOp*fade>0.02;
+        setRopes(cx,cy+mH/2+0.42+sy,0,cx,cy+mH/2,0,mL/2*0.86,mW/2*0.86);
+        ropes.material.opacity=ropeOp*0.9*fade; ropes.visible=ropes.material.opacity>0.02;
+        scan.grp.position.set(cx,cy,0);
+        if(scanOp>0.02){scan.show(scanOp*fade);} else scan.hide();
+        if(name!=='measure'&&name!=='over'&&name!=='swap') scan.color(C_TEAL);
+        refMat.opacity=refOp*fade; ref.visible=refMat.opacity>0.02;
+        dimA.mat.opacity*=fade; dimB.mat.opacity*=fade;
+        if(name==='intro'||name==='crane'){dimA.hide();dimB.hide();}
+        roofMat.opacity=0.8*roofOp*fade; bowMat.opacity=0.95*roofOp*fade;
+        roofGrp.visible=roofOp*fade>0.02;
+        if(name!=='success'&&name!=='outro')CONT.setOpacity(fade);
+        else {CONT.edgeMat.opacity*=fade;CONT.endMat.opacity*=fade;CONT.gridMat.opacity=0.42*fade;}
+        crate.op(fade); shadow.op(fade);
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== AKT 3 — Palette bauen ======================
+  // 40 Kartons 45 x 30 x 30 cm, sonst nichts — der Fall, mit dem der Palettierer
+  // gebaut wurde. Auf die Europalette gehen sechs je Lage, und zwar VIER laengs und
+  // ZWEI quer: das gemischte Muster ist der Punkt, den der Rechner sehen laesst und
+  // eine Faustregel nicht. Bei 180 cm Maximalhoehe sind das fuenf Lagen, 30 Kartons,
+  // 164,4 cm, 295 kg — und eine zweite, angebrochene Palette fuer die letzten zehn.
+  var ACT3=(function(){
+    var CL=45,CW=30,CH=30,CKG=9,QTY=40;                  // Karton in cm / kg, Gesamtmenge
+    var PLL=120,PLW=80,PLH=14.4,TARE=25;                 // Europalette
+    var PER=6,LAYERS=5,PERPAL=30,REST=10,RESTL=2,PALS=2;
+    var HGES=PLH+LAYERS*CH, KGES=TARE+PERPAL*CKG;        // 164,4 cm · 295 kg
+    // Das Lagenmuster, wie makeFloorPacker es liefert: [x, z, dx, dz] in cm, Ursprung Ecke.
+    var MUSTER=[[0,0,30,45],[30,0,30,45],[60,0,30,45],[90,0,30,45],[0,45,45,30],[45,45,45,30]];
+    var S=0.0125;                                        // cm -> Szeneneinheiten
+    var PX=PLL*S,PZ=PLW*S,PY=PLH*S,CY=CH*S;
+    var CAM_TOP={x:0.0,y:2.55,z:3.95,lx:0.0,ly:0.32},
+        CAM_SIDE={x:0.0,y:2.30,z:5.70,lx:0.0,ly:1.15},
+        CAM_WIDE={x:0.80,y:2.60,z:8.70,lx:0.81,ly:1.00};
+    function camMix(a,b,t){FR.camX=lerp(a.x,b.x,t);FR.camY=lerp(a.y,b.y,t);
+      FR.camZ=lerp(a.z,b.z,t);FR.camLx=lerp(a.lx,b.lx,t);FR.camLy=lerp(a.ly,b.ly,t);}
+    var XA=-0.10, XB=1.72;                               // Standort Palette 1 und 2 (Deck 1,5 breit)
+    // "1 Lagen" liest sich falsch, und zwar in beiden Sprachen.
+    function lagenWort(n){var e=lang()==='en';return n+' '+(n===1?(e?'layer':'Lage'):(e?'layers':'Lagen'));}
+    var root,shadow,palA,palB,cartons=[],scan,dim;
+
+    // Ein Palettengestell: Deck oben, drei Kloetze darunter. Mehr braucht es nicht,
+    // damit man auf den ersten Blick eine Palette sieht und keine Kiste.
+    function makePallet(x){
+      var g=new THREE.Group(); g.position.x=x; root.add(g);
+      var wood=new THREE.MeshStandardMaterial({color:C_WOOD,roughness:0.85,metalness:0.04,transparent:true,opacity:1});
+      var deck=new THREE.Mesh(new THREE.BoxGeometry(PX,4*S,PZ),wood); deck.position.y=PY-2*S; g.add(deck);
+      var em=new THREE.LineBasicMaterial({color:0xB2895F,transparent:true,opacity:0.5});
+      deck.add(new THREE.LineSegments(new THREE.EdgesGeometry(deck.geometry),em));
+      [-50,0,50].forEach(function(bx){
+        var k=new THREE.Mesh(new THREE.BoxGeometry(12*S,(PLH-4)*S,PZ),wood);
+        k.position.set(bx*S,(PLH-4)*S/2,0); g.add(k);
+      });
+      return {grp:g,mat:wood,edge:em,op:function(o){wood.opacity=o;em.opacity=0.5*o;}};
+    }
+    // Platz Nummer i auf einer Palette: Muster-Rechteck, Lage, Standort.
+    function spot(i,px){
+      var r=MUSTER[i%PER],ly=Math.floor(i/PER);
+      return {x:px+(r[0]+r[2]/2-PLL/2)*S, y:PY+(ly+0.5)*CY, z:(r[1]+r[3]/2-PLW/2)*S, dx:r[2]*S, dz:r[3]*S, layer:ly};
+    }
+    return {
+      id:'palette',
+      PH:[{n:'intro',d:1.0},{n:'layer',d:2.4},{n:'stack',d:3.0},{n:'measure',d:1.6},
+          {n:'rest',d:2.2},{n:'success',d:1.8},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r; shadow=makeShadow(root);
+        palA=makePallet(XA); palB=makePallet(XB);
+        for(var i=0;i<QTY;i++){
+          var voll=i<PERPAL, s=spot(voll?i:i-PERPAL, voll?XA:XB);
+          var b=makeBox(root,s.dx,CY,s.dz);
+          b.at=s; b.voll=voll; b.idx=i;
+          b.from=new THREE.Vector3(s.x,s.y+2.1+(i%PER)*0.10,s.z);
+          cartons.push(b);
+        }
+        scan=makeBrackets(root,new THREE.Vector3(PX+0.06,LAYERS*CY+PY+0.06,PZ+0.06),0.16);
+        scan.grp.position.set(XA,(LAYERS*CY+PY)/2,0);
+        dim=makeDimV(root);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,gezeigt=PERPAL,nLage=0,nStapel=0,restDa=0;
+        var V={Q:QTY,P:PER,S:LAYERS,PP:PERPAL,R:REST,RL:RESTL,N:PALS,KG:KGES,
+               cl:CL,cw:CW,ch:CH,ckg:CKG,
+               HD:HGES.toLocaleString('de-DE',{minimumFractionDigits:1}),
+               HE:HGES.toLocaleString('en-GB',{minimumFractionDigits:1})};
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        var wide=0;
+
+        if(name==='intro'){
+          cartons.forEach(function(b){b.mesh.position.copy(b.from);b.tone(C_BLUEEDGE,F_IDLE);});
+          scan.hide(); dim.hide(); applyStatus(2,'intro',V,t);
+        } else if(name==='layer'||name==='stack'){
+          // Eine durchgehende Uhr ueber beide Phasen: die erste Lage legt sich langsam
+          // (man soll das Muster lesen koennen), die restlichen vier fallen zuegiger.
+          var tt=(name==='layer'?p*2.4:2.4+p*3.0);
+          cartons.forEach(function(b){
+            if(!b.voll){b.mesh.visible=false;return;}
+            b.mesh.visible=true;
+            var start=b.idx<PER? b.idx*0.34 : 2.4+(b.idx-PER)*0.115;
+            var dur=b.idx<PER?0.55:0.42;
+            var lp=clamp01((tt-start)/dur);
+            b.mesh.position.set(b.at.x,lerp(b.from.y,b.at.y,gravityBounce(lp)),b.at.z);
+            b.mesh.scale.setScalar(1);
+            if(lp>=1){ if(b.at.layer===0)nLage++; nStapel=Math.max(nStapel,b.at.layer+1); }
+            b.tone(lp>=1?C_TEAL:C_BLUEEDGE, F_IDLE);
+          });
+          scan.hide(); dim.hide();
+          if(name==='layer') applyStatus(2,'layer',Object.assign({n:nLage},V),t);
+          else applyStatus(2,'stack',Object.assign({n:nStapel,nL:lagenWort(nStapel)},V),t);
+        } else if(name==='measure'){
+          cartons.forEach(function(b){b.mesh.visible=b.voll; if(b.voll){b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_TEAL,F_IDLE);}});
+          var inn=smooth(clamp01(p/0.3));
+          scan.color(C_TEAL); scan.show(inn*(0.78+0.22*Math.sin(t*5.0)),lerp(1.12,1.0,inn));
+          dim.set(XA-PX/2-0.18,0,0,lerp(0,PY+LAYERS*CY,smooth(clamp01(p/0.7))),inn*0.9,C_TEAL);
+          applyStatus(2,'measure',V,t);
+        } else if(name==='rest'){
+          wide=smooth(p);
+          restDa=1;
+          var ein=smooth(clamp01(p/0.55));
+          cartons.forEach(function(b){
+            b.mesh.visible=true;
+            if(b.voll){b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_TEAL,F_IDLE);}
+            else{
+              var lp=clamp01((p*2.2-0.5-(b.idx-PERPAL)*0.075)/0.5);
+              b.mesh.position.set(b.at.x,lerp(b.from.y,b.at.y,gravityBounce(lp)),b.at.z);
+              b.mesh.visible=lp>0.001;
+              b.tone(lp>=1?C_TEAL:C_BLUEEDGE,F_IDLE);
+            }
+          });
+          palB.op(ein*fade);
+          scan.show(0.5*(1-smooth(clamp01(p/0.35))));
+          dim.set(XA-PX/2-0.18,0,0,PY+LAYERS*CY,0.9*(1-smooth(clamp01(p/0.35))),C_TEAL);
+          applyStatus(2,'rest',V,t);
+        } else {
+          wide=1; restDa=1;
+          cartons.forEach(function(b){b.mesh.visible=true;b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_GOOD,F_GOOD);});
+          scan.hide();
+          dim.set(XA-PX/2-0.18,0,0,PY+LAYERS*CY,0.75,C_GOOD);
+          applyStatus(2,'done',V,t);
+        }
+
+        // Der Schwenk erzaehlt mit: Draufsicht auf das Muster, dann Seitenblick auf
+        // den wachsenden Stapel, zuletzt weit genug fuer beide Paletten.
+        if(name==='intro'||name==='layer') camMix(CAM_TOP,CAM_TOP,0);
+        else if(name==='stack') camMix(CAM_TOP,CAM_SIDE,smooth(clamp01(p/0.65)));
+        else if(name==='measure') camMix(CAM_SIDE,CAM_SIDE,0);
+        else camMix(CAM_SIDE,CAM_WIDE,wide);
+        palA.op(fade); if(!restDa)palB.op(0);
+        palB.grp.visible=palB.mat.opacity>0.02;
+        cartons.forEach(function(b){b.op(fade);});
+        shadow.place(PX*(restDa?2.6:1.5),lerp(XA,(XA+XB)/2,wide)); shadow.op(fade*0.7);
+        dim.mat.opacity*=fade; scan.mB.opacity*=fade; scan.mX.opacity*=fade;
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== Regisseur ======================
+  var ACTS=[ACT1,ACT2,ACT3];
+  ACTS.forEach(function(a){ a.cycle=a.PH.reduce(function(s,p){return s+p.d;},0); });
+  var TOTAL_CYCLE=ACTS.reduce(function(s,a){return s+a.cycle;},0);
+  function phaseAt(a,ct){var acc=0;for(var i=0;i<a.PH.length;i++){if(ct<acc+a.PH[i].d)return{n:a.PH[i].n,p:(ct-acc)/a.PH[i].d};acc+=a.PH[i].d;}
+    return{n:a.PH[a.PH.length-1].n,p:1};}
+
+  var started=false,raf=0,running=false,elapsed=0,curAct=-1,roots=[];
+  var FR={camX:0,camY:0,camZ:0,camLx:0,camLy:0.5,spin:false};
+
+  // Die drei Punkte in der Leiste: sie sagen, dass es mehr als eine Szene gibt, und
+  // erlauben den Sprung. Ohne sie sieht ein Besucher, der nach zwoelf Sekunden
+  // weiterscrollt, nie, dass es Akt 2 und 3 ueberhaupt gibt.
+  var actDots=[];
+  document.querySelectorAll('#clhActs .clh-ad').forEach(function(d,i){
+    actDots.push(d);
+    d.addEventListener('click',function(){ jumpTo(i); });
+  });
+  function actStart(i){var s=0;for(var k=0;k<i;k++)s+=ACTS[k].cycle;return s;}
+  function jumpTo(i){ elapsed=actStart(i)+0.001; if(started&&!running)resume(); }
+  function markDots(i){ actDots.forEach(function(d,k){ d.classList.toggle('on',k===i); d.setAttribute('aria-current',k===i?'true':'false'); }); }
+
   function ensureThree(cb){ if(window.THREE) return cb();
     var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
     s.async=true; s.onload=cb; s.onerror=function(){}; document.head.appendChild(s); }
+
+  function build(){
+    _ca=new THREE.Color(); _cb=new THREE.Color(); _tmp=new THREE.Vector3();
+    renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+    renderer.setClearColor(0x000000,0); renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(42,1,0.1,100);
+    pivot=new THREE.Object3D(); scene.add(pivot);
+    scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+    var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
+    var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
+    ACTS.forEach(function(a){ var g=new THREE.Group(); g.visible=false; pivot.add(g); roots.push(g); a.build(g); });
+    clock=new THREE.Clock(); sizeUp();
+    window.addEventListener('resize',sizeUp);
+    window.addEventListener('pointermove',onMove);
+  }
+  function sizeUp(){var r=canvas.getBoundingClientRect();var w=Math.max(1,r.width),h=Math.max(1,r.height);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  var tx=0,ty=0,px=0,py=0;
+  function onMove(e){var nx=(e.clientX/window.innerWidth)*2-1,ny=(e.clientY/window.innerHeight)*2-1;tx=nx*0.14;ty=ny*0.08;}
+
   // WICHTIG: das Canvas steht bis zum Three-Load auf display:none und hat damit keine
   // Box -> ein IntersectionObserver darauf wuerde NIE isIntersecting=true melden.
   // Daher die immer sichtbare Stage beobachten (Wrapper .clh-stage). Und: Canvas erst
@@ -842,200 +1471,18 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function pause(){ running=false; if(raf){cancelAnimationFrame(raf);raf=0;} }
   function resume(){ if(running||!started)return; running=true; clock&&clock.start(); raf=requestAnimationFrame(loop); }
 
-  // ====================== SCENE ======================
-  var renderer,scene,camera,pivot,CONT,shadow,sweep,scanGroup,bracketMat,bboxMat,clock;
-  var boxes=[],repackRank=[],lbMin,lbMax,bc,bs;
-  // Farbfuehrung der Animation: Akzent = arbeitet, Gelb = Konflikt, Gruen = geloest.
-  // C_TEAL heisst historisch so, traegt jetzt aber den einen Akzent (kein zweiter Markenton).
-  var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF;
-  var CAM_BASE={x:0.0,y:1.4,z:6.0,lx:0.0}, CAM_WIDE={x:1.0,y:1.7,z:8.7,lx:1.25};
-  var XL=-1.25,L0=2.5,W=1.0,H=1.16,BL=0.62,BH=0.52,BW=0.46,DROP=5.4;
-  var _ca,_cb,_tmp;
-
-  function clamp01(x){return x<0?0:x>1?1:x;}
-  function lerp(a,b,t){return a+(b-a)*t;}
-  function smooth(t){t=clamp01(t);return t*t*(3-2*t);}
-  function easeOutBack(x){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
-  function easeInOut(x){return x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;}
-  function gravityBounce(x){x=clamp01(x); if(x<0.86){var t=x/0.86;return t*t*(3-2*t);} var u=(x-0.86)/0.14; return 1-Math.sin(u*Math.PI)*0.025;}
-  function lerpV(out,a,b,t){out.set(lerp(a.x,b.x,t),lerp(a.y,b.y,t),lerp(a.z,b.z,t));}
-  function colLerp(target,a,b,t){_ca.setHex(a);_cb.setHex(b);target.copy(_ca).lerp(_cb,clamp01(t));}
-
-  var PH=[{n:'intro',d:1.1},{n:'pack',d:3.6},{n:'overflow',d:1.5},{n:'solve',d:1.2},
-          {n:'grow',d:1.1},{n:'repack',d:2.4},{n:'success',d:2.0},{n:'outro',d:0.9}];
-  var START={},CYCLE=0; PH.forEach(function(p){START[p.n]=CYCLE;CYCLE+=p.d;});
-  function phaseAt(ct){var acc=0;for(var i=0;i<PH.length;i++){if(ct<acc+PH[i].d)return{n:PH[i].n,p:(ct-acc)/PH[i].d,i:i};acc+=PH[i].d;}return{n:'outro',p:1,i:PH.length-1};}
-
-  function shadowTex(){var c=document.createElement('canvas');c.width=c.height=128;var g=c.getContext('2d');
-    var grd=g.createRadialGradient(64,64,0,64,64,64);grd.addColorStop(0,'rgba(0,0,0,.5)');grd.addColorStop(.6,'rgba(0,0,0,.18)');grd.addColorStop(1,'rgba(0,0,0,0)');
-    g.fillStyle=grd;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
-  function sweepTex(){var s=96,c=document.createElement('canvas');c.width=c.height=s;var g=c.getContext('2d');
-    var img=g.createImageData(s,s);
-    for(var y=0;y<s;y++){for(var x=0;x<s;x++){var u=Math.abs(x/(s-1)-0.5)*2,v=Math.abs(y/(s-1)-0.5)*2;
-      var au=Math.max(0,1-u*u),av=Math.max(0,1-Math.pow(v,0.6)),a=Math.pow(av,2.2)*au,i=(y*s+x)*4;
-      img.data[i]=120;img.data[i+1]=180;img.data[i+2]=255;img.data[i+3]=Math.round(a*255);}}
-    g.putImageData(img,0,0);return new THREE.CanvasTexture(c);}
-
-  function packPositions(cx,lengthU,n){
-    var bl=0.62,zc=[-0.26,0.26],yc=[0.28,0.82];
-    var usable=lengthU-0.18,step=bl+0.04,cols=Math.max(1,Math.floor(usable/step)),startX=cx-(cols-1)*step/2,out=[];
-    for(var c=0;c<cols;c++){var x=startX+c*step;for(var l=0;l<2;l++){for(var z=0;z<2;z++){out.push(new THREE.Vector3(x,yc[l],zc[z]));}}}
-    return out.slice(0,n);
-  }
-  function makeContainer(){
-    var grp=new THREE.Group();
-    var edgeMat=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.55});
-    var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
-    var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
-    var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
-    pivot.add(grp);
-    return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
-      setLength:function(L){grp.scale.x=L/L0; grp.position.x=XL+L/2;},
-      setColor:function(hex){edgeMat.color.setHex(hex); endMat.color.setHex(hex);},
-      setOpacity:function(o){edgeMat.opacity=0.55*o; endMat.opacity=0.6*o; grid.material.opacity=0.42*o;}};
-  }
-  function placeShadow(L){shadow.scale.x=L*1.35; shadow.position.x=XL+L/2;}
-
-  function build(){
-    _ca=new THREE.Color(); _cb=new THREE.Color(); _tmp=new THREE.Vector3();
-    renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
-    renderer.setClearColor(0x000000,0); renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
-    scene=new THREE.Scene();
-    camera=new THREE.PerspectiveCamera(42,1,0.1,100); camera.position.set(CAM_BASE.x,CAM_BASE.y,CAM_BASE.z);
-    pivot=new THREE.Object3D(); scene.add(pivot);
-    scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
-    var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
-    var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
-
-    CONT=makeContainer(); CONT.setLength(L0);
-    shadow=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
-    shadow.rotation.x=-Math.PI/2; shadow.position.y=-0.004; pivot.add(shadow);
-
-    var inside20=packPositions(0,2.5,12).slice(0,11);
-    var over=[ new THREE.Vector3(1.80,0.30,-0.22), new THREE.Vector3(2.20,0.30,0.24), new THREE.Vector3(1.98,0.84,0.02) ];
-    var final40=packPositions(1.25,5.0,14);
-    for(var i=0;i<TOTAL;i++){
-      var geo=new THREE.BoxGeometry(BL,BH,BW);
-      var mat=new THREE.MeshStandardMaterial({color:0x1B2E45,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
-      var m=new THREE.Mesh(geo,mat);
-      var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
-      m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em)); pivot.add(m);
-      var staged=i<11?inside20[i].clone():over[i-11].clone();
-      var intro=new THREE.Vector3(staged.x,staged.y+DROP,staged.z);
-      boxes.push({mesh:m,mat:mat,edge:em,intro:intro,staged:staged,finalT:final40[i].clone(),isOver:(i>=11)});
-    }
-    var order=boxes.map(function(b,idx){return idx;}).sort(function(a,b){return (boxes[a].finalT.x-boxes[b].finalT.x)||(boxes[a].finalT.y-boxes[b].finalT.y);});
-    order.forEach(function(idx,rank){repackRank[idx]=rank;});
-
-    // bbox of staged load -> measurement brackets
-    lbMin=new THREE.Vector3(1e9,1e9,1e9); lbMax=new THREE.Vector3(-1e9,-1e9,-1e9);
-    boxes.forEach(function(b){var s=b.staged;
-      lbMin.x=Math.min(lbMin.x,s.x-BL/2);lbMax.x=Math.max(lbMax.x,s.x+BL/2);
-      lbMin.y=Math.min(lbMin.y,s.y-BH/2);lbMax.y=Math.max(lbMax.y,s.y+BH/2);
-      lbMin.z=Math.min(lbMin.z,s.z-BW/2);lbMax.z=Math.max(lbMax.z,s.z+BW/2);});
-    var MG=0.07; lbMin.x-=MG;lbMax.x+=MG;lbMin.y-=MG;lbMax.y+=MG;lbMin.z-=MG;lbMax.z+=MG;
-    bc=new THREE.Vector3().addVectors(lbMin,lbMax).multiplyScalar(0.5);
-    bs=new THREE.Vector3().subVectors(lbMax,lbMin);
-    var arm=0.24,V=[];
-    for(var sx=0;sx<2;sx++)for(var sy=0;sy<2;sy++)for(var sz=0;sz<2;sz++){
-      var X=sx?lbMax.x:lbMin.x,Y=sy?lbMax.y:lbMin.y,Z=sz?lbMax.z:lbMin.z;
-      var dx=sx?-1:1,dy=sy?-1:1,dz=sz?-1:1,ox=X-bc.x,oy=Y-bc.y,oz=Z-bc.z;
-      V.push(ox,oy,oz,ox+dx*arm,oy,oz, ox,oy,oz,ox,oy+dy*arm,oz, ox,oy,oz,ox,oy,oz+dz*arm);
-    }
-    var bgeo=new THREE.BufferGeometry(); bgeo.setAttribute('position',new THREE.Float32BufferAttribute(V,3));
-    bracketMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0});
-    bboxMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0});
-    scanGroup=new THREE.Group();
-    scanGroup.add(new THREE.LineSegments(bgeo,bracketMat));
-    scanGroup.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(bs.x,bs.y,bs.z)),bboxMat));
-    scanGroup.position.copy(bc); scanGroup.visible=false; pivot.add(scanGroup);
-    sweep=new THREE.Mesh(new THREE.PlaneGeometry(bs.x+0.5,0.16),new THREE.MeshBasicMaterial({map:sweepTex(),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
-    sweep.position.set(bc.x,bc.y,0.05); pivot.add(sweep);
-
-    clock=new THREE.Clock(); sizeUp();
-    window.addEventListener('resize',sizeUp);
-    window.addEventListener('pointermove',onMove);
-  }
-
-  function sizeUp(){var r=canvas.getBoundingClientRect();var w=Math.max(1,r.width),h=Math.max(1,r.height);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-  var tx=0,ty=0,px=0,py=0;
-  function onMove(e){var nx=(e.clientX/window.innerWidth)*2-1,ny=(e.clientY/window.innerHeight)*2-1;tx=nx*0.14;ty=ny*0.08;}
-
-  function update(ct,t){
-    var ph=phaseAt(ct),name=ph.n,p=ph.p,fade=1,dim=1,sweepOp=0,L=L0;
-    var camX=CAM_BASE.x,camY=CAM_BASE.y,camZ=CAM_BASE.z,camLx=CAM_BASE.lx,placed=0;
-    if(name==='intro')fade=smooth(p/0.5);
-    if(name==='outro')fade=1-smooth(p);
-
-    if(name==='intro'){
-      boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);});
-      CONT.setColor(C_BLUEEDGE); applyStatus('intro',0,t);
-    } else if(name==='pack'){
-      var stag=0.17,dur=1.05,tt=p*PH[1].d;
-      boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
-        b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
-        if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
-        b.edge.color.setHex(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE); b.mat.color.setHex(b.isOver&&lp>=1?0x453620:0x1B2E45);});
-      CONT.setColor(C_BLUEEDGE); applyStatus('pack',placed,t);
-    } else if(name==='overflow'){
-      var pulse=0.5+0.5*Math.sin(t*5.0);
-      boxes.forEach(function(b){b.mesh.position.copy(b.staged);
-        if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);b.mesh.scale.setScalar(1+pulse*0.04);}
-        else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);b.mesh.scale.setScalar(1);}});
-      CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus('over',placed,t);
-    } else if(name==='solve'){
-      dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
-      var sp=easeInOut(clamp01(p/0.78)); sweep.position.y=lerp(lbMax.y+0.45,lbMin.y-0.25,sp); sweepOp=Math.sin(clamp01(p/0.78)*Math.PI);
-      scanGroup.visible=true; scanGroup.scale.setScalar(lerp(1.16,1.0,smooth(clamp01(p/0.4))));
-      var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0); bracketMat.opacity=inn*pl; bboxMat.opacity=inn*0.20;
-      boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
-        if(b.isOver){b.edge.color.setHex(C_WARN);b.mat.color.setHex(0x453620);}else{b.edge.color.setHex(C_BLUEEDGE);b.mat.color.setHex(0x1B2E45);}});
-      CONT.setColor(C_WARN); applyStatus('solve',0,t);
-    } else if(name==='grow'||name==='repack'){
-      var growP=name==='grow'?smooth(p):1;
-      if(name==='grow'){var go=1-smooth(clamp01(p/0.3)); scanGroup.visible=go>0.02; bracketMat.opacity=go*0.8; bboxMat.opacity=go*0.16;}
-      L=lerp(2.5,5.0,growP);
-      camX=lerp(CAM_BASE.x,CAM_WIDE.x,growP);camY=lerp(CAM_BASE.y,CAM_WIDE.y,growP);camZ=lerp(CAM_BASE.z,CAM_WIDE.z,growP);camLx=lerp(CAM_BASE.lx,CAM_WIDE.lx,growP);
-      colLerp(_ca,C_WARN,C_TEAL,growP); CONT.edgeMat.color.copy(_ca); CONT.endMat.color.copy(_ca);
-      var winT=(START[name]-START['grow'])+p*PH[ph.i].d,stag2=0.15,dur2=0.6;
-      boxes.forEach(function(b,i){var rank=repackRank[i],lp=clamp01((winT-rank*stag2)/dur2);
-        lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
-        b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
-        if(lp>=1){b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);placed++;}
-        else{b.edge.color.setHex(b.isOver?C_WARN:C_BLUEEDGE);b.mat.color.setHex(b.isOver?0x453620:0x1B2E45);}});
-      applyStatus('repack',placed,t);
-    } else if(name==='success'){
-      L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx;
-      var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
-      CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);b.mesh.scale.setScalar(1);});
-      placed=TOTAL; applyStatus('done',placed,t);
-    } else {
-      L=5.0;camX=CAM_WIDE.x;camY=CAM_WIDE.y;camZ=CAM_WIDE.z;camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
-      boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.edge.color.setHex(C_GOOD);b.mat.color.setHex(0x1B3B31);}); placed=TOTAL;
-    }
-
-    CONT.setLength(L); placeShadow(L);
-    var f=fade*dim;
-    if(name!=='success')CONT.setOpacity(f); else {CONT.edgeMat.opacity*=fade;CONT.endMat.opacity*=fade;CONT.gridMat.opacity=0.42*fade;}
-    boxes.forEach(function(b){b.mat.opacity=f;b.edge.opacity=0.78*f;});
-    shadow.material.opacity=0.8*fade;
-    if(name!=='solve'&&name!=='grow'){scanGroup.visible=false;bracketMat.opacity=0;bboxMat.opacity=0;}
-    else {bracketMat.opacity*=fade;bboxMat.opacity*=fade;}
-    sweep.material.opacity=sweepOp*0.85*fade;
-    camera.position.set(camX,camY,camZ); camera.lookAt(camLx,0.5,0);
-  }
-
-  var elapsed=0;
   function loop(){
     if(!running)return;
     var dt=Math.min(clock.getDelta(),0.05); elapsed+=dt;
-    var ct=elapsed%CYCLE;
+    var r=elapsed%TOTAL_CYCLE,i=0;
+    while(i<ACTS.length-1&&r>=ACTS[i].cycle){r-=ACTS[i].cycle;i++;}
+    if(i!==curAct){ roots.forEach(function(g,k){g.visible=(k===i);}); markDots(i); curAct=i; }
+    var ph=phaseAt(ACTS[i],r);
     px+=(tx-px)*0.06; py+=(ty-py)*0.06;
-    pivot.rotation.y=px+(phaseAt(ct).n==='success'?Math.sin(elapsed*0.5)*0.04:0);
+    ACTS[i].update(ph.n,ph.p,r,elapsed,FR);
+    pivot.rotation.y=px+(FR.spin?Math.sin(elapsed*0.5)*0.04:0);
     pivot.rotation.x=py*0.6;
-    update(ct,elapsed);
+    camera.position.set(FR.camX,FR.camY,FR.camZ); camera.lookAt(FR.camLx,FR.camLy,0);
     renderer.render(scene,camera);
     raf=requestAnimationFrame(loop);
   }
