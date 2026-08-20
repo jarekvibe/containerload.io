@@ -106,7 +106,8 @@ var ICO  = { s: 16, m: 20, sw: 1.5 };
 | Abstände | **4 · 8 · 12 · 16 · 24 · 32**, nichts dazwischen — als `SP.*` inline und als Tailwind-Klasse (`p-1/2/3/4/6/8`, **kein `p-5`**, das sind 20) |
 | Symbole | **eine** Linienstärke (`ICO.sw` = 1,5) und zwei Größen (16 / 20). Nichts darunter |
 | Monospace | **nur an Zahlen** (ab `FS.small`) und am Teilen-Link. Ziffern bleiben untereinander stehen — als Kleintext ist sie Kostüm |
-| Farbe | neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Farbe | **ein** Akzent (`C.accent` = `C.hint`) · neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Fläche | **ein Ton**, kein Verlauf. Verläufe nur dort, wo ein Bild entsteht: hinter der 3D-Bühne und als Vignette darüber |
 | Zahlen | über `nf()` / `fmtDE()`, nie `toFixed()` in der Anzeige — sonst steht in der deutschen Oberfläche „0.03 m" |
 | Emoji | keine. Linien-SVG oder das Wort |
 
@@ -125,6 +126,10 @@ var ICO  = { s: 16, m: 20, sw: 1.5 };
 | `Seg` | Umschalter mit genau einem aktiven Zustand (See-/Landfracht, DE/EN, cm/mm) — aktiv wird durch die Fläche markiert |
 | `Kpi` | Beschriftung oben, Zahl darunter groß in Monospace |
 | `Lbl` | die kleine, ruhige Beschriftung |
+
+**Auswahlreihen sind Raster, keine umbrechenden Reihen.** Fünf Kacheln in einer `flex-wrap`-Reihe ergaben oben drei und unten zwei, und die untere Reihe stand unter keiner Spalte. Deshalb `segGrid(n)` mit fester Spaltenzahl — und die Kachelzahl geht in **ganzen Reihen** auf: fünf Containertypen plus „Custom · eigene Maße" sind sechs, fünf Fahrzeuge plus „Custom" ebenso. `test/auswahlraster.test.mjs` rechnet das nach; wer einen sechsten Typ ergänzt, fällt dort auf die Nase und muss entscheiden, wie das Raster weitergeht. Nebeneffekt der Custom-Kachel: der Zustand „eigene Maße" war vorher nur über „Maße anpassen" erreichbar und in der Auswahl unsichtbar.
+
+**Die Kennzahlen der Leiste stehen auf `NUMS.m`, nicht auf `NUMS.l`.** Mit 26 px passten in der Landfracht bei 1440 px vier Zahlen plus „Alles verladen" plus „Details" nicht mehr in eine Zeile — und einzeilig ist sie laut Regelwerk oben. 20 px über einer 11,5-px-Beschriftung dominieren immer noch deutlich. Wer daran dreht, misst bei **1440 px in beiden Domänen** nach.
 
 **Keine Farbverläufe** (ein Markenton, siehe `C.accent`) und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche.
 
@@ -169,6 +174,10 @@ Das Lagenmuster kommt aus `makeFloorPacker` — demselben Guillotine-Packer, der
 Zwei Invarianten hält `test/palettierer-multi.test.mjs` fest: **es darf unterwegs kein Karton verschwinden** (verladen + übrig = eingegeben, auch wenn ein Typ auf die Palette gar nicht passt), und **eine Lage wird nie zwischen zwei Paletten geteilt** — sie ist die kleinste Einheit, die jemand am Stück baut. Gleich aufgebaute Paletten werden gezählt, nicht einzeln aufgelistet, sonst steht in der Ladung dreißigmal dasselbe Packstück.
 
 **Die Palette bleibt im Container eine Palette.** Übergebene Positionen tragen einen Bauplan (`pal: { b, ly }` — Palettenhöhe und die Lagen mit ihrer Kennfarbe). Der Viewport zeichnet daraus je Lage ein eigenes Band plus die Holzpalette darunter, statt einer glatten Kiste; sonst verliert die Ladung beim Übernehmen genau das Bild, das man gerade gebaut hat. **Auf die Rechnung hat das keinen Einfluss** — die zählt weiter das Außenmaß. Die Bänder werden auf die tatsächliche Höhe der Position skaliert: wer sie in der Ladungsliste ändert, bekommt kein Band, das über die Kiste hinausragt.
+
+**Eine übernommene Palette lässt sich nachbessern.** In der Ladungsliste steht danach nur noch „120 × 80 × 174,4 cm" — daraus ist nicht zurückzurechnen, ob darunter vier oder vierzig Kartons liegen. Wer merkt, dass die Kartons 2 cm höher sind, hätte die ganze Eingabe neu tippen müssen. Deshalb fährt der **Eingabestand des Dialogs** als `palSrc` an den erzeugten Positionen mit, der Dialog nimmt ihn über `init` wieder an, und „Palette bearbeiten" in der aufgeklappten Zeile öffnet ihn damit.
+
+Beim Übernehmen einer Korrektur **ersetzen** die neuen Positionen die alten derselben `grp` an Ort und Stelle — sonst wüchse die Liste bei jeder Korrektur um einen Satz Paletten. Die Kennfarben bleiben, was sie waren: eine Korrektur soll die Ladung nicht umfärben. Die eigentliche Falle hält `test/palette-nachbessern.test.mjs` fest: wer dem Dialog ein neues Eingabefeld gibt und es in `onApply` mitschickt, aber nicht aus `init` liest, setzt es beim Nachbessern stillschweigend auf den Standardwert zurück — die Rechnung läuft durch, und niemand sieht es.
 
 `pal` und `grp` bleiben **lokal** und stehen nicht im Teilen-Format. Ein geteilter Link zeigt die Palette also wieder als einfache Kiste — die Maße und die Kennfarbe (`cl`) reisen mit, der Aufbau nicht. Das im `?p=` zu ergänzen wäre eine eigene Entscheidung.
 

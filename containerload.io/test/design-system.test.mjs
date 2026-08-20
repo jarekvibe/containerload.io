@@ -33,7 +33,7 @@ const oberflaeche = zeilen.filter((_, i) => istOberflaeche(i + 1)).join("\n");
 const AUSNAHMEN = new Set([
   "#0c1320", "#0b1119",                          // Strichfarben der Druckvorlage auf weissem Papier
   "#0a2b46", "#165780", "#0f3c60",               // die drei Wuerfelflaechen der Marke
-  "#04121a", "#0b0616",                          // Text auf Akzent- bzw. Hinweisflaeche
+  "#04121a",                                    // Text auf Akzentflaeche
   "#1a0f08",                                     // warmer Grund der Tuer-Warnung
   "#0f1c2e", "#0c1622", "#0e2438", "#15334e", "#0d1726", "#0b1f33", "#08111c", // 3D-Buehne
   "#101a2b",                                     // oberer Stop des Verlaufs hinter der 3D-Ansicht
@@ -141,6 +141,32 @@ test("Symbole haben eine Linienstaerke und zwei Groessen", () => {
     .map((m) => m.match(/"(\d+)"/)[1]))];
   const falsch = groessen.filter((g) => !["16", "20"].includes(g));
   assert.deepStrictEqual(falsch, [], `Symbolgroessen ausserhalb 16/20: ${falsch.join(", ")}`);
+});
+
+test("die Flaeche haelt einen Ton - kein Verlauf hinter der Oberflaeche", () => {
+  // Die Startseite kommt ohne Verlaeufe aus; im Rechner lag hinter der ganzen Seite ein
+  // radialer, leicht blauer. Nebeneinander gehalten sah der Rechner deshalb "anders"
+  // aus, ohne dass man sagen konnte warum. Erlaubt bleiben Verlaeufe nur DORT, wo ein
+  // Bild entsteht: hinter der 3D-Buehne und als Vignette darueber.
+  const zeilen = app.split("\n");
+  const treffer = [];
+  zeilen.forEach((z, i) => {
+    if (!/radial-gradient/.test(z)) return;
+    if (/mountRef|pointer-events-none/.test(z)) return;   // 3D-Buehne und ihre Vignette
+    treffer.push(`Zeile ${i + 1}`);
+  });
+  assert.deepStrictEqual(treffer, [],
+    `Verlauf als Flaechenhintergrund: ${treffer.join(", ")} — die Flaeche haelt EINEN Ton`);
+});
+
+test("es gibt genau einen Akzent", () => {
+  // hint war #8B5CF6, ein Violett, das es sonst nirgends im Produkt gibt und auf der
+  // Startseite schon gar nicht. Ein zweiter Akzent ist genau das, was eine Oberflaeche
+  // zusammengesetzt aussehen laesst.
+  const akz = (/\n\s*accent: "(#[0-9A-Fa-f]{6})"/.exec(app) || [])[1];
+  const hint = (/\n\s*hint: "(#[0-9A-Fa-f]{6})"/.exec(app) || [])[1];
+  assert.ok(akz, "C.accent nicht gefunden");
+  assert.strictEqual(hint, akz, `hint (${hint}) weicht vom Akzent (${akz}) ab — ein Ton, nicht zwei`);
 });
 
 test("Schriftgewicht hoert bei 700 auf", () => {
