@@ -5,32 +5,53 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Impressum — ContainerLoad</title>
 <meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
 <!-- Verweist auf die Markendateien statt das Zeichen hier noch einmal einzubacken.
      Eingebackene Kopien laufen auseinander — genau das war hier passiert. -->
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
-/* --teal trug frueher ein Tuerkisgruen und damit einen zweiten Markenton. Seit dem
-   Umbau gibt es nur noch einen; der Name bleibt, damit die Verlaeufe unten nicht
-   angefasst werden muessen — sie werden dadurch von selbst zu glatten Flaechen. */
-:root{--bg:#070a0f;--card:#0c111a;--line:#19222f;--text:#eef2f7;--dim:#9aa7b8;--faint:#6F7C93;--accent:#2E8FFF;--teal:#2E8FFF}
+/* Dieselben Werte wie im Rechner, auf der Startseite und im Container-Wissen.
+   Hier standen bis zuletzt die alten: eigener Grundton (#070a0f statt #0E1116),
+   eigene Flaechen- und Textstufen, Inter statt Archivo (und zwar ohne die Schrift
+   ueberhaupt zu laden), Schriftgewicht 800, Radius 14 — und in .ph ein Tuerkis,
+   das es im Produkt seit dem Umbau nicht mehr gibt. Zwei Seiten, die aussehen wie
+   von woanders. Der Rechtstext ist dabei unangetastet geblieben. */
+:root{
+  --bg:#0E1116; --card:#161D27; --line:#1C2531; --line-2:#232C38;
+  --text:#E9F0F7; --dim:#9DB0C2; --faint:#7689A0; --accent:#2E8FFF;
+  --sans:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;line-height:1.65;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
 .wrap{max-width:720px;margin:0 auto;padding:48px 22px 80px}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
-.brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:36px}
-.mark{width:30px;height:30px;border-radius:8px;background:linear-gradient(90deg,var(--accent),var(--teal));display:flex;align-items:center;justify-content:center}
-.brand b{font-weight:800;font-size:16px}
-.grad{background:linear-gradient(90deg,var(--accent),var(--teal));-webkit-background-clip:text;background-clip:text;color:transparent}
-h1{font-size:30px;font-weight:800;letter-spacing:-.02em;margin:0 0 24px}
-h2{font-size:16px;font-weight:700;margin:30px 0 8px;color:var(--text)}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+/* Markenzeichen wie ueberall sonst: isometrischer Wuerfel auf Akzentgrund, daneben der
+   Schriftzug mit "Load" im Markenton. Kein Verlauf, kein background-clip:text. */
+.brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:36px;color:var(--text)}
+.brand:hover{text-decoration:none}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex:none}
+.brand b{font-weight:700;font-size:16px;letter-spacing:-.01em}
+.grad{color:var(--accent)}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0 0 24px}
+h2{font-size:17px;font-weight:700;margin:30px 0 8px;color:var(--text)}
 p{margin:0 0 12px;color:var(--dim)}
-.box{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0;color:var(--text)}
-.muted{color:var(--faint);font-size:13px}
-.back{display:inline-block;margin-top:40px;font-size:14px}
-.ph{color:var(--teal);background:rgba(56,224,200,.1);padding:1px 6px;border-radius:5px;font-size:14px}
-</style>
+.box{background:var(--card);border:1px solid var(--line-2);border-radius:12px;
+  padding:18px 20px;margin:14px 0;color:var(--text)}
+.muted{color:var(--faint);font-size:13.5px}
+.back{display:inline-block;margin-top:40px;font-size:13.5px}
+/* Platzhalter im Rechtstext. Trug den Markenton als Flaeche in einem Tuerkis, das es
+   nicht mehr gibt — jetzt derselbe Akzent wie alles andere. */
+.ph{color:var(--accent);background:rgba(46,143,255,.12);padding:1px 6px;border-radius:8px;font-size:14px}
+GOOD</style>
 </head>
 <body>
 <div class="wrap">
