@@ -552,12 +552,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Verlauf. Stattdessen dieselbe Regel wie bei selbst gewaehlten Farben: Akzent und
   // abgedunkelter Akzent. Das gibt dem Export-Bild Tiefe ohne zweite Markenfarbe.
   var exportAccentStops = (hex) => { const base = hex || "#2E8FFF"; return [base, shade(base, -0.22)]; };
-  function makeFloorPacker(l, w, rotatable) {
+  // maxSpots (optional): so viele Stellplaetze braucht der Aufrufer HOECHSTENS. Ohne den
+  // Wert rechnet der Packer wie immer das echte Maximum aus. Mit ihm hoert er auf, sobald
+  // die Zahl erreicht ist — das Ergebnis bleibt unter maxSpots exakt und darueber "mindestens
+  // so viele", was der Aufrufer ohnehin nicht mehr unterscheiden kann.
+  //
+  // Grund: das Bodenraster wurde bisher IMMER vollstaendig aufgebaut, unabhaengig von der
+  // Menge. Ein Packstueck von 3 mm Kante — beim Umschalten der Eingabe auf mm schnell
+  // getippt — ergab auf einem 45' HC 3,5 Millionen Rechtecke und blockierte den Browser
+  // fuenf bis zwoelf Sekunden lang fuer ein einziges Teil.
+  function makeFloorPacker(l, w, rotatable, maxSpots) {
     const memo = /* @__PURE__ */ new Map();
+    const LIMIT = maxSpots > 0 ? maxSpots : Infinity;
     const grid = (a, b, pl, pw) => {
       const nx = Math.floor((a + 1e-6) / pl), nz = Math.floor((b + 1e-6) / pw);
       const r = [];
-      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) r.push({ x: i * pl, z: j * pw, dx: pl, dz: pw });
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        r.push({ x: i * pl, z: j * pw, dx: pl, dz: pw });
+        if (r.length >= LIMIT) return r;
+      }
       return r;
     };
     const cands = (D) => {
@@ -574,6 +587,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       let best = { count: 0, rects: [] };
       const grids = rotatable ? [grid(FL, FW, l, w), grid(FL, FW, w, l)] : [grid(FL, FW, l, w)];
       for (const g of grids) if (g.length > best.count) best = { count: g.length, rects: g };
+      // Genug fuer den Aufrufer: das Zerteilen kann die Zahl nur noch weiter erhoehen,
+      // und mehr als LIMIT wird nicht gebraucht.
+      if (best.count >= LIMIT) { memo.set(key, best); return best; }
       if (best.count < 500) {
         for (const s of cands(FL)) {
           const A = solve(s, FW), B = solve(FL - s, FW);
@@ -1175,7 +1191,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const totalBoxes = types.reduce((s, t) => s + Math.max(0, Math.floor(num(t.qty))), 0);
     const empty = { placed: [], perType: types.map((t) => ({ loaded: 0, total: Math.max(0, Math.floor(num(t.qty))) })), contVol: CL * CW * CH / 1e6, usedVol: 0, util: 0, weight: 0, boxes: 0, totalBoxes, layers: 0, single: false, rotHint: false, rotHintAll: false };
     if (CL <= 0 || CW <= 0 || CH <= 0) return empty;
-    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: num(t.weight) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
+    // Gewicht auf >= 0 klemmen, wie es palletize/palletizeMulti seit jeher tun. Ein
+    // Minuszeichen im Gewichtsfeld - beim Einfuegen aus einer Tabelle schnell passiert -
+    // ergab sonst eine negative Zuladung ("-9.940 kg") und haette jede Ueberladungspruefung
+    // ausgehebelt, weil die Summe nach unten statt nach oben lief.
+    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
     const loaded = types.map(() => 0);
     let placed = [], weight = 0, layers = 0, single = false;
     if (valid.length === 1) {
@@ -1187,7 +1207,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // belegten Hoehen gezaehlt (siehe unten) — sonst meldet das Tool "2 gestapelt",
       // obwohl nur ein Packstueck auf dem Boden steht.
       const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
-      const fl = makeFloorPacker(t.l, t.w, t.rotatable)(CL, CW);
+      // Mehr Stellplaetze als Menge / Etagen kann diese Schleife nie belegen — der Packer
+      // muss also gar nicht erst mehr ausrechnen.
+      const brauchtSpots = Math.max(1, Math.ceil(t.qty / Math.max(1, capLay)));
+      const fl = makeFloorPacker(t.l, t.w, t.rotatable, brauchtSpots)(CL, CW);
       // Reihenfolge: STELLPLATZ zuerst, dann in die Hoehe. Frueher andersherum — erst der
       // ganze Boden, dann die zweite Etage. Die Zahl war in beiden Faellen dieselbe (die
       // Kapazitaet ist Stellplaetze x Etagen), aber bei wenigen Packstuecken stand alles
@@ -4676,6 +4699,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const totalWeight = cargo.reduce((s, c) => s + Math.max(0, Math.floor(num(c.qty))) * Math.max(0, num(c.weight)), 0);
     const overweight = num(container.payload) > 0 && totalWeight > num(container.payload) + 0.5;
     const overKg = Math.round(totalWeight - num(container.payload));
+    // Die Zuladungs-Anzeige bleibt bei result.weight: sie misst DIESEN Container, und dafuer
+    // ist sie richtig. Was sie nicht sagen kann, sagt jetzt die Statuszeile - dass die
+    // eingegebene Ladung als Ganzes schwerer ist als der Container tragen darf. Beides
+    // zusammen ist vollstaendig, eines allein war es nicht.
     // === Landfracht: Akzent + Lademeter-Kennzahlen ===
     const AC = domain === "road" ? C.teal : C.accent;
     // Belegte Lademeter = vorderste->hinterste belegte Position (max x+dx), in m. x = Laenge (cm).
@@ -4729,7 +4756,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
-    const statusColor = payPct > 100 ? C.bad : railHot ? C.warn : C.good;
+    const statusColor = payPct > 100 || overweight ? C.bad : railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: "14px 20px" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: "10px 18px", paddingRight: 18 } },
@@ -4747,6 +4774,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "currentColor", flexShrink: 0 } }),
             /* @__PURE__ */ React.createElement("span", null, allFit ? T.allLoaded : T.open(unplaced))
           ),
+          overweight && /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, padding: "2px 9px", background: hexA(C.bad, 0.12), color: C.bad, border: `1px solid ${hexA(C.bad, 0.32)}` } }, T.overCap(fmtDE(overKg))),
           /* @__PURE__ */ React.createElement("button", { onClick: () => setCogOpen((o) => !o), "aria-expanded": cogOpen ? "true" : "false", className: "flex items-center gap-1.5 rounded-lg transition hover:brightness-125", style: { background: "transparent", border: "1px solid #232C38", color: C.dim, padding: "6px 11px", fontFamily: SANS, fontSize: 11, cursor: "pointer", whiteSpace: "nowrap" } },
             /* @__PURE__ */ React.createElement("span", null, cogOpen ? T.railLess : T.railDetails),
             /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, transform: cogOpen ? "rotate(180deg)" : "none", transition: "transform .2s", display: "inline-block" } }, "▾")
