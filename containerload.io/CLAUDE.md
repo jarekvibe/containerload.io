@@ -161,6 +161,52 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
+Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:
+
+1. **Re-Solve** — Ladung passt nicht in den 20′, der Rechner sucht, der 40′ passt.
+2. **Überhöhe** — eine Maschine 240 × 220 × 300 cm. Kein Standardcontainer ist innen höher als 270 cm, also 30 cm zu hoch. Plane und Dachspriegel kommen ab, der Kran hebt von oben ein; im 20′ Open Top ragt sie 61 cm über den Rahmen.
+3. **Palette** — 40 Kartons 45 × 30 × 30 cm. Sechs je Lage, vier längs und zwei quer, fünf Lagen, 164,4 cm, 295 kg, Rest auf eine zweite Palette.
+
+**Ein Regisseur, drei Akte.** Renderer, Kamera, Statuszeile, Pillen und Fortschrittsleiste teilen sich alle; jeder Akt bringt eigene Phasen (`PH`), eigene Texte (`ACT_TEXT[i]`), eine eigene `build(root)` und ein eigenes `update(name, p, ct, t, FR)` mit. Der Akt schreibt Kamera und Drehung in `FR`, der Regisseur setzt sie. **Wer einen vierten Akt baut, baut ihn nach demselben Schema** — sonst fällt die Reihe auseinander, und genau das war der Auftrag.
+
+Drei Punkte links in der Leiste sagen, dass es mehr als eine Szene gibt, und springen auf Klick. Ohne sie sieht niemand, der nach zwölf Sekunden weiterscrollt, dass es Akt 2 und 3 überhaupt gibt.
+
+**Die Zahlen in den Texten sind keine Erfindung.** `test/hero-animation.test.mjs` ruft `suggestEquipment` und `palletize` aus `app.html` auf und rechnet jede einzelne nach — auch das Lagenmuster, Rechteck für Rechteck. Wer hier eine Zahl ändert, muss sie dort nachweisen können. Dieselbe Regel wie im Container-Wissen, aus demselben Grund.
+
+Die Animation läuft **nicht** bei `prefers-reduced-motion` und **nicht** auf echten Telefonen (kleinere Viewport-Kante < 600) — dort steht das SVG-Standbild.
+
+### Die Ergebnisleiste zeigt vier Zahlen, nicht sechs
+Sechs Kennzahlen plus Statusblock brauchen rund 850 px. Im Dreispalten-Layout stehen der Gruppe 490 zur Verfügung — die Leiste war deshalb zwischen **1440 und 1800 px immer zweizeilig**, also auf den meisten Laptops. In der Leiste stehen jetzt **Voll · Verladen · Volumen · Gewicht** (Landfracht: Lademeter statt Volumen), die übrigen zwei in der Schublade „Details". Wer eine neue Kennzahl einbaut, entscheidet sich für eine der beiden Listen — `statCards` oder `detailCards` — und misst nach, ob die Leiste noch einzeilig ist.
+
+Zwei Dinge, die die Leiste falsch erzählt hat und die nicht zurückkommen dürfen:
+- **Grün heißt „alles ist drin".** Vorher hieß es nur „Gewicht und Auslastung sind in Ordnung" — der Punkt stand auf Grün, während daneben „30 offen" stand.
+- **„Verladen 62 / 92" zählt den ersten Container**, das Bild darüber zeigt aber bis zu vier. Die Zahl trägt deshalb dieselbe Marke wie die Hülle im Bild (`C1` / `F1`), sobald es mehr als eine gibt.
+
+### Die Gewichtsanzeige und die Überladung
+Die Zuladungsanzeige misst `result.weight` — das Gewicht dessen, was in **diesem** Container liegt. Dafür ist sie richtig. Was sie nicht sagen kann: dass die **eingegebene** Ladung als Ganzes schwerer ist, als der Container tragen darf. Ein einzelnes 30-t-Stück auf einem 28,2-t-Container wird gar nicht erst platziert, `result.weight` bleibt 0, und die Anzeige stünde auf 0 %. Diesen Satz trägt jetzt die Statuszeile (`overweight` / `overKg` / `T.overCap`). **Beides zusammen ist vollständig, eines allein war es nicht.**
+
+### `makeFloorPacker(l, w, rotatable, maxSpots)`
+Der vierte Parameter ist optional und sagt, wie viele Stellplätze der Aufrufer **höchstens** belegen kann. Ohne ihn rechnet der Packer wie immer das echte Maximum; mit ihm hört er dort auf. Unter `maxSpots` bleibt das Ergebnis exakt, darüber heißt es „mindestens so viele" — was der Aufrufer ohnehin nicht unterscheiden kann, weil er nach `qty` abbricht.
+
+Grund: das Bodenraster wurde immer vollständig aufgebaut, unabhängig von der Menge. Ein Packstück mit 3 mm Kante — beim Umschalten der Eingabe auf Millimeter schnell getippt — ergab auf einem 45′ HC 3,5 Millionen Rechtecke und ließ den Browser fünf bis zwölf Sekunden stehen. **`palletize` ruft weiterhin ohne `maxSpots` auf**, dort wird die echte Zahl gebraucht.
+
+### Zwischen den Sprachen darf nichts liegenbleiben
+Die Fahrzeug**schlüssel** in `VEHICLES` sind deutsch und bleiben es — sie stehen als `preset` im Teilen-Link. Angezeigt wird, was `VEHICLE_LABEL(T)` und `VEHICLE_META(T)` liefern, analog zu `KIND_LABEL(T)` bei den Containern. Vorher stand der ganze Landfracht-Modus auch bei `?lang=en` auf Deutsch da.
+
+Der **Teilen-Link trägt die Sprache mit** (`&lang=en`, nur bei Englisch angehängt). `share.html` reicht den Query-String unverändert weiter und ist selbst zweisprachig. Ohne das öffnete ein englisch erstellter Plan beim Empfänger einen deutschen Rechner.
+
+`test/i18n-tote-schluessel.test.mjs` meldet übersetzten Text, den niemand sehen kann. **Vorsicht bei der Prüfung:** ein Schlüssel kann auch dynamisch über eine Tabelle erreicht werden (`T[cogClassKey]`, `{ height: T.palCapHeight }`). Eine frühere Prüfung hatte das übersehen und hätte englischen Text gelöscht, der gebraucht wird.
+
+### Auf dem Telefon
+Alle drei Seiten ließen sich seitlich schieben; `test/mobil.test.mjs` hält die Vorkehrungen fest (die CI hat keinen Browser, aber sie kann prüfen, ob im Quelltext steht, was nötig ist):
+- **`.clh-stage`** hat eine Mindesthöhe **und** ein Seitenverhältnis. Beides zusammen bestimmt nicht die Höhe, sondern die **Breite**: 380 hoch bei 1,05 sind 399 breit. Unter 560 px fällt die Mindesthöhe deshalb weg.
+- **Tabellen im Container-Wissen** stehen in `<div class="tabelle">` und scrollen dort. Die Zahlenspalten tragen `white-space: nowrap` — richtig so, eine Zahl darf nicht umbrechen; nur darf sie nicht die Seite mitnehmen.
+- **Die Kopfzeile des Rechners** darf umbrechen (`flex-wrap`); Planname und „Speichern" bekommen auf dem Telefon eine eigene Zeile, die Sprachwahl liegt unter `sm` im „…"-Menü.
+
+### Randseiten
+`impressum.html`, `datenschutz.html` und `share.html` waren die letzten Seiten mit eigenen Werten — eigener Grundton, eigene Stufen, Inter statt Archivo (und zwar **ohne die Schrift zu laden**), Gewicht 800, Radius 14, ein Türkis aus der Zeit davor. Selten besuchte Seiten driften am weitesten, weil niemand hinsieht. `test/randseiten.test.mjs` liest Grundton und Akzent **aus `app.html`** und prüft beide Seiten plus `site.webmanifest` dagegen. **Am Rechtstext ändert dort niemand etwas ohne Rücksprache** — der Test fasst ihn auch nicht an.
+
 ### Zweisprachigkeit (DE/EN)
 - **Deutsch ist die Ausgangssprache.** Texte stehen direkt im HTML mit `data-i18n="key"`-Attributen.
 - Englisch wird über ein `EN = { key: … }`-Wörterbuch im Inline-JS überlagert. Sprachwahl in `localStorage` unter `cl_lang`.
