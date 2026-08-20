@@ -1775,8 +1775,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       allLoaded: "Alles verladen",
       overCap: (kg) => `${kg} kg \xFCber Zuladung`,
       qImported: (n) => `${n} Position${n === 1 ? "" : "en"} aus dem Link \xFCbernommen – unten pr\xFCfbar`,
-      railFull: "Voll", railDetails: "Details", railLess: "Weniger",
-      freeTitle: "Noch frei", freeLen: "L\xE4nge bis T\xFCr", freeVol: "Volumen", freePay: "Zuladung", freeFull: "Container leer",
+      railFull: "Voll", railDetails: "Details", railLess: "Weniger", freeLen: "L\xE4nge bis T\xFCr", freeVol: "Volumen", freePay: "Zuladung", freeFull: "Container leer",
       open: (n) => `${n} offen`,
       volume: "Volumen",
       weight: "Gewicht",
@@ -1824,26 +1823,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       doorWarn: (n) => `${n} Position${n === 1 ? "" : "en"} ${n === 1 ? "passt" : "passen"} nicht durch die T\xFCr`,
       doorHint: (w, h) => `T\xFCr\xF6ffnung ca. ${w}\xD7${h} cm`,
       pdfBtn: "Ladevorschlag",
-      pdfTitle: "Ladevorschlag als PDF (\xF6ffnet Druckansicht)",
+      pdfTitle: "Als PDF mit QR-Code zum 3D-Plan",
       exportBtn: "Export",
-      exportTitle: "Ladeliste als CSV/Excel herunterladen",
+      exportTitle: "Ladeliste als CSV f\xFCr Excel",
       exportEmpty: "Erst Packst\xFCcke hinzuf\xFCgen",
       exportDone: "Ladeliste exportiert",
       shotBtn: "Bild",
-      shotColor: "Bild-Farbe (nur Export)",
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
       shotAccentLabel: "Akzentfarbe",
       shotLogoLabel: "Firmenlogo (optional)",
       shotLogoDrag: "Logo hier ablegen oder klicken zum Hochladen",
-      shotLogoRemove: "Logo entfernen",
       shotLogoRemoveBtn: "×",
       shotTransparent: "Transparenter Hintergrund",
       shotTransparentHint: "Container freigestellt – ideal zum Einf\xFCgen in E-Mails.",
       shotSave: "Bild speichern",
       shotCopyBtn: "In Zwischenablage kopieren",
       shotCopyHint: "Direkt mit Strg+V in eine E-Mail einf\xFCgen – kein Anhang n\xF6tig.",
-      shotTitle: "Ansicht als Bild speichern (PNG f\xFCr Kunden/Agenten)",
+      shotTitle: "Die Ansicht als PNG-Bild",
       shotEmpty: "Erst Packst\xFCcke laden",
       shotDone: "Bild gespeichert",
       shotCopied: "In Zwischenablage kopiert – jetzt mit Strg+V einf\xFCgen",
@@ -1886,8 +1883,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "\xDCberl\xE4nge h.",
       oogSlots: (n) => `Blockierte Slots: ${n}`,
       oogDisc: "Sch\xE4tzung zur Buchungsvorbereitung – keine verbindliche Stauplanung.",
-      plansBtn: "Meine Pl\xE4ne", plansTitle: "Meine Pl\xE4ne", plansSaveTitle: "Aktuellen Plan speichern", planRename: "Umbenennen",
-      plansNamePh: "Plan-Name", plansSave: "Speichern", plansSaved: "Gespeichert", plansLoaded: "Plan geladen",
+      plansBtn: "Meine Pl\xE4ne", plansTitle: "Meine Pl\xE4ne", plansSaveTitle: "Aktuellen Plan speichern", planRename: "Umbenennen", plansSave: "Speichern", plansSaved: "Gespeichert", plansLoaded: "Plan geladen",
       plansLinkCopied: "Link kopiert", plansOpen: "\xD6ffnen", plansShare: "Teilen", plansDelete: "L\xF6schen",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "Position" : "Positionen"} \xB7 ${pcs} Stk`,
       plansEmpty: "Noch keine Pl\xE4ne gespeichert. Speichere oben deinen aktuellen Plan, um ihn sp\xE4ter wiederzufinden.",
@@ -1942,6 +1938,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palFree: "Freies Maß",
       palCarton: "Karton",
       close: "Schlie\xDFen",
+      plansTitle: "Nur in diesem Browser gespeichert",
       palQty: "Menge",
       palLimits: "Grenzen",
       palMaxH: "Bauhöhe max.",
@@ -1965,8 +1962,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palOverWarn: (l, w) => "Überstand " + l + " cm längs, " + w + " cm quer — mit diesen Außenmaßen geht die Palette in die Ladung.",
       palEmpty: "Mit diesen Maßen entsteht keine Lage.",
       palResult: (n, p) => plu(n, "Karton", "Kartons") + " \u2192 " + plu(p, "Palette", "Paletten"),
-      palSplit: (f, pp, rest, rh) => f + " volle à " + pp + " Kartons + 1 Restpalette mit " + rest + " (" + rh + " cm hoch)",
-      palSplitFull: (f, pp) => f + " volle Paletten à " + pp + " Kartons",
       palFoot: "Rein geometrisch · kein Lagenverbund, keine Ladungssicherung · Palettengewicht und Tragfähigkeit sind Richtwerte",
       palCancel: "Abbrechen",
       palApply: "In die Ladung übernehmen",
@@ -2014,8 +2009,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       allLoaded: "All loaded",
       overCap: (kg) => `${kg} kg over payload`,
       qImported: (n) => `${n} item${n === 1 ? "" : "s"} imported from link – editable below`,
-      railFull: "Full", railDetails: "Details", railLess: "Less",
-      freeTitle: "Still free", freeLen: "Length to door", freeVol: "Volume", freePay: "Payload", freeFull: "Container empty",
+      railFull: "Full", railDetails: "Details", railLess: "Less", freeLen: "Length to door", freeVol: "Volume", freePay: "Payload", freeFull: "Container empty",
       open: (n) => `${n} left`,
       volume: "Volume",
       weight: "Weight",
@@ -2063,26 +2057,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       doorWarn: (n) => `${n} item${n === 1 ? "" : "s"} won\u2019t fit through the door`,
       doorHint: (w, h) => `Door opening approx. ${w}\xD7${h} cm`,
       pdfBtn: "Load proposal",
-      pdfTitle: "Load proposal as PDF (opens print view)",
+      pdfTitle: "As PDF with a QR code to the 3D plan",
       exportBtn: "Export",
-      exportTitle: "Download cargo list as CSV/Excel",
+      exportTitle: "Cargo list as CSV for Excel",
       exportEmpty: "Add cargo first",
       exportDone: "Cargo list exported",
       shotBtn: "Image",
-      shotColor: "Image colour (export only)",
       shotExportTitle: "Export image",
       shotExportDesc: "Clean view image for customers/agents – always from the perfect angle.",
       shotAccentLabel: "Accent colour",
       shotLogoLabel: "Company logo (optional)",
       shotLogoDrag: "Drop logo here or click to upload",
-      shotLogoRemove: "Remove logo",
       shotLogoRemoveBtn: "×",
       shotTransparent: "Transparent background",
       shotTransparentHint: "Container cut out – ideal for pasting into emails.",
       shotSave: "Save image",
       shotCopyBtn: "Copy to clipboard",
       shotCopyHint: "Paste directly into an email with Ctrl+V – no attachment needed.",
-      shotTitle: "Save view as image (PNG for customers/agents)",
+      shotTitle: "The view as a PNG image",
       shotEmpty: "Load cargo first",
       shotDone: "Image saved",
       shotCopied: "Copied to clipboard – now paste it with Ctrl+V",
@@ -2125,8 +2117,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "Over length b.",
       oogSlots: (n) => `Blocked slots: ${n}`,
       oogDisc: "Estimate for booking prep – not a binding stowage plan.",
-      plansBtn: "My plans", plansTitle: "My plans", plansSaveTitle: "Save current plan", planRename: "Rename",
-      plansNamePh: "Plan name", plansSave: "Save", plansSaved: "Saved", plansLoaded: "Plan loaded",
+      plansBtn: "My plans", plansTitle: "My plans", plansSaveTitle: "Save current plan", planRename: "Rename", plansSave: "Save", plansSaved: "Saved", plansLoaded: "Plan loaded",
       plansLinkCopied: "Link copied", plansOpen: "Open", plansShare: "Share", plansDelete: "Delete",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "item" : "items"} \xB7 ${pcs} pcs`,
       plansEmpty: "No saved plans yet. Save your current plan above to find it again later.",
@@ -2181,6 +2172,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palFree: "Custom size",
       palCarton: "Carton",
       close: "Close",
+      plansTitle: "Saved in this browser only",
       palQty: "Quantity",
       palLimits: "Limits",
       palMaxH: "Max. height",
@@ -2204,8 +2196,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palOverWarn: (l, w) => "Overhang " + l + " cm lengthwise, " + w + " cm crosswise — the pallet enters the load with these outer dimensions.",
       palEmpty: "No layer can be built from these dimensions.",
       palResult: (n, p) => plu(n, "carton", "cartons") + " \u2192 " + plu(p, "pallet", "pallets"),
-      palSplit: (f, pp, rest, rh) => f + " full at " + pp + " cartons + 1 part pallet with " + rest + " (" + rh + " cm high)",
-      palSplitFull: (f, pp) => f + " full pallets at " + pp + " cartons",
       palFoot: "Purely geometric · no interlocking pattern, no load securing · pallet weight and capacity are guide values",
       palCancel: "Cancel",
       palApply: "Add to load",
@@ -4005,9 +3995,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 13.5, color: "#eaf4ff" } }, T.manualTitle),
             manualMode && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: 11, letterSpacing: "0.08em", color: C.teal, background: hexA(C.teal, 0.14), border: `1px solid ${hexA(C.teal, 0.4)}`, borderRadius: 8, padding: "2px 6px" } }, T.manualBadge)
           ),
-          /* @__PURE__ */ React.createElement("button", { onClick: manualToggle, style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, letterSpacing: "0.03em", padding: "6px 10px", borderRadius: 8, cursor: "pointer", background: manualMode ? "#161D27" : hexA(C.teal, 0.14), border: `1px solid ${manualMode ? "#2E3A49" : hexA(C.teal, 0.45)}`, color: manualMode ? C.dim : "#bdfaf0" } }, manualMode ? T.manualToggleOff : T.manualToggleOn)
+          /* @__PURE__ */ React.createElement("button", { onClick: manualToggle, style: { fontFamily: SANS, fontSize: 11, fontWeight: 600, title: T.manualSub, letterSpacing: "0.03em", padding: "6px 10px", borderRadius: 8, cursor: "pointer", background: manualMode ? "#161D27" : hexA(C.teal, 0.14), border: `1px solid ${manualMode ? "#2E3A49" : hexA(C.teal, 0.45)}`, color: manualMode ? C.dim : "#bdfaf0" } }, manualMode ? T.manualToggleOff : T.manualToggleOn)
         ),
-        !manualMode && /* @__PURE__ */ React.createElement("p", { style: { marginTop: 8, fontSize: 11, lineHeight: 1.5, color: C.faint } }, T.manualSub),
+        manualMode && /* @__PURE__ */ React.createElement("p", { style: { marginTop: 8, fontSize: 11, lineHeight: 1.5, color: C.faint } }, T.manualSub),
         manualMode && /* @__PURE__ */ React.createElement("div", { style: { marginTop: 12 } },
           /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 6 } }, T.cargo),
           /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1.5" }, cargo.map((c, i) => {
@@ -4780,25 +4770,32 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Die Auslastung stand frueher als 26px-Zahl mit eigenem Trennstrich vor der Leiste – ein
     // Sonderfall, der nur deshalb groesser war, weil er der erste war. Sie ist eine Kennzahl
     // wie die anderen und steht jetzt auch so da.
-    const statCards = domain === "road" ? [
-      { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor },
-      { label: T.loaded, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn },
-      { label: T.ldm, value: nf(ldmBelegt, 2), sub: `/ ${nf(ldmTotal, 2)} ldm` },
-      { label: T.volume, value: nf(result.usedVol, 2), sub: "cbm" },
-      { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor },
-      { label: T.spots, value: `${floorSpots}`, sub: T.spotsSub }
-    ] : [
-      { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor },
-      { label: T.loaded, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn },
-      // Freie Laenge bis zur Tuer stand vorher in der schwebenden Karte im 3D-Bild. Sie ist die
-      // einzige Zahl von dort, die sich nicht aus der Leiste ergibt (freies Volumen und freie
-      // Zuladung stehen als "belegt / gesamt" schon daneben) – deshalb ist sie mit umgezogen,
-      // und die Karte konnte ganz verschwinden.
-      { label: T.freeLen, value: nf(freeLenM, 2), sub: "m" },
-      { label: T.volume, value: nf(result.usedVol, 1), sub: `/ ${nf(result.contVol, 1)} m\xB3` },
-      { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor },
-      { label: T.layers, value: `${result.boxes === 0 ? 0 : result.single ? result.layers : Math.max(1, result.layers)}`, sub: result.single ? T.stacked : T.mixed }
-    ];
+    // Zeigt das 3D-Bild mehr als einen Container, dann zaehlt die Leiste den ERSTEN —
+    // sie sagt das jetzt auch, mit derselben Marke, die im Bild an den Huellen steht (C1/F1).
+    // Ohne diesen Zusatz las man "62 / 92 verladen" neben einem Bild, in dem alle 92 stehen.
+    const slot1 = result.chain && result.chain.length > 1 ? " \xB7 " + (domain === "road" ? "F1" : "C1") : "";
+    const kpiFull = { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor };
+    const kpiLoaded = { label: T.loaded + slot1, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: allFit ? C.good : C.warn };
+    const kpiWeight = { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor };
+    const kpiVol = domain === "road"
+      ? { label: T.volume, value: nf(result.usedVol, 2), sub: "cbm" }
+      : { label: T.volume, value: nf(result.usedVol, 1), sub: `/ ${nf(result.contVol, 1)} m\xB3` };
+    const kpiLdm = { label: T.ldm, value: nf(ldmBelegt, 2), sub: `/ ${nf(ldmTotal, 2)} ldm` };
+    // Freie Laenge bis zur Tuer stand vorher in der schwebenden Karte im 3D-Bild. Sie ist die
+    // einzige Zahl von dort, die sich nicht aus der Leiste ergibt (freies Volumen und freie
+    // Zuladung stehen als "belegt / gesamt" schon daneben) – deshalb ist sie mit umgezogen,
+    // und die Karte konnte ganz verschwinden.
+    const kpiFreeLen = { label: T.freeLen, value: nf(freeLenM, 2), sub: "m" };
+    const kpiLayers = { label: T.layers, value: `${result.boxes === 0 ? 0 : result.single ? result.layers : Math.max(1, result.layers)}`, sub: result.single ? T.stacked : T.mixed };
+    const kpiSpots = { label: T.spots, value: `${floorSpots}`, sub: T.spotsSub };
+    // Vier in der Leiste, der Rest eine Klick tiefer. Sechs Karten plus Statusblock brauchen
+    // etwa 850 px; im Dreispalten-Layout stehen der Gruppe 490 zur Verfuegung. Die Leiste ist
+    // deshalb zwischen 1440 und 1800 px immer zweizeilig umgebrochen — auf genau den Breiten,
+    // auf denen die meisten arbeiten.
+    const statCards = domain === "road"
+      ? [kpiFull, kpiLoaded, kpiLdm, kpiWeight]
+      : [kpiFull, kpiLoaded, kpiVol, kpiWeight];
+    const detailCards = domain === "road" ? [kpiVol, kpiSpots] : [kpiFreeLen, kpiLayers];
     // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
     // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
     const cog = computeLongCog(result.placed || [], (ti) => num(cargo[ti] && cargo[ti].weight), num(container.l));
@@ -4806,7 +4803,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
-    const statusColor = payPct > 100 || overweight ? C.bad : railHot ? C.warn : C.good;
+    // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
+    // dreissig Packstuecke gar nicht in den Container gingen. Daneben stand "30 offen", und
+    // zwar in Gruen. Was nicht drin ist, ist kein guter Zustand.
+    const statusColor = payPct > 100 || overweight ? C.bad : !allFit || railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: "14px 20px" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: "10px 18px", paddingRight: 18 } },
@@ -4836,6 +4836,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ),
       /* @__PURE__ */ React.createElement("div", { style: { maxHeight: cogOpen ? 360 : 0, overflow: "hidden", transition: "max-height .3s ease", background: hexA("#121821", 0.5) } },
         /* @__PURE__ */ React.createElement("div", { className: "px-5 py-4", style: { borderTop: "1px solid #1C2531", display: "flex", flexDirection: "column", gap: 14 } },
+          // Die beiden Kennzahlen, die oben keinen Platz mehr haben. Sie stehen hier in
+          // derselben Form wie in der Leiste — es ist dieselbe Zahl, nur eine Zeile tiefer.
+          /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap", style: { gap: "10px 18px" } },
+            detailCards.map((s2, i) => /* @__PURE__ */ React.createElement(React.Fragment, { key: i },
+              i > 0 && /* @__PURE__ */ React.createElement("div", { style: { width: 1, alignSelf: "stretch", background: "#232C38" } }),
+              /* @__PURE__ */ React.createElement("div", { className: "min-w-0", style: { paddingLeft: i ? 18 : 0 } },
+                /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 3 } }, s2.label),
+                /* @__PURE__ */ React.createElement("div", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 600, color: s2.accent || C.text, fontVariantNumeric: "tabular-nums", lineHeight: 1.1 } }, s2.value,
+                  s2.sub ? /* @__PURE__ */ React.createElement("span", { style: { fontSize: 11, color: C.faint, fontWeight: 400 } }, " ", s2.sub) : null))))),
           /* @__PURE__ */ React.createElement(Meter, { label: primaryMeter.label, pct: primaryMeter.pct, color: primaryMeter.color, text: primaryMeter.text }),
           num(container.payload) > 0 && /* @__PURE__ */ React.createElement(Meter, { label: T.payloadUtil, pct: Math.min(payPct, 100), color: payColor, text: `${payPct.toFixed(0)}%`, over: payPct > 100 }),
           cog && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
@@ -5018,14 +5027,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("button", { onClick: () => setMenuOpen((o) => !o), title: T.moreMenu, "aria-expanded": menuOpen ? "true" : "false", className: "px-2.5 py-1 rounded-lg transition hover:brightness-125", style: { fontFamily: SANS, fontSize: 12.5, fontWeight: 700, letterSpacing: "0.06em", lineHeight: 1.35, color: menuOpen ? "#bcd9ff" : C.dim, background: menuOpen ? hexA(C.accent, 0.1) : "transparent", border: `1px solid ${menuOpen ? hexA(C.accent, 0.4) : "#232C38"}`, cursor: "pointer" } }, "\u2026"),
       menuOpen && /* @__PURE__ */ React.createElement(React.Fragment, null,
         /* @__PURE__ */ React.createElement("div", { onClick: () => setMenuOpen(false), style: { position: "fixed", inset: 0, zIndex: 40 } }),
-        /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: 30, right: 0, zIndex: 41, minWidth: 176, padding: 6, borderRadius: 12, background: "#161D27", border: "1px solid #2E3A49", boxShadow: "0 18px 50px -16px rgba(0,0,0,0.85)" } },
+        /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: 30, right: 0, zIndex: 41, minWidth: 284, padding: 6, borderRadius: 12, background: "#161D27", border: "1px solid #2E3A49", boxShadow: "0 18px 50px -16px rgba(0,0,0,0.85)" } },
           [
-            !EMBEDDED && { label: T.backToSite, fn: () => { window.location.href = homeHref; } },
-            domain === "sea" && { label: T.pdfBtn, fn: buildLadevorschlag, aus: manualMode },
-            { label: T.exportBtn, fn: doExportCSV, aus: manualMode },
-            { label: T.shotBtn, fn: () => setExportOpen(true) },
-            { label: T.plansBtn, fn: () => setPlansOpen(true), aus: manualMode }
-          ].filter(Boolean).map((e, i) => /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, fontSize: 13.5, fontWeight: 600, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } }, e.label))
+            domain === "sea" && { label: T.pdfBtn, sub: T.pdfTitle, fn: buildLadevorschlag, aus: manualMode },
+            { label: T.exportBtn, sub: T.exportTitle, fn: doExportCSV, aus: manualMode },
+            { label: T.shotBtn, sub: T.shotTitle, fn: () => setExportOpen(true) },
+            { label: T.plansBtn, sub: T.plansTitle, fn: () => setPlansOpen(true), aus: manualMode },
+            !EMBEDDED && { trenner: true },
+            !EMBEDDED && { label: T.backToSite, fn: () => { window.location.href = homeHref; } }
+          ].filter(Boolean).map((e, i) => e.trenner
+            ? /* @__PURE__ */ React.createElement("div", { key: i, style: { height: 1, background: "#232C38", margin: "5px 3px" } })
+            : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600 } }, e.label),
+              e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 1 } }, e.sub) : null))
         ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-5 pt-5" }, /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 5, background: "#161D27", border: "1px solid #232C38", borderRadius: 12, padding: 4 } }, [["sea", T.domSea], ["road", T.domRoad]].map(([d, lbl]) => { const on = domain === d; const acc = d === "road" ? C.teal : C.accent; return /* @__PURE__ */ React.createElement("button", { key: d, onClick: () => switchDomain(d), style: { flex: 1, border: 0, cursor: "pointer", background: on ? hexA(acc, 0.12) : "transparent", color: on ? "#dbe8ff" : C.dim, fontFamily: SANS, fontWeight: 700, fontSize: 12.5, padding: "9px 6px", borderRadius: 8, boxShadow: on ? `inset 0 0 0 1px ${hexA(acc, 0.6)}` : "none", transition: ".18s" } }, lbl); }))), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-5 pt-4" }, /* @__PURE__ */ React.createElement("button", { onClick: recDisabled ? void 0 : openRec, disabled: recDisabled, className: "w-full px-4 py-2.5 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: "transparent", border: `1px solid ${recDisabled ? "#232C38" : hexA(C.accent, 0.32)}`, color: recDisabled ? C.faint : "#bcd9ff", fontWeight: 600, fontSize: 13.5, cursor: recDisabled ? "default" : "pointer" } }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-1.5", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: 11, fontWeight: 600, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: 8, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 5 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: 11, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: 700 } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: "#ffd9a8", marginTop: 4, fontWeight: 600 } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, lineHeight: 1.35, color: C.faint, marginTop: 6 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-xl px-3.5 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: 15, fontWeight: 700, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-xl px-4 py-2.5 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 17 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: 12.5, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: 12.5, fontWeight: 700 } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12.5, fontWeight: 700 } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-1.5 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: "#0B0616", fontSize: 12.5, fontWeight: 700 } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-5 py-2.5 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: 11, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", null, T.footR)), exportOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setExportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 460, background: "#161D27", borderRadius: 16, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "8.5", cy: "8.5", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M21 15l-5-5L5 21" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shotExportTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: 17, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13.5, lineHeight: 1.5, marginBottom: 16 } }, T.shotExportDesc), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, fontWeight: 500, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 9 } }, T.shotAccentLabel), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 18 } }, Object.entries(EXPORT_ACCENTS).map(([key, hex]) => { const on = exportAccent === key; const lbl = { standard: "Standard", blau: LANG === "en" ? "Blue" : "Blau", rot: LANG === "en" ? "Red" : "Rot" }[key]; return /* @__PURE__ */ React.createElement("button", { key, onClick: () => setExportAccent(key), className: "flex items-center gap-2 rounded-lg transition", style: { padding: "6px 11px 6px 8px", background: on ? hexA(C.accent, 0.1) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.5) : C.fieldBorder}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 16, height: 16, borderRadius: 999, background: hex || "linear-gradient(135deg,#2E8FFF,#2E8FFF)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, fontWeight: 600, color: on ? C.text : C.dim } }, lbl)); })), /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 14px", borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}`, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 10 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.text, marginBottom: 9 } }, T.shotLogoLabel), /* @__PURE__ */ React.createElement("div", { onDragOver: (e) => { e.preventDefault(); e.target.style.background = hexA(C.accent, 0.15); }, onDragLeave: (e) => { e.target.style.background = C.field; }, onDrop: (e) => { e.preventDefault(); const files = e.dataTransfer.files; if (files.length > 0) { const file = files[0]; if (file.type.startsWith("image/")) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } } e.target.style.background = C.field; }, onClick: () => { const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.onchange = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } }; input.click(); }, style: { padding: "16px", borderRadius: 8, border: `2px dashed ${C.fieldBorder}`, background: C.field, cursor: "pointer", textAlign: "center", transition: "background .2s" } }, customLogo ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: 12.5, color: C.accent, fontWeight: 600 } }, "✓ ", LANG === "en" ? "Logo uploaded" : "Logo hochgeladen"), /* @__PURE__ */ React.createElement("button", { onClick: (e) => { e.stopPropagation(); setCustomLogo(null); }, className: "ml-auto px-2 py-1 rounded transition hover:brightness-110", style: { background: hexA(C.bad, 0.15), border: `1px solid ${hexA(C.bad, 0.4)}`, color: C.bad, fontSize: 11, fontWeight: 600, cursor: "pointer" } }, T.shotLogoRemoveBtn)) : /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 12.5 } }, T.shotLogoDrag)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between", style: { padding: "12px 14px", borderRadius: 12, background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("div", { style: { paddingRight: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: 13.5, fontWeight: 600, color: C.text } }, T.shotTransparent), /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginTop: 2, lineHeight: 1.4 } }, T.shotTransparentHint)), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportTransparent((v) => !v), role: "switch", "aria-checked": exportTransparent ? "true" : "false", style: { flexShrink: 0, width: 42, height: 24, borderRadius: 999, border: 0, cursor: "pointer", padding: 3, display: "flex", justifyContent: exportTransparent ? "flex-end" : "flex-start", background: exportTransparent ? C.accent : "#2E3A49", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 18, height: 18, borderRadius: 999, background: exportTransparent ? "#04121A" : "#8FA3B6" } })))), /* @__PURE__ */ React.createElement("div", { style: { padding: "15px 20px", borderTop: "1px solid #1C2531", background: "#121821", borderRadius: "0 0 20px 20px" } }, CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("div", { style: { fontSize: 11, color: C.faint, marginBottom: 10, lineHeight: 1.4 } }, T.shotCopyHint), /* @__PURE__ */ React.createElement("div", { className: "flex justify-end gap-2" }, /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), className: "px-4 py-2 rounded-lg transition hover:brightness-110", style: { background: "transparent", color: C.dim, fontWeight: 600, fontSize: 13.5, cursor: "pointer" } }, LANG === "en" ? "Cancel" : "Abbrechen"), /* @__PURE__ */ React.createElement("button", { onClick: saveScreenshot, className: "px-4 py-2 rounded-lg transition hover:brightness-110 flex items-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: 600, fontSize: 13.5, cursor: "pointer" } }, T.shotSave), CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("button", { onClick: copyScreenshotToClipboard, className: "px-4 py-2 rounded-lg transition hover:brightness-110 flex items-center gap-2", style: { background: C.accent, color: "#04121A", fontWeight: 700, fontSize: 13.5, cursor: "pointer" } }, T.shotCopyBtn))))), shareOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setShareOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 520, background: "#161D27", borderRadius: 16, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-5 py-3.5", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "15", height: "15", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: "2.4", strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: 700, fontSize: 15 } }, T.shareTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setShareOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: 17, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-5" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: 13.5, lineHeight: 1.5, marginBottom: 12 } }, T.shareDesc), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { readOnly: true, value: shareURL, onFocus: (e) => e.target.select(), className: "flex-1 rounded-lg px-3 py-2.5", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: 12.5, fontFamily: MONO, outline: "none" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => {
       try {
         navigator.clipboard.writeText(shareURL).then(() => setShareCopied(true), () => {
@@ -5489,6 +5503,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               const pt = R.perType.find((x) => x.ti === build.layers[0].ti);
               const txt = pt && { height: T.palCapHeight, weight: T.palCapWeight, layers: T.palCapLayers }[pt.cap];
               return txt ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.faint, marginTop: 6, lineHeight: 1.45 } }, txt) : null;
+            })(),
+            // Wie viel Ueberstand tatsaechlich gebraucht wird. Der zugelassene Ueberstand
+            // steht als Eingabe daneben — GENUTZT wird er aber nur, wenn das Lagenmuster
+            // ihn braucht, und genau diese Zahl entscheidet, ob die Palette im Container
+            // noch neben ihre Nachbarin passt. Gemessen, nicht angenommen.
+            (() => {
+              const ol = (num(build.outL) - num(pal.l)) / 2, ow = (num(build.outW) - num(pal.w)) / 2;
+              if (ol < 0.05 && ow < 0.05) return null;
+              return /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.45 } },
+                T.palOverWarn(dimDE(Math.max(0, ol)), dimDE(Math.max(0, ow))));
             })(),
             R.noFit.length ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palNoFit(R.noFit.map((i) => letter(i)).join(", "))) : null,
             R.unplaced > 0 ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: 11, color: C.warn, marginTop: 6, lineHeight: 1.4 } }, T.palLeft(R.unplaced)) : null)
