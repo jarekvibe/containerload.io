@@ -5,53 +5,67 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Stauplan ansehen — ContainerLoad</title>
 <meta name="description" content="Jemand hat dir einen Ladeplan geschickt. Öffne ihn, um in 3D zu sehen, wie die Ladung in den Container passt – ohne Login." />
-<meta property="og:title" content="📦 Stauplan wurde mit dir geteilt" />
+<!-- Diese Seite existiert nur, um 450 ms lang zu zeigen, wer da schickt, und dann nach
+     /app weiterzuleiten. Ein canonical gehoert trotzdem hierher: sonst gilt jede der
+     unendlich vielen ?c=-Adressen als eigene Seite. -->
+<link rel="canonical" href="https://containerload.io/share" />
+<meta name="robots" content="noindex,follow" />
+<meta property="og:title" content="Stauplan wurde mit dir geteilt" />
 <meta property="og:description" content="Jemand hat dir einen Ladeplan geschickt. Öffne den Link und sieh genau, wie die Ladung in den Container passt – interaktiv in 3D, ohne Login." />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:url" content="https://containerload.io/share" />
 <meta property="og:image" content="https://containerload.io/share-og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="Ein Ladeplan wurde dir geteilt – in 3D ansehen." />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="📦 Stauplan wurde mit dir geteilt" />
+<meta name="twitter:title" content="Stauplan wurde mit dir geteilt" />
 <meta name="twitter:description" content="Sieh in 3D, wie die Ladung in den Container passt – ohne Login, direkt im Browser." />
 <meta name="twitter:image" content="https://containerload.io/share-og.png" />
-<meta name="theme-color" content="#070a0f" />
+<meta name="theme-color" content="#0E1116" />
 <!-- Verweist auf die Markendateien statt das Zeichen hier noch einmal einzubacken.
      Eingebackene Kopien laufen auseinander — genau das war hier passiert. -->
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
+  /* Grundton, Akzent, Radien und Gewichte wie im Rechner und auf der Startseite.
+     Hier standen vorher ein eigener Grundton (#070a0f), ein eigener Akzent (#2f9bff),
+     zwei Farbverlaeufe und Schriftgewicht 800 — vier Abweichungen auf einer Seite,
+     die nur eine halbe Sekunde zu sehen ist. */
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#070a0f;color:#eef2f7;font-family:'Inter',ui-sans-serif,system-ui,-apple-system,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
-  .bg{position:fixed;inset:0;background:radial-gradient(60% 50% at 80% 0%,rgba(21,64,122,.6),transparent),radial-gradient(50% 40% at 0% 100%,rgba(15,61,58,.5),transparent)}
-  .wrap{position:relative;text-align:center;padding:24px;max-width:440px}
+  body{background:#0E1116;color:#E9F0F7;
+    font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .wrap{text-align:center;padding:24px;max-width:440px}
   .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px}
-  /* Ein Markenton, kein Verlauf, kein farbiger Schein — wie auf der Startseite und im Rechner. */
-  .mark{width:40px;height:40px;border-radius:11px;background:#2E8FFF;display:flex;align-items:center;justify-content:center}
-  .word{font-size:21px;font-weight:800;letter-spacing:-.02em}
-  .grad{color:#2E8FFF;-webkit-text-fill-color:#2E8FFF}
-  .eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#2E8FFF;margin-bottom:14px}
-  h1{font-size:27px;font-weight:800;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
-  p{color:#9aa7b8;font-size:15px;line-height:1.55;margin-bottom:26px}
-  .spin{width:26px;height:26px;border:3px solid rgba(47,155,255,.25);border-top-color:#2f9bff;border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 22px}
+  .mark{width:40px;height:40px;border-radius:12px;background:#2E8FFF;display:flex;align-items:center;justify-content:center}
+  .word{font-size:21px;font-weight:700;letter-spacing:-.02em}
+  .word-load{color:#2E8FFF}
+  .eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:#7689A0;margin-bottom:14px}
+  h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+  p{color:#9DB0C2;font-size:15px;line-height:1.55;margin-bottom:26px}
+  .spin{width:26px;height:26px;border:3px solid rgba(46,143,255,.25);border-top-color:#2E8FFF;
+    border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 22px}
   @keyframes sp{to{transform:rotate(360deg)}}
-  .btn{display:inline-flex;align-items:center;gap:8px;background:#2E8FFF;color:#04101f;font-weight:700;font-size:15px;padding:13px 26px;border-radius:12px;text-decoration:none;transition:filter .15s}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:#2E8FFF;color:#04121A;font-weight:700;
+    font-size:15px;padding:13px 26px;border-radius:12px;text-decoration:none;transition:filter .15s}
   .btn:hover{filter:brightness(1.08)}
-  .foot{margin-top:22px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#67748a}
+  .btn:focus-visible{outline:2px solid #2E8FFF;outline-offset:3px}
+  .foot{margin-top:22px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#7689A0}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>
 <body>
-<div class="bg"></div>
 <div class="wrap">
   <div class="logo">
-    <span class="mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
-    <span class="word">Container<span class="grad">Load</span></span>
+    <span class="mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+    <span class="word">Container<span class="word-load">Load</span></span>
   </div>
-  <div class="eyebrow">● Geteilter Stauplan</div>
-  <h1>Ein Ladeplan wurde<br>mit dir geteilt.</h1>
-  <p>Du siehst gleich in 3D, wie die Ladung in den Container passt – interaktiv, ohne Login.</p>
+  <div class="eyebrow" id="s-ey">Geteilter Stauplan</div>
+  <h1 id="s-h1">Ein Ladeplan wurde<br>mit dir geteilt.</h1>
+  <p id="s-p">Du siehst gleich in 3D, wie die Ladung in den Container passt – interaktiv, ohne Login.</p>
   <div class="spin" id="spin"></div>
   <a class="btn" id="go" href="/app">Stauplan öffnen →</a>
   <div class="foot">containerload.io</div>
@@ -59,6 +73,30 @@
 <script>
   (function () {
     var search = window.location.search || "";
+    // Sprache: Der Rechner haengt beim Teilen &lang=en an, wenn der Absender englisch
+    // arbeitet. Vorher ging die Sprache hier verloren — der Empfaenger sah eine deutsche
+    // Zwischenseite und landete in einem deutschen Rechner, obwohl der Plan auf Englisch
+    // erstellt und geteilt wurde. Der Query-String wandert unveraendert weiter nach /app,
+    // dort liest LANG dasselbe ?lang= wieder aus.
+    var en = false;
+    try {
+      var p = (new URLSearchParams(search).get("lang") || "").toLowerCase();
+      if (p) en = p.indexOf("en") === 0;
+      else en = ((window.localStorage.getItem("cl_lang") || "").toLowerCase().indexOf("en") === 0);
+    } catch (e) {}
+    if (en) {
+      document.documentElement.lang = "en";
+      document.title = "View stowage plan — ContainerLoad";
+      var t = {
+        "s-ey": "Shared stowage plan",
+        "s-h1": "A loading plan<br>was shared with you.",
+        "s-p": "You are about to see in 3D how the load fits into the container — interactive, no sign-up.",
+        "go": "Open the plan →"
+      };
+      for (var id in t) { var el = document.getElementById(id); if (el) el.innerHTML = t[id]; }
+      var ns = document.getElementById("s-noscript");
+      if (ns) ns.textContent = "Please enable JavaScript or click “Open the plan”.";
+    }
     var target = "/app" + search;
     var go = document.getElementById("go");
     if (go) go.setAttribute("href", target);
@@ -68,6 +106,6 @@
     }, 450);
   })();
 </script>
-<noscript><div style="position:fixed;bottom:16px;left:0;right:0;text-align:center;color:#9aa7b8;font-size:13px">Bitte JavaScript aktivieren oder den Button „Stauplan öffnen" klicken.</div></noscript>
+<noscript><div id="s-noscript" style="position:fixed;bottom:16px;left:0;right:0;text-align:center;color:#9DB0C2;font-size:13px">Bitte JavaScript aktivieren oder den Button „Stauplan öffnen" klicken.</div></noscript>
 </body>
 </html>
