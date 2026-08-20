@@ -80,3 +80,54 @@ test("26 Europaletten sind im 40-Fuss geometrisch unmoeglich", () => {
   assert.ok(restBreite < 80, `${restBreite} cm Restbreite — da ginge doch noch eine Palette`);
   assert.ok(restLaenge < 80, `${restLaenge} cm Restlaenge — da ginge doch noch eine Palette`);
 });
+
+// Die Startseite hat genau denselben Fehler getragen und ist beim ersten Mal
+// durchgerutscht, weil oben nur der Ordner ratgeber/ durchsucht wurde. Die
+// Uebersichtskarte verlinkt aber auf die Seite, der sie widersprochen hat — und die
+// englische Fassung im EN-Woerterbuch gleich mit. Deshalb steht die Startseite jetzt
+// mit im Netz.
+test("auch die Startseite traegt keine widerlegte Angabe mehr", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  const raus = ["25–26", "25-26", "24–25", "9–10"];
+  const treffer = raus.filter((r) => start.includes(r));
+  assert.deepStrictEqual(treffer, [], `index.html nennt wieder: ${treffer.join(", ")}`);
+});
+
+// Und die Karte muss die Zahl nennen, die auch der Packer rechnet — nicht bloss
+// keine falsche. Sonst haette ein Loeschen des Satzes den Test schon zufriedengestellt.
+test("die Uebersichtskarten der Startseite nennen die gerechneten Zahlen", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  // [i18n-Schluessel der Karte, Preset, Packstueckmass]
+  const KARTEN = [["rg1_p", "20' GP", [120, 80]], ["rg2_p", "40' GP", [120, 80]]];
+  for (const [key, preset, [l, w]] of KARTEN) {
+    const echt = stellplaetze(preset, l, w);
+    const de = start.match(new RegExp(`data-i18n="${key}"[^>]*>([^<]*)<`));
+    const en = start.match(new RegExp(`"${key}": "([^"]*)"`));
+    assert.ok(de && en, `${key}: deutsche oder englische Fassung nicht gefunden`);
+    for (const [was, txt] of [["deutsch", de[1]], ["englisch", en[1]]])
+      assert.ok(new RegExp(`\\b${echt}\\b`).test(txt),
+        `Karte ${key} (${was}) sagt "${txt.trim()}", der Packer rechnet ${echt}`);
+  }
+});
+
+// Der Beweis-Satz der Startseite: "11 EUR-Paletten statt 8". Die 11 stand immer, die
+// Vergleichszahl war erfunden — sie soll das Ergebnis OHNE Erkennung gedrehter Muster
+// nennen, und das sind 8, nicht 9. Ausgerechnet der Satz, mit dem das Werkzeug seine
+// Genauigkeit belegt, war die einzige Zahl auf der Seite, die niemand nachrechnen
+// konnte. Beide Zahlen kommen jetzt aus demselben Packer, mit und ohne Drehung.
+test("die Vergleichszahl im Merkmal 'palettengenau' stimmt", () => {
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  const C = PRESETS["20' GP"];
+  const mit = makeFloorPacker(120, 80, true)(C.l, C.w).count;
+  const ohne = makeFloorPacker(120, 80, false)(C.l, C.w).count;
+  assert.ok(mit > ohne, "ohne Drehung duerfte nicht mehr passen als mit");
+  for (const [was, txt] of [
+    ["deutsch", (start.match(/data-i18n="f2_p"[^>]*>(.*?)<\/p>/s) || [])[1]],
+    ["englisch", (start.match(/"f2_p": "(.*?)", "f3_h"/s) || [])[1]]
+  ]) {
+    assert.ok(txt, `${was}: Merkmal f2_p nicht gefunden`);
+    const zahlen = (txt.match(/\d+/g) || []).map(Number);
+    assert.ok(zahlen.includes(mit), `${was}: die gerechnete Zahl ${mit} fehlt in "${txt}"`);
+    assert.ok(zahlen.includes(ohne), `${was}: die Vergleichszahl muesste ${ohne} sein — im Text steht ${zahlen.join(", ")}`);
+  }
+});
