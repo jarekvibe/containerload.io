@@ -554,13 +554,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       let stackable = true;
       if (/nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel/i.test(low)) stackable = false;
+      // "stapelbar bis 180 cm" -- die Angabe, wie sie in Anfragen steht. Bewusst an ein
+      // Schluesselwort gebunden (bis / max / up to) UND an eine Laengeneinheit: sonst
+      // frisst der Ausdruck das Stueckgewicht ("max 100 kg") oder eine der Kantenlaengen.
+      let stackH = null;
+      const shm = line.match(/(?:bis|max\.?|maximal|up\s*to)\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\b/i);
+      if (shm && stackable) {
+        const v = toNum(shm[1]), u = (shm[2] || "cm").toLowerCase();
+        const cm = u === "m" ? v * 100 : u === "mm" ? v / 10 : v;
+        if (cm > 0) stackH = Math.round(cm * 10) / 10;
+      }
       let rotatable = true;
       if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
-      out.push({ qty, l: Math.max(1, Math.round(l)), w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), weight: Math.max(0, Math.round(weight)), stackable, rotatable, name });
+      out.push({ qty, l: Math.max(1, Math.round(l)), w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), weight: Math.max(0, Math.round(weight)), stackable, stackH, rotatable, name });
     }
     return out;
   }
@@ -925,10 +935,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     var m = +t.stackMax;
     return m >= 2 && isFinite(m) ? m : Infinity;
   }
+  // Die ZWEITE Stapelgrenze: wie hoch der Turm ueber dem Containerboden werden darf, in cm.
+  //
+  // Warum es die braucht, obwohl es stackMax schon gibt: an der Rampe wird nicht in Lagen
+  // gedacht, sondern in Zentimetern -- "stapelbar bis 180 cm". Eine Lagenzahl ist dafuer nur
+  // eine Naeherung, und zwar eine, die sich nicht zusammensetzen laesst. Bei Paletten von 42
+  // bis 49 cm Bauhoehe rechnet man sich aus: unter 45 cm gehen vier, darueber nur drei. Stehen
+  // dann eine flache unten und drei hohe darauf, sind es vier Lagen (jede Grenze fuer sich
+  // eingehalten) und 184 cm (die eigentliche Grenze gerissen). Genau so gemeldet.
+  //
+  // Gemessen wird ab dem Containerboden, nicht ab dem Stueck: "bis 180 cm" ist eine Angabe
+  // ueber den fertigen Stapel im Container, so wie sie in der Anfrage steht.
+  function stackHOf(t) {
+    var h = t ? +t.stackH : NaN;
+    return h > 0 && isFinite(h) ? h : Infinity;
+  }
   // Umkehrung fuer die UI: aktueller Zustand eines Packstuecks -> Auswahlwert des Stapel-Selectors.
-  // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf (also 2/3/4 hoch gesamt).
+  // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf (also 2/3/4 hoch gesamt),
+  // "h" = Grenze in Zentimetern statt in Lagen.
   function stackModeOf(c) {
     if (c && c.stackable === false) return "no";
+    if (c && isFinite(+c.stackH) && +c.stackH > 0) return "h";
     var m = c ? +c.stackMax : NaN;
     if (!(m >= 2 && isFinite(m))) return "free";
     return m <= 2 ? "x1" : m === 3 ? "x2" : "x3";
@@ -1027,7 +1054,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return n;
   }
-  function manualCandidate(container, item, rotated, px, pz, placed, weightUsed) {
+  // Kleinste Hoehengrenze in dieser Saeule -- die eigene und die jedes Stueckes darunter.
+  // Gegenstueck zu hlim in emsPackOnce; beide muessen dasselbe ergeben, sonst verhaelt sich
+  // Ziehen von Hand anders als automatisches Packen.
+  function towerHLimit(px, pz, dx, dz, y, placed, cargo, item) {
+    let grenze = stackHOf(item), cur = y;
+    for (let guard = 0; guard <= placed.length; guard++) {
+      const below = placed.find((b) =>
+        Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
+        Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
+      if (!below) break;
+      const it = cargo && cargo[below.ti];
+      if (it) grenze = Math.min(grenze, stackHOf(it));
+      cur = below.y;
+    }
+    return grenze;
+  }
+  function manualCandidate(container, item, rotated, px, pz, placed, weightUsed, cargo) {
     const l = num(item.l), w = num(item.w), h = num(item.h);
     const dx = rotated ? w : l, dz = rotated ? l : w, dy = h;
     if (dx <= 0 || dz <= 0 || dy <= 0) return { ok: false, reason: "dims" };
@@ -1047,6 +1091,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (y == null) return { ok: false, reason: "overlap" };
     const cap = stackCapOf(item);
     if (isFinite(cap) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > cap) return { ok: false, reason: "stackmax" };
+    const hcap = towerHLimit(px, pz, dx, dz, y, placed, cargo, item);
+    if (isFinite(hcap) && y + dy > hcap + 1e-6) return { ok: false, reason: "stackheight" };
     const cand = { x: px, y, z: pz, dx, dy, dz };
     if (!withinBounds(container, cand)) return { ok: false, reason: "bounds" };
     return { ok: true, box: cand };
@@ -1135,9 +1181,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // und die hoechste Lage, die sein Turm nach ALLEN Traegern darunter erreichen
             // darf (lim = min ueber pos + Tragfaehigkeit - 1). Beim Aufsetzen genuegt der
             // Vergleich mit dem unmittelbaren Untergrund.
-            let pos = 1, lim = Infinity;
+            //
+            // Die Hoehengrenze (stackH, "stapelbar bis 180 cm") laeuft genau parallel dazu,
+            // nur in Zentimetern statt in Lagen: hlim ist die hoechste Oberkante, die der
+            // Turm nach allen Stuecken darunter erreichen darf. Sie wird gebraucht, weil eine
+            // Lagenzahl sich bei ungleich hohen Paletten nicht zusammensetzen laesst -- vier
+            // Lagen aus 42 + 47 + 47 + 47 halten jede Einzelgrenze ein und sind trotzdem
+            // 183 cm hoch.
+            let pos = 1, lim = Infinity, hlim = Infinity;
             if (py > 1e-4) {
-              let untenPos = 0, untenLim = Infinity;
+              let untenPos = 0, untenLim = Infinity, untenH = Infinity;
               for (const b of placed) {
                 if (Math.abs(b.y + b.dy - py) > 1e-3) continue;
                 const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
@@ -1146,11 +1199,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 if (oz <= 1e-6) continue;
                 untenPos = Math.max(untenPos, b.pos || 1);
                 untenLim = Math.min(untenLim, b.lim === void 0 ? Infinity : b.lim);
+                untenH = Math.min(untenH, b.hlim === void 0 ? Infinity : b.hlim);
               }
               pos = untenPos + 1;
               if (pos > untenLim) continue;   // eines der Stuecke darunter traegt nicht so viel
               lim = untenLim;
+              hlim = untenH;
             }
+            if (isFinite(u.stackH)) hlim = Math.min(hlim, u.stackH);
+            if (py + dy > hlim + 1e-6) continue;   // der Turm wuerde zu hoch
             // WICHTIG, und bewusst so: "nicht stapelbar" heisst in diesem Rechner seit jeher
             // "ICH darf auf nichts stehen" (die Pruefung oben, S.y > 1e-6) -- NICHT "auf mich
             // darf nichts". Ein nicht stapelbares Stueck traegt hier also weiterhin. Das ist
@@ -1165,13 +1222,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
             else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
             else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
-            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim };
+            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim, hlim };
           }
         }
       }
       if (!best) continue;
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim });
+      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim, hlim: best.hlim });
       weight += u.weight;
       const next = [];
       for (const S of ems) {
@@ -1262,7 +1319,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Minuszeichen im Gewichtsfeld - beim Einfuegen aus einer Tabelle schnell passiert -
     // ergab sonst eine negative Zuladung ("-9.940 kg") und haette jede Ueberladungspruefung
     // ausgehebelt, weil die Summe nach unten statt nach oben lief.
-    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
+    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), stackH: stackHOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
     const loaded = types.map(() => 0);
     let placed = [], weight = 0, layers = 0, single = false;
     if (valid.length === 1) {
@@ -1273,7 +1330,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Die spaeter ausgewiesene Lagenzahl wird nach dem Packen aus den tatsaechlich
       // belegten Hoehen gezaehlt (siehe unten) — sonst meldet das Tool "2 gestapelt",
       // obwohl nur ein Packstueck auf dem Boden steht.
-      const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
+      // Auch die Hoehengrenze zaehlt hier mit: "bis 180 cm" bei 45 cm Bauhoehe sind vier
+      // Lagen, egal was der Container hergibt.
+      const hLay = isFinite(t.stackH) ? Math.floor((t.stackH + 1e-6) / t.h) : Infinity;
+      const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax, hLay) : 1;
       // Mehr Stellplaetze als Menge / Etagen kann diese Schleife nie belegen — der Packer
       // muss also gar nicht erst mehr ausrechnen.
       const brauchtSpots = Math.max(1, Math.ceil(t.qty / Math.max(1, capLay)));
@@ -1701,6 +1761,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // wird schneller) und 727 ms im schlimmsten nachgestellten Fall, 1.900 Packstuecke auf
   // zehn Container. Gezeichnet werden 8; darueber wird jede Huelle im Bild zum Strich.
   var MAXCHAIN = 24, MAXDRAW = 8;
+  // Was ist ueber die GANZE Kette verladen? Ohne diese Bilanz zeigte die Ladungsliste die
+  // Zahlen des ersten Containers -- "0/1" an einem Packstueck, das im zweiten Container
+  // liegt und im Bild daneben zu sehen ist. Mehr als ein Container ist ein Entschluss,
+  // kein Fehler; die Liste muss den ganzen Plan zaehlen, nicht seinen ersten Teil.
+  function kettenBilanz(cargo, remaining) {
+    return cargo.map((t, i) => {
+      const total = Math.max(0, Math.floor(num(t.qty)));
+      const offen = Math.max(0, remaining[i] ? remaining[i].qty : 0);
+      return { loaded: Math.max(0, total - offen), total };
+    });
+  }
   function chainContainers(container0, preset0, cargo, slot0, overrides, MAXVIS, carrier) {
     // Auto-Folgecontainer nur aus Standard-Typen; Special Equipment nur per manueller Wahl.
     // Folgecontainer kommen von derselben Reederei wie der erste – eine Buchung, ein Equipment-Pool.
@@ -1736,7 +1807,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
     }
-    return { chain, remainingBoxes: totRem };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
@@ -1757,7 +1828,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
     }
-    return { chain, remainingBoxes: totRem };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   var LANG = (() => {
     try {
@@ -1829,11 +1900,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackable: "stapelbar",
       notStackable: "nicht stapelb.",
       stackNo: "nicht stapelbar",
+      stackToH: "bis H\xF6he \u2026", stackHLabel: "max. H\xF6he", stackHSum: (h) => "stapelbar bis " + h,
       stackFree: "frei stapelbar",
       stackX: (n) => `${n}\xD7 stapelbar`,
       rotate: "Drehen",
       loaded: "Verladen",
+      slotsTitle: "Je Container", slotsTitleRoad: "Je Fahrzeug", slotsEmpty: "leer",
       allLoaded: "Alles verladen",
+      allLoadedN: (n) => `Alles verladen \xB7 ${n} Container`,
+      allLoadedRoadN: (n) => `Alles verladen \xB7 ${n} Fahrzeuge`,
       overCap: (kg) => `${kg} kg \xFCber Zuladung`,
       qImported: (n) => `${n} Position${n === 1 ? "" : "en"} aus dem Link \xFCbernommen – unten pr\xFCfbar`,
       railFull: "Voll", railDetails: "Details", railLess: "Weniger", freeLen: "L\xE4nge bis T\xFCr", freeVol: "Volumen", freePay: "Zuladung", freeFull: "Container leer",
@@ -1860,7 +1935,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       backToSite: "Zur Seite",
       impBtn: "Excel / Text",
       impTitle: "Ladung aus Excel oder Text importieren",
-      impPh: "z. B.\n18 Paletten 120x80x110, 300 kg, stapelbar\n6 Kartons 60x40x40, 12 kg\n— oder direkt aus Excel kopieren & einfügen —",
+      impPh: "z. B.\n18 Paletten 120x80x110, 300 kg, stapelbar bis 180 cm\n6 Kartons 60x40x40, 12 kg\n— oder direkt aus Excel kopieren & einfügen —",
       impTsv: (cols) => `Excel-Tabelle erkannt · Spalten: ${cols}`,
       impTsvNoHead: "keine Kopfzeile — Zuordnung geraten, bitte prüfen",
       impTsvSkipped: (n) => `${n} Zeile${n === 1 ? "" : "n"} übersprungen (keine Maße)`,
@@ -1892,6 +1967,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       shotBtn: "Bild",
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
+      shotLayoutLabel: "Anordnung", shotLayoutRow: "Reihe", shotLayoutSheet: "Einzeln",
+      shotLayoutRowHint: "Alle Container nebeneinander \u2013 gut fuer den Ueberblick.",
+      shotLayoutSheetHint: "Ein Bild je Container \u2013 jeder gross genug, um die Lagen zu erkennen.",
       shotAccentLabel: "Akzentfarbe",
       shotLogoLabel: "Firmenlogo (optional)",
       shotLogoDrag: "Logo hier ablegen oder klicken zum Hochladen",
@@ -1952,7 +2030,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "Position" : "Positionen"} \xB7 ${pcs} Stk`,
       plansEmpty: "Noch keine Pl\xE4ne gespeichert. Speichere oben deinen aktuellen Plan, um ihn sp\xE4ter wiederzufinden.",
       plansFoot: "Pl\xE4ne liegen nur in diesem Browser — kein Login, keine Cloud. Auf ein anderes Ger\xE4t bringst du einen Plan per Teilen-Link.",
-      orbitHint: "ziehen \xB7 scrollen", resetView: "Ansicht zur\xFCcksetzen",
+      orbitHint: "ziehen \xB7 scrollen \xB7 rechts schiebt",
+      orbitHintLong: "Ziehen dreht \xB7 rechte Maustaste (oder Shift) schiebt \xB7 das Rad zoomt dorthin, wo der Zeiger steht \xB7 Doppelklick holt einen Container in die Mitte",
+      resetView: "Ansicht zur\xFCcksetzen",
       autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       unitToCm: "Auf Zentimeter umschalten", unitToMm: "Auf Millimeter umschalten",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
@@ -2080,11 +2160,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackable: "stackable",
       notStackable: "not stackable",
       stackNo: "not stackable",
+      stackToH: "up to height \u2026", stackHLabel: "max. height", stackHSum: (h) => "stackable up to " + h,
       stackFree: "freely stackable",
       stackX: (n) => `${n}\xD7 stackable`,
       rotate: "Rotate",
       loaded: "Loaded",
+      slotsTitle: "Per container", slotsTitleRoad: "Per vehicle", slotsEmpty: "empty",
       allLoaded: "All loaded",
+      allLoadedN: (n) => `All loaded \xB7 ${n} containers`,
+      allLoadedRoadN: (n) => `All loaded \xB7 ${n} vehicles`,
       overCap: (kg) => `${kg} kg over payload`,
       qImported: (n) => `${n} item${n === 1 ? "" : "s"} imported from link – editable below`,
       railFull: "Full", railDetails: "Details", railLess: "Less", freeLen: "Length to door", freeVol: "Volume", freePay: "Payload", freeFull: "Container empty",
@@ -2111,7 +2195,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       backToSite: "Back to site",
       impBtn: "Excel / text",
       impTitle: "Import cargo from Excel or text",
-      impPh: "e.g.\n18 pallets 120x80x110, 300 kg, stackable\n6 cartons 60x40x40, 12 kg\n— or copy & paste straight from Excel —",
+      impPh: "e.g.\n18 pallets 120x80x110, 300 kg, stackable up to 180 cm\n6 cartons 60x40x40, 12 kg\n— or copy & paste straight from Excel —",
       impTsv: (cols) => `Excel table detected · columns: ${cols}`,
       impTsvNoHead: "no header row — mapping guessed, please check",
       impTsvSkipped: (n) => `${n} row${n === 1 ? "" : "s"} skipped (no dimensions)`,
@@ -2143,6 +2227,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       shotBtn: "Image",
       shotExportTitle: "Export image",
       shotExportDesc: "Clean view image for customers/agents – always from the perfect angle.",
+      shotLayoutLabel: "Layout", shotLayoutRow: "Row", shotLayoutSheet: "Separate",
+      shotLayoutRowHint: "All containers side by side \u2013 good for the overview.",
+      shotLayoutSheetHint: "One picture per container \u2013 each big enough to read the layers.",
       shotAccentLabel: "Accent colour",
       shotLogoLabel: "Company logo (optional)",
       shotLogoDrag: "Drop logo here or click to upload",
@@ -2203,7 +2290,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "item" : "items"} \xB7 ${pcs} pcs`,
       plansEmpty: "No saved plans yet. Save your current plan above to find it again later.",
       plansFoot: "Plans live only in this browser — no login, no cloud. To move one to another device, use the share link.",
-      orbitHint: "drag \xB7 scroll", resetView: "Reset view",
+      orbitHint: "drag \xB7 scroll \xB7 right-drag pans",
+      orbitHintLong: "Drag to orbit \xB7 right mouse button (or Shift) pans \xB7 the wheel zooms towards the pointer \xB7 double-click centres a container",
+      resetView: "Reset view",
       autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       unitToCm: "Switch to centimetres", unitToMm: "Switch to millimetres",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
@@ -2309,10 +2398,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
-  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
+  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
   var decodePlanState = (st) => {
     if (!st || !Array.isArray(st.it) || !st.it.length) return null;
-    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0 }));
+    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0 }));
     // Domain zuerst lesen: alter Link ohne dm => "sea" (Rueckwaerts-Kompatibilitaet).
     const domain = st.dm === "road" ? "road" : "sea";
     const table = domain === "road" ? VEHICLES : PRESETS;
@@ -2375,6 +2464,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (+r.q > 1) t += "q" + v2num(r.q);
       if (r.s === 0) t += "s";
       else if (r.s >= 2) t += "y" + v2num(r.s);
+      if (+r.sh > 0) t += "H" + v2num(r.sh);
       if (r.r === 0) t += "r";
       if (typeof r.cl === "string" && /^#[0-9a-fA-F]{6}$/.test(r.cl)) t += "k" + r.cl.slice(1).toLowerCase();
       if (typeof r.n === "string" && r.n !== V2_DEFAULT_NAME && r.n !== "") t += "n" + encodeURIComponent(r.n.slice(0, 40)).replace(/~/g, "%7E");
@@ -2435,6 +2525,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           else if (tg === "q") { var v2 = rn(); if (v2 == null) return null; it.q = v2; }
           else if (tg === "s") it.s = 0;
           else if (tg === "y") { var vy = rn(); if (vy == null) return null; it.s = vy; }
+          else if (tg === "H") { var vh = rn(); if (vh == null) return null; it.sh = vh; }
           else if (tg === "r") it.r = 0;
           else if (tg === "k") { var hx = raw.slice(j, j + 6); if (!/^[0-9a-fA-F]{6}$/.test(hx)) return null; it.cl = "#" + hx.toLowerCase(); j += 6; }
           else if (tg === "n") { it.n = decodeURIComponent(raw.slice(j)).slice(0, 40); j = raw.length; }
@@ -2580,12 +2671,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     lines.push(row(["Position", "Menge", "Laenge_cm", "Breite_cm", "Hoehe_cm", "Gewicht_kg_Stueck", "Gewicht_kg_gesamt", "Stapelbar", "Drehbar_90", "Geladen", "Gesamt"]));
     cargo.forEach((c, i) => {
       const q = Math.max(0, +c.qty || 0);
-      const pt = result && result.perType && result.perType[i] || { loaded: "", total: q };
+      const pt = result && (result.perTypeAll || result.perType) && (result.perTypeAll || result.perType)[i] || { loaded: "", total: q };
       lines.push(row([
         c.name || "Position " + (i + 1),
         q, +c.l || 0, +c.w || 0, +c.h || 0,
         +c.weight || 0, (+c.weight || 0) * q,
-        c.stackable === false ? "nein" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
+        c.stackable === false ? "nein" : isFinite(+c.stackH) && +c.stackH > 0 ? "bis " + +c.stackH + " cm" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
         c.rotatable === false ? "nein" : "ja",
         pt.loaded, pt.total
       ]));
@@ -2628,7 +2719,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const volC = q * num(it.l) * num(it.w) * num(it.h) / 1e6;
     const stack = it.stackable !== false;
     const capN = it.stackable === false ? 1 : isFinite(it.stackMax) && +it.stackMax >= 2 ? +it.stackMax : Infinity;
-    const stackTxt = isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
+    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
     const dims = `${dimDE(it.l, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.w, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.h, en ? "en-US" : "de-DE")}`;
     const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
@@ -2990,6 +3081,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     names.forEach((nm) => opts.push(/* @__PURE__ */ React.createElement("option", { key: nm, value: nm, style: optStyle }, zeig(nm))));
     return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-2 py-1", style: { pointerEvents: "auto", background: hexA("#161D27", 0.88), border: "1px solid #2E3A49" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, (road ? "F" : "C") + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), "aria-label": (road ? T.vehicle : T.container) + " " + (idx + 1), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, opts));
   }
+  // Wie weit muss die Kamera weg, damit ein Quader mit den Halbmassen hx/hy/hz bei
+  // Seitenverhaeltnis "aspect" vollstaendig ins Bild passt? Ruhelage der Kamera (theta/phi)
+  // und Bildwinkel (40 Grad) sind dieselben wie in der Live-Ansicht -- deshalb steht hier
+  // eine Funktion und nicht zweimal dieselbe Rechnung.
+  function camFit(hx, hy, hz, aspect, thIn, phIn) {
+    const th = thIn == null ? -0.92 : thIn, ph = phIn == null ? 1 : phIn;
+    const dir = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
+    const rgt = [-Math.sin(th), 0, Math.cos(th)];               // waagerecht, senkrecht zu dir
+    const up = [dir[1] * rgt[2] - dir[2] * rgt[1], dir[2] * rgt[0] - dir[0] * rgt[2], dir[0] * rgt[1] - dir[1] * rgt[0]];
+    const tY = Math.tan(40 * Math.PI / 180 / 2), tX = tY * Math.max(0.5, aspect);
+    let need = 0;
+    for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) {
+      const p = [sx * hx, sy * hy, sz * hz];
+      const d = p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];  // Tiefe entlang der Blickachse
+      const rr = Math.abs(p[0] * rgt[0] + p[1] * rgt[1] + p[2] * rgt[2]);
+      const uu = Math.abs(p[0] * up[0] + p[1] * up[1] + p[2] * up[2]);
+      need = Math.max(need, rr / tX + d, uu / tY + d);
+    }
+    return need;
+  }
   function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef }) {
     const mountRef = useRef(null);
     const three = useRef(null);
@@ -3060,7 +3171,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         camera.lookAt(target);
       };
       let lastInteract = performance.now();
-      let dragging = false, px = 0, py = 0, downX = 0, downY = 0;
+      let dragging = false, schiebt = false, px = 0, py = 0, downX = 0, downY = 0;
       const dom = renderer.domElement;
       // ── Manuelles Platzieren (Slice 2): Raycasting gegen die Bodenebene (y=0, nur Seefracht/
       // Hauptcontainer) fuer die Ghost-Vorschau, und gegen bereits platzierte Kisten fuer die Auswahl.
@@ -3084,6 +3195,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const xCm = hit.x * 100, zCm = hit.z * 100;
         if (xCm < -80 || zCm < -80 || xCm > CL + 80 || zCm > CW + 80) return null;
         return { x: xCm, z: zCm };
+      };
+      // Der Punkt unter dem Zeiger auf ZIELHOEHE (nicht auf dem Boden): danach richtet sich,
+      // wohin das Rad zoomt und was ein Doppelklick in die Mitte holt.
+      const zielEbene = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const punktUnterZeiger = (e) => {
+        ndcFromEvent(e);
+        raycaster.setFromCamera(ndc, camera);
+        zielEbene.constant = -target.y;
+        const hit = new THREE.Vector3();
+        return raycaster.ray.intersectPlane(zielEbene, hit) ? hit : null;
+      };
+      // Das Ziel darf sich bewegen, aber nicht verlorengehen. Grenze ist die Reihe selbst
+      // plus etwas Auslauf - sonst schiebt man sich mit zwei Handbewegungen ins Nichts und
+      // findet ohne "Ansicht zuruecksetzen" nicht zurueck.
+      const zielKlemmen = () => {
+        const f = three.current && three.current.frame;
+        if (!f) return;
+        const m = 2;
+        target.x = Math.max(f.cx - f.hx - m, Math.min(f.cx + f.hx + m, target.x));
+        target.y = Math.max(0, Math.min(f.cy + f.hy + m, target.y));
+        target.z = Math.max(f.cz - f.hz - m, Math.min(f.cz + f.hz + m, target.z));
       };
       const updateGhost = (e) => {
         const t = three.current;
@@ -3113,7 +3245,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         originX = snapAxis(originX, dx, edgesX, SNAP_TOL);
         originZ = snapAxis(originZ, dz, edgesZ, SNAP_TOL);
         const weightUsed = p.manualPlaced.reduce((s, o) => s + (p.cargo[o.ti] ? num(p.cargo[o.ti].weight) : 0), 0);
-        const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed);
+        const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed, p.cargo);
         t.ghost.visible = true;
         if (res.ok) {
           t.ghostCandidate = { ti: p.manualArmedTi, cid: item.id, rot: p.manualRot, ...res.box };
@@ -3155,6 +3287,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       const down = (e) => {
         dragging = true;
+        // Rechte oder mittlere Maustaste - oder Shift - schiebt, statt zu drehen. Ohne das
+        // bleibt bei einer Kette aus drei Containern der Mittelpunkt fest: man zoomt in die
+        // Mitte hinein und kommt an den ersten und den letzten gar nicht heran.
+        schiebt = e.button === 2 || e.button === 1 || e.shiftKey;
         px = e.clientX;
         py = e.clientY;
         downX = e.clientX;
@@ -3167,25 +3303,67 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         if (p.manualMode && p.manualArmedTi != null && !dragging) updateGhost(e);
         if (!dragging) return;
         lastInteract = performance.now();
-        sph.theta -= (e.clientX - px) * 6e-3;
-        sph.phi = Math.max(0.18, Math.min(Math.PI * 0.49, sph.phi - (e.clientY - py) * 6e-3));
+        const dx = e.clientX - px, dy = e.clientY - py;
+        if (schiebt) {
+          // Ein Pixel Mauszug = ein Pixel Bild: die sichtbare Hoehe auf Zielentfernung
+          // geteilt durch die Hoehe der Leinwand.
+          const proPixel = 2 * Math.tan(camera.fov * Math.PI / 360) * cur.r / Math.max(1, dom.clientHeight);
+          camera.updateMatrixWorld();
+          const rechts = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+          const hoch = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+          target.addScaledVector(rechts, -dx * proPixel);
+          target.addScaledVector(hoch, dy * proPixel);
+          zielKlemmen();
+        } else {
+          sph.theta -= dx * 6e-3;
+          sph.phi = Math.max(0.18, Math.min(Math.PI * 0.49, sph.phi - dy * 6e-3));
+        }
         px = e.clientX;
         py = e.clientY;
       };
       const up = (e) => {
+        const warSchieben = schiebt;
         dragging = false;
+        schiebt = false;
         dom.releasePointerCapture?.(e.pointerId);
-        if (Math.hypot(e.clientX - downX, e.clientY - downY) <= CLICK_SLOP) handleManualClick(e);
+        // Ein Klick mit der rechten Taste ist kein Platzieren.
+        if (!warSchieben && Math.hypot(e.clientX - downX, e.clientY - downY) <= CLICK_SLOP) handleManualClick(e);
       };
       const wheel = (e) => {
         e.preventDefault();
         lastInteract = performance.now();
+        const vorher = sph.r;
         sph.r = Math.max(2.5, Math.min(95, sph.r * (1 + e.deltaY * 11e-4)));
+        // Beim HINEINzoomen wandert das Ziel zum Punkt unter dem Zeiger - und zwar genau um
+        // den Anteil, um den die Entfernung schrumpft. Genau dieser Faktor haelt den Punkt
+        // unter dem Zeiger stehen, statt ihn wegzuziehen; jeder 3D-Betrachter macht das so.
+        // Beim Herauszoomen bleibt das Ziel stehen, sonst zerrt es bei jedem Rueckzug.
+        const rein = 1 - sph.r / vorher;
+        if (rein > 1e-3) {
+          const p = punktUnterZeiger(e);
+          if (p) {
+            target.lerp(p, rein);
+            zielKlemmen();
+          }
+        }
       };
+      // Doppelklick holt, worauf man zeigt, in die Mitte. Im manuellen Modus nicht: dort
+      // setzt jeder Klick eine Kiste, und ein Doppelklick saesse sonst zwei.
+      const dbl = (e) => {
+        if (propsRef.current.manualMode) return;
+        const p = punktUnterZeiger(e);
+        if (!p) return;
+        target.copy(p);
+        zielKlemmen();
+        lastInteract = performance.now();
+      };
+      const keinMenue = (e) => e.preventDefault();
       dom.addEventListener("pointerdown", down);
       dom.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
       dom.addEventListener("wheel", wheel, { passive: false });
+      dom.addEventListener("dblclick", dbl);
+      dom.addEventListener("contextmenu", keinMenue);
       let raf;
       const tick = () => {
         const now = performance.now();
@@ -3271,21 +3449,67 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const captureView = (opts = {}) => {
         try {
           const transparent = !!opts.transparent;
+          // slot: nur DIESEN Container aufnehmen, eng eingepasst. Fuer das Blatt mit einer
+          // Kachel je Container - in der Reihe ist bei drei 40-Fuessern jeder einzelne zu
+          // klein, um noch etwas darin zu erkennen.
+          const nurSlot = opts.slot;
           const curW = mount.clientWidth || W, curH = mount.clientHeight || H;
-          const outW = 1600, outH = 1000; // fixes 16:10-Format, unabhaengig von der Bildschirmgroesse
+          // Bildformat nach dem MOTIV. Ein 20-Fuss-Container ist ein kompakter Block und
+          // bleibt bei 16:10. Eine Kette aus drei 40-Fuessern ist ein 40 m langes, flaches
+          // Band -- in 16:10 gepresst bleiben davon zwei leere Drittel uebrig und die Ladung
+          // wird winzig. Genau das war der Grund, warum "das alles nicht aufs Bild passt".
+          // Das Verhaeltnis waechst deshalb mit der Laenge der Reihe, gedeckelt bei 16:7.
+          const frA0 = three.current && three.current.frame;
+          const frA = nurSlot != null && frA0 && frA0.slots && frA0.slots[nurSlot] ? frA0.slots[nurSlot] : frA0;
+          const laengs = frA ? frA.hx / Math.max(0.3, Math.max(frA.hy, frA.hz)) : 2.5;
+          // Die Einzelkachel bekommt ein festes Verhaeltnis - alle Kacheln eines Blattes
+          // muessen gleich hoch sein, sonst steht die Reihe schief.
+          const outAsp = opts.aspect || Math.max(1.6, Math.min(2.2, 1.05 + 0.22 * laengs));
+          const outW = opts.width || 1600, outH = Math.round(outW / outAsp);
           const aspect = outW / outH;
-          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, eng an den CONTAINER eingepasst
-          // (die Packstuecke liegen darin). Bewusst NICHT die Gruppen-Bounding-Box: die enthaelt die
-          // grosse Boden-Gitterflaeche und wuerde den Container winzig zoomen.
+          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, eingepasst auf die GANZE
+          // Reihe - bei einer Kette sind das drei Container nebeneinander, nicht einer.
+          // Vorher rechnete der Export mit den Massen des GEWAEHLTEN Containers; alles ab dem
+          // zweiten stand ausserhalb des Bildes. Die Halbmasse der Reihe liegen in t.frame,
+          // wo die Live-Ansicht sie ohnehin berechnet.
+          //
+          // Bewusst NICHT die Gruppen-Bounding-Box: die enthaelt die grosse Boden-Gitterflaeche
+          // und wuerde die Container winzig zoomen.
+          const frAll = three.current && three.current.frame;
+          const fr = nurSlot != null && frAll && frAll.slots && frAll.slots[nurSlot] ? frAll.slots[nurSlot] : frAll;
           const cont = propsRef.current.container || {};
           const CLm = num(cont.l) / 100, CHm = num(cont.h) / 100, CWm = num(cont.w) / 100;
-          const center = target.clone();
-          const radius = CLm > 0 && CHm > 0 && CWm > 0 ? Math.max(0.8, 0.5 * Math.sqrt(CLm * CLm + CHm * CHm + CWm * CWm)) : 6;
+          const center = fr ? new THREE.Vector3(fr.cx, fr.cy, fr.cz) : target.clone();
+          const hx = fr ? fr.hx : CLm / 2, hy = fr ? fr.hy : CHm / 2, hz = fr ? fr.hz : CWm / 2;
+          // Blickwinkel: die Uebersicht bleibt bei der gewohnten Ruhelage. Die Einzelkachel
+          // schaut flacher und seitlicher - ein 12 m langer Container quer im Bild kippt bei
+          // 33 Grad Aufsicht so stark, dass die Haelfte der Kachel leer bleibt. Die Neigung
+          // auf dem Schirm ist cos(phi)*cos(theta); flacher und seitlicher heisst weniger
+          // Neigung und damit mehr Container je Kachel. Die Deckel bleiben sichtbar.
+          const theta = opts.theta == null ? -0.92 : opts.theta;
+          const phi = opts.phi == null ? 1 : opts.phi;
           const fov = camera.fov * Math.PI / 180;
-          const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
-          const dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
-          const theta = -0.92, phi = 1;
+          let dist;
+          if (hx > 0 && hy > 0 && hz > 0) {
+            dist = Math.max(2.5, camFit(hx, hy, hz, aspect, theta, phi) * 1.06);
+          } else {
+            const radius = 6;
+            const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+            dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
+          }
           const prevFog = scene.fog;
+          const prevFogFar = scene.fog ? scene.fog.far : 0;
+          // Alles ausblenden, was nicht zu diesem Container gehoert. Das Bodengitter traegt
+          // keine Marke und bleibt stehen - es gibt der Kachel ihren Boden.
+          const versteckt = [];
+          if (nurSlot != null) {
+            group.children.forEach((c2) => {
+              if (c2.userData && c2.userData.slot != null && c2.userData.slot !== nurSlot && c2.visible) {
+                c2.visible = false;
+                versteckt.push(c2);
+              }
+            });
+          }
           // Boden-Gitterlinien (floorGrid, separat vom Schatten-"ground") sonst im freigestellten
           // Export sichtbar, wo sie auf hellem Mail-/Dokument-Hintergrund unschoen durchscheinen.
           if (transparent) { scene.fog = null; if (ground) ground.visible = false; group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = false; }); }
@@ -3296,10 +3520,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           camera.position.set(center.x + dist * Math.sin(phi) * Math.cos(theta), center.y + dist * Math.cos(phi), center.z + dist * Math.sin(phi) * Math.sin(theta));
           camera.updateProjectionMatrix();
           camera.lookAt(center);
+          // Der Nebel war auf die Live-Entfernung gestellt. Beim Export steht die Kamera
+          // weiter weg (die ganze Reihe muss ins Bild), und der hinterste Container waere
+          // sonst im Nebel verschwunden.
+          if (scene.fog) scene.fog.far = Math.max(prevFogFar, dist + 2 * hx + 20);
           renderer.render(scene, camera);
           const url = renderer.domElement.toDataURL("image/png");
           // Live-Ansicht exakt wiederherstellen
           scene.fog = prevFog;
+          if (scene.fog) scene.fog.far = prevFogFar;
+          versteckt.forEach((c2) => { c2.visible = true; });
           if (ground) ground.visible = true;
           if (transparent) group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = true; });
           renderer.setPixelRatio(prevPR);
@@ -3321,6 +3551,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         dom.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
         dom.removeEventListener("wheel", wheel);
+        dom.removeEventListener("dblclick", dbl);
+        dom.removeEventListener("contextmenu", keinMenue);
         if (shotRef && shotRef.current === captureView) shotRef.current = null;
         renderer.dispose();
         if (dom.parentNode) dom.parentNode.removeChild(dom);
@@ -3619,6 +3851,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const d = dimsArr[ci], S = getShell(d.CL, d.CH, d.CW);
         const ckind = c.preset && c.preset.kind || "dry";
         const cg = new THREE.Group();
+        cg.userData.slot = ci;
         if (ci === 0) cg0 = cg;
         cg.position.x = xpos[ci];
         if (isRoad) cg.position.y = BASE_Y; // Auflieger + Ladung anheben; placed-Koordinaten unberuehrt.
@@ -3746,7 +3979,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           cg.add(el);
         }
         const isNew = !REDUCED && ci >= 1 && ci >= prevC;
-        cg.userData = { boxMeshes, reveal: ci === 0 && willAnimate, popStart: isNew ? performance.now() + (ci - Math.max(1, prevC)) * 120 : 0 };
+        cg.userData = { slot: ci, boxMeshes, reveal: ci === 0 && willAnimate, popStart: isNew ? performance.now() + (ci - Math.max(1, prevC)) * 120 : 0 };
         if (isNew) cg.scale.setScalar(1e-3);
         group.add(cg);
       });
@@ -3850,7 +4083,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           }
           return tg;
         };
-        chain.forEach((c, ci) => { const tk = buildTruck(dimsArr[ci]); tk.position.x = xpos[ci]; group.add(tk); });
+        chain.forEach((c, ci) => { const tk = buildTruck(dimsArr[ci]); tk.position.x = xpos[ci]; tk.userData.slot = ci; group.add(tk); });
       }
       const n = chain.length;
       const yLift = isRoad ? BASE_Y : 0; // Kamera-Ziel mit anheben; Truck ragt vorne raus -> mehr Abstand.
@@ -3861,27 +4094,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // 20-Fuss wirkte verloren, ein 45-Fuss fuellte das Bild. Jetzt werden die acht Ecken
       // in die Kamera-Achsen projiziert und der noetige Abstand daraus bestimmt; das haengt
       // korrekt vom Seitenverhaeltnis ab, was vorher gar nicht beruecksichtigt wurde.
-      const camFit = (hx, hy, hz, aspect) => {
-        const th = -0.92, ph = 1;                                   // Ruhelage der Kamera
-        const dir = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
-        const rgt = [-Math.sin(th), 0, Math.cos(th)];               // waagerecht, senkrecht zu dir
-        const up = [dir[1] * rgt[2] - dir[2] * rgt[1], dir[2] * rgt[0] - dir[0] * rgt[2], dir[0] * rgt[1] - dir[1] * rgt[0]];
-        const tY = Math.tan(40 * Math.PI / 180 / 2), tX = tY * Math.max(0.5, aspect);
-        let need = 0;
-        for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) {
-          const p = [sx * hx, sy * hy, sz * hz];
-          const d = p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];  // Tiefe entlang der Blickachse
-          const rr = Math.abs(p[0] * rgt[0] + p[1] * rgt[1] + p[2] * rgt[2]);
-          const uu = Math.abs(p[0] * up[0] + p[1] * up[1] + p[2] * up[2]);
-          need = Math.max(need, rr / tX + d, uu / tY + d);
-        }
-        return need;
-      };
       // Rand: etwas Luft, damit Statuskarte und Bedienelemente nicht auf der Ladung kleben.
       // Strasse braucht mehr, weil die Zugmaschine vorne ueber die Box hinausragt.
       const camMargin = isRoad ? 1.42 : 1.2;
       const camAspect = t.camera && t.camera.aspect > 0 ? t.camera.aspect : 1.7;
-      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, r: Math.max(2.5, camFit(rowW / 2, maxCH / 2, maxCW / 2, camAspect) * camMargin) };
+      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, hx: rowW / 2, hy: maxCH / 2, hz: maxCW / 2, margin: camMargin,
+        slots: dimsArr.map((d, i) => ({ cx: xpos[i] + d.CL / 2, cy: (isRoad ? BASE_Y : 0) + d.CH / 2, cz: d.CW / 2, hx: d.CL / 2, hy: d.CH / 2, hz: d.CW / 2 })), r: Math.max(2.5, camFit(rowW / 2, maxCH / 2, maxCW / 2, camAspect) * camMargin) };
       // Nebel & Schatten an die Szenengröße anpassen (Einzelcontainer bleibt unverändert).
       if (t.scene && t.scene.fog) {
         t.scene.fog.near = n > 1 ? Math.max(16, t.frame.r * 0.8) : 16;
@@ -3922,7 +4140,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px] pointer-events-none", style: { fontFamily: SANS, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
             // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
             // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
             /* @__PURE__ */ React.createElement("div", { key: "n", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, 0.45)}`, borderRadius: R.s, padding: "4px 8px" } },
@@ -4333,6 +4551,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [shareURL, setShareURL] = useState("");
     const [shareCopied, setShareCopied] = useState(false);
     const [exportAccent, setExportAccent] = useState("standard"); // Akzentfarbe nur fuer das Export-Bild
+    // "reihe" = alle Container nebeneinander (Uebersicht), "blatt" = einer je Kachel, jeder
+    // eng eingepasst. Bei drei 40-Fuessern nebeneinander ist der einzelne zu klein, um noch
+    // etwas darin zu erkennen - fuer den Kunden ist dann das Blatt das bessere Dokument.
+    const [exportLayout, setExportLayout] = useState("reihe");
     const [exportOpen, setExportOpen] = useState(false); // Bild-Export-Dialog
     const [exportTransparent, setExportTransparent] = useState(false); // transparenter Hintergrund im Export-Bild
     const [customLogo, setCustomLogo] = useState(null); // Custom Firmenlogo fuer Export (Data-URL oder Image-Objekt)
@@ -4379,7 +4601,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!item || item.rotatable === false) return;
       const rest = manualPlaced.filter((_, i) => i !== manualSel);
       const weightUsed = rest.reduce((s, o) => s + (cargo[o.ti] ? num(cargo[o.ti].weight) : 0), 0);
-      const res = manualCandidate(container, item, !b.rot, b.x, b.z, rest, weightUsed);
+      const res = manualCandidate(container, item, !b.rot, b.x, b.z, rest, weightUsed, cargo);
       if (!res.ok) {
         setToast(T.manualInvalid);
         return;
@@ -4395,7 +4617,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!item) return;
       const rest = manualPlaced.filter((_, i) => i !== manualSel);
       const weightUsed = rest.reduce((s, o) => s + (cargo[o.ti] ? num(cargo[o.ti].weight) : 0), 0);
-      const res = manualCandidate(container, item, b.rot, b.x + dxAxis, b.z + dzAxis, rest, weightUsed);
+      const res = manualCandidate(container, item, b.rot, b.x + dxAxis, b.z + dzAxis, rest, weightUsed, cargo);
       if (!res.ok) {
         setToast(T.manualInvalid);
         return;
@@ -4485,7 +4707,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         Math.max(0, Math.floor(num(c.qty))) + "\xD7",
         `${m(c.l)}\xD7${m(c.w)}\xD7${m(c.h)} ${unit}`,
         num(c.weight) > 0 ? fmtDE(c.weight) + " kg" : null,
-        c.stackable === false ? T.notStackable : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
+        c.stackable === false ? T.notStackable
+          : isFinite(+c.stackH) && +c.stackH > 0 ? T.stackHSum(m(c.stackH) + " " + unit)
+          : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
       ].filter(Boolean).join(" \xB7 ");
     };
     // Farbauflösung zentral: eigene Farbe (item.color) oder indexbasierte Palettenfarbe.
@@ -4531,9 +4755,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : chainContainers(container, preset, cargo, r, chainOverride, MAXVIS, carrier);
           r.chain = ch.chain;
           r.remainingBoxes = ch.remainingBoxes;
+          // Die Bilanz ueber ALLE Container des Plans. r.perType bleibt daneben stehen und
+          // meint weiterhin den ersten - die Leiste weist ihn ausdruecklich als "C1" aus.
+          r.perTypeAll = ch.perType;
         } else {
           r.chain = [{ name: preset, preset: container, placed: r.placed }];
           r.remainingBoxes = 0;
+          r.perTypeAll = r.perType;
         }
         setResult(r);
       }, 200);
@@ -4663,7 +4891,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Stapel-Selector -> setzt stackable + stackMax (Gesamt-Lagen) in einem Rutsch.
     // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf, also 2/3/4 hoch gesamt.
     const setStackMode = (id, mode) => {
-      const patch = mode === "no" ? { stackable: false, stackMax: 1 } : mode === "free" ? { stackable: true, stackMax: Infinity } : { stackable: true, stackMax: mode === "x1" ? 2 : mode === "x2" ? 3 : 4 };
+      // 180 cm als Vorgabe: das ist die Zahl, die in Anfragen steht ("stapelbar bis 180 cm").
+      // Die beiden Grenzen schliessen einander aus - wer in Zentimetern denkt, denkt nicht
+      // gleichzeitig in Lagen, und zwei Grenzen nebeneinander waeren nur schwerer zu lesen.
+      const patch = mode === "no" ? { stackable: false, stackMax: 1, stackH: null }
+        : mode === "free" ? { stackable: true, stackMax: Infinity, stackH: null }
+        : mode === "h" ? { stackable: true, stackMax: Infinity, stackH: 180 }
+        : { stackable: true, stackMax: mode === "x1" ? 2 : mode === "x2" ? 3 : 4, stackH: null };
       setCargo((cs) => cs.map((c) => c.id === id ? { ...c, ...patch } : c));
     };
     const addCargo = () => {
@@ -4745,7 +4979,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const updImportRow = (i, k, v) => setImportRows((rs) => rs.map((r, j) => j === i ? { ...r, [k]: v } : r));
     const delImportRow = (i) => setImportRows((rs) => rs.filter((_, j) => j !== i));
     const applyImport = (replace) => {
-      const items = (importRows || []).map((r) => ({ id: uid(), name: r.name || "Position", l: Math.max(1, num(r.l, 1)), w: Math.max(1, num(r.w, 1)), h: Math.max(1, num(r.h, 1)), weight: Math.max(0, num(r.weight, 0)), qty: Math.max(1, parseInt(r.qty, 10) || 1), stackable: r.stackable !== false, rotatable: r.rotatable !== false }));
+      const items = (importRows || []).map((r) => ({ id: uid(), name: r.name || "Position", l: Math.max(1, num(r.l, 1)), w: Math.max(1, num(r.w, 1)), h: Math.max(1, num(r.h, 1)), weight: Math.max(0, num(r.weight, 0)), qty: Math.max(1, parseInt(r.qty, 10) || 1), stackable: r.stackable !== false, stackH: num(r.stackH) > 0 ? num(r.stackH) : null, rotatable: r.rotatable !== false }));
       if (!items.length) return;
       merk(cargo);
       setCargo((cs) => replace ? items : [...cs, ...items]);
@@ -4789,6 +5023,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // tatsaechlich platzierten Kisten, sonst aus dem Auto-Ergebnis.
       let shotUtil = result ? result.util : 0, shotLoaded = result ? result.boxes : 0, shotTotal = result ? result.totalBoxes : 0;
       let shotVol = result ? result.usedVol : 0, shotWeight = result ? result.weight : 0;
+      // Das Bild zeigt den GANZEN Plan - bei einer Kette drei Container. Dann muessen auch
+      // die Zahlen darunter den ganzen Plan meinen. Vorher standen dort die des ersten:
+      // "17/37 geladen" unter einem Bild, auf dem alle 37 liegen.
+      const shotKette = !!(result && result.chain && result.chain.length > 1);
+      let shotTitel = String(preset);
+      if (shotKette && !manualMode) {
+        let vol = 0, wt = 0, contVol = 0, n = 0;
+        result.chain.forEach((c2) => {
+          const cp = c2.preset || {};
+          contVol += num(cp.l) * num(cp.w) * num(cp.h) / 1e6;
+          (c2.placed || []).forEach((b) => {
+            vol += b.dx * b.dy * b.dz / 1e6;
+            const it = cargo[b.ti];
+            if (it) wt += Math.max(0, num(it.weight));
+            n++;
+          });
+        });
+        shotLoaded = n;
+        shotVol = vol;
+        shotWeight = wt;
+        shotUtil = contVol > 0 ? vol / contVol * 100 : 0;
+        // Gleiche Typen zusammenfassen: "3 x 40' HC" statt dreimal derselbe Name.
+        const typen = [];
+        result.chain.forEach((c2) => {
+          const nm = c2.name || preset;
+          const letzt = typen[typen.length - 1];
+          if (letzt && letzt.nm === nm) letzt.n++; else typen.push({ nm, n: 1 });
+        });
+        shotTitel = typen.map((t2) => (t2.n > 1 ? t2.n + "\xD7 " : "") + t2.nm).join(" + ");
+      }
       if (manualMode) {
         const cVol = num(container.l) * num(container.w) * num(container.h) / 1e6;
         let used = 0, wt = 0;
@@ -4803,19 +5067,43 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         setToast(T.shotEmpty);
         return null;
       }
-      const cap = shotRef.current && shotRef.current({ transparent: exportTransparent });
-      if (!cap) {
+      // Eine Kachel je Container. Warum sie hierhin gehoeren: das Bild ist das, was beim
+      // Kunden ankommt, und die Frage "wie voll ist der zweite" stellt sich dort genauso.
+      const slotsImBild = manualMode ? [] : (slotRows || []).slice(0, 8);
+      const mehrSlots = manualMode ? 0 : Math.max(0, (slotRows || []).length - 8);
+      const slotZeilen = slotsImBild.length > 1 ? Math.ceil(slotsImBild.length / 4) : 0;
+      const slotProZeile = slotZeilen ? Math.ceil(slotsImBild.length / slotZeilen) : 0;
+      // Zwei Anordnungen: "reihe" ist die gewohnte Gesamtansicht, "blatt" nimmt JEDEN
+      // Container einzeln auf. In der Reihe ist bei drei 40-Fuessern der einzelne zu klein,
+      // um noch etwas darin zu erkennen; auf dem Blatt fuellt er seine Kachel.
+      const blatt = !manualMode && exportLayout === "blatt" && slotsImBild.length > 1;
+      const KACHEL_ASP = 2.1, KACHEL_THETA = -1.17, KACHEL_PHI = 1.17;
+      const caps = blatt
+        ? slotsImBild.map((_, i) => shotRef.current && shotRef.current({ transparent: exportTransparent, slot: i, width: 1000, aspect: KACHEL_ASP, theta: KACHEL_THETA, phi: KACHEL_PHI }))
+        : [shotRef.current && shotRef.current({ transparent: exportTransparent })];
+      if (!caps.length || caps.some((c2) => !c2)) {
         setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
         return null;
       }
+      const cap = caps[0];
       setExportOpen(false);
       const customLogoImg = await loadCustomLogoImage();
+      const bilder = await Promise.all(caps.map((c2) => new Promise((res) => {
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = () => res(null);
+        im.src = c2.url;
+      })));
+      if (bilder.some((b2) => !b2)) {
+        setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
+        return null;
+      }
+      const img = bilder[0];
       return new Promise((resolveBlob) => {
-      const img = new Image();
-      img.onload = () => {
+      {
         // Bild-Compose: opak = Chrome-Karte mit Fussleiste; transparent = freigestellter Render
         // + dezenter Glass-Balken mit Logo/Kennzahlen. Nur Akzent-Elemente nehmen den Export-Akzent.
-        const S = cap.w / 1000;
+        const S = (blatt ? 1600 : cap.w) / 1000;
         const px = (n) => Math.round(n * S);
         const accStops = exportAccentStops(EXPORT_ACCENTS[exportAccent]);
         const MONOF = "'JetBrains Mono', ui-monospace, monospace";
@@ -4894,24 +5182,145 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             g.fillStyle = fg; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(text, chipX + px(12), chipY + chipH / 2 + px(0.5));
             chipX += w + px(8);
           };
-          chip(String(preset).toUpperCase(), "rgba(12,20,29,.82)", "rgba(255,255,255,.14)", "#C5D4E2");
+          chip(String(shotTitel).toUpperCase(), "rgba(12,20,29,.82)", "rgba(255,255,255,.14)", "#C5D4E2");
           const full = shotLoaded >= shotTotal;
           chip(full ? String(T.allLoaded).toUpperCase() : String(T.open(shotTotal - shotLoaded)).toUpperCase(), full ? "rgba(47,216,160,.16)" : "rgba(245,165,36,.16)", full ? "rgba(47,216,160,.4)" : "rgba(245,165,36,.4)", full ? "#5CE3B6" : "#F7BC5A");
         };
+        // ── Eine Kachel je Container ────────────────────────────────────────────────
+        const slotKachelH = px(104);
+        const stripH = slotZeilen ? slotZeilen * slotKachelH + (slotZeilen - 1) * px(10) : 0;
+        const slotBalken = (bx, by, bw, pct, farbe, glas) => {
+          const h = px(6);
+          g.fillStyle = glas ? "rgba(255,255,255,0.14)" : "#232C38";
+          rr(bx, by, bw, h, h / 2); g.fill();
+          const f = Math.max(0, Math.min(100, pct)) / 100;
+          if (f > 0.001) { g.fillStyle = farbe; rr(bx, by, Math.max(h, bw * f), h, h / 2); g.fill(); }
+        };
+        // Kopfzeile "C1 - 40' HC ... 17 STK". Gibt die Grundlinie zurueck.
+        const slotKopf = (sr, ix, y, iw, glas) => {
+          const muted = glas ? "#BCC9D6" : "#7689A0";
+          g.textAlign = "left"; g.textBaseline = "alphabetic";
+          g.font = `700 ${px(15)}px ${MONOF}`; g.fillStyle = accStops[0];
+          g.fillText(sr.marke, ix, y);
+          const mw = g.measureText(sr.marke).width;
+          g.font = `600 ${px(13)}px ${SANSF}`; g.fillStyle = "#E9F0F7";
+          g.fillText(" \xB7 " + sr.name, ix + mw, y);
+          g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = muted;
+          g.textAlign = "right";
+          g.fillText(sr.stueck + (en ? " PCS" : " STK"), ix + iw, y);
+        };
+        // Die zwei Balken. Zwei, weil zwei Grenzen gelten - Raum und Gewicht - und bei
+        // schwerer Ladung die zweite zuerst zuschlaegt. Hoehe: px(50).
+        const slotWerte = (sr, ix, yTop, iw, glas) => {
+          const muted = glas ? "#BCC9D6" : "#7689A0";
+          g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
+          g.fillText(en ? "VOLUME" : "VOLUMEN", ix, yTop + px(8));
+          g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = "#C5D4E2";
+          g.fillText(`${nf(sr.vol, 1)} / ${nf(sr.cVol, 1)} m\xB3`, ix + iw, yTop + px(8));
+          slotBalken(ix, yTop + px(14), iw, sr.cVol > 0 ? sr.vol / sr.cVol * 100 : 0, accStops[0], glas);
+          const pPct = sr.pay > 0 ? sr.kg / sr.pay * 100 : 0;
+          const kgFarbe = pPct > 100 ? "#FF5D52" : pPct > 90 ? "#F5A524" : accStops[0];
+          g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
+          g.fillText(en ? "WEIGHT" : "GEWICHT", ix, yTop + px(39));
+          g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = pPct > 90 ? kgFarbe : "#C5D4E2";
+          g.fillText(sr.pay > 0 ? `${nf(sr.kg / 1000, 1)} / ${nf(sr.pay / 1000, 1)} t` : `${nf(sr.kg / 1000, 1)} t`, ix + iw, yTop + px(39));
+          slotBalken(ix, yTop + px(45), iw, pPct, kgFarbe, glas);
+        };
+        const kachelGrund = (x, y, w, h, glas) => {
+          g.fillStyle = glas ? "rgba(10,15,22,0.5)" : "#161D27";
+          rr(x, y, w, h, px(12)); g.fill();
+          g.strokeStyle = glas ? "rgba(255,255,255,0.14)" : "#232C38";
+          g.lineWidth = Math.max(1, S);
+          rr(x + 0.5, y + 0.5, w - 1, h - 1, px(12)); g.stroke();
+        };
+        const drawSlots = (sx, sy, sw, glas) => {
+          if (!slotZeilen) return;
+          const slotMuted = glas ? "#BCC9D6" : "#7689A0";
+          const lueck = px(10);
+          const kw = (sw - lueck * (slotProZeile - 1)) / slotProZeile;
+          slotsImBild.forEach((sr, i) => {
+            const zeile = Math.floor(i / slotProZeile), spalte = i % slotProZeile;
+            const x = sx + spalte * (kw + lueck), y = sy + zeile * (slotKachelH + lueck);
+            kachelGrund(x, y, kw, slotKachelH, glas);
+            const ix = x + px(14), iw = kw - px(28);
+            slotKopf(sr, ix, y + px(22), iw, glas);
+            slotWerte(sr, ix, y + px(35), iw, glas);
+          });
+          if (mehrSlots > 0) {
+            g.textAlign = "right"; g.textBaseline = "alphabetic";
+            g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = slotMuted;
+            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, sx + sw, sy + stripH + px(16));
+          }
+        };
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
-        if (cap.transparent) {
+        if (blatt) {
+          // ── Blatt: eine Kachel je Container, jede mit eigenem Render ──────────────────
+          // Volle Reihen, hoechstens drei je Reihe - dieselbe Regel wie bei der
+          // Kachelleiste. Der Kunde bekommt damit ein Dokument, in dem jeder Container
+          // gross genug ist, um die Lagen zu erkennen.
+          const glas = cap.transparent;
+          const FR = px(26), footH = customLogoImg ? px(150) : px(96), discH = px(30);
+          const zeilen = Math.ceil(bilder.length / 3);
+          const spalten = Math.ceil(bilder.length / zeilen);
+          const lueck = px(14);
+          const innenW = px(1000) * 1.6;                       // Blattbreite ohne Rand
+          const kw = (innenW - lueck * (spalten - 1)) / spalten;
+          const renderH = kw / KACHEL_ASP;
+          const kopfH = px(34), werteH = px(58);
+          const kh = kopfH + renderH + werteH;
+          const gitterH = zeilen * kh + (zeilen - 1) * lueck;
+          const mehrH = mehrSlots > 0 ? px(24) : 0;
+          cv.width = innenW + FR * 2;
+          cv.height = FR + px(46) + gitterH + mehrH + footH + discH;
+          if (glas) g.clearRect(0, 0, cv.width, cv.height);
+          else { g.fillStyle = "#121821"; g.fillRect(0, 0, cv.width, cv.height); }
+          if (glas) mutedCol = "#BCC9D6";
+          // Kopfzeile des Blattes: dieselben Chips wie sonst oben links im Render.
+          drawChips(FR - px(16), FR - px(16));
+          const gy = FR + px(46);
+          bilder.forEach((bi, i) => {
+            const sr = slotsImBild[i];
+            const zeile = Math.floor(i / spalten), spalte = i % spalten;
+            const x = FR + spalte * (kw + lueck), y = gy + zeile * (kh + lueck);
+            kachelGrund(x, y, kw, kh, glas);
+            const ix = x + px(14), iw = kw - px(28);
+            slotKopf(sr, ix, y + px(23), iw, glas);
+            g.save();
+            rr(x + px(6), y + kopfH, kw - px(12), renderH, px(8));
+            g.clip();
+            g.drawImage(bi, x + px(6), y + kopfH, kw - px(12), renderH);
+            g.restore();
+            slotWerte(sr, ix, y + kopfH + renderH + px(2), iw, glas);
+          });
+          if (mehrSlots > 0) {
+            g.textAlign = "right"; g.textBaseline = "alphabetic";
+            g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = glas ? "#BCC9D6" : "#7689A0";
+            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, FR + innenW, gy + gitterH + px(16));
+          }
+          const fy = gy + gitterH + mehrH, fcy = fy + footH / 2;
+          accentLine(FR, fy + px(1), innenW);
+          drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg, px(260), px(114));
+          drawMetrics(cv.width - FR - px(24), fcy);
+          const dY = fy + footH;
+          if (!glas) { g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke(); }
+          g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = glas ? "#BCC9D6" : "#3F5061";
+          g.textAlign = "center"; g.textBaseline = "middle";
+          g.fillText(String(T.shotFoot).toUpperCase(), cv.width / 2, dY + discH / 2);
+        } else if (cap.transparent) {
           // Transparent: freigestellter Render + dezenter Glass-Balken (bleibt auf hell UND dunkel lesbar).
           const FR = px(22), gapR = px(14), barH = customLogoImg ? px(150) : px(96);
+          const stripPlatz = stripH ? stripH + gapR + (mehrSlots > 0 ? px(24) : 0) : 0;
           cv.width = cap.w + FR * 2;
-          cv.height = FR + cap.h + gapR + barH + FR;
+          cv.height = FR + cap.h + gapR + stripPlatz + barH + FR;
           g.clearRect(0, 0, cv.width, cv.height);
           g.drawImage(img, FR, FR, cap.w, cap.h);
           drawChips(FR, FR);
-          const barX = FR, barY = FR + cap.h + gapR, barW = cap.w;
+          mutedCol = "#BCC9D6"; // schon hier: die Kacheln liegen auf demselben hellen Grund
+          drawSlots(FR, FR + cap.h + gapR, cap.w, true);
+          const barX = FR, barY = FR + cap.h + gapR + stripPlatz, barW = cap.w;
           rr(barX, barY, barW, barH, px(16)); g.fillStyle = "rgba(10,15,22,0.5)"; g.fill();
           g.strokeStyle = "rgba(255,255,255,0.14)"; g.lineWidth = Math.max(1, S); rr(barX + 0.5, barY + 0.5, barW - 1, barH - 1, px(16)); g.stroke();
           accentLine(barX + px(16), barY, barW - px(32));
-          mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
           drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(barX + barW - px(20), midY);
@@ -4920,17 +5329,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
           const FR = px(26), footH = customLogoImg ? px(150) : px(96), discH = px(30), cardR = px(14);
+          const stripPlatz = stripH ? stripH + px(14) + (mehrSlots > 0 ? px(24) : 0) : 0;
           cv.width = cap.w + FR * 2;
-          cv.height = FR + cap.h + footH + discH;
+          cv.height = FR + cap.h + stripPlatz + footH + discH;
           g.fillStyle = "#121821"; g.fillRect(0, 0, cv.width, cv.height);
           g.save(); rr(FR, FR, cap.w, cap.h, cardR); g.clip(); g.drawImage(img, FR, FR, cap.w, cap.h); g.restore();
           g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); rr(FR + 0.5, FR + 0.5, cap.w - 1, cap.h - 1, cardR); g.stroke();
           drawChips(FR, FR);
-          const fy = FR + cap.h, fcy = fy + footH / 2;
+          drawSlots(FR, FR + cap.h + px(14), cap.w, false);
+          const fy = FR + cap.h + stripPlatz, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), cap.w);
           drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(cv.width - FR - px(24), fcy);
-          const dY = FR + cap.h + footH; g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
+          const dY = fy + footH; g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = "#3F5061"; g.textAlign = "center"; g.textBaseline = "middle";
           g.fillText(String(T.shotFoot).toUpperCase(), cv.width / 2, dY + discH / 2);
         }
@@ -4938,12 +5349,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (!blob) setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
           resolveBlob(blob);
         }, "image/png");
-      };
-      img.onerror = () => {
-        setToast(LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
-        resolveBlob(null);
-      };
-      img.src = cap.url;
+      }
       });
     };
     const saveScreenshot = async () => {
@@ -5016,6 +5422,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const unplaced = result.totalBoxes - result.boxes;
     const allFit = unplaced <= 0 && result.totalBoxes > 0;
+    // Der Plan kann aus mehreren Containern bestehen. Das ist ein Entschluss, kein Fehler:
+    // was im zweiten Container liegt, ist verladen -- es steht im Bild daneben. Vorher las
+    // die Leiste nur den ERSTEN Container und meldete "17 offen" in Orange, waehrend das
+    // Bild drei volle Container zeigte. Offen ist nur, was die ganze Kette nicht mehr
+    // aufnimmt (remainingBoxes).
+    const kette = !!(result.chain && result.chain.length > 1);
+    const offenGesamt = kette ? (result.remainingBoxes || 0) : unplaced;
+    const planFit = offenGesamt <= 0 && result.totalBoxes > 0;
     // Leer ist kein Fehler, sondern der Anfang. Ohne diese Unterscheidung stuende beim
     // Oeffnen "0 offen" in Orange da, bevor ueberhaupt etwas eingegeben wurde.
     const leer = result.totalBoxes === 0;
@@ -5031,8 +5445,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // 30 t auf einem 28,2-t-Container: nichts platziert, result.weight = 0. Die Absicht des Nutzers
     // zaehlt, nicht was der Greedy-Packer noch reinbekommen hat.
     const totalWeight = cargo.reduce((s, c) => s + Math.max(0, Math.floor(num(c.qty))) * Math.max(0, num(c.weight)), 0);
-    const overweight = num(container.payload) > 0 && totalWeight > num(container.payload) + 0.5;
-    const overKg = Math.round(totalWeight - num(container.payload));
+    // Die Zuladung des PLANS, nicht die eines Containers. Bei drei Containern ist eine
+    // Ladung von 67 t nicht ueberladen, und ein rotes "33.227 kg ueber Zuladung" daneben
+    // war schlicht die falsche Rechnung.
+    const planPayload = kette
+      ? result.chain.reduce((s2, c2) => s2 + Math.max(0, num(c2.preset && c2.preset.payload)), 0)
+      : num(container.payload);
+    const overweight = planPayload > 0 && totalWeight > planPayload + 0.5;
+    const overKg = Math.round(totalWeight - planPayload);
     // Die Zuladungs-Anzeige bleibt bei result.weight: sie misst DIESEN Container, und dafuer
     // ist sie richtig. Was sie nicht sagen kann, sagt jetzt die Statuszeile - dass die
     // eingegebene Ladung als Ganzes schwerer ist als der Container tragen darf. Beides
@@ -5097,12 +5517,43 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const cog = computeLongCog(result.placed || [], (ti) => num(cargo[ti] && cargo[ti].weight), num(container.l));
     const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
+    // Volumen und Gewicht JE CONTAINER. Die Leiste oben nennt immer nur C1 (sie sagt es
+    // auch dazu), und die Gesamtsumme steht im Bild — was dazwischen fehlte, war die Frage
+    // "wie voll ist eigentlich der zweite". Beim Buchen ist genau das die Zahl: jeder
+    // Container hat seine eigene Zuladung und wird einzeln gestellt.
+    const slotRows = (result.chain || []).map((c2, i) => {
+      const cp = c2.preset || {};
+      const cVol = num(cp.l) * num(cp.w) * num(cp.h) / 1e6;
+      let vol = 0, kg = 0;
+      (c2.placed || []).forEach((b) => {
+        vol += b.dx * b.dy * b.dz / 1e6;
+        const it = cargo[b.ti];
+        if (it) kg += Math.max(0, num(it.weight));
+      });
+      const pay = num(cp.payload);
+      const pPct = pay > 0 ? kg / pay * 100 : 0;
+      // "Voll" muss dasselbe meinen wie in der Leiste darueber - auf der Strasse sind das
+      // die belegten Lademeter, nicht das Volumen. Sonst stuenden zwei verschiedene
+      // Prozentzahlen unter derselben Beschriftung.
+      const ldmB = (c2.placed || []).length ? Math.max(...(c2.placed || []).map((b) => b.x + b.dx)) / 100 : 0;
+      const ldmT = num(cp.l) / 100;
+      return {
+        marke: (domain === "road" ? "F" : "C") + (i + 1),
+        name: c2.name || preset,
+        stueck: (c2.placed || []).length,
+        vol, cVol, kg, pay,
+        vollPct: domain === "road"
+          ? (ldmT > 0 ? ldmB / ldmT * 100 : 0)
+          : (cVol > 0 ? vol / cVol * 100 : 0),
+        kgColor: pPct > 100 ? C.bad : pPct > 90 ? C.warn : C.text
+      };
+    });
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
     // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
     // dreissig Packstuecke gar nicht in den Container gingen. Daneben stand "30 offen", und
     // zwar in Gruen. Was nicht drin ist, ist kein guter Zustand.
-    const statusColor = payPct > 100 || overweight ? C.bad : leer ? C.faint : !allFit || railHot ? C.warn : C.good;
+    const statusColor = overweight ? C.bad : leer ? C.faint : !planFit ? C.warn : railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: `${SP.m}px ${SP.l}px` } },
         /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: SP.s, paddingRight: SP.m } },
@@ -5117,7 +5568,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: { paddingLeft: SP.l } },
           /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { color: statusColor, fontSize: FS.small, fontWeight: FW.semi, whiteSpace: "nowrap" } },
             /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "currentColor", flexShrink: 0 } }),
-            /* @__PURE__ */ React.createElement("span", null, leer ? T.noCargo : allFit ? T.allLoaded : T.open(unplaced))
+            /* @__PURE__ */ React.createElement("span", null, leer ? T.noCargo : !planFit ? T.open(offenGesamt) : kette ? (domain === "road" ? T.allLoadedRoadN(result.chain.length) : T.allLoadedN(result.chain.length)) : T.allLoaded)
           ),
           overweight && /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, padding: `2px ${SP.s}px`, background: hexA(C.bad, 0.16), color: C.bad } }, T.overCap(fmtDE(overKg))),
           /* @__PURE__ */ React.createElement(Btn, { size: "s", variant: cogOpen ? "accent" : "ghost", onClick: () => setCogOpen((o) => !o) },
@@ -5129,7 +5580,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("div", { style: { height: 2, background: "#232C38", position: "relative" } },
         /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: 0, top: 0, bottom: 0, width: Math.min(100, primaryMeter.pct) + "%", background: railColor, borderRadius: "0 2px 2px 0", transition: "width .4s ease, background .3s" } })
       ),
-      /* @__PURE__ */ React.createElement("div", { style: { maxHeight: cogOpen ? 360 : 0, overflow: "hidden", transition: "max-height .3s ease", background: hexA("#121821", 0.5) } },
+      // Die Schublade hatte eine feste Hoehe von 360 px - solange nur zwei Kennzahlen, zwei
+      // Balken und die Gewichtsverteilung darin standen, reichte das. Mit der Tabelle je
+      // Container reicht es nicht mehr, und abgeschnitten wurde ausgerechnet die
+      // Gewichtsverteilung ganz unten: STILL, ohne Andeutung, dass da noch etwas ist.
+      // Jetzt scrollt sie, statt zu schlucken - und sie nimmt hoechstens die halbe
+      // Fensterhoehe, damit die 3D-Ansicht darueber nicht zusammengedrueckt wird.
+      /* @__PURE__ */ React.createElement("div", { style: { maxHeight: cogOpen ? "min(460px, 50vh)" : "0px", overflowX: "hidden", overflowY: cogOpen ? "auto" : "hidden", transition: "max-height .3s ease", background: hexA("#121821", 0.5) } },
         /* @__PURE__ */ React.createElement("div", { className: "px-6 py-4", style: { borderTop: "1px solid #1C2531", display: "flex", flexDirection: "column", gap: SP.l } },
           // Die beiden Kennzahlen, die oben keinen Platz mehr haben. Sie stehen hier in
           // derselben Form wie in der Leiste — es ist dieselbe Zahl, nur eine Zeile tiefer.
@@ -5138,6 +5595,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               i > 0 && /* @__PURE__ */ React.createElement("div", { style: { width: 1, alignSelf: "stretch", background: C.line } }),
               /* @__PURE__ */ React.createElement("div", { className: "min-w-0", style: { paddingLeft: i ? SP.l : 0 } },
                 /* @__PURE__ */ React.createElement(Kpi, { label: s2.label, value: s2.value, sub: s2.sub, accent: s2.accent, size: "m" }))))),
+          slotRows.length > 1 && /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement(Lbl, { style: { marginBottom: SP.s } }, domain === "road" ? T.slotsTitleRoad : T.slotsTitle),
+            // Waagerecht scrollbar statt umbrechend: eine Zahl darf nicht umbrechen, und
+            // die Seite darf sie nicht mitnehmen (dieselbe Regel wie im Container-Wissen).
+            /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } },
+              /* @__PURE__ */ React.createElement("div", { style: { minWidth: 520 } },
+                /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1.5fr 0.7fr 1.4fr 1.6fr 0.6fr", gap: SP.m, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, color: C.faint, paddingBottom: SP.xs } },
+                  /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.vehicle : T.container),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.loaded),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.volume),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.weight),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.railFull)),
+                slotRows.map((sr, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "1.5fr 0.7fr 1.4fr 1.6fr 0.6fr", gap: SP.m, alignItems: "baseline", padding: `${SP.s}px 0`, borderTop: `1px solid ${C.line}` } },
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.small, color: C.text, whiteSpace: "nowrap" } },
+                    /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontWeight: FW.bold, color: AC } }, sr.marke),
+                    " \xB7 ", sr.name),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: sr.stueck ? C.text : C.faint } }, sr.stueck || T.slotsEmpty),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: C.text, whiteSpace: "nowrap" } },
+                    nf(sr.vol, 1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " / ", nf(sr.cVol, 1), " m\xB3")),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: sr.kgColor, whiteSpace: "nowrap" } },
+                    fmtDE(Math.round(sr.kg)), sr.pay > 0 ? /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " / ", fmtDE(sr.pay), " kg") : /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " kg")),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: C.text } }, Math.round(sr.vollPct), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " %"))))))),
           /* @__PURE__ */ React.createElement(Meter, { label: primaryMeter.label, pct: primaryMeter.pct, color: primaryMeter.color, text: primaryMeter.text }),
           num(container.payload) > 0 && /* @__PURE__ */ React.createElement(Meter, { label: T.payloadUtil, pct: Math.min(payPct, 100), color: payColor, text: `${payPct.toFixed(0)}%`, over: payPct > 100 }),
           cog && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: SP.s } },
@@ -5297,13 +5776,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.dim } }, T.cargoEmpty),
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.xs, lineHeight: 1.45 } }, T.cargoEmptyHint)) : null,
         cargo.map((c, i) => {
-      const pt = result.perType[i];
+      const pt = (result.perTypeAll || result.perType)[i];
       const done = pt && pt.total > 0 && pt.loaded >= pt.total;
       const col = colorOf(c, i);
       const open = openCargo === c.id;
       return /* @__PURE__ */ React.createElement("div", { key: c.id, style: { background: open ? C.raised : C.surface, borderRadius: R.l, padding: open ? SP.l : `${SP.m}px ${SP.l}px`, ...(c.grp ? { boxShadow: `inset 2px 0 0 0 ${hexA(col, 0.7)}` } : null), transition: "background-color .15s" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: open ? { paddingBottom: SP.m, marginBottom: SP.m, borderBottom: `1px solid ${C.line}` } : null }, /* @__PURE__ */ React.createElement("span", { style: { position: "relative", flexShrink: 0, display: "inline-flex" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setColorPickFor(colorPickFor === c.id ? null : c.id), title: T.colorTitle, style: { width: ICO.s, height: ICO.s, borderRadius: R.s, background: col, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.25)", border: 0, cursor: "pointer", padding: 0 } }), colorPickFor === c.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setColorPickFor(null), style: { position: "fixed", inset: 0, zIndex: 40 } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: SP.xl, left: 0, zIndex: 41, background: "#0c1320", borderRadius: R.l, padding: SP.s, width: 132, boxShadow: "0 16px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: SP.s } }, TYPE_COLORS.map((hex) => /* @__PURE__ */ React.createElement("button", { key: hex, onClick: () => { upd(c.id, "color", hex); setColorPickFor(null); }, style: { width: SP.xl, height: SP.xl, borderRadius: R.s, background: hex, cursor: "pointer", border: 0, boxShadow: (c.color || col) === hex ? "inset 0 0 0 2px #E9F0F7" : "inset 0 0 0 1px rgba(255,255,255,0.15)", padding: 0 } }))), /* @__PURE__ */ React.createElement("button", { onClick: () => { upd(c.id, "color", null); setColorPickFor(null); }, style: { marginTop: SP.s, width: "100%", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: C.dim, background: C.field, border: 0, borderRadius: R.s, padding: `${SP.xs}px 0`, cursor: "pointer" } }, T.colorAuto)))), /* @__PURE__ */ React.createElement("input", { value: c.name, onChange: (e) => upd(c.id, "name", e.target.value), className: "flex-1 min-w-0 bg-transparent focus:outline-none", style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text, borderBottom: "1px solid transparent", paddingBottom: 4 }, onFocus: (e) => e.target.style.borderBottomColor = hexA(C.accent, 0.6), onBlur: (e) => e.target.style.borderBottomColor = "transparent" }), pt && /* @__PURE__ */ React.createElement("span", { className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: MONO, fontSize: FS.small, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", background: hexA(done ? C.good : C.warn, 0.14), color: done ? C.good : C.warn } }, pt.loaded, "/", pt.total), doorCheck.idx.has(i) && /* @__PURE__ */ React.createElement("span", { title: T.doorHint(doorOpening.w, doorOpening.h), className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, background: hexA(C.warn, 0.16), color: C.warn } }, T.doorChip), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(open ? null : c.id), title: T.cargoToggle, "aria-expanded": open ? "true" : "false", style: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: SP.xl, height: SP.xl, borderRadius: R.s, border: 0, background: open ? hexA(C.accent, 0.16) : C.field, color: open ? "#bcd9ff" : C.dim, fontSize: FS.small, lineHeight: 1, cursor: "pointer", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" } }, "▾"), cargo.length > 0 && /* @__PURE__ */ React.createElement("button", { "aria-label": T.cargoDelete, title: T.cargoDelete, onClick: () => del(c.id), style: { color: C.faint, fontSize: FS.h3, lineHeight: 1, padding: `0 ${SP.xs}px`, cursor: "pointer" }, onMouseOver: (e) => e.target.style.color = C.bad, onMouseOut: (e) => e.target.style.color = C.faint }, "\xD7")),
       !open && /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(c.id), style: { display: "block", width: "100%", textAlign: "left", marginTop: SP.s, padding: 0, background: "transparent", border: 0, cursor: "pointer", fontFamily: SANS, fontSize: FS.label, lineHeight: 1.4, color: C.faint } }, cargoSummary(c)),
-      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
+      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
         const on = c.rotatable !== false;
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "transition flex items-center gap-1", style: { height: SP.xxl, padding: `0 ${SP.m}px`, borderRadius: R.s, border: 0, cursor: "pointer", fontSize: FS.small, fontWeight: on ? FW.semi : FW.label, background: on ? hexA(C.accent, 0.16) : C.field, color: on ? "#BCD9FF" : C.dim } }, "\u21BB 90\xB0");
       })())),
@@ -5344,7 +5823,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi } }, e.label),
               e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 4 } }, e.sub) : null))
-        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", null, T.footR)), exportOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setExportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 460, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "8.5", cy: "8.5", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M21 15l-5-5L5 21" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.shotExportTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 16 } }, T.shotExportDesc), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 8 } }, T.shotAccentLabel), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 16 } }, Object.entries(EXPORT_ACCENTS).map(([key, hex]) => { const on = exportAccent === key; const lbl = { standard: "Standard", blau: LANG === "en" ? "Blue" : "Blau", rot: LANG === "en" ? "Red" : "Rot" }[key]; return /* @__PURE__ */ React.createElement("button", { key, onClick: () => setExportAccent(key), className: "flex items-center gap-2 rounded-lg transition", style: { padding: "8px 12px 8px 8px", background: on ? hexA(C.accent, 0.1) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.5) : C.fieldBorder}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 16, height: 16, borderRadius: 999, background: hex || "linear-gradient(135deg,#2E8FFF,#2E8FFF)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, fontWeight: FW.semi, color: on ? C.text : C.dim } }, lbl)); })), /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px", borderRadius: R.l, background: C.field, border: `1px solid ${C.fieldBorder}`, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text, marginBottom: 8 } }, T.shotLogoLabel), /* @__PURE__ */ React.createElement("div", { onDragOver: (e) => { e.preventDefault(); e.target.style.background = hexA(C.accent, 0.15); }, onDragLeave: (e) => { e.target.style.background = C.field; }, onDrop: (e) => { e.preventDefault(); const files = e.dataTransfer.files; if (files.length > 0) { const file = files[0]; if (file.type.startsWith("image/")) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } } e.target.style.background = C.field; }, onClick: () => { const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.onchange = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } }; input.click(); }, style: { padding: "16px", borderRadius: R.s, border: `2px dashed ${C.fieldBorder}`, background: C.field, cursor: "pointer", textAlign: "center", transition: "background .2s" } }, customLogo ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: C.accent, fontWeight: FW.semi } }, "✓ ", LANG === "en" ? "Logo uploaded" : "Logo hochgeladen"), /* @__PURE__ */ React.createElement("button", { onClick: (e) => { e.stopPropagation(); setCustomLogo(null); }, className: "ml-auto px-2 py-1 rounded transition hover:brightness-110", style: { background: hexA(C.bad, 0.15), border: `1px solid ${hexA(C.bad, 0.4)}`, color: C.bad, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, T.shotLogoRemoveBtn)) : /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small } }, T.shotLogoDrag)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between", style: { padding: "12px 16px", borderRadius: R.l, background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("div", { style: { paddingRight: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.shotTransparent), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: 4, lineHeight: 1.4 } }, T.shotTransparentHint)), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportTransparent((v) => !v), role: "switch", "aria-checked": exportTransparent ? "true" : "false", style: { flexShrink: 0, width: 42, height: 24, borderRadius: 999, border: 0, cursor: "pointer", padding: 4, display: "flex", justifyContent: exportTransparent ? "flex-end" : "flex-start", background: exportTransparent ? C.accent : "#2E3A49", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 18, height: 18, borderRadius: 999, background: exportTransparent ? "#04121A" : "#8FA3B6" } })))), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 24px", borderTop: "1px solid #1C2531", background: "#121821", borderRadius: `0 0 ${R.l}px ${R.l}px` } }, CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginBottom: 12, lineHeight: 1.4 } }, T.shotCopyHint), /* @__PURE__ */ React.createElement("div", { className: "flex justify-end gap-2" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "l", onClick: () => setExportOpen(false) }, LANG === "en" ? "Cancel" : "Abbrechen"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: saveScreenshot }, T.shotSave), CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: copyScreenshotToClipboard }, T.shotCopyBtn))))), shareOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setShareOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 520, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.shareTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setShareOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 12 } }, T.shareDesc), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { readOnly: true, value: shareURL, onFocus: (e) => e.target.select(), className: "flex-1 rounded-lg px-3 py-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: MONO, outline: "none" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => {
+        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", null, T.footR)), exportOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setExportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 460, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("rect", { x: "3", y: "3", width: "18", height: "18", rx: "2" }), /* @__PURE__ */ React.createElement("circle", { cx: "8.5", cy: "8.5", r: "1.5" }), /* @__PURE__ */ React.createElement("path", { d: "M21 15l-5-5L5 21" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.shotExportTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 16 } }, T.shotExportDesc), (result.chain && result.chain.length > 1 && !manualMode ? /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 16 } }, /* @__PURE__ */ React.createElement(Lbl, { style: { marginBottom: SP.s } }, T.shotLayoutLabel), /* @__PURE__ */ React.createElement(Seg, { size: "s", value: exportLayout, onPick: setExportLayout, items: [["reihe", T.shotLayoutRow], ["blatt", T.shotLayoutSheet]] }), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.s, lineHeight: 1.4 } }, exportLayout === "blatt" ? T.shotLayoutSheetHint : T.shotLayoutRowHint)) : null), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 8 } }, T.shotAccentLabel), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: 16 } }, Object.entries(EXPORT_ACCENTS).map(([key, hex]) => { const on = exportAccent === key; const lbl = { standard: "Standard", blau: LANG === "en" ? "Blue" : "Blau", rot: LANG === "en" ? "Red" : "Rot" }[key]; return /* @__PURE__ */ React.createElement("button", { key, onClick: () => setExportAccent(key), className: "flex items-center gap-2 rounded-lg transition", style: { padding: "8px 12px 8px 8px", background: on ? hexA(C.accent, 0.1) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.5) : C.fieldBorder}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 16, height: 16, borderRadius: 999, background: hex || "linear-gradient(135deg,#2E8FFF,#2E8FFF)", boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.2)" } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, fontWeight: FW.semi, color: on ? C.text : C.dim } }, lbl)); })), /* @__PURE__ */ React.createElement("div", { style: { padding: "12px 16px", borderRadius: R.l, background: C.field, border: `1px solid ${C.fieldBorder}`, marginBottom: 16 } }, /* @__PURE__ */ React.createElement("div", { style: { marginBottom: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text, marginBottom: 8 } }, T.shotLogoLabel), /* @__PURE__ */ React.createElement("div", { onDragOver: (e) => { e.preventDefault(); e.target.style.background = hexA(C.accent, 0.15); }, onDragLeave: (e) => { e.target.style.background = C.field; }, onDrop: (e) => { e.preventDefault(); const files = e.dataTransfer.files; if (files.length > 0) { const file = files[0]; if (file.type.startsWith("image/")) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } } e.target.style.background = C.field; }, onClick: () => { const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.onchange = (e) => { const file = e.target.files[0]; if (file) { const reader = new FileReader(); reader.onload = (ev) => setCustomLogo(ev.target.result); reader.readAsDataURL(file); } }; input.click(); }, style: { padding: "16px", borderRadius: R.s, border: `2px dashed ${C.fieldBorder}`, background: C.field, cursor: "pointer", textAlign: "center", transition: "background .2s" } }, customLogo ? /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: C.accent, fontWeight: FW.semi } }, "✓ ", LANG === "en" ? "Logo uploaded" : "Logo hochgeladen"), /* @__PURE__ */ React.createElement("button", { onClick: (e) => { e.stopPropagation(); setCustomLogo(null); }, className: "ml-auto px-2 py-1 rounded transition hover:brightness-110", style: { background: hexA(C.bad, 0.15), border: `1px solid ${hexA(C.bad, 0.4)}`, color: C.bad, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, T.shotLogoRemoveBtn)) : /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small } }, T.shotLogoDrag)))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between", style: { padding: "12px 16px", borderRadius: R.l, background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("div", { style: { paddingRight: 12 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.shotTransparent), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: 4, lineHeight: 1.4 } }, T.shotTransparentHint)), /* @__PURE__ */ React.createElement("button", { onClick: () => setExportTransparent((v) => !v), role: "switch", "aria-checked": exportTransparent ? "true" : "false", style: { flexShrink: 0, width: 42, height: 24, borderRadius: 999, border: 0, cursor: "pointer", padding: 4, display: "flex", justifyContent: exportTransparent ? "flex-end" : "flex-start", background: exportTransparent ? C.accent : "#2E3A49", transition: ".18s" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 18, height: 18, borderRadius: 999, background: exportTransparent ? "#04121A" : "#8FA3B6" } })))), /* @__PURE__ */ React.createElement("div", { style: { padding: "16px 24px", borderTop: "1px solid #1C2531", background: "#121821", borderRadius: `0 0 ${R.l}px ${R.l}px` } }, CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginBottom: 12, lineHeight: 1.4 } }, T.shotCopyHint), /* @__PURE__ */ React.createElement("div", { className: "flex justify-end gap-2" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "l", onClick: () => setExportOpen(false) }, LANG === "en" ? "Cancel" : "Abbrechen"), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: saveScreenshot }, T.shotSave), CLIPBOARD_IMAGE_SUPPORTED && /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: copyScreenshotToClipboard }, T.shotCopyBtn))))), shareOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setShareOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 520, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: C.accent, strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "5", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "6", cy: "12", r: "3" }), /* @__PURE__ */ React.createElement("circle", { cx: "18", cy: "19", r: "3" }), /* @__PURE__ */ React.createElement("path", { d: "M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" })), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.shareTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setShareOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 12 } }, T.shareDesc), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { readOnly: true, value: shareURL, onFocus: (e) => e.target.select(), className: "flex-1 rounded-lg px-3 py-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: MONO, outline: "none" } }), /* @__PURE__ */ React.createElement("button", { onClick: () => {
       try {
         navigator.clipboard.writeText(shareURL).then(() => setShareCopied(true), () => {
         });
@@ -5353,7 +5832,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }, className: "px-4 py-3 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontWeight: FW.bold, fontSize: FS.body, whiteSpace: "nowrap" } }, shareCopied ? T.shareCopied : T.shareCopy)), /* @__PURE__ */ React.createElement("a", { href: shareURL, target: "_blank", rel: "noopener", className: "inline-block mt-3 transition hover:brightness-125", style: { fontFamily: SANS, fontSize: FS.label, color: C.accent } }, T.shareOpen), domain === "sea" && /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setShareOpen(false);
       buildLadevorschlag();
-    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)")))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => setImportRows(parseCargoText(importText)) }, T.impDetect), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel))) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : "#1C2531", border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : "#2E3A49"}`, color: r.stackable ? C.good : C.faint, fontSize: FS.small, fontWeight: FW.bold } }, r.stackable ? "\u2713" : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: "#1C2531", border: "1px solid #2E3A49", color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), recOpen && (() => {
+    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)")))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => setImportRows(parseCargoText(importText)) }, T.impDetect), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel))) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", title: num(r.stackH) > 0 ? T.stackHSum(dimDE(num(r.stackH)) + " cm") : void 0, style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : "#1C2531", border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : "#2E3A49"}`, color: r.stackable ? C.good : C.faint, fontSize: num(r.stackH) > 0 ? FS.label : FS.small, fontWeight: FW.bold } }, r.stackable ? (num(r.stackH) > 0 ? dimDE(num(r.stackH)) : "\u2713") : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: "#1C2531", border: "1px solid #2E3A49", color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), recOpen && (() => {
       // Anzeige-Logik: geometrisch passend UND Zuladung nicht ueberschritten. (packCargo stoppt
       // selbst am Payload-Limit; payPct>100 kann bei editierten Custom-Payloads dennoch auftreten.)
       const rows = recData ? recData.rows.map((r) => ({ ...r, fitsShown: r.fits && r.payPct <= 100 })) : [];
@@ -5572,7 +6051,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
 
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full", style: { height: 230 } },
       /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { borderRadius: R.s, overflow: "hidden", background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }),
-      /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-2 left-3 pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, "ziehen \xB7 scrollen"),
+      /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-2 left-3", title: T.orbitHintLong, style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, cursor: "default" } }, T.orbitHint),
       /* @__PURE__ */ React.createElement("button", { onClick: () => setSpin((v) => !v), className: "absolute top-2 right-11 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, spin ? "⏸" : "▶"),
       /* @__PURE__ */ React.createElement("button", { onClick: () => ctl.current.reset && ctl.current.reset(), className: "absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, "⟳"));
   }

@@ -228,6 +228,54 @@ Weiter zu rechnen kostet fast nichts, weil jeder Folgecontainer weniger Rest zu 
 
 **Die Kette und die Empfehlung antworten auf verschiedene Fragen** und dürfen deshalb verschiedene Zahlen nennen: die Kette beginnt beim **gewählten** Container und hängt Folgecontainer an, die Empfehlung rechnet die günstigste Kombination frei aus. Damit nicht zwei Zahlen unkommentiert nebeneinanderstehen, nennt die Pille ihre Grundlage: „6 Container · mit dieser Wahl".
 
+### Mehr als ein Container ist ein Entschluss, kein Fehler
+Statuszeile, Mengenzähler in der Ladungsliste und der Bildexport lasen alle nur den **ersten** Container. Bei 37 Paletten auf drei Containern stand daneben „17 offen" in Orange, „0/1" an Packstücken, die im zweiten Container liegen und im Bild daneben zu sehen sind, und ein rotes „33.227 kg über Zuladung", das die Gesamtladung gegen die Zuladung **eines** Containers rechnete.
+
+Drei Stellen zählen deshalb jetzt den ganzen Plan:
+- **`chainContainers`/`chainVehicles` liefern `perType`** (über `kettenBilanz`) — die Bilanz über alle Container. `result.perType` bleibt daneben stehen und meint weiterhin den ersten; die Leiste weist ihn ausdrücklich als `C1` aus.
+- **Offen ist, was die ganze Kette nicht mehr aufnimmt** (`remainingBoxes`), nicht was neben dem ersten Container liegt. Grün heißt dann „Alles verladen · 3 Container".
+- **Die Überladung rechnet gegen die Zuladung des Plans** (Summe über die Kette). 67 t auf drei Containern sind keine Überladung.
+
+`kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
+
+### Die Kamera darf ihren Mittelpunkt verlassen
+Die 3D-Ansicht kreiste um `t.target`, und das war die **Mitte der Reihe**. Zoomen hieß damit immer „in die Mitte hinein" — bei drei Containern also in die Lücke zwischen dem ersten und dem zweiten. An den ersten oder letzten Container kam man gar nicht heran. Drei Wege heraus, alle drei Standard in 3D-Betrachtern:
+
+- **Rechte (oder mittlere) Maustaste, oder Shift, schiebt** das Ziel in der Bildebene. Ein Pixel Mauszug ist ein Pixel Bild (`proPixel` aus Bildwinkel, Entfernung und Leinwandhöhe) — sonst rutscht die Ladung unter dem Zeiger weg.
+- **Das Rad zoomt dorthin, wo der Zeiger steht.** Das Ziel wandert zum Punkt unter dem Zeiger, und zwar **genau um den Anteil, um den die Entfernung schrumpft** (`target.lerp(p, 1 − r_neu/r_alt)`). Nur dieser Faktor lässt den Punkt unter dem Zeiger stehen; ein größerer zieht ihn weg (erst mit ×1,6 probiert — das überschoss sichtbar). Beim Heraus­zoomen bleibt das Ziel stehen, sonst zerrt es bei jedem Rückzug.
+- **Doppelklick holt den Punkt unter dem Zeiger in die Mitte** — im manuellen Modus nicht, dort säße ein Doppelklick zwei Kisten.
+
+Zwei Dinge halten das zusammen: `zielKlemmen()` begrenzt das Ziel auf die Reihe plus zwei Meter Auslauf (die Halbmaße stehen in `t.frame`) — sonst schiebt man sich mit zwei Handbewegungen ins Nichts und findet ohne „Ansicht zurücksetzen" nicht zurück. Und ein Schiebe-Zug setzt im manuellen Modus **keine** Kiste (`warSchieben` in `up`), sonst platziert jeder Rechtsklick eine.
+
+Der sichtbare Hinweis bleibt kurz — daneben sitzt das Empfehlungsbanner, unter dem ein langer Text durchläuft. Das Ganze steht im `title`. Er stand übrigens fest auf Deutsch im Markup, obwohl `T.orbitHint` seit jeher existierte.
+
+### Volumen und Gewicht je Container
+Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
+
+Zwei Dinge halten `test/kennzahlen-je-container.test.mjs` zusammen: die **Zeilen summieren sich auf die Gesamtladung** (37 Stück, 67.772 kg), und die **erste Zeile ist exakt das, was die Leiste als C1 zeigt** — zwei verschiedene Zahlen für denselben Container übereinander wären schlimmer als keine Tabelle. Die Spalte „Voll" meint dasselbe wie die Leiste: im Seeverkehr Volumen, auf der Straße **Lademeter**.
+
+**Dieselben Zahlen stehen im Bild** — eine Kachel je Container, mit zwei Balken: Raum und Gewicht. Zwei, weil zwei Grenzen gelten und bei schwerer Ladung die zweite zuerst zuschlägt (bei der gemeldeten Sendung: 47 % Volumen, 99 % Zuladung). Das Bild ist das, was beim Kunden ankommt; die Frage stellt sich dort genauso. Die Kacheln rechnen **nicht selbst**, sondern lesen `slotRows` — sonst laufen Bild und Oberfläche auseinander. Bis zu **acht** Kacheln, danach „+N weitere" (mehr zeichnet auch die 3D-Ansicht nicht, `MAXDRAW`). Sie gehen in vollen Reihen auf, höchstens vier je Reihe: sechs Container sind 2×3, nicht 4+2 — dieselbe Regel wie bei der Typ-Auswahl.
+
+**Zwei Anordnungen, umschaltbar im Bild-Dialog** (nur sichtbar, wenn es mehr als einen Container gibt):
+
+- **Reihe** — alle Container nebeneinander, wie bisher. Gut für den Überblick.
+- **Einzeln** — ein eigener Render je Container, jeder eng eingepasst, als Blatt mit einer Kachel je Container. In der Reihe teilen sich drei 40-Füßer die Bildbreite; darin ist keine Lage mehr zu erkennen.
+
+Für die Einzelaufnahme nimmt `captureView` einen `slot` entgegen: es blendet alle Gruppen mit einer **anderen** `userData.slot` aus und passt auf den Rahmen dieses einen Containers ein (`t.frame.slots[i]`). Zwei Fallen dabei, beide erlebt:
+1. `cg.userData = { … }` weiter unten **ersetzt** das Objekt komplett — die Slot-Marke muss **dort** stehen, sonst ist sie wieder weg und jede Kachel zeigt die ganze Reihe.
+2. `theta`/`phi` werden in `captureView` **vor** der Entfernungsrechnung gebraucht. Wer sie darunter deklariert, bekommt eine TDZ-Referenz — die `try/catch` schluckt sie, und der Export liefert einfach nichts. Dieselbe Falle wie seinerzeit bei `leer`.
+
+**Die Einzelkachel schaut flacher und seitlicher** (θ −1,17 / φ 1,17 statt −0,92 / 1). Die Neigung auf dem Schirm ist `cos(φ)·cos(θ)`; ein 12 m langer Container kippt bei der Übersichts-Ruhelage so stark ins Bild, dass die halbe Kachel leer bleibt. Flacher und seitlicher heißt weniger Neigung und damit rund 15 % mehr Container je Kachel — aber nicht so flach, dass die Deckflächen verschwinden, denn an denen zählt man die Lagen. `camFit` nimmt den Winkel deshalb als Parameter.
+
+**Beide Bildvarianten rechnen ihre Höhe getrennt** (transparenter Glass-Balken, opake Chrome-Karte). Wer nur eine anpasst, schiebt in der anderen die Fußleiste über die Kacheln; `test/bild-je-container.test.mjs` prüft beide.
+
+**Die Schublade scrollt, sie schneidet nicht ab.** Mit der Tabelle passt der Inhalt nicht mehr in die früheren festen 360 px — abgeschnitten wurde ausgerechnet die Gewichtsverteilung ganz unten, ohne jede Andeutung, dass da noch etwas ist. Jetzt `min(460px, 50vh)` mit `overflow-y: auto`: hoch genug für den Normalfall, gedeckelt auf die halbe Fensterhöhe, damit die 3D-Ansicht darüber nicht zusammengedrückt wird.
+
+### Der Bildexport rahmt die ganze Reihe
+Die Export-Kamera wurde auf die Maße des **gewählten** Containers eingepasst; bei einer Kette lag alles ab dem zweiten außerhalb des Bildes. Die Live-Ansicht rechnet die Halbmaße der ganzen Reihe längst aus — sie stehen jetzt in `t.frame` (`hx/hy/hz`), und `camFit` liegt auf Modulebene, damit **Live-Ansicht und Export dieselbe Einpassung benutzen**. Der Nebel wird für die größere Export-Entfernung mitgezogen (sonst verschwindet der hinterste Container im Dunst) und danach zurückgestellt.
+
+**Das Bildformat folgt dem Motiv.** Ein 20-Fuß-Container ist ein kompakter Block und bleibt bei 16:10; eine Reihe aus drei 40-Fußern ist über 40 m lang und 2,7 m hoch — in 16:10 gepresst bleiben zwei leere Drittel übrig. Das Seitenverhältnis wächst deshalb stufenlos mit der Länge der Reihe, gedeckelt bei 16:7,3.
+
 ### Was `stackMax` bedeutet — und was nicht
 **Es ist eine Tragfähigkeit.** Der Selektor sagt es wörtlich: „1× stapelbar" = *eine zusätzliche Lage obendrauf* (`stackMax` 2). Daraus folgen drei Dinge, die alle drei gelten müssen:
 
@@ -236,6 +284,19 @@ Weiter zu rechnen kostet fast nichts, weil jeder Folgecontainer weniger Rest zu 
 - Ein Stück ganz oben trägt nichts und verletzt deshalb nichts — auch wenn es auf Lage 3 liegt. Die frühere Fassung verbot das und ließ dafür Ladung liegen.
 
 Umgesetzt ohne Suche: jedes gesetzte Stück trägt seine Lage im Turm (`pos`) und die höchste Lage, die sein Turm nach **allen** Trägern darunter erreichen darf (`lim = min(pos + Tragfähigkeit − 1)`). Beim Aufsetzen genügt der Vergleich mit dem unmittelbaren Untergrund. `towerAt` im manuellen Pfad folgt derselben Regel — `test/stackmax-manuell.test.mjs` verlangt, dass Ziehen von Hand und automatisches Packen dasselbe ergeben.
+
+### Die zweite Stapelgrenze: „stapelbar bis 180 cm" (`stackH`)
+An der Rampe wird nicht in Lagen gedacht, sondern in Zentimetern. Eine Lagenzahl ist dafür nur eine Näherung — und eine, die sich **nicht zusammensetzen lässt.** Bei Paletten von 42 bis 49 cm rechnet man sich aus: unter 45 cm gehen vier Lagen, darüber drei. Steht dann eine flache unten und drei hohe darauf, sind es vier Lagen (jede Einzelgrenze eingehalten) und **183 cm** — die eigentliche Grenze gerissen. Genau so gemeldet, und genau so in `test/stapelhoehe.test.mjs` festgehalten.
+
+`stackH` ist deshalb eine Grenze in Zentimetern, **gemessen ab dem Containerboden** — so, wie die Angabe in der Anfrage gemeint ist. Umgesetzt parallel zu `lim`: jedes gesetzte Stück trägt `hlim`, die höchste Oberkante, die sein Turm nach allen Stücken darunter erreichen darf. Beide Grenzen gelten nebeneinander, die schärfere gewinnt.
+
+Im Auswahlfeld schließen sie einander aus („bis Höhe …" **oder** „2× stapelbar"): wer in Zentimetern denkt, denkt nicht gleichzeitig in Lagen, und zwei Grenzen nebeneinander wären nur schwerer zu lesen. Im Teilen-Link trägt sie den Tag **`H`** — Großbuchstabe, weil die Codetabelle des `?c=`-Formats ausdrücklich nur **ergänzt** werden darf. Ohne den Tag verließe die Grenze den Link stillschweigend, und der Empfänger rechnete mit einer anderen Ladung als der Absender.
+
+**Die Grenze fragt nicht nach Sorte oder Listenposition, nur danach, was unter ihr steht.** Das ist keine Feinheit, sondern genau der Punkt, an dem die Lagengrenze schon einmal gescheitert ist: sie zählte den Turm nur über Stücke *gleicher Bauhöhe*, und bei 39 einzeln erfassten Paletten war keine zwei gleich hoch. `test/stapelhoehe.test.mjs` prüft deshalb ausdrücklich den Fall **37 einzeln erfasste Positionen** — und den gemischten, in dem nur die Hälfte eine Grenze trägt: ein Stück ohne eigene Grenze, das auf einem mit Grenze steht, bleibt gebunden. Sonst ließe sich die Grenze durch eine fremde Kiste obendrauf aushebeln.
+
+**Der Freitext-Import versteht die Angabe** („stapelbar bis 180 cm", „bis 1,8 m", „up to 180 cm"). Wer 37 Paletten einzeln erfasst, setzt die Grenze sonst 37 Mal von Hand — und die Zeilen kommen ohnehin so aus der Anfrage. Der Ausdruck ist an ein Schlüsselwort **und** an eine Längeneinheit gebunden: „max 100 kg" ist keine Stapelhöhe, und `test/import-stapelhoehe.test.mjs` hält genau das fest.
+
+**Was dabei KEIN Fehler war:** die Meldung lautete „das Tool macht vier Lagen, obwohl ich nur 2× stapelbar gewählt habe". Das Stück mit „2× stapelbar" stand auf Lage 2 und trug zwei — genau das, was die Angabe bedeutet. Der Fehler lag eine Ebene darüber, in der Übersetzung der Vorgabe in Lagenzahlen. Vor dem Ändern nachrechnen, nicht dem ersten Eindruck folgen.
 
 **„Nicht stapelbar" ist etwas anderes** und bleibt, wie es war: das Stück darf **auf nichts stehen** (`S.y > 1e-6` in `emsPackOnce`). Es trägt in diesem Rechner weiterhin — `test/pack-order.test.mjs` hält das fest (11 nicht stapelbare am Boden, 11 stapelbare darüber). Ob das dem Verständnis an der Rampe entspricht, ist eine **offene fachliche Frage** und nicht beiläufig zu ändern.
 
