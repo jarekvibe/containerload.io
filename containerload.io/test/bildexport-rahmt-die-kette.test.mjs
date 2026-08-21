@@ -21,7 +21,7 @@ const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
 
 // camFit steht auf Modulebene, damit Live-Ansicht UND Export dieselbe Einpassung benutzen.
-const s = L.findIndex((l) => l.includes("function camFit(hx, hy, hz, aspect)"));
+const s = L.findIndex((l) => l.includes("function camFit(hx, hy, hz, aspect"));
 assert.ok(s >= 0, "camFit muss auf Modulebene stehen - sonst hat der Export wieder seine eigene Rechnung");
 const e = L.findIndex((l, i) => i > s && l === "  }");
 const { camFit } = new Function(L.slice(s, e + 1).join("\n") + "\nreturn { camFit };")();
@@ -67,17 +67,20 @@ test("eine laengere Reihe braucht mehr Abstand - sonst waere nichts gewonnen", (
 });
 
 test("der Export passt auf die REIHE ein, nicht auf einen Container", () => {
-  assert.ok(/const fr = three\.current && three\.current\.frame;/.test(roh),
+  assert.ok(/const frAll = three\.current && three\.current\.frame;/.test(roh),
     "der Export liest die Reihen-Masse nicht aus t.frame");
+  // Mit slot: nur dieser eine Container; ohne: die ganze Reihe.
+  assert.ok(/const fr = nurSlot != null && frAll && frAll\.slots && frAll\.slots\[nurSlot\] \? frAll\.slots\[nurSlot\] : frAll;/.test(roh),
+    "die Einzelaufnahme greift nicht auf den Rahmen ihres Containers zu");
   assert.ok(/const hx = fr \? fr\.hx : CLm \/ 2, hy = fr \? fr\.hy : CHm \/ 2, hz = fr \? fr\.hz : CWm \/ 2;/.test(roh));
   assert.ok(/hx: rowW \/ 2, hy: maxCH \/ 2, hz: maxCW \/ 2/.test(roh),
     "t.frame traegt die Halbmasse der Reihe nicht mehr");
-  assert.ok(/dist = Math\.max\(2\.5, camFit\(hx, hy, hz, aspect\)/.test(roh));
+  assert.ok(/dist = Math\.max\(2\.5, camFit\(hx, hy, hz, aspect, theta, phi\)/.test(roh));
 });
 
 test("das Bildformat folgt der Laenge der Reihe", () => {
-  assert.ok(/const outAsp = Math\.max\(1\.6, Math\.min\(2\.2, 1\.05 \+ 0\.22 \* laengs\)\);/.test(roh),
-    "das Seitenverhaeltnis waechst nicht mehr mit der Reihe");
+  assert.ok(/const outAsp = opts\.aspect \|\| Math\.max\(1\.6, Math\.min\(2\.2, 1\.05 \+ 0\.22 \* laengs\)\);/.test(roh),
+    "das Seitenverhaeltnis waechst nicht mehr mit der Reihe (oder die Kachel kann es nicht mehr vorgeben)");
   const asp = (laengs) => Math.max(1.6, Math.min(2.2, 1.05 + 0.22 * laengs));
   // 20' einzeln: 2,95 / 1,195 = 2,47 -> bleibt bei 16:10 wie bisher
   assert.strictEqual(asp(2.47), 1.6);

@@ -256,6 +256,17 @@ Zwei Dinge halten `test/kennzahlen-je-container.test.mjs` zusammen: die **Zeilen
 
 **Dieselben Zahlen stehen im Bild** — eine Kachel je Container, mit zwei Balken: Raum und Gewicht. Zwei, weil zwei Grenzen gelten und bei schwerer Ladung die zweite zuerst zuschlägt (bei der gemeldeten Sendung: 47 % Volumen, 99 % Zuladung). Das Bild ist das, was beim Kunden ankommt; die Frage stellt sich dort genauso. Die Kacheln rechnen **nicht selbst**, sondern lesen `slotRows` — sonst laufen Bild und Oberfläche auseinander. Bis zu **acht** Kacheln, danach „+N weitere" (mehr zeichnet auch die 3D-Ansicht nicht, `MAXDRAW`). Sie gehen in vollen Reihen auf, höchstens vier je Reihe: sechs Container sind 2×3, nicht 4+2 — dieselbe Regel wie bei der Typ-Auswahl.
 
+**Zwei Anordnungen, umschaltbar im Bild-Dialog** (nur sichtbar, wenn es mehr als einen Container gibt):
+
+- **Reihe** — alle Container nebeneinander, wie bisher. Gut für den Überblick.
+- **Einzeln** — ein eigener Render je Container, jeder eng eingepasst, als Blatt mit einer Kachel je Container. In der Reihe teilen sich drei 40-Füßer die Bildbreite; darin ist keine Lage mehr zu erkennen.
+
+Für die Einzelaufnahme nimmt `captureView` einen `slot` entgegen: es blendet alle Gruppen mit einer **anderen** `userData.slot` aus und passt auf den Rahmen dieses einen Containers ein (`t.frame.slots[i]`). Zwei Fallen dabei, beide erlebt:
+1. `cg.userData = { … }` weiter unten **ersetzt** das Objekt komplett — die Slot-Marke muss **dort** stehen, sonst ist sie wieder weg und jede Kachel zeigt die ganze Reihe.
+2. `theta`/`phi` werden in `captureView` **vor** der Entfernungsrechnung gebraucht. Wer sie darunter deklariert, bekommt eine TDZ-Referenz — die `try/catch` schluckt sie, und der Export liefert einfach nichts. Dieselbe Falle wie seinerzeit bei `leer`.
+
+**Die Einzelkachel schaut flacher und seitlicher** (θ −1,17 / φ 1,17 statt −0,92 / 1). Die Neigung auf dem Schirm ist `cos(φ)·cos(θ)`; ein 12 m langer Container kippt bei der Übersichts-Ruhelage so stark ins Bild, dass die halbe Kachel leer bleibt. Flacher und seitlicher heißt weniger Neigung und damit rund 15 % mehr Container je Kachel — aber nicht so flach, dass die Deckflächen verschwinden, denn an denen zählt man die Lagen. `camFit` nimmt den Winkel deshalb als Parameter.
+
 **Beide Bildvarianten rechnen ihre Höhe getrennt** (transparenter Glass-Balken, opake Chrome-Karte). Wer nur eine anpasst, schiebt in der anderen die Fußleiste über die Kacheln; `test/bild-je-container.test.mjs` prüft beide.
 
 **Die Schublade scrollt, sie schneidet nicht ab.** Mit der Tabelle passt der Inhalt nicht mehr in die früheren festen 360 px — abgeschnitten wurde ausgerechnet die Gewichtsverteilung ganz unten, ohne jede Andeutung, dass da noch etwas ist. Jetzt `min(460px, 50vh)` mit `overflow-y: auto`: hoch genug für den Normalfall, gedeckelt auf die halbe Fensterhöhe, damit die 3D-Ansicht darüber nicht zusammengedrückt wird.
