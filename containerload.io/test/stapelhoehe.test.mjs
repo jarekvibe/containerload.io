@@ -103,3 +103,68 @@ test("beide Grenzen gelten nebeneinander, die schaerfere gewinnt", () => {
   const r2 = packCargo(PRESETS["40' HC"], [pal(45, { qty: 30, stackMax: 5, stackH: 140 })], {}, false);
   assert.strictEqual(Math.max(...saeulenHoehen(r2.placed)), 135, "140 cm ist hier schaerfer als 5 Lagen");
 });
+
+
+// ── Die Frage, die sofort kam: gilt das auch bei EINZELN erfassten Positionen? ──────────
+//
+// Sie ist berechtigt, denn genau daran ist die Lagengrenze frueher gescheitert: sie zaehlte
+// den Turm nur ueber Stuecke GLEICHER BAUHOEHE. Bei 39 einzeln erfassten Paletten von 41 bis
+// 52 cm war keine zwei gleich hoch, der Turm blieb bei 1, und die Grenze griff nie.
+//
+// Die Hoehengrenze darf diesen Fehler nicht wiederholen. Sie fragt deshalb nicht nach Sorte,
+// Bauhoehe oder Listenposition, sondern nur danach, WAS UNTER MIR STEHT.
+const G1 = [[49, 2220], [47, 2180], [47, 2180], [46, 2090], [45, 2030], [45, 2030], [45, 1915],
+  [45, 1915], [42, 1795], [42, 1805], [45, 2173], [45, 2195], [45, 2175], [45, 2201], [45, 2199],
+  [43, 1896], [43, 1919], [43, 1943], [47, 2295], [47, 2235], [47, 1942], [47, 2290], [46, 2150],
+  [43, 1949], [45, 1940], [45, 2090], [45, 2085], [45, 2085], [44, 1885]];
+const G2 = [[55, 1020], [55, 1020], [55, 1020], [55, 1025], [55, 1025], [55, 1025], [51, 915], [51, 915]];
+// 37 Positionen, jede fuer sich erfasst - so, wie es aus der Anfrage kommt.
+const einzeln = (extra) => [
+  ...G1.map(([h, kg], i) => ({ name: "G1-" + (i + 1), l: 325, w: 218, h, weight: kg, qty: 1, stackable: true, stackMax: Infinity, rotatable: true, ...extra })),
+  ...G2.map(([h, kg], i) => ({ name: "G2-" + (i + 1), l: 228, w: 110, h, weight: kg, qty: 1, stackable: true, stackMax: Infinity, rotatable: true, ...extra }))
+];
+
+test("37 EINZELN erfasste Positionen: die Grenze gilt trotzdem", () => {
+  const ladung = einzeln({ stackH: 180 });
+  for (const name of ["20' GP", "40' GP", "40' HC", "45' HC"]) {
+    const r = packCargo(PRESETS[name], ladung, {}, false);
+    // Tragen alle Positionen dieselbe Grenze, darf KEINE Oberkante darueber liegen.
+    const hoechste = Math.max(...r.placed.map((p) => p.y + p.dy));
+    assert.ok(hoechste <= 180 + 1e-6, `${name}: hoechste Oberkante ${hoechste} cm`);
+    assert.ok(r.boxes > 0, `${name}: die Grenze darf die Ladung nicht abwuergen`);
+  }
+});
+
+test("Gegenprobe: ohne Grenze stapelt derselbe Satz deutlich hoeher", () => {
+  const r = packCargo(PRESETS["40' HC"], einzeln({}), {}, false);
+  const hoechste = Math.max(...r.placed.map((p) => p.y + p.dy));
+  assert.ok(hoechste > 180, `ohne Grenze erwartet mehr als 180 cm, gemessen ${hoechste}`);
+});
+
+test("gemischt: nur wer in seiner ganzen Stuetzkette keine Grenze hat, darf darueber", () => {
+  // Jede zweite Position mit Grenze. Ein Stueck ohne eigene Grenze, das auf einem mit
+  // Grenze steht, ist trotzdem gebunden - sonst waere die Grenze durch eine fremde Kiste
+  // obendrauf auszuhebeln.
+  const ladung = einzeln({}).map((c, i) => (i % 2 === 0 ? { ...c, stackH: 180 } : c));
+  const r = packCargo(PRESETS["40' HC"], ladung, {}, false);
+  const traegtMich = (p) => {
+    const out = [];
+    let cur = [p];
+    for (let g = 0; g <= r.placed.length; g++) {
+      const next = r.placed.filter((b) => cur.some((c) =>
+        Math.abs(b.y + b.dy - c.y) < 1e-3 &&
+        Math.min(c.x + c.dx, b.x + b.dx) - Math.max(c.x, b.x) > 1e-6 &&
+        Math.min(c.z + c.dz, b.z + b.dz) - Math.max(c.z, b.z) > 1e-6));
+      if (!next.length) break;
+      out.push(...next);
+      cur = next;
+    }
+    return out;
+  };
+  const verstoesse = r.placed.filter((p) => {
+    const kette = [p, ...traegtMich(p)];
+    return kette.some((b) => ladung[b.ti].stackH === 180) && p.y + p.dy > 180 + 1e-6;
+  });
+  assert.strictEqual(verstoesse.length, 0,
+    `${verstoesse.length} Stueck(e) ueber 180 cm, obwohl in ihrer Stuetzkette eine Grenze steht`);
+});
