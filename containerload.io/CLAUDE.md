@@ -238,6 +238,13 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Volumen und Gewicht je Container
+Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
+
+Zwei Dinge halten `test/kennzahlen-je-container.test.mjs` zusammen: die **Zeilen summieren sich auf die Gesamtladung** (37 Stück, 67.772 kg), und die **erste Zeile ist exakt das, was die Leiste als C1 zeigt** — zwei verschiedene Zahlen für denselben Container übereinander wären schlimmer als keine Tabelle. Die Spalte „Voll" meint dasselbe wie die Leiste: im Seeverkehr Volumen, auf der Straße **Lademeter**.
+
+**Die Schublade scrollt, sie schneidet nicht ab.** Mit der Tabelle passt der Inhalt nicht mehr in die früheren festen 360 px — abgeschnitten wurde ausgerechnet die Gewichtsverteilung ganz unten, ohne jede Andeutung, dass da noch etwas ist. Jetzt `min(460px, 50vh)` mit `overflow-y: auto`: hoch genug für den Normalfall, gedeckelt auf die halbe Fensterhöhe, damit die 3D-Ansicht darüber nicht zusammengedrückt wird.
+
 ### Der Bildexport rahmt die ganze Reihe
 Die Export-Kamera wurde auf die Maße des **gewählten** Containers eingepasst; bei einer Kette lag alles ab dem zweiten außerhalb des Bildes. Die Live-Ansicht rechnet die Halbmaße der ganzen Reihe längst aus — sie stehen jetzt in `t.frame` (`hx/hy/hz`), und `camFit` liegt auf Modulebene, damit **Live-Ansicht und Export dieselbe Einpassung benutzen**. Der Nebel wird für die größere Export-Entfernung mitgezogen (sonst verschwindet der hinterste Container im Dunst) und danach zurückgestellt.
 

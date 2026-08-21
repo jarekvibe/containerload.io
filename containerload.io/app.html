@@ -1905,6 +1905,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackX: (n) => `${n}\xD7 stapelbar`,
       rotate: "Drehen",
       loaded: "Verladen",
+      slotsTitle: "Je Container", slotsTitleRoad: "Je Fahrzeug", slotsEmpty: "leer",
       allLoaded: "Alles verladen",
       allLoadedN: (n) => `Alles verladen \xB7 ${n} Container`,
       allLoadedRoadN: (n) => `Alles verladen \xB7 ${n} Fahrzeuge`,
@@ -2159,6 +2160,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackX: (n) => `${n}\xD7 stackable`,
       rotate: "Rotate",
       loaded: "Loaded",
+      slotsTitle: "Per container", slotsTitleRoad: "Per vehicle", slotsEmpty: "empty",
       allLoaded: "All loaded",
       allLoadedN: (n) => `All loaded \xB7 ${n} containers`,
       allLoadedRoadN: (n) => `All loaded \xB7 ${n} vehicles`,
@@ -5262,6 +5264,37 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const cog = computeLongCog(result.placed || [], (ti) => num(cargo[ti] && cargo[ti].weight), num(container.l));
     const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
+    // Volumen und Gewicht JE CONTAINER. Die Leiste oben nennt immer nur C1 (sie sagt es
+    // auch dazu), und die Gesamtsumme steht im Bild — was dazwischen fehlte, war die Frage
+    // "wie voll ist eigentlich der zweite". Beim Buchen ist genau das die Zahl: jeder
+    // Container hat seine eigene Zuladung und wird einzeln gestellt.
+    const slotRows = (result.chain || []).map((c2, i) => {
+      const cp = c2.preset || {};
+      const cVol = num(cp.l) * num(cp.w) * num(cp.h) / 1e6;
+      let vol = 0, kg = 0;
+      (c2.placed || []).forEach((b) => {
+        vol += b.dx * b.dy * b.dz / 1e6;
+        const it = cargo[b.ti];
+        if (it) kg += Math.max(0, num(it.weight));
+      });
+      const pay = num(cp.payload);
+      const pPct = pay > 0 ? kg / pay * 100 : 0;
+      // "Voll" muss dasselbe meinen wie in der Leiste darueber - auf der Strasse sind das
+      // die belegten Lademeter, nicht das Volumen. Sonst stuenden zwei verschiedene
+      // Prozentzahlen unter derselben Beschriftung.
+      const ldmB = (c2.placed || []).length ? Math.max(...(c2.placed || []).map((b) => b.x + b.dx)) / 100 : 0;
+      const ldmT = num(cp.l) / 100;
+      return {
+        marke: (domain === "road" ? "F" : "C") + (i + 1),
+        name: c2.name || preset,
+        stueck: (c2.placed || []).length,
+        vol, cVol, kg, pay,
+        vollPct: domain === "road"
+          ? (ldmT > 0 ? ldmB / ldmT * 100 : 0)
+          : (cVol > 0 ? vol / cVol * 100 : 0),
+        kgColor: pPct > 100 ? C.bad : pPct > 90 ? C.warn : C.text
+      };
+    });
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
     // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
@@ -5294,7 +5327,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       /* @__PURE__ */ React.createElement("div", { style: { height: 2, background: "#232C38", position: "relative" } },
         /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", left: 0, top: 0, bottom: 0, width: Math.min(100, primaryMeter.pct) + "%", background: railColor, borderRadius: "0 2px 2px 0", transition: "width .4s ease, background .3s" } })
       ),
-      /* @__PURE__ */ React.createElement("div", { style: { maxHeight: cogOpen ? 360 : 0, overflow: "hidden", transition: "max-height .3s ease", background: hexA("#121821", 0.5) } },
+      // Die Schublade hatte eine feste Hoehe von 360 px - solange nur zwei Kennzahlen, zwei
+      // Balken und die Gewichtsverteilung darin standen, reichte das. Mit der Tabelle je
+      // Container reicht es nicht mehr, und abgeschnitten wurde ausgerechnet die
+      // Gewichtsverteilung ganz unten: STILL, ohne Andeutung, dass da noch etwas ist.
+      // Jetzt scrollt sie, statt zu schlucken - und sie nimmt hoechstens die halbe
+      // Fensterhoehe, damit die 3D-Ansicht darueber nicht zusammengedrueckt wird.
+      /* @__PURE__ */ React.createElement("div", { style: { maxHeight: cogOpen ? "min(460px, 50vh)" : "0px", overflowX: "hidden", overflowY: cogOpen ? "auto" : "hidden", transition: "max-height .3s ease", background: hexA("#121821", 0.5) } },
         /* @__PURE__ */ React.createElement("div", { className: "px-6 py-4", style: { borderTop: "1px solid #1C2531", display: "flex", flexDirection: "column", gap: SP.l } },
           // Die beiden Kennzahlen, die oben keinen Platz mehr haben. Sie stehen hier in
           // derselben Form wie in der Leiste — es ist dieselbe Zahl, nur eine Zeile tiefer.
@@ -5303,6 +5342,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               i > 0 && /* @__PURE__ */ React.createElement("div", { style: { width: 1, alignSelf: "stretch", background: C.line } }),
               /* @__PURE__ */ React.createElement("div", { className: "min-w-0", style: { paddingLeft: i ? SP.l : 0 } },
                 /* @__PURE__ */ React.createElement(Kpi, { label: s2.label, value: s2.value, sub: s2.sub, accent: s2.accent, size: "m" }))))),
+          slotRows.length > 1 && /* @__PURE__ */ React.createElement("div", null,
+            /* @__PURE__ */ React.createElement(Lbl, { style: { marginBottom: SP.s } }, domain === "road" ? T.slotsTitleRoad : T.slotsTitle),
+            // Waagerecht scrollbar statt umbrechend: eine Zahl darf nicht umbrechen, und
+            // die Seite darf sie nicht mitnehmen (dieselbe Regel wie im Container-Wissen).
+            /* @__PURE__ */ React.createElement("div", { style: { overflowX: "auto" } },
+              /* @__PURE__ */ React.createElement("div", { style: { minWidth: 520 } },
+                /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "1.5fr 0.7fr 1.4fr 1.6fr 0.6fr", gap: SP.m, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, color: C.faint, paddingBottom: SP.xs } },
+                  /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.vehicle : T.container),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.loaded),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.volume),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.weight),
+                  /* @__PURE__ */ React.createElement("span", { style: { textAlign: "right" } }, T.railFull)),
+                slotRows.map((sr, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { display: "grid", gridTemplateColumns: "1.5fr 0.7fr 1.4fr 1.6fr 0.6fr", gap: SP.m, alignItems: "baseline", padding: `${SP.s}px 0`, borderTop: `1px solid ${C.line}` } },
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.small, color: C.text, whiteSpace: "nowrap" } },
+                    /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontWeight: FW.bold, color: AC } }, sr.marke),
+                    " \xB7 ", sr.name),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: sr.stueck ? C.text : C.faint } }, sr.stueck || T.slotsEmpty),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: C.text, whiteSpace: "nowrap" } },
+                    nf(sr.vol, 1), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " / ", nf(sr.cVol, 1), " m\xB3")),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: sr.kgColor, whiteSpace: "nowrap" } },
+                    fmtDE(Math.round(sr.kg)), sr.pay > 0 ? /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " / ", fmtDE(sr.pay), " kg") : /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " kg")),
+                  /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.small, fontVariantNumeric: "tabular-nums", textAlign: "right", color: C.text } }, Math.round(sr.vollPct), /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " %"))))))),
           /* @__PURE__ */ React.createElement(Meter, { label: primaryMeter.label, pct: primaryMeter.pct, color: primaryMeter.color, text: primaryMeter.text }),
           num(container.payload) > 0 && /* @__PURE__ */ React.createElement(Meter, { label: T.payloadUtil, pct: Math.min(payPct, 100), color: payColor, text: `${payPct.toFixed(0)}%`, over: payPct > 100 }),
           cog && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: SP.s } },
