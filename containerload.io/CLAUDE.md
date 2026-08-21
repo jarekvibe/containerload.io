@@ -243,6 +243,10 @@ Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazw
 
 Zwei Dinge halten `test/kennzahlen-je-container.test.mjs` zusammen: die **Zeilen summieren sich auf die Gesamtladung** (37 Stück, 67.772 kg), und die **erste Zeile ist exakt das, was die Leiste als C1 zeigt** — zwei verschiedene Zahlen für denselben Container übereinander wären schlimmer als keine Tabelle. Die Spalte „Voll" meint dasselbe wie die Leiste: im Seeverkehr Volumen, auf der Straße **Lademeter**.
 
+**Dieselben Zahlen stehen im Bild** — eine Kachel je Container, mit zwei Balken: Raum und Gewicht. Zwei, weil zwei Grenzen gelten und bei schwerer Ladung die zweite zuerst zuschlägt (bei der gemeldeten Sendung: 47 % Volumen, 99 % Zuladung). Das Bild ist das, was beim Kunden ankommt; die Frage stellt sich dort genauso. Die Kacheln rechnen **nicht selbst**, sondern lesen `slotRows` — sonst laufen Bild und Oberfläche auseinander. Bis zu **acht** Kacheln, danach „+N weitere" (mehr zeichnet auch die 3D-Ansicht nicht, `MAXDRAW`). Sie gehen in vollen Reihen auf, höchstens vier je Reihe: sechs Container sind 2×3, nicht 4+2 — dieselbe Regel wie bei der Typ-Auswahl.
+
+**Beide Bildvarianten rechnen ihre Höhe getrennt** (transparenter Glass-Balken, opake Chrome-Karte). Wer nur eine anpasst, schiebt in der anderen die Fußleiste über die Kacheln; `test/bild-je-container.test.mjs` prüft beide.
+
 **Die Schublade scrollt, sie schneidet nicht ab.** Mit der Tabelle passt der Inhalt nicht mehr in die früheren festen 360 px — abgeschnitten wurde ausgerechnet die Gewichtsverteilung ganz unten, ohne jede Andeutung, dass da noch etwas ist. Jetzt `min(460px, 50vh)` mit `overflow-y: auto`: hoch genug für den Normalfall, gedeckelt auf die halbe Fensterhöhe, damit die 3D-Ansicht darüber nicht zusammengedrückt wird.
 
 ### Der Bildexport rahmt die ganze Reihe

@@ -5051,20 +5051,85 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const full = shotLoaded >= shotTotal;
           chip(full ? String(T.allLoaded).toUpperCase() : String(T.open(shotTotal - shotLoaded)).toUpperCase(), full ? "rgba(47,216,160,.16)" : "rgba(245,165,36,.16)", full ? "rgba(47,216,160,.4)" : "rgba(245,165,36,.4)", full ? "#5CE3B6" : "#F7BC5A");
         };
+        // ── Eine Kachel je Container ────────────────────────────────────────────────
+        // Die Zahlen aus der Details-Schublade, nur fuers Bild gesetzt. Warum sie
+        // hierhin gehoeren: das Bild ist das, was beim Kunden ankommt, und die Frage
+        // "wie voll ist der zweite" stellt sich dort genauso wie im Rechner. Zwei Balken
+        // je Kachel, weil zwei Grenzen gelten - Raum und Gewicht - und bei schwerer
+        // Ladung die zweite zuerst zuschlaegt.
+        const slotsImBild = manualMode ? [] : (slotRows || []).slice(0, 8);
+        const mehrSlots = manualMode ? 0 : Math.max(0, (slotRows || []).length - 8);
+        const slotZeilen = slotsImBild.length > 1 ? Math.ceil(slotsImBild.length / 4) : 0;
+        const slotProZeile = slotZeilen ? Math.ceil(slotsImBild.length / slotZeilen) : 0;
+        const slotKachelH = px(104);
+        const stripH = slotZeilen ? slotZeilen * slotKachelH + (slotZeilen - 1) * px(10) : 0;
+        const drawSlots = (sx, sy, sw, glas) => {
+          if (!slotZeilen) return;
+          const slotMuted = glas ? "#BCC9D6" : "#7689A0";
+          const lueck = px(10);
+          const kw = (sw - lueck * (slotProZeile - 1)) / slotProZeile;
+          const balken = (bx, by, bw, pct, farbe) => {
+            const h = px(6);
+            g.fillStyle = glas ? "rgba(255,255,255,0.14)" : "#232C38";
+            rr(bx, by, bw, h, h / 2); g.fill();
+            const f = Math.max(0, Math.min(100, pct)) / 100;
+            if (f > 0.001) { g.fillStyle = farbe; rr(bx, by, Math.max(h, bw * f), h, h / 2); g.fill(); }
+          };
+          slotsImBild.forEach((sr, i) => {
+            const zeile = Math.floor(i / slotProZeile), spalte = i % slotProZeile;
+            const x = sx + spalte * (kw + lueck), y = sy + zeile * (slotKachelH + lueck);
+            g.fillStyle = glas ? "rgba(10,15,22,0.5)" : "#161D27";
+            rr(x, y, kw, slotKachelH, px(12)); g.fill();
+            g.strokeStyle = glas ? "rgba(255,255,255,0.14)" : "#232C38";
+            g.lineWidth = Math.max(1, S);
+            rr(x + 0.5, y + 0.5, kw - 1, slotKachelH - 1, px(12)); g.stroke();
+            const ix = x + px(14), iw = kw - px(28);
+            g.textAlign = "left"; g.textBaseline = "alphabetic";
+            g.font = `700 ${px(15)}px ${MONOF}`; g.fillStyle = accStops[0];
+            g.fillText(sr.marke, ix, y + px(22));
+            const mw = g.measureText(sr.marke).width;
+            g.font = `600 ${px(13)}px ${SANSF}`; g.fillStyle = "#E9F0F7";
+            g.fillText(" \xB7 " + sr.name, ix + mw, y + px(22));
+            g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = slotMuted;
+            g.textAlign = "right";
+            g.fillText(sr.stueck + (en ? " PCS" : " STK"), ix + iw, y + px(22));
+            // Volumen
+            g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = slotMuted;
+            g.fillText(en ? "VOLUME" : "VOLUMEN", ix, y + px(43));
+            g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = "#C5D4E2";
+            g.fillText(`${nf(sr.vol, 1)} / ${nf(sr.cVol, 1)} m\xB3`, ix + iw, y + px(43));
+            balken(ix, y + px(49), iw, sr.cVol > 0 ? sr.vol / sr.cVol * 100 : 0, accStops[0]);
+            // Gewicht - bei schwerer Ladung die Grenze, die zuerst greift
+            const pPct = sr.pay > 0 ? sr.kg / sr.pay * 100 : 0;
+            const kgFarbe = pPct > 100 ? "#FF5D52" : pPct > 90 ? "#F5A524" : accStops[0];
+            g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = slotMuted;
+            g.fillText(en ? "WEIGHT" : "GEWICHT", ix, y + px(74));
+            g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = pPct > 90 ? kgFarbe : "#C5D4E2";
+            g.fillText(sr.pay > 0 ? `${nf(sr.kg / 1000, 1)} / ${nf(sr.pay / 1000, 1)} t` : `${nf(sr.kg / 1000, 1)} t`, ix + iw, y + px(74));
+            balken(ix, y + px(80), iw, pPct, kgFarbe);
+          });
+          if (mehrSlots > 0) {
+            g.textAlign = "right"; g.textBaseline = "alphabetic";
+            g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = slotMuted;
+            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, sx + sw, sy + stripH + px(16));
+          }
+        };
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
         if (cap.transparent) {
           // Transparent: freigestellter Render + dezenter Glass-Balken (bleibt auf hell UND dunkel lesbar).
           const FR = px(22), gapR = px(14), barH = customLogoImg ? px(150) : px(96);
+          const stripPlatz = stripH ? stripH + gapR + (mehrSlots > 0 ? px(24) : 0) : 0;
           cv.width = cap.w + FR * 2;
-          cv.height = FR + cap.h + gapR + barH + FR;
+          cv.height = FR + cap.h + gapR + stripPlatz + barH + FR;
           g.clearRect(0, 0, cv.width, cv.height);
           g.drawImage(img, FR, FR, cap.w, cap.h);
           drawChips(FR, FR);
-          const barX = FR, barY = FR + cap.h + gapR, barW = cap.w;
+          mutedCol = "#BCC9D6"; // schon hier: die Kacheln liegen auf demselben hellen Grund
+          drawSlots(FR, FR + cap.h + gapR, cap.w, true);
+          const barX = FR, barY = FR + cap.h + gapR + stripPlatz, barW = cap.w;
           rr(barX, barY, barW, barH, px(16)); g.fillStyle = "rgba(10,15,22,0.5)"; g.fill();
           g.strokeStyle = "rgba(255,255,255,0.14)"; g.lineWidth = Math.max(1, S); rr(barX + 0.5, barY + 0.5, barW - 1, barH - 1, px(16)); g.stroke();
           accentLine(barX + px(16), barY, barW - px(32));
-          mutedCol = "#BCC9D6"; // heller, damit Labels/Untertext auf dem 50%-Balken ueber hellem Mail-BG lesbar bleiben
           const midY = barY + barH * 0.44;
           drawLogo(barX + px(20), midY - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(barX + barW - px(20), midY);
@@ -5073,17 +5138,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         } else {
           // Opak: Chrome-Karte, Render inset, Fussleiste, mitreisende Disclaimer-Zeile.
           const FR = px(26), footH = customLogoImg ? px(150) : px(96), discH = px(30), cardR = px(14);
+          const stripPlatz = stripH ? stripH + px(14) + (mehrSlots > 0 ? px(24) : 0) : 0;
           cv.width = cap.w + FR * 2;
-          cv.height = FR + cap.h + footH + discH;
+          cv.height = FR + cap.h + stripPlatz + footH + discH;
           g.fillStyle = "#121821"; g.fillRect(0, 0, cv.width, cv.height);
           g.save(); rr(FR, FR, cap.w, cap.h, cardR); g.clip(); g.drawImage(img, FR, FR, cap.w, cap.h); g.restore();
           g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); rr(FR + 0.5, FR + 0.5, cap.w - 1, cap.h - 1, cardR); g.stroke();
           drawChips(FR, FR);
-          const fy = FR + cap.h, fcy = fy + footH / 2;
+          drawSlots(FR, FR + cap.h + px(14), cap.w, false);
+          const fy = FR + cap.h + stripPlatz, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), cap.w);
           drawLogo(FR + px(24), fcy - px(22), px(44), customLogoImg, px(260), px(114));
           drawMetrics(cv.width - FR - px(24), fcy);
-          const dY = FR + cap.h + footH; g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
+          const dY = fy + footH; g.strokeStyle = "#232C38"; g.lineWidth = Math.max(1, S); g.beginPath(); g.moveTo(FR, dY + 0.5); g.lineTo(cv.width - FR, dY + 0.5); g.stroke();
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = "#3F5061"; g.textAlign = "center"; g.textBaseline = "middle";
           g.fillText(String(T.shotFoot).toUpperCase(), cv.width / 2, dY + discH / 2);
         }
