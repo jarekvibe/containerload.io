@@ -84,20 +84,54 @@ Special Equipment (Open Top, Flat Rack, Platform) und „Custom" bleiben von der
 **Es gibt genau eine Ergebnisanzeige** — die Leiste unter der 3D-Ansicht. Die früher darüber schwebende Karte zeigte dieselben Zahlen ein zweites Mal. Im 3D-Bild bleibt nur, was räumlich dazugehört: Tür-Warnung, Übermaß-Kasten, Empfehlungsbanner. Wer eine neue Kennzahl einbaut, baut sie in die Leiste.
 
 ### Das Regelwerk (gilt für `app.html` wie für `index.html`)
-PR #57 hat die Landingpage entschlackt, PR #68 dieselben Regeln in den Rechner gezogen. `test/design-system.test.mjs` hält sie fest — der Test schlägt fehl, sobald sich neue Zwischentöne, Radien oder Größen ansammeln. Wer eine Stufe wirklich braucht, trägt sie dort mit Begründung ein; dann ist es eine Entscheidung und kein Versehen.
+PR #57 hat die Landingpage entschlackt, PR #68 dieselben Regeln in den Rechner gezogen, und der Design-Durchgang vom August 2026 hat sie aus dem Markup in **Marken** geholt. `test/design-system.test.mjs` hält beides fest: dass die Marken die vereinbarten Werte tragen, **und** dass daneben keine Zahl im Markup steht. Wer eine Stufe wirklich braucht, trägt sie oben in `app.html` ein und passt den Test an; dann ist es eine Entscheidung und kein Versehen.
+
+Die Skala steht als erstes im Modul, noch vor `var C`:
+
+```js
+var FS   = { label: 11.5, small: 12.5, body: 13.5, lead: 15, h3: 17, h2: 20 };
+var FW   = { label: 500, body: 500, semi: 600, bold: 700 };
+var NUMS = { s: 15, m: 20, l: 26 };      // Kennzahlen, Monospace, tabular-nums
+var R    = { s: 8, l: 16 };              // ZWEI Radien, mehr nicht
+var SP   = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 };
+var ICO  = { s: 16, m: 20, sw: 1.5 };
+```
 
 | | |
 |---|---|
 | Flächen | **sechs Stufen**, Grundton `#0E1116` (identisch mit der Landingpage — sie bindet den Rechner per iframe ein) |
-| Radien | **8** klein · **12** Karte · **16** Dialog · **999** Pille |
-| Schriftgrößen | **11 · 12,5 · 13,5 · 15 · 17** plus Kennzahlen — nichts unter 11 px |
-| Gewichte | bis **700**, nicht darüber |
-| Monospace | **nur an Zahlen** (ab 12,5 px) und am Teilen-Link. Sie hat einen Zweck: Ziffern bleiben untereinander stehen. Als Kleintext ist sie Kostüm |
-| Farbe | neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Radien | **zwei**: `R.s` (8) für alles, was man anfasst — Knopf, Feld, Pille; `R.l` (16) für Flächen, auf denen etwas steht — Karte, Dialog. Dazu `999` für die echte Pille und `"50%"` für den Kreis |
+| Schriftgrößen | nur `FS.*` / `NUMS.*`, **keine Zahl im Markup**. Nichts unter 11,5 px |
+| Gewichte | nur `FW.*`, bis **700**, nicht darüber |
+| Abstände | **4 · 8 · 12 · 16 · 24 · 32**, nichts dazwischen — als `SP.*` inline und als Tailwind-Klasse (`p-1/2/3/4/6/8`, **kein `p-5`**, das sind 20) |
+| Symbole | **eine** Linienstärke (`ICO.sw` = 1,5) und zwei Größen (16 / 20). Nichts darunter |
+| Monospace | **nur an Zahlen** (ab `FS.small`) und am Teilen-Link. Ziffern bleiben untereinander stehen — als Kleintext ist sie Kostüm |
+| Farbe | **ein** Akzent (`C.accent` = `C.hint`) · neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
+| Fläche | **ein Ton**, kein Verlauf. Verläufe nur dort, wo ein Bild entsteht: hinter der 3D-Bühne und als Vignette darüber |
 | Zahlen | über `nf()` / `fmtDE()`, nie `toFixed()` in der Anzeige — sonst steht in der deutschen Oberfläche „0.03 m" |
 | Emoji | keine. Linien-SVG oder das Wort |
 
-**Weitere Gestaltungsregeln:** keine Emoji in der Oberfläche; keine Farbverläufe (ein Markenton, siehe `C.accent`); ein Rahmen bedeutet *Ergebnis* oder *Objekt in einer Liste* — Einstellungen liegen ohne Rahmen auf der Fläche. Und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche. Monospace trägt Zahlen (dafür ist sie da), Fußnoten und Hinweise stehen in der normalen Schrift.
+**Die Druckvorlage (`LV_ROW` … `LV_DOC`) ist ausgenommen.** Sie ist ein eigenes Dokument: A4, weißes Papier, andere Schrift. Der Test überspringt diesen Bereich; wer dort arbeitet, arbeitet in dessen eigener Ordnung.
+
+**Zahlen dominieren, Beschriftungen sind klein und ruhig.** Ein Ladungsrechner wird nach Zahlen gelesen. Deshalb steht bei einer Kennzahl die **Beschriftung oben und klein** (`Lbl`, `FS.label`) und die **Zahl darunter groß** in Monospace mit `tabular-nums` — dafür gibt es `Kpi`. Fließtext wird davon nicht größer.
+
+**Getrennt wird über die Fläche, nicht über eine Linie.** Vor dem Durchgang lagen über hundert `1px solid`-Umrisse im Rechner — jeder Umschalter, jede Karte, jeder Knopf in seinem eigenen Kästchen. Das war der Hauptgrund, warum die Oberfläche wie ein Baukasten wirkte. Ein Rahmen bleibt jetzt dem vorbehalten, was **ausgewählt** ist (als `boxShadow: inset 0 0 0 1px`, damit er kein Layout verschiebt) oder was **warnt**. Ein Dialog darf eine Haarlinie behalten: er schwebt über fremdem Inhalt. Gestrichelte Rahmen gibt es nicht mehr.
+
+**Wiederkehrende Muster sind Komponenten mit festen Varianten** — nicht jedes Mal frisch zusammengesetzte Utility-Ketten:
+
+| | |
+|---|---|
+| `Btn` | `primary` (der eine Weg vorwärts) · `accent` (gleichrangige Wahl unter mehreren) · `ghost` (Nebenhandlung) · `quiet` (fast unsichtbar). Größen `s` / `m` / `l` |
+| `Card` | Fläche **ohne** Rahmen; `tone` = surface / raised / field, `ring` nur für Ausgewähltes |
+| `Seg` | Umschalter mit genau einem aktiven Zustand (See-/Landfracht, DE/EN, cm/mm) — aktiv wird durch die Fläche markiert |
+| `Kpi` | Beschriftung oben, Zahl darunter groß in Monospace |
+| `Lbl` | die kleine, ruhige Beschriftung |
+
+**Auswahlreihen sind Raster, keine umbrechenden Reihen.** Fünf Kacheln in einer `flex-wrap`-Reihe ergaben oben drei und unten zwei, und die untere Reihe stand unter keiner Spalte. Deshalb `segGrid(n)` mit fester Spaltenzahl — und die Kachelzahl geht in **ganzen Reihen** auf: fünf Containertypen plus „Custom · eigene Maße" sind sechs, fünf Fahrzeuge plus „Custom" ebenso. `test/auswahlraster.test.mjs` rechnet das nach; wer einen sechsten Typ ergänzt, fällt dort auf die Nase und muss entscheiden, wie das Raster weitergeht. Nebeneffekt der Custom-Kachel: der Zustand „eigene Maße" war vorher nur über „Maße anpassen" erreichbar und in der Auswahl unsichtbar.
+
+**Die Kennzahlen der Leiste stehen auf `NUMS.m`, nicht auf `NUMS.l`.** Mit 26 px passten in der Landfracht bei 1440 px vier Zahlen plus „Alles verladen" plus „Details" nicht mehr in eine Zeile — und einzeilig ist sie laut Regelwerk oben. 20 px über einer 11,5-px-Beschriftung dominieren immer noch deutlich. Wer daran dreht, misst bei **1440 px in beiden Domänen** nach.
+
+**Keine Farbverläufe** (ein Markenton, siehe `C.accent`) und **keine winzige, weit gesperrte Monospace als Fließtext** — das ist der auffälligste Verräter einer schnell zusammengeklickten Oberfläche.
 
 **In der Mitte der Kopfzeile steht der Name des Plans** (`planName`) — leer zeigt er die Einladung „Plan benennen". Er ist keine Dekoration: Er füllt den Vorschlag in „Meine Pläne", steht im Ladevorschlag neben der Referenznummer und bildet den Dateinamen von CSV- und Bild-Export (`planSlug()`). Bewusst **nicht** im `?c=`-Link — dafür bräuchte das Format ein neues Feld, und das ist eine eigene Entscheidung.
 
@@ -140,6 +174,10 @@ Das Lagenmuster kommt aus `makeFloorPacker` — demselben Guillotine-Packer, der
 Zwei Invarianten hält `test/palettierer-multi.test.mjs` fest: **es darf unterwegs kein Karton verschwinden** (verladen + übrig = eingegeben, auch wenn ein Typ auf die Palette gar nicht passt), und **eine Lage wird nie zwischen zwei Paletten geteilt** — sie ist die kleinste Einheit, die jemand am Stück baut. Gleich aufgebaute Paletten werden gezählt, nicht einzeln aufgelistet, sonst steht in der Ladung dreißigmal dasselbe Packstück.
 
 **Die Palette bleibt im Container eine Palette.** Übergebene Positionen tragen einen Bauplan (`pal: { b, ly }` — Palettenhöhe und die Lagen mit ihrer Kennfarbe). Der Viewport zeichnet daraus je Lage ein eigenes Band plus die Holzpalette darunter, statt einer glatten Kiste; sonst verliert die Ladung beim Übernehmen genau das Bild, das man gerade gebaut hat. **Auf die Rechnung hat das keinen Einfluss** — die zählt weiter das Außenmaß. Die Bänder werden auf die tatsächliche Höhe der Position skaliert: wer sie in der Ladungsliste ändert, bekommt kein Band, das über die Kiste hinausragt.
+
+**Eine übernommene Palette lässt sich nachbessern.** In der Ladungsliste steht danach nur noch „120 × 80 × 174,4 cm" — daraus ist nicht zurückzurechnen, ob darunter vier oder vierzig Kartons liegen. Wer merkt, dass die Kartons 2 cm höher sind, hätte die ganze Eingabe neu tippen müssen. Deshalb fährt der **Eingabestand des Dialogs** als `palSrc` an den erzeugten Positionen mit, der Dialog nimmt ihn über `init` wieder an, und „Palette bearbeiten" in der aufgeklappten Zeile öffnet ihn damit.
+
+Beim Übernehmen einer Korrektur **ersetzen** die neuen Positionen die alten derselben `grp` an Ort und Stelle — sonst wüchse die Liste bei jeder Korrektur um einen Satz Paletten. Die Kennfarben bleiben, was sie waren: eine Korrektur soll die Ladung nicht umfärben. Die eigentliche Falle hält `test/palette-nachbessern.test.mjs` fest: wer dem Dialog ein neues Eingabefeld gibt und es in `onApply` mitschickt, aber nicht aus `init` liest, setzt es beim Nachbessern stillschweigend auf den Standardwert zurück — die Rechnung läuft durch, und niemand sieht es.
 
 `pal` und `grp` bleiben **lokal** und stehen nicht im Teilen-Format. Ein geteilter Link zeigt die Palette also wieder als einfache Kiste — die Maße und die Kennfarbe (`cl`) reisen mit, der Aufbau nicht. Das im `?p=` zu ergänzen wäre eine eigene Entscheidung.
 
