@@ -1679,49 +1679,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
     }
     let remaining = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-    // Die Kombination wird zweimal gesucht -- gierig und sortenrein -- und die bessere
-    // gewinnt. Ohne das nennt das Empfehlungsbanner eine SCHLECHTERE Kombination als die,
-    // die der Rechner darunter tatsaechlich baut ("2x 40' HC + 1x 40' GP", waehrend in der
-    // Kette ein 20-Fuesser steht). Zwei widerspruechliche Zahlen nebeneinander sind
-    // schlimmer als eine ungenaue.
-    const OPT = { noHint: true, quick: true };
-    const kombi = (sortenrein) => {
-      let rest = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      const used = {};
-      let guard = 0, vol = 0, n = 0;
-      while (guard++ < 80) {
-        const tot = rest.reduce((s, t) => s + t.qty, 0);
-        if (tot === 0) break;
-        // Passt der ganze Rest in EINEN Container? Dann den kleinsten davon nehmen.
-        let fit = null;
-        for (const o of stdOrder) {
-          if (packCargo(o.p, rest, OPT).boxes >= tot) { fit = o; break; }
-        }
-        if (fit) {
-          used[fit.name] = (used[fit.name] || 0) + 1;
-          vol += fit.vol; n++;
-          rest = rest.map((t) => ({ ...t, qty: 0 }));
+    const used = {};
+    let guard = 0;
+    while (guard++ < 80) {
+      const tot = remaining.reduce((s, t) => s + t.qty, 0);
+      if (tot === 0) break;
+      let fit = null;
+      for (const o of stdOrder) {
+        const r2 = packCargo(o.p, remaining, { noHint: true, quick: true });
+        if (r2.boxes >= tot) {
+          fit = o;
           break;
         }
-        const r = sortenrein
-          ? packSortenrein(workhorse.p, rest, sortenReihenfolge(rest), null, OPT)
-          : packCargo(workhorse.p, rest, OPT);
-        if (r.boxes === 0) break;
-        used[workhorse.name] = (used[workhorse.name] || 0) + 1;
-        vol += workhorse.vol; n++;
-        rest = rest.map((t, i) => ({ ...t, qty: t.qty - (r.perType[i] ? r.perType[i].loaded : 0) }));
       }
-      return { used, offen: rest.reduce((s, t) => s + t.qty, 0), n, vol };
-    };
-    let best = kombi(false);
-    const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
-    if (sorten > 1 && sorten <= SORTENREIN_MAX) {
-      const rein = kombi(true);
-      // Dieselbe Rangfolge wie bei der Kette: was liegenbleibt, dann die Zahl der
-      // Container, dann das gebuchte Volumen.
-      if (rein.offen < best.offen || (rein.offen === best.offen && (rein.n < best.n || (rein.n === best.n && rein.vol < best.vol)))) best = rein;
+      if (fit) {
+        used[fit.name] = (used[fit.name] || 0) + 1;
+        break;
+      }
+      const r = packCargo(workhorse.p, remaining, { noHint: true, quick: true });
+      if (r.boxes === 0) break;
+      used[workhorse.name] = (used[workhorse.name] || 0) + 1;
+      remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (r.perType[i]?.loaded || 0) }));
     }
-    const combo = stdOrder.slice().reverse().filter((o) => best.used[o.name]).map((o) => ({ name: o.name, count: best.used[o.name] }));
+    const combo = stdOrder.slice().reverse().filter((o) => used[o.name]).map((o) => ({ name: o.name, count: used[o.name] }));
     return { type: "multi", combo };
   }
   // Landfracht-Empfehlung: Wie viele GLEICHE Fahrzeuge (das aktuell gewaehlte) braucht es, wenn
@@ -1811,75 +1791,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return { loaded: Math.max(0, total - offen), total };
     });
   }
-  // ── Sortenrein statt gleichzeitig: gleiche Ware gehoert in denselben Container ──
-  //
-  // Gemeldet, mit Bild: 8 grosse Packstuecke (600x220x100) und 22 Paletten. Der gierige
-  // Packer legte in den ERSTEN Container 22 Paletten UND 2 der grossen Stuecke -- weil das
-  // dort die meisten Stuecke sind (24 statt 22). Die uebrigen 6 grossen Stuecke brauchten
-  // danach ZWEI weitere 40-Fuss-Container, der letzte davon fuer ganze zwei Stueck.
-  //
-  // Sortenrein waeren es dieselben drei Container gewesen -- aber 4 + 4 grosse Stuecke in
-  // zwei 40-Fuessern und die 22 Paletten in einem 20-Fuesser. Gleiche Zahl, kleinerer
-  // dritter Container, und ein Bild, nach dem sich laden laesst.
-  //
-  // Das ist der klassische Greedy-Fehler: lokal das Maximum, global das schlechtere
-  // Ergebnis. Der Ausweg ist nicht, gierig abzuschaffen, sondern eine ZWEITE Kette daneben
-  // zu stellen und am Ende die bessere zu nehmen.
-  //
-  // Reihenfolge der Sorten: das groesste Stueck zuerst. Es bestimmt die Aufteilung; die
-  // Kleinteile fuellen hinterher auf, nicht umgekehrt.
-  function sortenReihenfolge(rest) {
-    const vol = (t) => num(t.l) * num(t.w) * num(t.h);
-    return rest.map((_, i) => i).filter((i) => rest[i].qty > 0)
-      .sort((a, b) => vol(rest[b]) - vol(rest[a]) || rest[b].qty - rest[a].qty || a - b);
-  }
-  // Packt EINEN Container sortenrein: angeboten wird nur der Anfang der Sortenliste, bis
-  // einschliesslich der ersten Sorte, die nicht mehr vollstaendig hineingeht. Alles danach
-  // wuerde nur Platz belegen, den diese Sorte im naechsten Container ohnehin wieder braucht.
-  //
-  // Ein Probelauf mit ALLEM sagt, wo diese Grenze liegt -- das kostet einen zweiten Packlauf
-  // und nicht einen je Sorte. Geht ohnehin alles hinein, gibt es nichts zu trennen.
-  function packSortenrein(preset, rest, reihenfolge, probe, opts) {
-    const o = opts || { noHint: true };
-    // Der Probelauf ist reine DIAGNOSE -- er sagt nur, wo die erste angebrochene Sorte
-    // liegt, und geht nicht ins Ergebnis. Deshalb "quick" (ohne Restarts): das kostete
-    // sonst den dritten Teil der gesamten Rechenzeit. Liegt er daneben, wird die
-    // sortenreine Kette am Ende ohnehin von ketteBesser verworfen.
-    // Fuer den ersten Container ist der Probelauf bereits gerechnet (slot0) -- der wird
-    // durchgereicht statt noch einmal gepackt.
-    const alles = probe || packCargo(preset, rest, { ...o, quick: true });
-    let bis = -1;
-    for (let k = 0; k < reihenfolge.length; k++) {
-      const i = reihenfolge[k];
-      if ((alles.perType[i] ? alles.perType[i].loaded : 0) < rest[i].qty) { bis = k; break; }
-    }
-    if (bis < 0 || bis >= reihenfolge.length - 1) return alles; // nichts zu trennen
-    const nimm = new Set(reihenfolge.slice(0, bis + 1));
-    const teil = rest.map((t, i) => nimm.has(i) ? t : { ...t, qty: 0 });
-    const r = packCargo(preset, teil, o);
-    // Der Probelauf war quick -- fuer das ECHTE Ergebnis wird hier mit den Optionen des
-    // Aufrufers gerechnet.
-    return r.boxes > 0 ? r : packCargo(preset, rest, o);
-  }
-  // Welche der beiden Ketten ist besser? Der Reihe nach:
-  //   1. was liegenbleibt   -- eine Kette, die Ladung stehen laesst, gewinnt nie.
-  //   2. Zahl der Container -- die Frage, mit der der Nutzer hier ist.
-  //   3. gebuchtes Containervolumen -- bei drei Containern ist 2x 40' + 1x 20' billiger als
-  //      3x 40'. Das ist der Unterschied, um den es in der Meldung ging, und es ist Geld.
-  //   4. Sortenstreuung     -- gleiche Ware in einem Container laesst sich laden, verzollen
-  //      und ausliefern. Nur der Gleichstand-Entscheid, nie ein Grund fuer einen Container mehr.
-  function ketteBesser(a, b) {
-    if (!a || !b) return !!a;
-    const masse = (k) => [k.totRem, k.chain.length,
-      k.chain.reduce((s, c) => s + num(c.preset.l) * num(c.preset.w) * num(c.preset.h), 0),
-      k.chain.reduce((s, c) => s + new Set(c.placed.map((x) => x.ti)).size, 0)];
-    const ma = masse(a), mb = masse(b);
-    for (let i = 0; i < ma.length; i++) {
-      if (ma[i] < mb[i] - 1e-6) return true;
-      if (ma[i] > mb[i] + 1e-6) return false;
-    }
-    return false;
-  }
   // ── Stufe 2: das Gewicht ueber die Kette verteilen, OHNE einen Container mehr zu brauchen ──
   //
   // Stufe 1 (chainContainers/chainVehicles) fuellt gierig: der erste Container bekommt alles,
@@ -1904,22 +1815,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // ein paar Prozent Luft, in Stufen -- die erste Stufe, die aufgeht, gewinnt.
   var AUSGLEICH_LUFT = [1, 1.08, 1.2, 1.45];
   var AUSGLEICH_MAXSTK = 600; // darueber ist der zweite Durchgang die Rechenzeit nicht wert
-  // Und der wichtigste Waechter: der Ausgleich greift NUR, wenn das Gewicht ueberhaupt die
-  // Grenze ist.
-  //
-  // Gemeldet, mit Bild: acht grosse Packstuecke (600x220x100) und 22 Paletten, zusammen
-  // 9 Tonnen auf drei Containern mit je 26,6 t Zuladung -- elf Prozent. Trotzdem hat der
-  // Ausgleich die Ladung auf 10/10/10 Stueck umverteilt und damit eine saubere Aufteilung
-  // (die Paletten hierhin, die grossen Stuecke dorthin) in drei zusammengewuerfelte
-  // Container verwandelt, in denen nichts mehr zusammengehoerte.
-  //
-  // Wo Gewicht nichts entscheidet, darf es auch nichts entscheiden. Erst wenn ein Container
-  // ueber diesem Anteil seiner Zuladung liegt, ist die gleichmaessige Verteilung ein echtes
-  // Ziel -- vorher ist sie nur Kosmetik, die die Geometrie zerstoert.
-  var AUSGLEICH_AB = 0.6;
-  // Sortenrein lohnt bei wenigen, deutlich verschiedenen Sorten. Bei 37 einzeln erfassten
-  // Paletten waere jede Sorte ein Stueck -- da gibt es nichts zu trennen, nur Rechenzeit.
-  var SORTENREIN_MAX = 12;
   function slotKg(placed, cargo) {
     let kg = 0;
     for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
@@ -1934,13 +1829,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const gesKg = cargo.reduce((a, t, i) => a + stueck[i] * Math.max(0, num(t.weight)), 0);
     if (!(gesKg > 0)) return null; // ohne Gewichte gibt es nichts auszugleichen
     const spanne = (k) => Math.max(...k) - Math.min(...k);
-    const istKg = chain.map((c) => slotKg(c.placed, cargo));
-    const istSpanne = spanne(istKg);
+    const istSpanne = spanne(chain.map((c) => slotKg(c.placed, cargo)));
     if (istSpanne <= 1e-6) return null; // schon gleich verteilt
-    // Bindet das Gewicht ueberhaupt? Wenn kein Container auch nur in die Naehe seiner
-    // Zuladung kommt, ist jede Umverteilung ein Eingriff ohne Gegenwert.
-    const voll = chain.map((c, i) => { const p = num(c.preset && c.preset.payload); return p > 0 ? istKg[i] / p : 0; });
-    if (Math.max(...voll) < AUSGLEICH_AB) return null;
     // Zuladung je Slot. Ohne Angabe (Custom ohne Gewichtsgrenze) zaehlt der Container mit dem
     // Durchschnitt mit -- sonst zoege ein einziges Infinity die ganze Verteilung an sich.
     const zul = chain.map((c) => num(c.preset && c.preset.payload) > 0 ? num(c.preset.payload) : 0);
@@ -1997,125 +1887,54 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       return workhorse;
     };
-    // Eine Kette bauen -- entweder gierig (alle Sorten gleichzeitig, wie bisher) oder
-    // sortenrein. Der erste Container ist der gewaehlte; gierig uebernimmt ihn fertig aus
-    // slot0, sortenrein packt ihn neu (und gibt ihn als slot0 zurueck, damit die Leiste
-    // dieselben Zahlen zeigt wie die Tabelle darunter).
-    const bauen = (sortenrein) => {
-      let erst = null, chain, remaining;
-      const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
-        if (!erst.boxes) return null;
-        chain = [{ name: preset0, preset: container0, placed: erst.placed }];
-        remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
-      } else {
-        chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
-        remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
-      }
-      let totRem = remaining.reduce((s, t) => s + t.qty, 0);
-      let slot = 1;
-      while (totRem > 0 && chain.length < MAXVIS) {
-        const ov = overrides && overrides[slot];
-        const manual = ov && PRESETS[ov];
-        const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
-        if (rr.boxes === 0 && !manual) break;
-        chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
-        if (rr.boxes === 0) break;
-        remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i] ? rr.perType[i].loaded : 0) }));
-        totRem = remaining.reduce((s, t) => s + t.qty, 0);
-        slot++;
-      }
-      return { chain, remaining, totRem, slot0: erst };
-    };
-    let erg = bauen(false);
-    // Die sortenreine Kette lohnt nur bei mehr als einer Sorte, und nur beim gewoehnlichen
-    // Trockencontainer: Special Equipment packt packKind, nicht packCargo.
-    const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
-    // Lohnt sich der zweite Durchgang ueberhaupt? Nur, wenn in der gierigen Kette ein
-    // Container VOR dem letzten mehrere Sorten traegt -- genau daraus entsteht der
-    // angebrochene Rest, der hinten einen weiteren Container kostet. Ist ohnehin jeder
-    // Container sortenrein, gibt es nichts zu verbessern und nichts zu rechnen.
-    const gemischt = erg.chain.slice(0, -1).some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
-    // Und nicht bei sehr langen Ketten: ab acht Containern zeichnet die Ansicht ohnehin
-    // nicht mehr alle (MAXDRAW), die Sortenfrage wiegt dort weniger als die Antwortzeit --
-    // und genau diese Ketten sind die teuren, weil jeder weitere Slot einen Packlauf kostet.
-    if (gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW
-        && (container0.kind || "dry") === "dry") {
-      const rein = bauen(true);
-      if (ketteBesser(rein, erg)) erg = rein;
+    const chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
+    let remaining = cargo.map((t, i) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) - (slot0.perType[i]?.loaded || 0) }));
+    let totRem = remaining.reduce((s, t) => s + t.qty, 0);
+    let slot = 1;
+    while (totRem > 0 && chain.length < MAXVIS) {
+      const ov = overrides && overrides[slot];
+      const manual = ov && PRESETS[ov];
+      const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
+      const rr = packCargo(pick.p, remaining, { noHint: true });
+      if (rr.boxes === 0 && !manual) break;
+      chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
+      if (rr.boxes === 0) break;
+      remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i]?.loaded || 0) }));
+      totRem = remaining.reduce((s, t) => s + t.qty, 0);
+      slot++;
     }
-    let { chain, remaining, totRem } = erg;
-    let slot0Neu = erg.slot0;
     // Stufe 2: bei festem N das Gewicht ausgleichen. Nur wenn alles verladen ist (sonst waere
     // die Frage nicht "wie verteile ich", sondern "was bleibt liegen") und nur bei einem
     // gewoehnlichen Trockencontainer -- Special Equipment packt packKind, nicht packCargo.
     if (totRem === 0 && chain.length > 1 && (container0.kind || "dry") === "dry") {
       const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      if (bal) return { chain: bal.chain, remainingBoxes: 0, perType: kettenBilanz(cargo, cargo.map(() => ({ qty: 0 }))), slot0: bal.slot0 };
     }
-    // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
-    // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
-    // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
-    // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
     return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
   function chainVehicles(container0, preset0, cargo, slot0, overrides, MAXVIS) {
-    // Dieselben zwei Strategien wie in der Seefracht. Nur der dritte Entscheid von
-    // ketteBesser (das gebuchte Volumen) faellt hier weg: das Fahrzeug ist gesetzt, es
-    // gibt keinen kleineren. Uebrig bleibt "gleiche Ware zusammen" -- an der Rampe genauso
-    // wertvoll wie im Hafen, und wer die Seefracht anders behandelt als die Landfracht,
-    // baut sich zwei Algorithmen, die auseinanderlaufen.
-    const bauen = (sortenrein) => {
-      let erst = null, chain, remaining;
-      const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
-        if (!erst.boxes) return null;
-        chain = [{ name: preset0, preset: container0, placed: erst.placed }];
-        remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
-      } else {
-        chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
-        remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
-      }
-      let totRem = remaining.reduce((s, t) => s + t.qty, 0);
-      let slot = 1;
-      while (totRem > 0 && chain.length < MAXVIS) {
-        const ov = overrides && overrides[slot];
-        const manual = ov && VEHICLES[ov];
-        const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
-        if (rr.boxes === 0 && !manual) break;
-        chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
-        if (rr.boxes === 0) break;
-        remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i] ? rr.perType[i].loaded : 0) }));
-        totRem = remaining.reduce((s, t) => s + t.qty, 0);
-        slot++;
-      }
-      return { chain, remaining, totRem, slot0: erst };
-    };
-    let erg = bauen(false);
-    const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
-    const gemischt = erg.chain.slice(0, -1).some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
-    if (gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW) {
-      const rein = bauen(true);
-      if (ketteBesser(rein, erg)) erg = rein;
+    const chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
+    let remaining = cargo.map((t, i) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
+    let totRem = remaining.reduce((s, t) => s + t.qty, 0);
+    let slot = 1;
+    while (totRem > 0 && chain.length < MAXVIS) {
+      const ov = overrides && overrides[slot];
+      const manual = ov && VEHICLES[ov];
+      const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
+      const rr = packCargo(pick.p, remaining, { noHint: true });
+      if (rr.boxes === 0 && !manual) break;
+      chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
+      if (rr.boxes === 0) break;
+      remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i] ? rr.perType[i].loaded : 0) }));
+      totRem = remaining.reduce((s, t) => s + t.qty, 0);
+      slot++;
     }
-    let { chain, remaining, totRem } = erg;
-    let slot0Neu = erg.slot0;
     if (totRem === 0 && chain.length > 1) {
       const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      if (bal) return { chain: bal.chain, remainingBoxes: 0, perType: kettenBilanz(cargo, cargo.map(() => ({ qty: 0 }))), slot0: bal.slot0 };
     }
-    // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
-    // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
-    // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
-    // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
     return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   var LANG = (() => {
