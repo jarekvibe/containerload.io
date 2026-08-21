@@ -238,6 +238,17 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Die Kamera darf ihren Mittelpunkt verlassen
+Die 3D-Ansicht kreiste um `t.target`, und das war die **Mitte der Reihe**. Zoomen hieß damit immer „in die Mitte hinein" — bei drei Containern also in die Lücke zwischen dem ersten und dem zweiten. An den ersten oder letzten Container kam man gar nicht heran. Drei Wege heraus, alle drei Standard in 3D-Betrachtern:
+
+- **Rechte (oder mittlere) Maustaste, oder Shift, schiebt** das Ziel in der Bildebene. Ein Pixel Mauszug ist ein Pixel Bild (`proPixel` aus Bildwinkel, Entfernung und Leinwandhöhe) — sonst rutscht die Ladung unter dem Zeiger weg.
+- **Das Rad zoomt dorthin, wo der Zeiger steht.** Das Ziel wandert zum Punkt unter dem Zeiger, und zwar **genau um den Anteil, um den die Entfernung schrumpft** (`target.lerp(p, 1 − r_neu/r_alt)`). Nur dieser Faktor lässt den Punkt unter dem Zeiger stehen; ein größerer zieht ihn weg (erst mit ×1,6 probiert — das überschoss sichtbar). Beim Heraus­zoomen bleibt das Ziel stehen, sonst zerrt es bei jedem Rückzug.
+- **Doppelklick holt den Punkt unter dem Zeiger in die Mitte** — im manuellen Modus nicht, dort säße ein Doppelklick zwei Kisten.
+
+Zwei Dinge halten das zusammen: `zielKlemmen()` begrenzt das Ziel auf die Reihe plus zwei Meter Auslauf (die Halbmaße stehen in `t.frame`) — sonst schiebt man sich mit zwei Handbewegungen ins Nichts und findet ohne „Ansicht zurücksetzen" nicht zurück. Und ein Schiebe-Zug setzt im manuellen Modus **keine** Kiste (`warSchieben` in `up`), sonst platziert jeder Rechtsklick eine.
+
+Der sichtbare Hinweis bleibt kurz — daneben sitzt das Empfehlungsbanner, unter dem ein langer Text durchläuft. Das Ganze steht im `title`. Er stand übrigens fest auf Deutsch im Markup, obwohl `T.orbitHint` seit jeher existierte.
+
 ### Volumen und Gewicht je Container
 Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
 

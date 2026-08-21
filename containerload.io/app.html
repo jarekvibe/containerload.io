@@ -2027,7 +2027,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "Position" : "Positionen"} \xB7 ${pcs} Stk`,
       plansEmpty: "Noch keine Pl\xE4ne gespeichert. Speichere oben deinen aktuellen Plan, um ihn sp\xE4ter wiederzufinden.",
       plansFoot: "Pl\xE4ne liegen nur in diesem Browser — kein Login, keine Cloud. Auf ein anderes Ger\xE4t bringst du einen Plan per Teilen-Link.",
-      orbitHint: "ziehen \xB7 scrollen", resetView: "Ansicht zur\xFCcksetzen",
+      orbitHint: "ziehen \xB7 scrollen \xB7 rechts schiebt",
+      orbitHintLong: "Ziehen dreht \xB7 rechte Maustaste (oder Shift) schiebt \xB7 das Rad zoomt dorthin, wo der Zeiger steht \xB7 Doppelklick holt einen Container in die Mitte",
+      resetView: "Ansicht zur\xFCcksetzen",
       autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       unitToCm: "Auf Zentimeter umschalten", unitToMm: "Auf Millimeter umschalten",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
@@ -2282,7 +2284,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "item" : "items"} \xB7 ${pcs} pcs`,
       plansEmpty: "No saved plans yet. Save your current plan above to find it again later.",
       plansFoot: "Plans live only in this browser — no login, no cloud. To move one to another device, use the share link.",
-      orbitHint: "drag \xB7 scroll", resetView: "Reset view",
+      orbitHint: "drag \xB7 scroll \xB7 right-drag pans",
+      orbitHintLong: "Drag to orbit \xB7 right mouse button (or Shift) pans \xB7 the wheel zooms towards the pointer \xB7 double-click centres a container",
+      resetView: "Reset view",
       autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       unitToCm: "Switch to centimetres", unitToMm: "Switch to millimetres",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
@@ -3161,7 +3165,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         camera.lookAt(target);
       };
       let lastInteract = performance.now();
-      let dragging = false, px = 0, py = 0, downX = 0, downY = 0;
+      let dragging = false, schiebt = false, px = 0, py = 0, downX = 0, downY = 0;
       const dom = renderer.domElement;
       // ── Manuelles Platzieren (Slice 2): Raycasting gegen die Bodenebene (y=0, nur Seefracht/
       // Hauptcontainer) fuer die Ghost-Vorschau, und gegen bereits platzierte Kisten fuer die Auswahl.
@@ -3185,6 +3189,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const xCm = hit.x * 100, zCm = hit.z * 100;
         if (xCm < -80 || zCm < -80 || xCm > CL + 80 || zCm > CW + 80) return null;
         return { x: xCm, z: zCm };
+      };
+      // Der Punkt unter dem Zeiger auf ZIELHOEHE (nicht auf dem Boden): danach richtet sich,
+      // wohin das Rad zoomt und was ein Doppelklick in die Mitte holt.
+      const zielEbene = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+      const punktUnterZeiger = (e) => {
+        ndcFromEvent(e);
+        raycaster.setFromCamera(ndc, camera);
+        zielEbene.constant = -target.y;
+        const hit = new THREE.Vector3();
+        return raycaster.ray.intersectPlane(zielEbene, hit) ? hit : null;
+      };
+      // Das Ziel darf sich bewegen, aber nicht verlorengehen. Grenze ist die Reihe selbst
+      // plus etwas Auslauf - sonst schiebt man sich mit zwei Handbewegungen ins Nichts und
+      // findet ohne "Ansicht zuruecksetzen" nicht zurueck.
+      const zielKlemmen = () => {
+        const f = three.current && three.current.frame;
+        if (!f) return;
+        const m = 2;
+        target.x = Math.max(f.cx - f.hx - m, Math.min(f.cx + f.hx + m, target.x));
+        target.y = Math.max(0, Math.min(f.cy + f.hy + m, target.y));
+        target.z = Math.max(f.cz - f.hz - m, Math.min(f.cz + f.hz + m, target.z));
       };
       const updateGhost = (e) => {
         const t = three.current;
@@ -3256,6 +3281,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       const down = (e) => {
         dragging = true;
+        // Rechte oder mittlere Maustaste - oder Shift - schiebt, statt zu drehen. Ohne das
+        // bleibt bei einer Kette aus drei Containern der Mittelpunkt fest: man zoomt in die
+        // Mitte hinein und kommt an den ersten und den letzten gar nicht heran.
+        schiebt = e.button === 2 || e.button === 1 || e.shiftKey;
         px = e.clientX;
         py = e.clientY;
         downX = e.clientX;
@@ -3268,25 +3297,67 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         if (p.manualMode && p.manualArmedTi != null && !dragging) updateGhost(e);
         if (!dragging) return;
         lastInteract = performance.now();
-        sph.theta -= (e.clientX - px) * 6e-3;
-        sph.phi = Math.max(0.18, Math.min(Math.PI * 0.49, sph.phi - (e.clientY - py) * 6e-3));
+        const dx = e.clientX - px, dy = e.clientY - py;
+        if (schiebt) {
+          // Ein Pixel Mauszug = ein Pixel Bild: die sichtbare Hoehe auf Zielentfernung
+          // geteilt durch die Hoehe der Leinwand.
+          const proPixel = 2 * Math.tan(camera.fov * Math.PI / 360) * cur.r / Math.max(1, dom.clientHeight);
+          camera.updateMatrixWorld();
+          const rechts = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0);
+          const hoch = new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+          target.addScaledVector(rechts, -dx * proPixel);
+          target.addScaledVector(hoch, dy * proPixel);
+          zielKlemmen();
+        } else {
+          sph.theta -= dx * 6e-3;
+          sph.phi = Math.max(0.18, Math.min(Math.PI * 0.49, sph.phi - dy * 6e-3));
+        }
         px = e.clientX;
         py = e.clientY;
       };
       const up = (e) => {
+        const warSchieben = schiebt;
         dragging = false;
+        schiebt = false;
         dom.releasePointerCapture?.(e.pointerId);
-        if (Math.hypot(e.clientX - downX, e.clientY - downY) <= CLICK_SLOP) handleManualClick(e);
+        // Ein Klick mit der rechten Taste ist kein Platzieren.
+        if (!warSchieben && Math.hypot(e.clientX - downX, e.clientY - downY) <= CLICK_SLOP) handleManualClick(e);
       };
       const wheel = (e) => {
         e.preventDefault();
         lastInteract = performance.now();
+        const vorher = sph.r;
         sph.r = Math.max(2.5, Math.min(95, sph.r * (1 + e.deltaY * 11e-4)));
+        // Beim HINEINzoomen wandert das Ziel zum Punkt unter dem Zeiger - und zwar genau um
+        // den Anteil, um den die Entfernung schrumpft. Genau dieser Faktor haelt den Punkt
+        // unter dem Zeiger stehen, statt ihn wegzuziehen; jeder 3D-Betrachter macht das so.
+        // Beim Herauszoomen bleibt das Ziel stehen, sonst zerrt es bei jedem Rueckzug.
+        const rein = 1 - sph.r / vorher;
+        if (rein > 1e-3) {
+          const p = punktUnterZeiger(e);
+          if (p) {
+            target.lerp(p, rein);
+            zielKlemmen();
+          }
+        }
       };
+      // Doppelklick holt, worauf man zeigt, in die Mitte. Im manuellen Modus nicht: dort
+      // setzt jeder Klick eine Kiste, und ein Doppelklick saesse sonst zwei.
+      const dbl = (e) => {
+        if (propsRef.current.manualMode) return;
+        const p = punktUnterZeiger(e);
+        if (!p) return;
+        target.copy(p);
+        zielKlemmen();
+        lastInteract = performance.now();
+      };
+      const keinMenue = (e) => e.preventDefault();
       dom.addEventListener("pointerdown", down);
       dom.addEventListener("pointermove", move);
       window.addEventListener("pointerup", up);
       dom.addEventListener("wheel", wheel, { passive: false });
+      dom.addEventListener("dblclick", dbl);
+      dom.addEventListener("contextmenu", keinMenue);
       let raf;
       const tick = () => {
         const now = performance.now();
@@ -3448,6 +3519,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         dom.removeEventListener("pointermove", move);
         window.removeEventListener("pointerup", up);
         dom.removeEventListener("wheel", wheel);
+        dom.removeEventListener("dblclick", dbl);
+        dom.removeEventListener("contextmenu", keinMenue);
         if (shotRef && shotRef.current === captureView) shotRef.current = null;
         renderer.dispose();
         if (dom.parentNode) dom.parentNode.removeChild(dom);
@@ -4033,7 +4106,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px] pointer-events-none", style: { fontFamily: SANS, color: C.faint } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
             // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
             // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
             /* @__PURE__ */ React.createElement("div", { key: "n", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, 0.45)}`, borderRadius: R.s, padding: "4px 8px" } },
@@ -5865,7 +5938,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
 
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full", style: { height: 230 } },
       /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { borderRadius: R.s, overflow: "hidden", background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }),
-      /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-2 left-3 pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, "ziehen \xB7 scrollen"),
+      /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-2 left-3", title: T.orbitHintLong, style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, cursor: "default" } }, T.orbitHint),
       /* @__PURE__ */ React.createElement("button", { onClick: () => setSpin((v) => !v), className: "absolute top-2 right-11 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, spin ? "⏸" : "▶"),
       /* @__PURE__ */ React.createElement("button", { onClick: () => ctl.current.reset && ctl.current.reset(), className: "absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, "⟳"));
   }
