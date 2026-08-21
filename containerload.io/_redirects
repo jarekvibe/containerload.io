@@ -16,3 +16,10 @@
 /ratgeber            /ratgeber/index.html    200
 /ratgeber/           /ratgeber/index.html    200
 /ratgeber/:slug      /ratgeber/:slug.html    200
+
+# Container Guide (englische Fassung des Container-Wissens). Eigene Adressen statt
+# ?lang=en: es sind eigene Dateien mit eigenen Titeln, und Google soll sie als solche
+# indexieren. Die Verknuepfung macht hreflang, nicht der Pfad.
+/en/guide            /en/guide/index.html    200
+/en/guide/           /en/guide/index.html    200
+/en/guide/:slug      /en/guide/:slug.html    200

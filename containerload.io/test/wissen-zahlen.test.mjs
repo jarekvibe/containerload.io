@@ -60,6 +60,41 @@ test("die Zahl steht auch wirklich auf der jeweiligen Seite", () => {
   }
 });
 
+// Die englische Fassung nennt DIESELBEN Zahlen — sie kommen aus demselben Packer. Eine
+// Uebersetzung, in der eine Zahl anders steht, ist schlimmer als keine: dann widerspricht
+// sich die Seite je nach Sprache, und der Knopf daneben oeffnet in beiden Faellen denselben
+// Rechner. Auch die Beispielmenge im ?q=-Link gehoert dazu.
+const enSeite = (f) => fs.readFileSync(path.join(dir, "..", "en", "guide", f), "utf8");
+const EN_FAELLE = [
+  ["euro-pallets-20ft-container.html", "Euro pallets in 20'", "20' GP", [120, 80], 11],
+  ["euro-pallets-40ft-container.html", "Euro pallets in 40'", "40' GP", [120, 80], 25],
+  ["industrial-pallets-container.html", "Industrial pallets in 20'", "20' GP", [120, 100], 9],
+  ["industrial-pallets-container.html", "Industrial pallets in 40'", "40' GP", [120, 100], 22],
+  ["wire-mesh-pallets-container.html", "Mesh pallets in 20'", "20' GP", [124, 83], 11],
+  ["wire-mesh-pallets-container.html", "Mesh pallets in 40'", "40' GP", [124, 83], 23]
+];
+
+test("die englische Fassung nennt dieselben gerechneten Zahlen", () => {
+  for (const [datei, was, preset, [l, w], behauptet] of EN_FAELLE) {
+    assert.strictEqual(behauptet, stellplaetze(preset, l, w), `${was}: der Packer rechnet anders`);
+    assert.ok(new RegExp(`\\b${behauptet}\\b`).test(enSeite(datei)), `${datei}: ${was} — die Zahl ${behauptet} kommt gar nicht vor`);
+  }
+});
+
+test("die Beispielladung hinter dem Knopf passt zur genannten Zahl", () => {
+  // Der ?q=-Link laedt den Rechner vor. Stuende dort eine andere Menge, wuerde der
+  // Rechner die Zahl im Text im selben Moment widerlegen, in dem jemand draufklickt.
+  const erwartet = { "euro-pallets-20ft-container.html": 11, "euro-pallets-40ft-container.html": 25,
+    "industrial-pallets-container.html": 22, "wire-mesh-pallets-container.html": 11,
+    "truck-trailer-load-calculation.html": 34 };
+  for (const [datei, menge] of Object.entries(erwartet)) {
+    const m = enSeite(datei).match(/href="\/app\?lang=en&q=([^"]+)"/);
+    assert.ok(m, `${datei}: kein ?q=-Link`);
+    const txt = decodeURIComponent(m[1]);
+    assert.ok(new RegExp(`^${menge}\\b`).test(txt), `${datei}: der Link laedt "${txt}", der Text nennt ${menge}`);
+  }
+});
+
 test("keine der widerlegten Angaben ist zurueckgekommen", () => {
   const raus = ["25–26", "24–25", "9–10", "rund 21 ", "fast identisch"];
   const treffer = [];

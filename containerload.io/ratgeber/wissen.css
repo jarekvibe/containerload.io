@@ -69,6 +69,19 @@ header.nav{
   display:flex;align-items:center;justify-content:center;flex:none;
 }
 
+/* ── Sprachwahl ────────────────────────────────────────── */
+/* Der Umschalter zeigt auf die ÜBERSETZUNG DIESER SEITE, nicht auf die Startseite:
+   wer die Frage auf Deutsch liest, will sie auf Englisch lesen und nicht von vorn
+   anfangen. Aktiv wird über die Fläche markiert, nicht über einen Rahmen — dieselbe
+   Regel wie beim Umschalter im Rechner. */
+.lang{display:inline-flex;gap:2px;margin-left:auto;background:var(--deep);border-radius:var(--r-s);padding:3px}
+.lang a{
+  font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;
+  padding:5px 9px;border-radius:var(--r-s);color:var(--faint);line-height:1;
+}
+.lang a:hover{color:var(--text);text-decoration:none}
+.lang a.on{background:var(--card);color:var(--text)}
+
 /* ── Schaltflächen ─────────────────────────────────────── */
 .btn{
   display:inline-flex;align-items:center;gap:.5rem;
@@ -79,6 +92,19 @@ header.nav{
 .btn-primary:hover{filter:brightness(1.08);text-decoration:none}
 .btn-ghost{background:transparent;border:1px solid var(--line-2);color:var(--text)}
 .btn-ghost:hover{border-color:var(--line-3);text-decoration:none}
+
+/* Mit der Sprachwahl steht in der Kopfzeile eine Gruppe mehr, und auf 390 px passt die
+   Schaltfläche daneben nicht mehr: gemessen 431 px Inhalt bei 390 px Fenster — die Seite
+   ließ sich seitlich schieben (test/mobil.test.mjs kennt genau dieses Problem).
+   Deshalb bricht die Kopfzeile dort um: Marke und Sprache in die erste Zeile, die
+   Schaltfläche über die volle Breite in die zweite. Nebeneffekt: sie ist mit dem Daumen
+   deutlich besser zu treffen. */
+@media(max-width:560px){
+  .nav-in{gap:8px;padding:12px 16px;flex-wrap:wrap}
+  .nav-in>.btn{flex:1 1 100%;justify-content:center;padding:.6rem 1rem;font-size:13px}
+  .brand-name{font-size:15px}
+  .lang a{padding:5px 8px}
+}
 
 /* ── Fließtext ─────────────────────────────────────────── */
 main{position:relative;z-index:1;padding:46px 0 40px}
