@@ -228,6 +228,21 @@ Weiter zu rechnen kostet fast nichts, weil jeder Folgecontainer weniger Rest zu 
 
 **Die Kette und die Empfehlung antworten auf verschiedene Fragen** und dürfen deshalb verschiedene Zahlen nennen: die Kette beginnt beim **gewählten** Container und hängt Folgecontainer an, die Empfehlung rechnet die günstigste Kombination frei aus. Damit nicht zwei Zahlen unkommentiert nebeneinanderstehen, nennt die Pille ihre Grundlage: „6 Container · mit dieser Wahl".
 
+### Mehr als ein Container ist ein Entschluss, kein Fehler
+Statuszeile, Mengenzähler in der Ladungsliste und der Bildexport lasen alle nur den **ersten** Container. Bei 37 Paletten auf drei Containern stand daneben „17 offen" in Orange, „0/1" an Packstücken, die im zweiten Container liegen und im Bild daneben zu sehen sind, und ein rotes „33.227 kg über Zuladung", das die Gesamtladung gegen die Zuladung **eines** Containers rechnete.
+
+Drei Stellen zählen deshalb jetzt den ganzen Plan:
+- **`chainContainers`/`chainVehicles` liefern `perType`** (über `kettenBilanz`) — die Bilanz über alle Container. `result.perType` bleibt daneben stehen und meint weiterhin den ersten; die Leiste weist ihn ausdrücklich als `C1` aus.
+- **Offen ist, was die ganze Kette nicht mehr aufnimmt** (`remainingBoxes`), nicht was neben dem ersten Container liegt. Grün heißt dann „Alles verladen · 3 Container".
+- **Die Überladung rechnet gegen die Zuladung des Plans** (Summe über die Kette). 67 t auf drei Containern sind keine Überladung.
+
+`kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
+
+### Der Bildexport rahmt die ganze Reihe
+Die Export-Kamera wurde auf die Maße des **gewählten** Containers eingepasst; bei einer Kette lag alles ab dem zweiten außerhalb des Bildes. Die Live-Ansicht rechnet die Halbmaße der ganzen Reihe längst aus — sie stehen jetzt in `t.frame` (`hx/hy/hz`), und `camFit` liegt auf Modulebene, damit **Live-Ansicht und Export dieselbe Einpassung benutzen**. Der Nebel wird für die größere Export-Entfernung mitgezogen (sonst verschwindet der hinterste Container im Dunst) und danach zurückgestellt.
+
+**Das Bildformat folgt dem Motiv.** Ein 20-Fuß-Container ist ein kompakter Block und bleibt bei 16:10; eine Reihe aus drei 40-Fußern ist über 40 m lang und 2,7 m hoch — in 16:10 gepresst bleiben zwei leere Drittel übrig. Das Seitenverhältnis wächst deshalb stufenlos mit der Länge der Reihe, gedeckelt bei 16:7,3.
+
 ### Was `stackMax` bedeutet — und was nicht
 **Es ist eine Tragfähigkeit.** Der Selektor sagt es wörtlich: „1× stapelbar" = *eine zusätzliche Lage obendrauf* (`stackMax` 2). Daraus folgen drei Dinge, die alle drei gelten müssen:
 
@@ -236,6 +251,15 @@ Weiter zu rechnen kostet fast nichts, weil jeder Folgecontainer weniger Rest zu 
 - Ein Stück ganz oben trägt nichts und verletzt deshalb nichts — auch wenn es auf Lage 3 liegt. Die frühere Fassung verbot das und ließ dafür Ladung liegen.
 
 Umgesetzt ohne Suche: jedes gesetzte Stück trägt seine Lage im Turm (`pos`) und die höchste Lage, die sein Turm nach **allen** Trägern darunter erreichen darf (`lim = min(pos + Tragfähigkeit − 1)`). Beim Aufsetzen genügt der Vergleich mit dem unmittelbaren Untergrund. `towerAt` im manuellen Pfad folgt derselben Regel — `test/stackmax-manuell.test.mjs` verlangt, dass Ziehen von Hand und automatisches Packen dasselbe ergeben.
+
+### Die zweite Stapelgrenze: „stapelbar bis 180 cm" (`stackH`)
+An der Rampe wird nicht in Lagen gedacht, sondern in Zentimetern. Eine Lagenzahl ist dafür nur eine Näherung — und eine, die sich **nicht zusammensetzen lässt.** Bei Paletten von 42 bis 49 cm rechnet man sich aus: unter 45 cm gehen vier Lagen, darüber drei. Steht dann eine flache unten und drei hohe darauf, sind es vier Lagen (jede Einzelgrenze eingehalten) und **183 cm** — die eigentliche Grenze gerissen. Genau so gemeldet, und genau so in `test/stapelhoehe.test.mjs` festgehalten.
+
+`stackH` ist deshalb eine Grenze in Zentimetern, **gemessen ab dem Containerboden** — so, wie die Angabe in der Anfrage gemeint ist. Umgesetzt parallel zu `lim`: jedes gesetzte Stück trägt `hlim`, die höchste Oberkante, die sein Turm nach allen Stücken darunter erreichen darf. Beide Grenzen gelten nebeneinander, die schärfere gewinnt.
+
+Im Auswahlfeld schließen sie einander aus („bis Höhe …" **oder** „2× stapelbar"): wer in Zentimetern denkt, denkt nicht gleichzeitig in Lagen, und zwei Grenzen nebeneinander wären nur schwerer zu lesen. Im Teilen-Link trägt sie den Tag **`H`** — Großbuchstabe, weil die Codetabelle des `?c=`-Formats ausdrücklich nur **ergänzt** werden darf. Ohne den Tag verließe die Grenze den Link stillschweigend, und der Empfänger rechnete mit einer anderen Ladung als der Absender.
+
+**Was dabei KEIN Fehler war:** die Meldung lautete „das Tool macht vier Lagen, obwohl ich nur 2× stapelbar gewählt habe". Das Stück mit „2× stapelbar" stand auf Lage 2 und trug zwei — genau das, was die Angabe bedeutet. Der Fehler lag eine Ebene darüber, in der Übersetzung der Vorgabe in Lagenzahlen. Vor dem Ändern nachrechnen, nicht dem ersten Eindruck folgen.
 
 **„Nicht stapelbar" ist etwas anderes** und bleibt, wie es war: das Stück darf **auf nichts stehen** (`S.y > 1e-6` in `emsPackOnce`). Es trägt in diesem Rechner weiterhin — `test/pack-order.test.mjs` hält das fest (11 nicht stapelbare am Boden, 11 stapelbare darüber). Ob das dem Verständnis an der Rampe entspricht, ist eine **offene fachliche Frage** und nicht beiläufig zu ändern.
 

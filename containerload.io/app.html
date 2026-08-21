@@ -925,10 +925,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     var m = +t.stackMax;
     return m >= 2 && isFinite(m) ? m : Infinity;
   }
+  // Die ZWEITE Stapelgrenze: wie hoch der Turm ueber dem Containerboden werden darf, in cm.
+  //
+  // Warum es die braucht, obwohl es stackMax schon gibt: an der Rampe wird nicht in Lagen
+  // gedacht, sondern in Zentimetern -- "stapelbar bis 180 cm". Eine Lagenzahl ist dafuer nur
+  // eine Naeherung, und zwar eine, die sich nicht zusammensetzen laesst. Bei Paletten von 42
+  // bis 49 cm Bauhoehe rechnet man sich aus: unter 45 cm gehen vier, darueber nur drei. Stehen
+  // dann eine flache unten und drei hohe darauf, sind es vier Lagen (jede Grenze fuer sich
+  // eingehalten) und 184 cm (die eigentliche Grenze gerissen). Genau so gemeldet.
+  //
+  // Gemessen wird ab dem Containerboden, nicht ab dem Stueck: "bis 180 cm" ist eine Angabe
+  // ueber den fertigen Stapel im Container, so wie sie in der Anfrage steht.
+  function stackHOf(t) {
+    var h = t ? +t.stackH : NaN;
+    return h > 0 && isFinite(h) ? h : Infinity;
+  }
   // Umkehrung fuer die UI: aktueller Zustand eines Packstuecks -> Auswahlwert des Stapel-Selectors.
-  // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf (also 2/3/4 hoch gesamt).
+  // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf (also 2/3/4 hoch gesamt),
+  // "h" = Grenze in Zentimetern statt in Lagen.
   function stackModeOf(c) {
     if (c && c.stackable === false) return "no";
+    if (c && isFinite(+c.stackH) && +c.stackH > 0) return "h";
     var m = c ? +c.stackMax : NaN;
     if (!(m >= 2 && isFinite(m))) return "free";
     return m <= 2 ? "x1" : m === 3 ? "x2" : "x3";
@@ -1027,7 +1044,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return n;
   }
-  function manualCandidate(container, item, rotated, px, pz, placed, weightUsed) {
+  // Kleinste Hoehengrenze in dieser Saeule -- die eigene und die jedes Stueckes darunter.
+  // Gegenstueck zu hlim in emsPackOnce; beide muessen dasselbe ergeben, sonst verhaelt sich
+  // Ziehen von Hand anders als automatisches Packen.
+  function towerHLimit(px, pz, dx, dz, y, placed, cargo, item) {
+    let grenze = stackHOf(item), cur = y;
+    for (let guard = 0; guard <= placed.length; guard++) {
+      const below = placed.find((b) =>
+        Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
+        Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
+      if (!below) break;
+      const it = cargo && cargo[below.ti];
+      if (it) grenze = Math.min(grenze, stackHOf(it));
+      cur = below.y;
+    }
+    return grenze;
+  }
+  function manualCandidate(container, item, rotated, px, pz, placed, weightUsed, cargo) {
     const l = num(item.l), w = num(item.w), h = num(item.h);
     const dx = rotated ? w : l, dz = rotated ? l : w, dy = h;
     if (dx <= 0 || dz <= 0 || dy <= 0) return { ok: false, reason: "dims" };
@@ -1047,6 +1081,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (y == null) return { ok: false, reason: "overlap" };
     const cap = stackCapOf(item);
     if (isFinite(cap) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > cap) return { ok: false, reason: "stackmax" };
+    const hcap = towerHLimit(px, pz, dx, dz, y, placed, cargo, item);
+    if (isFinite(hcap) && y + dy > hcap + 1e-6) return { ok: false, reason: "stackheight" };
     const cand = { x: px, y, z: pz, dx, dy, dz };
     if (!withinBounds(container, cand)) return { ok: false, reason: "bounds" };
     return { ok: true, box: cand };
@@ -1135,9 +1171,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // und die hoechste Lage, die sein Turm nach ALLEN Traegern darunter erreichen
             // darf (lim = min ueber pos + Tragfaehigkeit - 1). Beim Aufsetzen genuegt der
             // Vergleich mit dem unmittelbaren Untergrund.
-            let pos = 1, lim = Infinity;
+            //
+            // Die Hoehengrenze (stackH, "stapelbar bis 180 cm") laeuft genau parallel dazu,
+            // nur in Zentimetern statt in Lagen: hlim ist die hoechste Oberkante, die der
+            // Turm nach allen Stuecken darunter erreichen darf. Sie wird gebraucht, weil eine
+            // Lagenzahl sich bei ungleich hohen Paletten nicht zusammensetzen laesst -- vier
+            // Lagen aus 42 + 47 + 47 + 47 halten jede Einzelgrenze ein und sind trotzdem
+            // 183 cm hoch.
+            let pos = 1, lim = Infinity, hlim = Infinity;
             if (py > 1e-4) {
-              let untenPos = 0, untenLim = Infinity;
+              let untenPos = 0, untenLim = Infinity, untenH = Infinity;
               for (const b of placed) {
                 if (Math.abs(b.y + b.dy - py) > 1e-3) continue;
                 const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
@@ -1146,11 +1189,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 if (oz <= 1e-6) continue;
                 untenPos = Math.max(untenPos, b.pos || 1);
                 untenLim = Math.min(untenLim, b.lim === void 0 ? Infinity : b.lim);
+                untenH = Math.min(untenH, b.hlim === void 0 ? Infinity : b.hlim);
               }
               pos = untenPos + 1;
               if (pos > untenLim) continue;   // eines der Stuecke darunter traegt nicht so viel
               lim = untenLim;
+              hlim = untenH;
             }
+            if (isFinite(u.stackH)) hlim = Math.min(hlim, u.stackH);
+            if (py + dy > hlim + 1e-6) continue;   // der Turm wuerde zu hoch
             // WICHTIG, und bewusst so: "nicht stapelbar" heisst in diesem Rechner seit jeher
             // "ICH darf auf nichts stehen" (die Pruefung oben, S.y > 1e-6) -- NICHT "auf mich
             // darf nichts". Ein nicht stapelbares Stueck traegt hier also weiterhin. Das ist
@@ -1165,13 +1212,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
             else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
             else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
-            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim };
+            if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim, hlim };
           }
         }
       }
       if (!best) continue;
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim });
+      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim, hlim: best.hlim });
       weight += u.weight;
       const next = [];
       for (const S of ems) {
@@ -1262,7 +1309,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Minuszeichen im Gewichtsfeld - beim Einfuegen aus einer Tabelle schnell passiert -
     // ergab sonst eine negative Zuladung ("-9.940 kg") und haette jede Ueberladungspruefung
     // ausgehebelt, weil die Summe nach unten statt nach oben lief.
-    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
+    const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), stackH: stackHOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
     const loaded = types.map(() => 0);
     let placed = [], weight = 0, layers = 0, single = false;
     if (valid.length === 1) {
@@ -1273,7 +1320,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Die spaeter ausgewiesene Lagenzahl wird nach dem Packen aus den tatsaechlich
       // belegten Hoehen gezaehlt (siehe unten) — sonst meldet das Tool "2 gestapelt",
       // obwohl nur ein Packstueck auf dem Boden steht.
-      const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax) : 1;
+      // Auch die Hoehengrenze zaehlt hier mit: "bis 180 cm" bei 45 cm Bauhoehe sind vier
+      // Lagen, egal was der Container hergibt.
+      const hLay = isFinite(t.stackH) ? Math.floor((t.stackH + 1e-6) / t.h) : Infinity;
+      const capLay = maxLay < 1 ? 0 : t.stackable ? Math.min(maxLay, t.stackMax, hLay) : 1;
       // Mehr Stellplaetze als Menge / Etagen kann diese Schleife nie belegen — der Packer
       // muss also gar nicht erst mehr ausrechnen.
       const brauchtSpots = Math.max(1, Math.ceil(t.qty / Math.max(1, capLay)));
@@ -1701,6 +1751,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // wird schneller) und 727 ms im schlimmsten nachgestellten Fall, 1.900 Packstuecke auf
   // zehn Container. Gezeichnet werden 8; darueber wird jede Huelle im Bild zum Strich.
   var MAXCHAIN = 24, MAXDRAW = 8;
+  // Was ist ueber die GANZE Kette verladen? Ohne diese Bilanz zeigte die Ladungsliste die
+  // Zahlen des ersten Containers -- "0/1" an einem Packstueck, das im zweiten Container
+  // liegt und im Bild daneben zu sehen ist. Mehr als ein Container ist ein Entschluss,
+  // kein Fehler; die Liste muss den ganzen Plan zaehlen, nicht seinen ersten Teil.
+  function kettenBilanz(cargo, remaining) {
+    return cargo.map((t, i) => {
+      const total = Math.max(0, Math.floor(num(t.qty)));
+      const offen = Math.max(0, remaining[i] ? remaining[i].qty : 0);
+      return { loaded: Math.max(0, total - offen), total };
+    });
+  }
   function chainContainers(container0, preset0, cargo, slot0, overrides, MAXVIS, carrier) {
     // Auto-Folgecontainer nur aus Standard-Typen; Special Equipment nur per manueller Wahl.
     // Folgecontainer kommen von derselben Reederei wie der erste – eine Buchung, ein Equipment-Pool.
@@ -1736,7 +1797,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
     }
-    return { chain, remainingBoxes: totRem };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
@@ -1757,7 +1818,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
     }
-    return { chain, remainingBoxes: totRem };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   var LANG = (() => {
     try {
@@ -1829,11 +1890,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackable: "stapelbar",
       notStackable: "nicht stapelb.",
       stackNo: "nicht stapelbar",
+      stackToH: "bis H\xF6he \u2026", stackHLabel: "max. H\xF6he", stackHSum: (h) => "stapelbar bis " + h,
       stackFree: "frei stapelbar",
       stackX: (n) => `${n}\xD7 stapelbar`,
       rotate: "Drehen",
       loaded: "Verladen",
       allLoaded: "Alles verladen",
+      allLoadedN: (n) => `Alles verladen \xB7 ${n} Container`,
+      allLoadedRoadN: (n) => `Alles verladen \xB7 ${n} Fahrzeuge`,
       overCap: (kg) => `${kg} kg \xFCber Zuladung`,
       qImported: (n) => `${n} Position${n === 1 ? "" : "en"} aus dem Link \xFCbernommen – unten pr\xFCfbar`,
       railFull: "Voll", railDetails: "Details", railLess: "Weniger", freeLen: "L\xE4nge bis T\xFCr", freeVol: "Volumen", freePay: "Zuladung", freeFull: "Container leer",
@@ -2080,11 +2144,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       stackable: "stackable",
       notStackable: "not stackable",
       stackNo: "not stackable",
+      stackToH: "up to height \u2026", stackHLabel: "max. height", stackHSum: (h) => "stackable up to " + h,
       stackFree: "freely stackable",
       stackX: (n) => `${n}\xD7 stackable`,
       rotate: "Rotate",
       loaded: "Loaded",
       allLoaded: "All loaded",
+      allLoadedN: (n) => `All loaded \xB7 ${n} containers`,
+      allLoadedRoadN: (n) => `All loaded \xB7 ${n} vehicles`,
       overCap: (kg) => `${kg} kg over payload`,
       qImported: (n) => `${n} item${n === 1 ? "" : "s"} imported from link – editable below`,
       railFull: "Full", railDetails: "Details", railLess: "Less", freeLen: "Length to door", freeVol: "Volume", freePay: "Payload", freeFull: "Container empty",
@@ -2309,10 +2376,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
-  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
+  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
   var decodePlanState = (st) => {
     if (!st || !Array.isArray(st.it) || !st.it.length) return null;
-    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0 }));
+    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0 }));
     // Domain zuerst lesen: alter Link ohne dm => "sea" (Rueckwaerts-Kompatibilitaet).
     const domain = st.dm === "road" ? "road" : "sea";
     const table = domain === "road" ? VEHICLES : PRESETS;
@@ -2375,6 +2442,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (+r.q > 1) t += "q" + v2num(r.q);
       if (r.s === 0) t += "s";
       else if (r.s >= 2) t += "y" + v2num(r.s);
+      if (+r.sh > 0) t += "H" + v2num(r.sh);
       if (r.r === 0) t += "r";
       if (typeof r.cl === "string" && /^#[0-9a-fA-F]{6}$/.test(r.cl)) t += "k" + r.cl.slice(1).toLowerCase();
       if (typeof r.n === "string" && r.n !== V2_DEFAULT_NAME && r.n !== "") t += "n" + encodeURIComponent(r.n.slice(0, 40)).replace(/~/g, "%7E");
@@ -2435,6 +2503,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           else if (tg === "q") { var v2 = rn(); if (v2 == null) return null; it.q = v2; }
           else if (tg === "s") it.s = 0;
           else if (tg === "y") { var vy = rn(); if (vy == null) return null; it.s = vy; }
+          else if (tg === "H") { var vh = rn(); if (vh == null) return null; it.sh = vh; }
           else if (tg === "r") it.r = 0;
           else if (tg === "k") { var hx = raw.slice(j, j + 6); if (!/^[0-9a-fA-F]{6}$/.test(hx)) return null; it.cl = "#" + hx.toLowerCase(); j += 6; }
           else if (tg === "n") { it.n = decodeURIComponent(raw.slice(j)).slice(0, 40); j = raw.length; }
@@ -2580,12 +2649,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     lines.push(row(["Position", "Menge", "Laenge_cm", "Breite_cm", "Hoehe_cm", "Gewicht_kg_Stueck", "Gewicht_kg_gesamt", "Stapelbar", "Drehbar_90", "Geladen", "Gesamt"]));
     cargo.forEach((c, i) => {
       const q = Math.max(0, +c.qty || 0);
-      const pt = result && result.perType && result.perType[i] || { loaded: "", total: q };
+      const pt = result && (result.perTypeAll || result.perType) && (result.perTypeAll || result.perType)[i] || { loaded: "", total: q };
       lines.push(row([
         c.name || "Position " + (i + 1),
         q, +c.l || 0, +c.w || 0, +c.h || 0,
         +c.weight || 0, (+c.weight || 0) * q,
-        c.stackable === false ? "nein" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
+        c.stackable === false ? "nein" : isFinite(+c.stackH) && +c.stackH > 0 ? "bis " + +c.stackH + " cm" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
         c.rotatable === false ? "nein" : "ja",
         pt.loaded, pt.total
       ]));
@@ -2628,7 +2697,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const volC = q * num(it.l) * num(it.w) * num(it.h) / 1e6;
     const stack = it.stackable !== false;
     const capN = it.stackable === false ? 1 : isFinite(it.stackMax) && +it.stackMax >= 2 ? +it.stackMax : Infinity;
-    const stackTxt = isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
+    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
     const dims = `${dimDE(it.l, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.w, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.h, en ? "en-US" : "de-DE")}`;
     const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
@@ -2990,6 +3059,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     names.forEach((nm) => opts.push(/* @__PURE__ */ React.createElement("option", { key: nm, value: nm, style: optStyle }, zeig(nm))));
     return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-2 py-1", style: { pointerEvents: "auto", background: hexA("#161D27", 0.88), border: "1px solid #2E3A49" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, (road ? "F" : "C") + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), "aria-label": (road ? T.vehicle : T.container) + " " + (idx + 1), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, opts));
   }
+  // Wie weit muss die Kamera weg, damit ein Quader mit den Halbmassen hx/hy/hz bei
+  // Seitenverhaeltnis "aspect" vollstaendig ins Bild passt? Ruhelage der Kamera (theta/phi)
+  // und Bildwinkel (40 Grad) sind dieselben wie in der Live-Ansicht -- deshalb steht hier
+  // eine Funktion und nicht zweimal dieselbe Rechnung.
+  function camFit(hx, hy, hz, aspect) {
+    const th = -0.92, ph = 1;
+    const dir = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
+    const rgt = [-Math.sin(th), 0, Math.cos(th)];               // waagerecht, senkrecht zu dir
+    const up = [dir[1] * rgt[2] - dir[2] * rgt[1], dir[2] * rgt[0] - dir[0] * rgt[2], dir[0] * rgt[1] - dir[1] * rgt[0]];
+    const tY = Math.tan(40 * Math.PI / 180 / 2), tX = tY * Math.max(0.5, aspect);
+    let need = 0;
+    for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) {
+      const p = [sx * hx, sy * hy, sz * hz];
+      const d = p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];  // Tiefe entlang der Blickachse
+      const rr = Math.abs(p[0] * rgt[0] + p[1] * rgt[1] + p[2] * rgt[2]);
+      const uu = Math.abs(p[0] * up[0] + p[1] * up[1] + p[2] * up[2]);
+      need = Math.max(need, rr / tX + d, uu / tY + d);
+    }
+    return need;
+  }
   function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef }) {
     const mountRef = useRef(null);
     const three = useRef(null);
@@ -3113,7 +3202,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         originX = snapAxis(originX, dx, edgesX, SNAP_TOL);
         originZ = snapAxis(originZ, dz, edgesZ, SNAP_TOL);
         const weightUsed = p.manualPlaced.reduce((s, o) => s + (p.cargo[o.ti] ? num(p.cargo[o.ti].weight) : 0), 0);
-        const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed);
+        const res = manualCandidate(p.container, item, p.manualRot, originX, originZ, p.manualPlaced, weightUsed, p.cargo);
         t.ghost.visible = true;
         if (res.ok) {
           t.ghostCandidate = { ti: p.manualArmedTi, cid: item.id, rot: p.manualRot, ...res.box };
@@ -3272,20 +3361,41 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         try {
           const transparent = !!opts.transparent;
           const curW = mount.clientWidth || W, curH = mount.clientHeight || H;
-          const outW = 1600, outH = 1000; // fixes 16:10-Format, unabhaengig von der Bildschirmgroesse
+          // Bildformat nach dem MOTIV. Ein 20-Fuss-Container ist ein kompakter Block und
+          // bleibt bei 16:10. Eine Kette aus drei 40-Fuessern ist ein 40 m langes, flaches
+          // Band -- in 16:10 gepresst bleiben davon zwei leere Drittel uebrig und die Ladung
+          // wird winzig. Genau das war der Grund, warum "das alles nicht aufs Bild passt".
+          // Das Verhaeltnis waechst deshalb mit der Laenge der Reihe, gedeckelt bei 16:7.
+          const frA = three.current && three.current.frame;
+          const laengs = frA ? frA.hx / Math.max(0.3, Math.max(frA.hy, frA.hz)) : 2.5;
+          const outAsp = Math.max(1.6, Math.min(2.2, 1.05 + 0.22 * laengs));
+          const outW = 1600, outH = Math.round(outW / outAsp);
           const aspect = outW / outH;
-          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, eng an den CONTAINER eingepasst
-          // (die Packstuecke liegen darin). Bewusst NICHT die Gruppen-Bounding-Box: die enthaelt die
-          // grosse Boden-Gitterflaeche und wuerde den Container winzig zoomen.
+          // Perfekter Winkel: Kamera fest auf die Ideal-3/4-Ansicht, eingepasst auf die GANZE
+          // Reihe - bei einer Kette sind das drei Container nebeneinander, nicht einer.
+          // Vorher rechnete der Export mit den Massen des GEWAEHLTEN Containers; alles ab dem
+          // zweiten stand ausserhalb des Bildes. Die Halbmasse der Reihe liegen in t.frame,
+          // wo die Live-Ansicht sie ohnehin berechnet.
+          //
+          // Bewusst NICHT die Gruppen-Bounding-Box: die enthaelt die grosse Boden-Gitterflaeche
+          // und wuerde die Container winzig zoomen.
+          const fr = three.current && three.current.frame;
           const cont = propsRef.current.container || {};
           const CLm = num(cont.l) / 100, CHm = num(cont.h) / 100, CWm = num(cont.w) / 100;
-          const center = target.clone();
-          const radius = CLm > 0 && CHm > 0 && CWm > 0 ? Math.max(0.8, 0.5 * Math.sqrt(CLm * CLm + CHm * CHm + CWm * CWm)) : 6;
+          const center = fr ? new THREE.Vector3(fr.cx, fr.cy, fr.cz) : target.clone();
+          const hx = fr ? fr.hx : CLm / 2, hy = fr ? fr.hy : CHm / 2, hz = fr ? fr.hz : CWm / 2;
           const fov = camera.fov * Math.PI / 180;
-          const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
-          const dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
+          let dist;
+          if (hx > 0 && hy > 0 && hz > 0) {
+            dist = Math.max(2.5, camFit(hx, hy, hz, aspect) * 1.06);
+          } else {
+            const radius = 6;
+            const hfov = 2 * Math.atan(Math.tan(fov / 2) * aspect);
+            dist = Math.max(radius / Math.tan(fov / 2), radius / Math.tan(hfov / 2)) * 1.06;
+          }
           const theta = -0.92, phi = 1;
           const prevFog = scene.fog;
+          const prevFogFar = scene.fog ? scene.fog.far : 0;
           // Boden-Gitterlinien (floorGrid, separat vom Schatten-"ground") sonst im freigestellten
           // Export sichtbar, wo sie auf hellem Mail-/Dokument-Hintergrund unschoen durchscheinen.
           if (transparent) { scene.fog = null; if (ground) ground.visible = false; group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = false; }); }
@@ -3296,10 +3406,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           camera.position.set(center.x + dist * Math.sin(phi) * Math.cos(theta), center.y + dist * Math.cos(phi), center.z + dist * Math.sin(phi) * Math.sin(theta));
           camera.updateProjectionMatrix();
           camera.lookAt(center);
+          // Der Nebel war auf die Live-Entfernung gestellt. Beim Export steht die Kamera
+          // weiter weg (die ganze Reihe muss ins Bild), und der hinterste Container waere
+          // sonst im Nebel verschwunden.
+          if (scene.fog) scene.fog.far = Math.max(prevFogFar, dist + 2 * hx + 20);
           renderer.render(scene, camera);
           const url = renderer.domElement.toDataURL("image/png");
           // Live-Ansicht exakt wiederherstellen
           scene.fog = prevFog;
+          if (scene.fog) scene.fog.far = prevFogFar;
           if (ground) ground.visible = true;
           if (transparent) group.children.forEach((c) => { if (c instanceof THREE.GridHelper) c.visible = true; });
           renderer.setPixelRatio(prevPR);
@@ -3861,27 +3976,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // 20-Fuss wirkte verloren, ein 45-Fuss fuellte das Bild. Jetzt werden die acht Ecken
       // in die Kamera-Achsen projiziert und der noetige Abstand daraus bestimmt; das haengt
       // korrekt vom Seitenverhaeltnis ab, was vorher gar nicht beruecksichtigt wurde.
-      const camFit = (hx, hy, hz, aspect) => {
-        const th = -0.92, ph = 1;                                   // Ruhelage der Kamera
-        const dir = [Math.sin(ph) * Math.cos(th), Math.cos(ph), Math.sin(ph) * Math.sin(th)];
-        const rgt = [-Math.sin(th), 0, Math.cos(th)];               // waagerecht, senkrecht zu dir
-        const up = [dir[1] * rgt[2] - dir[2] * rgt[1], dir[2] * rgt[0] - dir[0] * rgt[2], dir[0] * rgt[1] - dir[1] * rgt[0]];
-        const tY = Math.tan(40 * Math.PI / 180 / 2), tX = tY * Math.max(0.5, aspect);
-        let need = 0;
-        for (let sx = -1; sx <= 1; sx += 2) for (let sy = -1; sy <= 1; sy += 2) for (let sz = -1; sz <= 1; sz += 2) {
-          const p = [sx * hx, sy * hy, sz * hz];
-          const d = p[0] * dir[0] + p[1] * dir[1] + p[2] * dir[2];  // Tiefe entlang der Blickachse
-          const rr = Math.abs(p[0] * rgt[0] + p[1] * rgt[1] + p[2] * rgt[2]);
-          const uu = Math.abs(p[0] * up[0] + p[1] * up[1] + p[2] * up[2]);
-          need = Math.max(need, rr / tX + d, uu / tY + d);
-        }
-        return need;
-      };
       // Rand: etwas Luft, damit Statuskarte und Bedienelemente nicht auf der Ladung kleben.
       // Strasse braucht mehr, weil die Zugmaschine vorne ueber die Box hinausragt.
       const camMargin = isRoad ? 1.42 : 1.2;
       const camAspect = t.camera && t.camera.aspect > 0 ? t.camera.aspect : 1.7;
-      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, r: Math.max(2.5, camFit(rowW / 2, maxCH / 2, maxCW / 2, camAspect) * camMargin) };
+      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, hx: rowW / 2, hy: maxCH / 2, hz: maxCW / 2, margin: camMargin, r: Math.max(2.5, camFit(rowW / 2, maxCH / 2, maxCW / 2, camAspect) * camMargin) };
       // Nebel & Schatten an die Szenengröße anpassen (Einzelcontainer bleibt unverändert).
       if (t.scene && t.scene.fog) {
         t.scene.fog.near = n > 1 ? Math.max(16, t.frame.r * 0.8) : 16;
@@ -4379,7 +4478,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!item || item.rotatable === false) return;
       const rest = manualPlaced.filter((_, i) => i !== manualSel);
       const weightUsed = rest.reduce((s, o) => s + (cargo[o.ti] ? num(cargo[o.ti].weight) : 0), 0);
-      const res = manualCandidate(container, item, !b.rot, b.x, b.z, rest, weightUsed);
+      const res = manualCandidate(container, item, !b.rot, b.x, b.z, rest, weightUsed, cargo);
       if (!res.ok) {
         setToast(T.manualInvalid);
         return;
@@ -4395,7 +4494,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!item) return;
       const rest = manualPlaced.filter((_, i) => i !== manualSel);
       const weightUsed = rest.reduce((s, o) => s + (cargo[o.ti] ? num(cargo[o.ti].weight) : 0), 0);
-      const res = manualCandidate(container, item, b.rot, b.x + dxAxis, b.z + dzAxis, rest, weightUsed);
+      const res = manualCandidate(container, item, b.rot, b.x + dxAxis, b.z + dzAxis, rest, weightUsed, cargo);
       if (!res.ok) {
         setToast(T.manualInvalid);
         return;
@@ -4485,7 +4584,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         Math.max(0, Math.floor(num(c.qty))) + "\xD7",
         `${m(c.l)}\xD7${m(c.w)}\xD7${m(c.h)} ${unit}`,
         num(c.weight) > 0 ? fmtDE(c.weight) + " kg" : null,
-        c.stackable === false ? T.notStackable : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
+        c.stackable === false ? T.notStackable
+          : isFinite(+c.stackH) && +c.stackH > 0 ? T.stackHSum(m(c.stackH) + " " + unit)
+          : isFinite(c.stackMax) && +c.stackMax >= 2 ? T.stackX(+c.stackMax - 1) : null
       ].filter(Boolean).join(" \xB7 ");
     };
     // Farbauflösung zentral: eigene Farbe (item.color) oder indexbasierte Palettenfarbe.
@@ -4531,9 +4632,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : chainContainers(container, preset, cargo, r, chainOverride, MAXVIS, carrier);
           r.chain = ch.chain;
           r.remainingBoxes = ch.remainingBoxes;
+          // Die Bilanz ueber ALLE Container des Plans. r.perType bleibt daneben stehen und
+          // meint weiterhin den ersten - die Leiste weist ihn ausdruecklich als "C1" aus.
+          r.perTypeAll = ch.perType;
         } else {
           r.chain = [{ name: preset, preset: container, placed: r.placed }];
           r.remainingBoxes = 0;
+          r.perTypeAll = r.perType;
         }
         setResult(r);
       }, 200);
@@ -4663,7 +4768,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Stapel-Selector -> setzt stackable + stackMax (Gesamt-Lagen) in einem Rutsch.
     // "x1"/"x2"/"x3" = 1/2/3 zusaetzliche Lagen obendrauf, also 2/3/4 hoch gesamt.
     const setStackMode = (id, mode) => {
-      const patch = mode === "no" ? { stackable: false, stackMax: 1 } : mode === "free" ? { stackable: true, stackMax: Infinity } : { stackable: true, stackMax: mode === "x1" ? 2 : mode === "x2" ? 3 : 4 };
+      // 180 cm als Vorgabe: das ist die Zahl, die in Anfragen steht ("stapelbar bis 180 cm").
+      // Die beiden Grenzen schliessen einander aus - wer in Zentimetern denkt, denkt nicht
+      // gleichzeitig in Lagen, und zwei Grenzen nebeneinander waeren nur schwerer zu lesen.
+      const patch = mode === "no" ? { stackable: false, stackMax: 1, stackH: null }
+        : mode === "free" ? { stackable: true, stackMax: Infinity, stackH: null }
+        : mode === "h" ? { stackable: true, stackMax: Infinity, stackH: 180 }
+        : { stackable: true, stackMax: mode === "x1" ? 2 : mode === "x2" ? 3 : 4, stackH: null };
       setCargo((cs) => cs.map((c) => c.id === id ? { ...c, ...patch } : c));
     };
     const addCargo = () => {
@@ -4789,6 +4900,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // tatsaechlich platzierten Kisten, sonst aus dem Auto-Ergebnis.
       let shotUtil = result ? result.util : 0, shotLoaded = result ? result.boxes : 0, shotTotal = result ? result.totalBoxes : 0;
       let shotVol = result ? result.usedVol : 0, shotWeight = result ? result.weight : 0;
+      // Das Bild zeigt den GANZEN Plan - bei einer Kette drei Container. Dann muessen auch
+      // die Zahlen darunter den ganzen Plan meinen. Vorher standen dort die des ersten:
+      // "17/37 geladen" unter einem Bild, auf dem alle 37 liegen.
+      const shotKette = !!(result && result.chain && result.chain.length > 1);
+      let shotTitel = String(preset);
+      if (shotKette && !manualMode) {
+        let vol = 0, wt = 0, contVol = 0, n = 0;
+        result.chain.forEach((c2) => {
+          const cp = c2.preset || {};
+          contVol += num(cp.l) * num(cp.w) * num(cp.h) / 1e6;
+          (c2.placed || []).forEach((b) => {
+            vol += b.dx * b.dy * b.dz / 1e6;
+            const it = cargo[b.ti];
+            if (it) wt += Math.max(0, num(it.weight));
+            n++;
+          });
+        });
+        shotLoaded = n;
+        shotVol = vol;
+        shotWeight = wt;
+        shotUtil = contVol > 0 ? vol / contVol * 100 : 0;
+        // Gleiche Typen zusammenfassen: "3 x 40' HC" statt dreimal derselbe Name.
+        const typen = [];
+        result.chain.forEach((c2) => {
+          const nm = c2.name || preset;
+          const letzt = typen[typen.length - 1];
+          if (letzt && letzt.nm === nm) letzt.n++; else typen.push({ nm, n: 1 });
+        });
+        shotTitel = typen.map((t2) => (t2.n > 1 ? t2.n + "\xD7 " : "") + t2.nm).join(" + ");
+      }
       if (manualMode) {
         const cVol = num(container.l) * num(container.w) * num(container.h) / 1e6;
         let used = 0, wt = 0;
@@ -4894,7 +5035,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             g.fillStyle = fg; g.textAlign = "left"; g.textBaseline = "middle"; g.fillText(text, chipX + px(12), chipY + chipH / 2 + px(0.5));
             chipX += w + px(8);
           };
-          chip(String(preset).toUpperCase(), "rgba(12,20,29,.82)", "rgba(255,255,255,.14)", "#C5D4E2");
+          chip(String(shotTitel).toUpperCase(), "rgba(12,20,29,.82)", "rgba(255,255,255,.14)", "#C5D4E2");
           const full = shotLoaded >= shotTotal;
           chip(full ? String(T.allLoaded).toUpperCase() : String(T.open(shotTotal - shotLoaded)).toUpperCase(), full ? "rgba(47,216,160,.16)" : "rgba(245,165,36,.16)", full ? "rgba(47,216,160,.4)" : "rgba(245,165,36,.4)", full ? "#5CE3B6" : "#F7BC5A");
         };
@@ -5016,6 +5157,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const unplaced = result.totalBoxes - result.boxes;
     const allFit = unplaced <= 0 && result.totalBoxes > 0;
+    // Der Plan kann aus mehreren Containern bestehen. Das ist ein Entschluss, kein Fehler:
+    // was im zweiten Container liegt, ist verladen -- es steht im Bild daneben. Vorher las
+    // die Leiste nur den ERSTEN Container und meldete "17 offen" in Orange, waehrend das
+    // Bild drei volle Container zeigte. Offen ist nur, was die ganze Kette nicht mehr
+    // aufnimmt (remainingBoxes).
+    const kette = !!(result.chain && result.chain.length > 1);
+    const offenGesamt = kette ? (result.remainingBoxes || 0) : unplaced;
+    const planFit = offenGesamt <= 0 && result.totalBoxes > 0;
     // Leer ist kein Fehler, sondern der Anfang. Ohne diese Unterscheidung stuende beim
     // Oeffnen "0 offen" in Orange da, bevor ueberhaupt etwas eingegeben wurde.
     const leer = result.totalBoxes === 0;
@@ -5031,8 +5180,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // 30 t auf einem 28,2-t-Container: nichts platziert, result.weight = 0. Die Absicht des Nutzers
     // zaehlt, nicht was der Greedy-Packer noch reinbekommen hat.
     const totalWeight = cargo.reduce((s, c) => s + Math.max(0, Math.floor(num(c.qty))) * Math.max(0, num(c.weight)), 0);
-    const overweight = num(container.payload) > 0 && totalWeight > num(container.payload) + 0.5;
-    const overKg = Math.round(totalWeight - num(container.payload));
+    // Die Zuladung des PLANS, nicht die eines Containers. Bei drei Containern ist eine
+    // Ladung von 67 t nicht ueberladen, und ein rotes "33.227 kg ueber Zuladung" daneben
+    // war schlicht die falsche Rechnung.
+    const planPayload = kette
+      ? result.chain.reduce((s2, c2) => s2 + Math.max(0, num(c2.preset && c2.preset.payload)), 0)
+      : num(container.payload);
+    const overweight = planPayload > 0 && totalWeight > planPayload + 0.5;
+    const overKg = Math.round(totalWeight - planPayload);
     // Die Zuladungs-Anzeige bleibt bei result.weight: sie misst DIESEN Container, und dafuer
     // ist sie richtig. Was sie nicht sagen kann, sagt jetzt die Statuszeile - dass die
     // eingegebene Ladung als Ganzes schwerer ist als der Container tragen darf. Beides
@@ -5102,7 +5257,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
     // dreissig Packstuecke gar nicht in den Container gingen. Daneben stand "30 offen", und
     // zwar in Gruen. Was nicht drin ist, ist kein guter Zustand.
-    const statusColor = payPct > 100 || overweight ? C.bad : leer ? C.faint : !allFit || railHot ? C.warn : C.good;
+    const statusColor = overweight ? C.bad : leer ? C.faint : !planFit ? C.warn : railHot ? C.warn : C.good;
     const railEl = /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", background: hexA("#121821", 0.7) } },
       /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap gap-y-3", style: { padding: `${SP.m}px ${SP.l}px` } },
         /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-stretch", style: { flex: 1, gap: SP.s, paddingRight: SP.m } },
@@ -5117,7 +5272,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: { paddingLeft: SP.l } },
           /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { color: statusColor, fontSize: FS.small, fontWeight: FW.semi, whiteSpace: "nowrap" } },
             /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: "currentColor", flexShrink: 0 } }),
-            /* @__PURE__ */ React.createElement("span", null, leer ? T.noCargo : allFit ? T.allLoaded : T.open(unplaced))
+            /* @__PURE__ */ React.createElement("span", null, leer ? T.noCargo : !planFit ? T.open(offenGesamt) : kette ? (domain === "road" ? T.allLoadedRoadN(result.chain.length) : T.allLoadedN(result.chain.length)) : T.allLoaded)
           ),
           overweight && /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, padding: `2px ${SP.s}px`, background: hexA(C.bad, 0.16), color: C.bad } }, T.overCap(fmtDE(overKg))),
           /* @__PURE__ */ React.createElement(Btn, { size: "s", variant: cogOpen ? "accent" : "ghost", onClick: () => setCogOpen((o) => !o) },
@@ -5297,13 +5452,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.dim } }, T.cargoEmpty),
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.xs, lineHeight: 1.45 } }, T.cargoEmptyHint)) : null,
         cargo.map((c, i) => {
-      const pt = result.perType[i];
+      const pt = (result.perTypeAll || result.perType)[i];
       const done = pt && pt.total > 0 && pt.loaded >= pt.total;
       const col = colorOf(c, i);
       const open = openCargo === c.id;
       return /* @__PURE__ */ React.createElement("div", { key: c.id, style: { background: open ? C.raised : C.surface, borderRadius: R.l, padding: open ? SP.l : `${SP.m}px ${SP.l}px`, ...(c.grp ? { boxShadow: `inset 2px 0 0 0 ${hexA(col, 0.7)}` } : null), transition: "background-color .15s" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: open ? { paddingBottom: SP.m, marginBottom: SP.m, borderBottom: `1px solid ${C.line}` } : null }, /* @__PURE__ */ React.createElement("span", { style: { position: "relative", flexShrink: 0, display: "inline-flex" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setColorPickFor(colorPickFor === c.id ? null : c.id), title: T.colorTitle, style: { width: ICO.s, height: ICO.s, borderRadius: R.s, background: col, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.25)", border: 0, cursor: "pointer", padding: 0 } }), colorPickFor === c.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setColorPickFor(null), style: { position: "fixed", inset: 0, zIndex: 40 } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: SP.xl, left: 0, zIndex: 41, background: "#0c1320", borderRadius: R.l, padding: SP.s, width: 132, boxShadow: "0 16px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: SP.s } }, TYPE_COLORS.map((hex) => /* @__PURE__ */ React.createElement("button", { key: hex, onClick: () => { upd(c.id, "color", hex); setColorPickFor(null); }, style: { width: SP.xl, height: SP.xl, borderRadius: R.s, background: hex, cursor: "pointer", border: 0, boxShadow: (c.color || col) === hex ? "inset 0 0 0 2px #E9F0F7" : "inset 0 0 0 1px rgba(255,255,255,0.15)", padding: 0 } }))), /* @__PURE__ */ React.createElement("button", { onClick: () => { upd(c.id, "color", null); setColorPickFor(null); }, style: { marginTop: SP.s, width: "100%", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: C.dim, background: C.field, border: 0, borderRadius: R.s, padding: `${SP.xs}px 0`, cursor: "pointer" } }, T.colorAuto)))), /* @__PURE__ */ React.createElement("input", { value: c.name, onChange: (e) => upd(c.id, "name", e.target.value), className: "flex-1 min-w-0 bg-transparent focus:outline-none", style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text, borderBottom: "1px solid transparent", paddingBottom: 4 }, onFocus: (e) => e.target.style.borderBottomColor = hexA(C.accent, 0.6), onBlur: (e) => e.target.style.borderBottomColor = "transparent" }), pt && /* @__PURE__ */ React.createElement("span", { className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: MONO, fontSize: FS.small, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", background: hexA(done ? C.good : C.warn, 0.14), color: done ? C.good : C.warn } }, pt.loaded, "/", pt.total), doorCheck.idx.has(i) && /* @__PURE__ */ React.createElement("span", { title: T.doorHint(doorOpening.w, doorOpening.h), className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, background: hexA(C.warn, 0.16), color: C.warn } }, T.doorChip), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(open ? null : c.id), title: T.cargoToggle, "aria-expanded": open ? "true" : "false", style: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: SP.xl, height: SP.xl, borderRadius: R.s, border: 0, background: open ? hexA(C.accent, 0.16) : C.field, color: open ? "#bcd9ff" : C.dim, fontSize: FS.small, lineHeight: 1, cursor: "pointer", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" } }, "▾"), cargo.length > 0 && /* @__PURE__ */ React.createElement("button", { "aria-label": T.cargoDelete, title: T.cargoDelete, onClick: () => del(c.id), style: { color: C.faint, fontSize: FS.h3, lineHeight: 1, padding: `0 ${SP.xs}px`, cursor: "pointer" }, onMouseOver: (e) => e.target.style.color = C.bad, onMouseOut: (e) => e.target.style.color = C.faint }, "\xD7")),
       !open && /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(c.id), style: { display: "block", width: "100%", textAlign: "left", marginTop: SP.s, padding: 0, background: "transparent", border: 0, cursor: "pointer", fontFamily: SANS, fontSize: FS.label, lineHeight: 1.4, color: C.faint } }, cargoSummary(c)),
-      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
+      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
         const on = c.rotatable !== false;
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "transition flex items-center gap-1", style: { height: SP.xxl, padding: `0 ${SP.m}px`, borderRadius: R.s, border: 0, cursor: "pointer", fontSize: FS.small, fontWeight: on ? FW.semi : FW.label, background: on ? hexA(C.accent, 0.16) : C.field, color: on ? "#BCD9FF" : C.dim } }, "\u21BB 90\xB0");
       })())),
