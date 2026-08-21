@@ -923,6 +923,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // direkt darunter (deren Oberkante == py). Verhindert schwebende Kisten / grosse Ueberhaenge –
   // rein geometrisch, keine echte Physik/Sicherung. SUPPORT_MIN = geforderter Anteil der Grundflaeche.
   var SUPPORT_MIN = 0.7;
+  // Die zweite Haelfte derselben Regel: KEIN UEBERSTAND ueber den Unterbau.
+  //
+  // Ein Flaechenanteil sagt, WIE VIEL getragen wird -- nicht, WO das Fehlende liegt. Und genau
+  // darauf kommt es an: 30 % fehlende Auflage mitten unter der Kiste (zwei Paletten mit einer
+  // Luecke dazwischen) ist eine Bruecke und in Ordnung. Dieselben 30 % an EINER KANTE sind ein
+  // laengeres Packstueck, das ueber ein kuerzeres hinausragt und in der Luft endet. Das kippt,
+  // laesst sich nicht sichern, und niemand baut es so -- genau so gemeldet, mit Bild.
+  //
+  // Geprueft wird deshalb zusaetzlich der Umriss dessen, was traegt: keine Kante der neuen Kiste
+  // darf weiter als OVERHANG_MAX ueber die Huelle ihrer Traeger hinausstehen.
+  var OVERHANG_MAX = 0;
   var MANUAL_NUDGE = 10; // cm – Feinjustier-Schrittweite fuer eine ausgewaehlte, manuell platzierte Kiste
   var SNAP_TOL = 25; // cm – Fangradius fuer das Andocken an die Kante einer Nachbarkiste beim Platzieren
   // Stapel-Obergrenze eines Packstuecks in GESAMT-Lagen (wie hoch der eigene Turm werden darf):
@@ -973,11 +984,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return best;
   }
-  function supportRatio(px, pz, dx, dz, py, placed) {
-    if (py <= 1e-4) return 1; // steht auf dem Boden
+  // Beide Haelften der Abstuetz-Regel in EINEM Durchgang ueber die Kisten darunter: genug
+  // Auflageflaeche (SUPPORT_MIN) UND kein Ueberstand ueber den Umriss der Traeger (OVERHANG_MAX).
+  // Ein Durchgang, weil das hier die heisseste Schleife des Packers ist.
+  function supportOk(px, pz, dx, dz, py, placed) {
+    if (py <= 1e-4) return true; // steht auf dem Boden
     const base = dx * dz;
-    if (base <= 0) return 1;
-    let sup = 0;
+    if (base <= 0) return true;
+    let sup = 0, x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
     for (const b of placed) {
       if (Math.abs(b.y + b.dy - py) > 1e-3) continue; // nur direkt darunterliegende Oberkanten
       const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
@@ -985,9 +999,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const oz = Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z);
       if (oz <= 0) continue;
       sup += ox * oz;
-      if (sup >= base * 0.999) return 1;
+      if (b.x < x0) x0 = b.x;
+      if (b.x + b.dx > x1) x1 = b.x + b.dx;
+      if (b.z < z0) z0 = b.z;
+      if (b.z + b.dz > z1) z1 = b.z + b.dz;
     }
-    return sup / base;
+    if (sup < base * SUPPORT_MIN - 1e-6) return false;
+    const tol = OVERHANG_MAX + 1e-6;
+    return px >= x0 - tol && px + dx <= x1 + tol && pz >= z0 - tol && pz + dz <= z1 + tol;
   }
   // ── Manuelles Platzieren (Slice 2): reine Geometrie-Helfer, vom UI-State entkoppelt und
   // node-testbar. Nutzt dieselbe Abstuetz-Regel (SUPPORT_MIN) wie der Auto-Packer, damit eine
@@ -1018,7 +1037,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     const sorted = [...levels].sort((a, b) => a - b);
     for (const y of sorted) {
-      if (supportRatio(px, pz, dx, dz, y, placed) < SUPPORT_MIN - 1e-6) continue;
+      if (!supportOk(px, pz, dx, dz, y, placed)) continue;
       const cand = { x: px, y, z: pz, dx, dy, dz };
       if (placed.some((b) => boxesOverlap(cand, b))) continue;
       return y;
@@ -1161,7 +1180,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         for (const [dx, dy, dz] of emsOris(u)) {
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
             const px = S.x, py = S.y, pz = S.z;
-            if (py > 1e-4 && supportRatio(px, pz, dx, dz, py, placed) < SUPPORT_MIN) continue; // nicht genug Auflage -> nicht schweben lassen
+            if (py > 1e-4 && !supportOk(px, pz, dx, dz, py, placed)) continue; // nicht genug Auflage oder Ueberstand -> nicht schweben lassen
             // Stapel-Obergrenze. stackMax ist eine TRAGFAEHIGKEIT: "1x stapelbar" heisst,
             // dass auf dieses Stueck genau ein weiteres darf -- unabhaengig davon, WAS
             // daraufkommt und wie hoch es ueber dem Containerboden steht.
@@ -1772,6 +1791,83 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return { loaded: Math.max(0, total - offen), total };
     });
   }
+  // ── Stufe 2: das Gewicht ueber die Kette verteilen, OHNE einen Container mehr zu brauchen ──
+  //
+  // Stufe 1 (chainContainers/chainVehicles) fuellt gierig: der erste Container bekommt alles,
+  // was hineingeht, der letzte den Rest. Das beantwortet "wie viele brauche ich?" mit der
+  // kleinsten Zahl -- und liefert daneben eine Verteilung, die so niemand bucht: 26 t, 26 t,
+  // 15 t. Jeder Container wird einzeln gestellt, einzeln gewogen und einzeln gefahren; drei
+  // annaehernd gleich schwere sind an der Rampe das Gewuenschte.
+  //
+  // Beide Ziele zusammen gehen, weil es zwei STUFEN sind und nicht ein Ziel:
+  //   1. Stufe 1 bestimmt N -- die kleinste Zahl Container, die die Ladung aufnimmt.
+  //   2. Stufe 2 verteilt bei FESTEM N neu und wird nur uebernommen, wenn danach immer noch
+  //      alles in dieselben N Container passt. Der Ausgleich kann also nie einen Container
+  //      kosten; geht er nicht auf, bleibt die gierige Verteilung stehen.
+  //
+  // Das Werkzeug dafuer ist die Zuladung selbst: jeder Container wird mit einer KUENSTLICH
+  // gesenkten Zuladung gepackt (dem Zielgewicht), nur der letzte mit seiner echten. Der
+  // Packer laesst dann von sich aus schwere Stuecke fuer die naechsten Container liegen --
+  // es braucht keinen zweiten Algorithmus, nur eine andere Schranke.
+  //
+  // Ein Zielgewicht exakt auf dem Schnitt geht selten auf: das naechste Stueck passt immer
+  // knapp nicht mehr, und was vorne liegenbleibt, muss hinten zusaetzlich hinein. Deshalb
+  // ein paar Prozent Luft, in Stufen -- die erste Stufe, die aufgeht, gewinnt.
+  var AUSGLEICH_LUFT = [1, 1.08, 1.2, 1.45];
+  var AUSGLEICH_MAXSTK = 600; // darueber ist der zweite Durchgang die Rechenzeit nicht wert
+  function slotKg(placed, cargo) {
+    let kg = 0;
+    for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
+    return kg;
+  }
+  function ketteAusgleichen(chain, cargo) {
+    const N = chain.length;
+    if (N < 2 || N > MAXDRAW) return null;
+    const stueck = cargo.map((t) => Math.max(0, Math.floor(num(t.qty))));
+    const gesStk = stueck.reduce((a, b) => a + b, 0);
+    if (gesStk <= 0 || gesStk > AUSGLEICH_MAXSTK) return null;
+    const gesKg = cargo.reduce((a, t, i) => a + stueck[i] * Math.max(0, num(t.weight)), 0);
+    if (!(gesKg > 0)) return null; // ohne Gewichte gibt es nichts auszugleichen
+    const spanne = (k) => Math.max(...k) - Math.min(...k);
+    const istSpanne = spanne(chain.map((c) => slotKg(c.placed, cargo)));
+    if (istSpanne <= 1e-6) return null; // schon gleich verteilt
+    // Zuladung je Slot. Ohne Angabe (Custom ohne Gewichtsgrenze) zaehlt der Container mit dem
+    // Durchschnitt mit -- sonst zoege ein einziges Infinity die ganze Verteilung an sich.
+    const zul = chain.map((c) => num(c.preset && c.preset.payload) > 0 ? num(c.preset.payload) : 0);
+    const schnitt = zul.reduce((a, b) => a + b, 0) / N || 1;
+    for (let i = 0; i < N; i++) if (!zul[i]) zul[i] = schnitt;
+    const versuch = (f) => {
+      let rest = cargo.map((t, i) => ({ ...t, qty: stueck[i] }));
+      let restKg = gesKg, offen = gesStk;
+      let restPay = zul.reduce((a, b) => a + b, 0);
+      const neu = [];
+      for (let i = 0; i < N && offen > 0; i++) {
+        const p = chain[i].preset;
+        const voll = zul[i];
+        // Zielgewicht ANTEILIG ZUR ZULADUNG, nicht stur der Durchschnitt: bei gleichen
+        // Containern ist das dasselbe (der Normalfall), bei gemischten heisst "gleichmaessig
+        // verteilt" nicht "gleich viele Kilo", sondern "keiner prozentual voller als die
+        // anderen". Der letzte nimmt, was bleibt -- ohne ihn als Auffangbecken ginge die
+        // Rechnung am letzten Rundungsrest auf.
+        const ziel = i === N - 1 ? voll : Math.min(voll, restKg * (voll / restPay) * f);
+        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true });
+        neu.push({ ...chain[i], placed: rr.placed, res: rr });
+        rest = rest.map((t, k) => ({ ...t, qty: t.qty - (rr.perType[k] ? rr.perType[k].loaded : 0) }));
+        restKg -= rr.weight;
+        restPay -= voll;
+        offen -= rr.placed.length;
+      }
+      return offen <= 0 ? neu : null;
+    };
+    for (const f of AUSGLEICH_LUFT) {
+      const neu = versuch(f);
+      if (!neu) continue;
+      if (spanne(neu.map((c) => slotKg(c.placed, cargo))) >= istSpanne - 1e-6) return null; // kein Gewinn
+      const slot0 = neu[0].res;
+      return { chain: neu.map((c) => ({ name: c.name, preset: c.preset, placed: c.placed })), slot0 };
+    }
+    return null;
+  }
   function chainContainers(container0, preset0, cargo, slot0, overrides, MAXVIS, carrier) {
     // Auto-Folgecontainer nur aus Standard-Typen; Special Equipment nur per manueller Wahl.
     // Folgecontainer kommen von derselben Reederei wie der erste – eine Buchung, ein Equipment-Pool.
@@ -1807,6 +1903,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
     }
+    // Stufe 2: bei festem N das Gewicht ausgleichen. Nur wenn alles verladen ist (sonst waere
+    // die Frage nicht "wie verteile ich", sondern "was bleibt liegen") und nur bei einem
+    // gewoehnlichen Trockencontainer -- Special Equipment packt packKind, nicht packCargo.
+    if (totRem === 0 && chain.length > 1 && (container0.kind || "dry") === "dry") {
+      const bal = ketteAusgleichen(chain, cargo);
+      if (bal) return { chain: bal.chain, remainingBoxes: 0, perType: kettenBilanz(cargo, cargo.map(() => ({ qty: 0 }))), slot0: bal.slot0 };
+    }
     return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
@@ -1827,6 +1930,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       remaining = remaining.map((t, i) => ({ ...t, qty: t.qty - (rr.perType[i] ? rr.perType[i].loaded : 0) }));
       totRem = remaining.reduce((s, t) => s + t.qty, 0);
       slot++;
+    }
+    if (totRem === 0 && chain.length > 1) {
+      const bal = ketteAusgleichen(chain, cargo);
+      if (bal) return { chain: bal.chain, remainingBoxes: 0, perType: kettenBilanz(cargo, cargo.map(() => ({ qty: 0 }))), slot0: bal.slot0 };
     }
     return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
   }
@@ -4758,6 +4865,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           // Die Bilanz ueber ALLE Container des Plans. r.perType bleibt daneben stehen und
           // meint weiterhin den ersten - die Leiste weist ihn ausdruecklich als "C1" aus.
           r.perTypeAll = ch.perType;
+          // Hat der Gewichtsausgleich zugeschlagen, ist der ERSTE Container nicht mehr der,
+          // den packKind oben allein gerechnet hat -- er gibt jetzt Gewicht an die folgenden
+          // ab. Dann muessen die C1-Zahlen der Leiste mitwandern, sonst stehen zwei
+          // verschiedene Wahrheiten fuer denselben Container uebereinander (die Leiste sagt
+          // 17 Stueck, die Tabelle darunter 15). Alles Uebrige an r (Container-Volumen,
+          // Gesamtmenge, Dreh-Hinweise, Uebermass) haengt am Container und an der Ladung,
+          // nicht an der Verteilung, und bleibt deshalb stehen.
+          if (ch.slot0) {
+            r.placed = ch.slot0.placed;
+            r.perType = ch.slot0.perType;
+            r.usedVol = ch.slot0.usedVol;
+            r.util = ch.slot0.util;
+            r.weight = ch.slot0.weight;
+            r.boxes = ch.slot0.boxes;
+            r.layers = ch.slot0.layers;
+          }
         } else {
           r.chain = [{ name: preset, preset: container, placed: r.placed }];
           r.remainingBoxes = 0;

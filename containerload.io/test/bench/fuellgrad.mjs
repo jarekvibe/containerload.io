@@ -24,6 +24,13 @@
 //   vorher   {"szenarien":300,"verladen":15189,"volumen":5547.979,"mitEtagen":187,"ySumme":445170}
 //   nachher  {"szenarien":300,"verladen":15189,"volumen":5547.979,"mitEtagen":295,"ySumme":1107100}
 // Also: identischer Füllgrad, deutlich mehr gestapelte Bilder.
+//
+// Referenz (Stand: kein Überstand mehr über den Unterbau, OVERHANG_MAX = 0):
+//   vorher   {"szenarien":300,"verladen":15189,"volumen":5547.979,"mitEtagen":295,"ySumme":1107100}
+//   nachher  {"szenarien":300,"verladen":15127,"volumen":5529.496,"mitEtagen":295,"ySumme":1051180}
+// Also 62 Packstücke (0,4 %) und 18,5 m³ (0,3 %) weniger — BEWUSST bezahlt: die Packstücke,
+// die dabei wegfallen, standen vorher teilweise in der Luft. Volle Auflage statt "kein
+// Überstand" hätte 98 gekostet und auch die legitimen Brücken verboten. Siehe CLAUDE.md.
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

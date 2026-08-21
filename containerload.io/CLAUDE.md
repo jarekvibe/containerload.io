@@ -148,6 +148,42 @@ Im **gemischten Pfad** (`emsSearch`, ab zwei Typen) entscheidet die **Höhensumm
 
 **Wer an `emsSearch` oder `emsPackOnce` etwas ändert, misst vorher und nachher** — `node test/bench/fuellgrad.mjs app.html` über 300 deterministische Ladungen. Verladene Packstücke und belegtes Volumen dürfen **nicht sinken**; alles andere ist Geschmack. Für den Gleichstand-Entscheid oben lag beides auf die dritte Nachkommastelle identisch (15.189 Packstücke, 5.547,979 m³), während die Ladungen mit mehr als einer Etage von 187 auf 295 von 300 stiegen. Der Messstand liegt bewusst außerhalb von `test/`, weil die CI dort mit `node --test test/*.mjs` greift und 30 Sekunden nicht in jeden Pull Request gehören.
 
+### Kein Überstand: was oben liegt, muss unten auch stehen
+Gemeldet mit Bild: der Packer stellte **längere Packstücke auf kürzere**, sodass sie an einer Kante in der Luft endeten. Die Abstütz-Regel war bis dahin eine reine **Flächenregel** — 70 % der Grundfläche mussten getragen sein (`SUPPORT_MIN`).
+
+Ein Flächenanteil sagt aber nur, **wie viel** getragen wird, nicht **wo das Fehlende liegt.** Und genau daran hängt der Unterschied: 30 % Luft **mitten** unter der Kiste (zwei Paletten mit einer Lücke dazwischen) ist eine Brücke und in Ordnung. Dieselben 30 % an **einer Kante** sind ein Überhang — er kippt, er lässt sich nicht sichern, und niemand baut ihn so.
+
+Seitdem gelten beide Hälften nebeneinander, geprüft in **einem** Durchgang über die Kisten darunter (`supportOk` — das ist die heißeste Schleife des Packers):
+- **`SUPPORT_MIN` = 0,7** — Mindestanteil der getragenen Grundfläche, unverändert.
+- **`OVERHANG_MAX` = 0 cm** — keine Kante darf über den **Umriss ihrer Träger** hinausstehen.
+
+`supportRatio` gibt es nicht mehr; Auto-Packer (`emsPackOnce`) und manueller Pfad (`dropHeight`) fragen dieselbe Funktion. Die Zeile `var SUPPORT_MIN = 0.7;` bleibt **wörtlich so stehen** — fünf Test-Slices schneiden an ihr.
+
+**Was es gekostet hat, und zwar bewusst:** über die 300 Ladungen des Messstands **62 von 15.189 Packstücken (0,4 %)** und **18,5 von 5.548 m³ (0,3 %)**. Das Regelwerk unten sagt, der Füllgrad dürfe nicht sinken — hier sinkt er absichtlich, weil die vorher gezählten Packstücke teilweise in der Luft standen. Volle Auflage (100 % statt „kein Überstand") hätte doppelt so viel gekostet (98 Packstücke) und dabei auch die legitimen Brücken verboten. Neuer Messstand:
+
+```
+{"szenarien":300,"verladen":15127,"volumen":5529.496,"mitEtagen":295,"ySumme":1051180}
+```
+
+`test/ueberhang.test.mjs` prüft gegen **null**, nicht gegen `OVERHANG_MAX` — sonst wüchse der Test stillschweigend mit, wenn jemand die Grenze wieder aufmacht.
+
+### Zwei Ziele, zwei Stufen: wenige Container **und** gleiches Gewicht
+„Verteil das Gewicht auf alle drei Container, aber brauch trotzdem so wenige wie möglich." Das klingt nach einem Zielkonflikt und ist keiner — es sind **zwei Stufen**:
+
+1. **Stufe 1** (`chainContainers` / `chainVehicles`, unverändert) füllt gierig und bestimmt damit **N**, die kleinste Zahl Container, die die Ladung aufnimmt.
+2. **Stufe 2** (`ketteAusgleichen`) verteilt bei **festem N** neu — und wird nur übernommen, wenn danach **immer noch alles in dieselben N Container passt.** Der Ausgleich kann also nie einen Container kosten; geht er nicht auf, bleibt die gierige Verteilung stehen.
+
+Das Werkzeug dafür ist kein zweiter Algorithmus, sondern **eine andere Schranke**: jeder Container wird mit einer künstlich gesenkten Zuladung gepackt (dem Zielgewicht), nur der letzte mit seiner echten. Der Packer lässt dann von sich aus schwere Stücke für die nächsten liegen.
+
+- **Das Zielgewicht ist anteilig zur Zuladung**, nicht stur der Durchschnitt. Bei gleichen Containern ist das dasselbe (der Normalfall); bei gemischten heißt „gleichmäßig verteilt" nicht „gleich viele Kilo", sondern „keiner prozentual voller als die anderen".
+- **Ein Zielgewicht exakt auf dem Schnitt geht selten auf** — das nächste Stück passt immer knapp nicht mehr, und was vorne liegenbleibt, muss hinten zusätzlich hinein. Deshalb `AUSGLEICH_LUFT = [1, 1.08, 1.2, 1.45]`: die erste Stufe, die aufgeht **und die Spanne verkleinert**, gewinnt. Jede Stufe ist ein kompletter zweiter Packlauf über die ganze Kette — deshalb sind es vier und nicht zwanzig.
+- **Gedeckelt** auf `AUSGLEICH_MAXSTK = 600` Packstücke und `MAXDRAW` Container. Gemessen: die gemeldete Sendung 84 → 142 ms, der schlimmste gedeckelte Fall (600 Kisten auf 8 Containern) 281 → 647 ms.
+- **Special Equipment bleibt außen vor.** Open Top und Flat Rack packt `packKind`, nicht `packCargo`; ein zweiter Durchgang über `packCargo` ließe die Übermaß-Stücke stillschweigend fallen.
+
+Bei der gemeldeten Sendung: **26.430 / 24.613 / 16.729 kg → 22.187 / 22.577 / 23.008 kg.**
+
+**Die Falle dabei:** der erste Container ist danach **nicht mehr der**, den `packKind` oben allein gerechnet hat — er gibt Gewicht ab. Die Kette liefert deshalb `slot0` zurück, und der Effekt in `app.html` **muss es in `r` übernehmen** (`placed`, `perType`, `usedVol`, `util`, `weight`, `boxes`, `layers`). Ohne das sagt die Leiste „15 / 37" und die Tabelle direkt darunter etwas anderes — zwei Wahrheiten für denselben Container. `test/kennzahlen-je-container.test.mjs` prüft beides: die Zahlen **und** dass der Effekt die Übernahme überhaupt vornimmt.
+
 ### Karton auf Palette (Vorstufe)
 `palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
 

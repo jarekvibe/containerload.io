@@ -89,12 +89,33 @@ test("kein Container ist voller als er gross ist", () => {
 
 test("die erste Zeile ist genau das, was die Leiste als C1 zeigt", () => {
   // Sonst stuenden zwei verschiedene Zahlen fuer denselben Container uebereinander.
-  const c0 = PRESETS["40' HC"];
-  const r0 = packCargo(c0, cargo, {}, false);
-  const z0 = jeContainer(chainContainers(c0, "40' HC", cargo, r0, {}, 24).chain)[0];
-  assert.strictEqual(z0.stueck, r0.boxes, `Tabelle ${z0.stueck} vs. Leiste ${r0.boxes}`);
-  assert.ok(Math.abs(z0.vol - r0.usedVol) < 1e-6, `Volumen ${z0.vol} vs. ${r0.usedVol}`);
-  assert.ok(Math.abs(z0.kg - r0.weight) < 0.5, `Gewicht ${z0.kg} vs. ${r0.weight}`);
+  //
+  // Seit dem Gewichtsausgleich ist der erste Container NICHT mehr der, den packCargo allein
+  // gerechnet hat -- er gibt Gewicht an die folgenden ab. Genau deshalb liefert die Kette
+  // slot0 zurueck, und genau deshalb uebernimmt die Oberflaeche es in r (siehe den Effekt in
+  // app.html). Der Test macht denselben Schritt: ohne ihn zeigt die Leiste 17 Stueck und die
+  // Tabelle darunter 15.
+  for (const preset of ["40' HC", "20' GP", "45' HC"]) {
+    const c0 = PRESETS[preset];
+    const r0 = packCargo(c0, cargo, {}, false);
+    const ch = chainContainers(c0, preset, cargo, r0, {}, 24);
+    const leiste = ch.slot0 || r0;
+    const z0 = jeContainer(ch.chain)[0];
+    assert.strictEqual(z0.stueck, leiste.boxes, `${preset}: Tabelle ${z0.stueck} vs. Leiste ${leiste.boxes}`);
+    assert.ok(Math.abs(z0.vol - leiste.usedVol) < 1e-6, `${preset}: Volumen ${z0.vol} vs. ${leiste.usedVol}`);
+    assert.ok(Math.abs(z0.kg - leiste.weight) < 0.5, `${preset}: Gewicht ${z0.kg} vs. ${leiste.weight}`);
+  }
+});
+
+test("die Oberflaeche uebernimmt slot0 auch wirklich", () => {
+  // Die Kette kann den ersten Container neu packen -- wenn der Effekt das Ergebnis nicht in r
+  // uebernimmt, merkt es niemand ausser dem Kunden, der zwei Zahlen sieht.
+  const eff = roh.slice(roh.indexOf("r.perTypeAll = ch.perType;"));
+  const block = eff.slice(0, eff.indexOf("setResult(r)"));
+  assert.ok(/if \(ch\.slot0\)/.test(block), "der Effekt fragt ch.slot0 gar nicht ab");
+  for (const feld of ["placed", "perType", "usedVol", "util", "weight", "boxes", "layers"]) {
+    assert.ok(block.includes(`r.${feld} = ch.slot0.${feld}`), `r.${feld} wird beim Ausgleich nicht mitgezogen`);
+  }
 });
 
 // ── Was die Oberflaeche daraus macht ────────────────────────────────────────
