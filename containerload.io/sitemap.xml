@@ -3,7 +3,10 @@
      muss JEDE Sprachfassung eine eigene <url> bekommen, und jede davon muss die
      VOLLSTAENDIGE Liste der Alternativen nennen - auch sich selbst. Sonst wertet
      Google die Verknuepfung nicht.
-     Die Ratgeber-Seiten sind deutschsprachige Texte und haben keine Uebersetzung. -->
+     Das Container-Wissen gibt es seit August 2026 ebenfalls in zwei Fassungen:
+     /ratgeber/<deutscher-slug> und /en/guide/<englischer-slug>. Die deutschen
+     Adressen sind indexiert und bleiben unveraendert; die englischen sind eigene
+     Seiten, keine Parameter-Variante. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
         xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
@@ -34,14 +37,162 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/app"/>
     <changefreq>weekly</changefreq><priority>0.7</priority>
   </url>
-  <url><loc>https://containerload.io/ratgeber/</loc><changefreq>monthly</changefreq><priority>0.6</priority></url>
-  <url><loc>https://containerload.io/ratgeber/europaletten-40-fuss-container</loc><lastmod>2026-07-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/europaletten-20-fuss-container</loc><lastmod>2026-07-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/industriepaletten-container</loc><lastmod>2026-07-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel</loc><lastmod>2026-07-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/container-masse-innenmasse</loc><lastmod>2026-07-09</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/container-volumen-cbm</loc><lastmod>2026-07-27</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/container-zuladung-gewicht</loc><lastmod>2026-07-27</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/gitterboxen-container</loc><lastmod>2026-07-27</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
-  <url><loc>https://containerload.io/ratgeber/cbm-berechnen</loc><lastmod>2026-07-27</lastmod><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url>
+    <loc>https://containerload.io/ratgeber/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/"/>
+    <changefreq>monthly</changefreq><priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/"/>
+    <changefreq>monthly</changefreq><priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/europaletten-40-fuss-container</loc>
+    <lastmod>2026-07-09</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/europaletten-40-fuss-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/euro-pallets-40ft-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/europaletten-40-fuss-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/euro-pallets-40ft-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/europaletten-40-fuss-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/euro-pallets-40ft-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/europaletten-40-fuss-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/europaletten-20-fuss-container</loc>
+    <lastmod>2026-07-09</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/europaletten-20-fuss-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/euro-pallets-20ft-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/europaletten-20-fuss-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/euro-pallets-20ft-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/europaletten-20-fuss-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/euro-pallets-20ft-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/europaletten-20-fuss-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/industriepaletten-container</loc>
+    <lastmod>2026-07-09</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/industriepaletten-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/industrial-pallets-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/industriepaletten-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/industrial-pallets-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/industriepaletten-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/industrial-pallets-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/industriepaletten-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel</loc>
+    <lastmod>2026-07-09</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/truck-trailer-load-calculation"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/truck-trailer-load-calculation</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/truck-trailer-load-calculation"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/container-masse-innenmasse</loc>
+    <lastmod>2026-07-09</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-masse-innenmasse"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-internal-dimensions"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-masse-innenmasse"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-internal-dimensions</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-masse-innenmasse"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-internal-dimensions"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-masse-innenmasse"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/container-volumen-cbm</loc>
+    <lastmod>2026-07-27</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-volume-cbm"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-volume-cbm</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-volume-cbm"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/container-zuladung-gewicht</loc>
+    <lastmod>2026-07-27</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-payload-weight"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-payload-weight</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-payload-weight"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/gitterboxen-container</loc>
+    <lastmod>2026-07-27</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/gitterboxen-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/wire-mesh-pallets-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/gitterboxen-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/wire-mesh-pallets-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/gitterboxen-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/wire-mesh-pallets-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/gitterboxen-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/cbm-berechnen</loc>
+    <lastmod>2026-07-27</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/how-to-calculate-cbm</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
 </urlset>

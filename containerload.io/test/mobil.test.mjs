@@ -34,13 +34,28 @@ test("die Hero-Buehne gibt ihre Mindesthoehe auf schmalen Schirmen auf", () => {
 test("jede Tabelle im Container-Wissen scrollt in ihrem eigenen Kasten", () => {
   const css = lies("ratgeber", "wissen.css");
   assert.match(css, /\.tabelle\{[^}]*overflow-x:\s*auto/, "wissen.css kennt keinen scrollenden Tabellenkasten");
-  const seiten = fs.readdirSync(path.join(dir, "..", "ratgeber")).filter((f) => f.endsWith(".html"));
-  for (const f of seiten) {
-    const s = lies("ratgeber", f);
-    const tabellen = (s.match(/<table>/g) || []).length;
-    const umschlossen = (s.match(/<div class="tabelle"><table>/g) || []).length;
-    assert.strictEqual(umschlossen, tabellen, `${f}: ${tabellen} Tabellen, davon ${umschlossen} im Kasten`);
+  // Beide Sprachbaeume, nicht nur der deutsche: die englischen Seiten tragen dieselben
+  // Tabellen und haetten dieselbe Falle.
+  for (const ordner of [["ratgeber"], ["en", "guide"]]) {
+    for (const f of fs.readdirSync(path.join(dir, "..", ...ordner)).filter((x) => x.endsWith(".html"))) {
+      const s = lies(...ordner, f);
+      const tabellen = (s.match(/<table>/g) || []).length;
+      const umschlossen = (s.match(/<div class="tabelle"><table>/g) || []).length;
+      assert.strictEqual(umschlossen, tabellen, `${ordner.join("/")}/${f}: ${tabellen} Tabellen, davon ${umschlossen} im Kasten`);
+    }
   }
+});
+
+test("die Kopfzeile des Container-Wissens bricht auf dem Telefon um", () => {
+  // Mit dem Sprachumschalter stehen dort drei Gruppen nebeneinander. Gemessen bei 390 px:
+  // 431 px Inhalt — die Seite liess sich seitlich schieben. Die Schaltflaeche geht deshalb
+  // unter 560 px in eine eigene, volle Zeile.
+  const css = lies("ratgeber", "wissen.css");
+  const eng = css.slice(css.indexOf("@media(max-width:560px)"));
+  assert.ok(eng.length > 50, "wissen.css hat keine Regel fuer schmale Schirme");
+  const block = eng.slice(0, eng.indexOf("}", eng.indexOf("}") + 1) + 200);
+  assert.match(block, /\.nav-in\{[^}]*flex-wrap:\s*wrap/, "die Kopfzeile darf auf dem Telefon nicht umbrechen");
+  assert.match(block, /\.nav-in>\.btn\{[^}]*flex:\s*1 1 100%/, "die Schaltflaeche bekommt keine eigene Zeile");
 });
 
 test("die Kopfzeile des Rechners darf auf dem Telefon umbrechen", () => {

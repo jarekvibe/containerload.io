@@ -235,6 +235,33 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Der Container Guide (`/en/guide/`) — das Container-Wissen auf Englisch
+Aus der Search Console: **36 % der Impressionen kommen von außerhalb Deutschlands** (NL, UK, US, IN, PT, NO, CH), und die **meistgesehene Suchanfrage überhaupt** war niederländisch („hoeveel europallets in een 40ft container"). Für all das gab es neun deutsche Seiten und sonst nichts.
+
+**Eigene Adressen, nicht `?lang=en`.** Es sind eigene Seiten mit eigenen Titeln, und der Titel *ist* die gesuchte Frage („How many euro pallets fit in a 40ft container?"). Verknüpft werden die beiden Fassungen über **hreflang**, nicht über den Pfad:
+
+| | |
+|---|---|
+| Deutsch | `/ratgeber/<deutscher-slug>` — **unverändert**, die Adressen sind indexiert |
+| Englisch | `/en/guide/<englischer-slug>` |
+| Verknüpfung | `hreflang` **in beide Richtungen** plus `x-default` → Deutsch, auf jeder Seite und in der Sitemap |
+
+Fünf Dinge, die dabei nicht kippen dürfen — `test/container-guide-en.test.mjs` hält jedes einzelne fest:
+
+- **Die Paarigkeit.** Jede deutsche Seite hat genau eine englische und umgekehrt. Der Test schreibt die Paarliste **nicht ab**, sondern liest sie aus den `hreflang`-Angaben der Seiten selbst.
+- **hreflang zeigt in beide Richtungen.** Eine Übersetzung, die nur von einer Seite aus verlinkt ist, wertet Google nicht — sie muss sich gegenseitig nennen, und jede Fassung muss die **volle** Liste tragen, auch sich selbst.
+- **Eine Gestaltung für beide Bäume.** Die englischen Seiten laden dieselbe `/ratgeber/wissen.css`. Der Pfad heißt weiter `/ratgeber/`, weil die Datei dort liegt; eine Kopie unter `/en/` wäre genau die zweite Fassung, die wegdriftet — dieselbe Geschichte wie oben.
+- **Dieselben Zahlen.** `test/wissen-zahlen.test.mjs` rechnet die englischen Seiten mit demselben `makeFloorPacker` nach, und zusätzlich die **Beispielmenge im `?q=`-Link**: stünde dort eine andere Zahl, widerlegte der Rechner den Text in dem Moment, in dem jemand draufklickt.
+- **Kein englischer Link zeigt in den deutschen Baum** (außer dem Sprachumschalter, der gemeinsamen CSS-Datei und den Rechtsseiten, die es nur auf Deutsch gibt), und jeder Rechner-Link trägt `lang=en`.
+
+**Der Sprachumschalter zeigt auf die Übersetzung DIESER Seite**, nicht auf die Startseite: wer die Frage auf Deutsch liest, will sie auf Englisch lesen und nicht von vorn anfangen. Er steht als `.lang`-Gruppe in der Kopfzeile — aktiv wird über die Fläche markiert, nicht über einen Rahmen, wie beim Umschalter im Rechner.
+
+**Die Startseite hängt ihre Wissens-Links mit um.** Sie schaltet die Sprache ohne Neuladen; die Kartenlinks zeigen aber auf feste Adressen. Die Zuordnung steht als `GUIDE`-Tabelle in `index.html` neben `appHref` — derselbe Mechanismus, der `/app` zu `/app?lang=en` macht. Ohne sie schickt die englische Startseite ihre Besucher auf deutsche Seiten. Der englische Satz „These reference pages are written in German" ist damit auch weg — er stimmte nicht mehr.
+
+**Die Kopfzeile bricht auf dem Telefon um.** Mit dem Umschalter stehen dort drei Gruppen nebeneinander; gemessen bei 390 px waren es **431 px Inhalt**, und die Seite ließ sich seitlich schieben — genau der Fehler, den `test/mobil.test.mjs` schon einmal eingefangen hat. Unter 560 px bekommt die Schaltfläche deshalb eine eigene, volle Zeile.
+
+**Slugs sind übersetzt, nicht transkribiert:** `euro-pallets-40ft-container`, `wire-mesh-pallets-container`, `how-to-calculate-cbm`. Gesucht wird auf Englisch nach „40ft", nicht nach „40-fuss".
+
 ### Der Entwurf, das Rückgängig und der leere Start
 **Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.
 
