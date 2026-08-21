@@ -133,7 +133,7 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/container-volumen-cbm</loc>
-    <lastmod>2026-07-27</lastmod>
+    <lastmod>2026-08-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-volume-cbm"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-volumen-cbm"/>
@@ -149,7 +149,7 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/container-zuladung-gewicht</loc>
-    <lastmod>2026-07-27</lastmod>
+    <lastmod>2026-08-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-payload-weight"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-zuladung-gewicht"/>
@@ -165,7 +165,7 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/gitterboxen-container</loc>
-    <lastmod>2026-07-27</lastmod>
+    <lastmod>2026-08-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/gitterboxen-container"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/wire-mesh-pallets-container"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/gitterboxen-container"/>
@@ -193,6 +193,38 @@
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/stellplaetze-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stellplaetze-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-floor-positions"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stellplaetze-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-floor-positions</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stellplaetze-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-floor-positions"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stellplaetze-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/stauplan-container</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-stowage-plan"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-stowage-plan</loc>
+    <lastmod>2026-08-21</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-stowage-plan"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
 </urlset>

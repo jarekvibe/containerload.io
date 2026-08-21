@@ -235,6 +235,32 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Die vertieften Seiten und die zwei neuen (August 2026)
+Aus der Search Console: 1.106 Impressionen in 28 Tagen bei **Ø-Position 35,8**. Das Problem war nicht die CTR — auf Seite 4 ist 1 % normal —, sondern die Rankings, und die hingen an zwei Dingen: **elf Seiten insgesamt**, und die drei meistgesehenen davon waren **163 bis 250 Wörter** lang.
+
+**Vertieft wurden die drei mit den meisten Impressionen** (Container-Volumen 313, Zuladung 151, Gitterboxen 117) auf 680–800 Wörter. Nicht mit Füllmaterial, sondern mit Rechnungen, die man sonst selbst anstellen müsste:
+
+- **Volumen:** die Herleitung aus den Innenmaßen, der Unterschied zu den Außenmaßen (38 m³ außen gegen 33 innen), und die High-Cube-Tabelle — 13 % mehr Volumen heißen bei 110 cm Bauhöhe **null** zusätzliche Paletten, bei 130 cm die doppelte Ladung. Es passen nur ganze Lagen hinein.
+- **Zuladung:** Zuladung als **Differenz** (Brutto − Tara) statt als gegebene Zahl, die 40-/44-t-Grenze auf der Straße (ohne KV-Ausnahme ist die Straße mit ~24 t die schärfere Grenze, nicht der Container) und **VGM** nach SOLAS Kapitel VI Regel 2.
+- **Gitterboxen:** Normmaße und Tara, warum im Container trotz 4.000 kg Stapellast **nur zwei Lagen** gehen (3 × 97 cm = 291 cm > 270 cm), und dass bei voll beladenen Boxen im 40-Fuß schon nach **24 statt 46** Schluss ist. Dazu der Abschnitt „Gitterbox, Gittercontainer, Gitterpalette — dasselbe?": die Suchanfrage *gittercontainer* (21 Impressionen) bekommt **keine eigene Seite**, sondern einen Synonym-Abschnitt. Zwei fast gleiche Seiten konkurrieren im Suchergebnis miteinander.
+
+**Zwei neue Seiten**, beide aus sichtbaren Suchanfragen entstanden:
+
+| Seite | Suchanfrage | Was sie kann |
+|---|---|---|
+| `/ratgeber/stellplaetze-container` · `/en/guide/container-floor-positions` | „stellplätze 20 fuss container" (21) | Alle Palettenarten in **einer** Tabelle, statt fünf Einzelseiten zu vergleichen. Kern: die **117,5 cm** (halbe Innenbreite) und der Dreh-Gewinn 8 → 11 |
+| `/ratgeber/stauplan-container` · `/en/guide/container-stowage-plan` | „stauplan container" (20) | Die Seite, die das Werkzeug selbst beschreibt — was in einen Stauplan gehört, in vier Schritten dahin, und was er **nicht** ist (keine Ladungssicherungsplanung) |
+
+**Die Startseite behält ihre SECHS Kacheln.** Das Raster ist `sm:grid-cols-2 lg:grid-cols-3`; nur ein Vielfaches von sechs geht in **beiden** Fällen in ganzen Reihen auf. Verlinkt werden die neuen Seiten stattdessen aus der Übersicht und aus den „Verwandte Fragen"-Blöcken der bestehenden Seiten.
+
+**`test/wissen-vertiefung.test.mjs` liest die neuen Tabellen aus dem HTML und rechnet sie nach** — Zelle für Zelle, in beiden Sprachen:
+- Jede Stellplatzzahl gegen `makeFloorPacker`, auch der Dreh-Vergleich (mit und ohne erlaubte 90°-Drehung).
+- **Brutto − Tara = die Zuladung aus `PRESETS`.** Die Tabelle erklärt die Zuladung als Differenz; wenn die drei Zahlen nicht aufgehen, widerlegt sie sich selbst.
+- Die Gitterbox-Lagen und das Gewichtslimit gegen `packCargo` mit demselben Stückgewicht.
+- Die High-Cube-Lagentabelle als Division mit den Innenhöhen aus `PRESETS` — inklusive der Zusicherung, dass bei 110 cm **wirklich** kein Gewinn entsteht.
+
+Beim Schreiben selbst widerlegt: „drei Europaletten quer nebeneinander" sind 240 cm und passen nicht in 235. Die richtige Aussage ist der **Wechsel** — eine längs, eine quer, 200 cm, 35 cm Rest. Genau daher kommen die 11 statt 8. Wer hier einen Satz ergänzt, rechnet ihn vorher nach; das ist auf diesen Seiten keine Formalie, sondern der Grund, warum ihnen jemand glaubt.
+
 ### Der Container Guide (`/en/guide/`) — das Container-Wissen auf Englisch
 Aus der Search Console: **36 % der Impressionen kommen von außerhalb Deutschlands** (NL, UK, US, IN, PT, NO, CH), und die **meistgesehene Suchanfrage überhaupt** war niederländisch („hoeveel europallets in een 40ft container"). Für all das gab es neun deutsche Seiten und sonst nichts.
 
