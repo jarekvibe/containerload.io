@@ -184,6 +184,46 @@ Bei der gemeldeten Sendung: **26.430 / 24.613 / 16.729 kg → 22.187 / 22.577 / 
 
 **Die Falle dabei:** der erste Container ist danach **nicht mehr der**, den `packKind` oben allein gerechnet hat — er gibt Gewicht ab. Die Kette liefert deshalb `slot0` zurück, und der Effekt in `app.html` **muss es in `r` übernehmen** (`placed`, `perType`, `usedVol`, `util`, `weight`, `boxes`, `layers`). Ohne das sagt die Leiste „15 / 37" und die Tabelle direkt darunter etwas anderes — zwei Wahrheiten für denselben Container. `test/kennzahlen-je-container.test.mjs` prüft beides: die Zahlen **und** dass der Effekt die Übernahme überhaupt vornimmt.
 
+### Gleiche Ware in denselben Container — und Gewicht nur, wo es bindet
+Gemeldet, mit Bild: **8 große Packstücke** (600 × 220 × 100 cm) und **22 Europaletten**, je 300 kg. Heraus kamen drei 40-Fuß-Container mit je einem Gemisch aus beidem. Der Nutzer sah sofort, was richtig gewesen wäre — die acht großen Stücke in zwei 40-Füßer, die 22 Paletten in einen 20-Füßer — und der Rechner nicht.
+
+Dahinter lagen **zwei unabhängige Fehler**, beide im selben Bild sichtbar.
+
+**Fehler 1: der Gewichtsausgleich lief, wo Gewicht nichts entscheidet.** 30 × 300 kg sind 9 t auf drei Containern mit je 26,6 t Zuladung — **elf Prozent**. Trotzdem hat der Ausgleich (siehe oben) die Ladung auf 10/10/10 Stück umverteilt und damit jede sinnvolle Aufteilung zerlegt. Er tat genau das, was ihm gesagt wurde; gesagt war das Falsche.
+
+`AUSGLEICH_AB = 0.6` — der Ausgleich greift erst, wenn **ein Container über 60 % seiner Zuladung** liegt. Bei der ursprünglich gemeldeten 37-Paletten-Sendung waren es 99 %; dort greift er weiterhin. Wo Gewicht nichts entscheidet, darf es auch nichts entscheiden.
+
+**Fehler 2: gierig ist lokal optimal und global schlechter.** Die Kette packte in den ersten Container 22 Paletten **und** 2 der großen Stücke — weil das dort die meisten Stücke sind (24 statt 22). Die übrigen 6 großen Stücke brauchten danach **zwei weitere 40-Füßer**, den letzten für ganze zwei Stück.
+
+Der Ausweg ist nicht, gierig abzuschaffen, sondern **eine zweite Kette danebenzustellen**:
+
+| | |
+|---|---|
+| Kette A | gierig, alle Sorten gleichzeitig — wie bisher |
+| Kette B | **sortenrein**: angeboten wird nur der Anfang der Sortenliste, bis einschließlich der ersten Sorte, die nicht mehr vollständig hineingeht (`packSortenrein`). Reihenfolge: größtes Stück zuerst (`sortenReihenfolge`) |
+
+`ketteBesser(a, b)` entscheidet, in dieser Reihenfolge:
+1. **was liegenbleibt** — eine Kette, die Ladung stehen lässt, gewinnt nie;
+2. **Zahl der Container** — die Frage, mit der der Nutzer da ist;
+3. **gebuchtes Containervolumen** — bei drei Containern ist 2× 40′ + 1× 20′ billiger als 3× 40′. Das ist der Unterschied, um den es ging, und es ist Geld;
+4. **Sortenstreuung** — nur der Gleichstand-Entscheid, **nie** ein Grund für einen Container mehr.
+
+Ergebnis für die gemeldete Ladung: **2× 40′ HC mit je 4 großen Stücken + 1× 20′ GP mit 22 Paletten.**
+
+**Dieselbe Rangfolge gilt für die Empfehlung.** `suggestContainer` rechnet unabhängig von der Kette und hatte denselben Greedy-Fehler: Es empfahl „2× 40′ HC + 1× 40′ GP", während die Kette darunter einen 20-Füßer buchte. Zwei widersprüchliche Zahlen nebeneinander sind schlimmer als eine ungenaue — `test/kette-sortenrein.test.mjs` rechnet beide gegeneinander.
+
+**Vier Wächter, damit der zweite Durchgang nicht zum Zeitfresser wird** — er kostet je Slot einen weiteren Packlauf, und die sortenreine Kette hat oft mehr Slots:
+- nur bei **mehr als einer** Sorte und höchstens `SORTENREIN_MAX = 12` (bei 37 einzeln erfassten Paletten wäre jede Sorte ein Stück — da gibt es nichts zu trennen);
+- nur, wenn die gierige Kette **vor dem letzten Container** überhaupt einen gemischten trägt (sonst ist nichts zu verbessern);
+- nur bis `MAXDRAW` Container — darüber zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese Ketten sind die teuren;
+- nur beim gewöhnlichen Trockencontainer (Special Equipment packt `packKind`).
+
+Der **Probelauf in `packSortenrein` ist reine Diagnose** und läuft deshalb `quick` (ohne Restarts); für den ersten Container wird der ohnehin gerechnete `slot0` durchgereicht. Ohne diese beiden Kniffe kostete der Umbau das Dreifache der Rechenzeit.
+
+Gemessen über 200 zufällige Ketten: **kein einziger Fall braucht mehr Container oder lässt mehr liegen**, die Sortenstreuung sinkt von 2.456 auf 2.413, die Rechenzeit steigt um 9 % (18,2 → 19,9 s; schlimmster Einzelfall 467 → 720 ms). Der Füllgrad-Messstand ist unverändert — `packCargo` selbst wurde nicht angefasst.
+
+> **Die Falle, die fünf Testdateien auf einmal umgeworfen hat:** Beim Umbau wurde aus `return { chain, remainingBoxes: … }` ein `const out = { … }; return out;`. Fünf Test-Slices schneiden das Ende von `chainContainers` an genau dieser Zeichenkette ab — sie liefen ins Leere, und die halbe Kette war nicht mehr getestet. Die Zeile beginnt jetzt in **beiden** Ketten-Funktionen wieder wörtlich mit `return { chain, remainingBoxes`, mit einem Kommentar darüber.
+
 ### Karton auf Palette (Vorstufe)
 `palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
 
