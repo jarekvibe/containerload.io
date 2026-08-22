@@ -116,5 +116,76 @@ test("die Datenschutzseite sagt, was gezaehlt wird und was der Rueckkanal tut", 
   assert.match(ds, /anonyme Ereignisse/, "die Ereigniszaehlung ist nicht erwaehnt");
   assert.match(ds, /ausschließlich der Name des Ereignisses/, "es steht nicht da, dass nur der Name uebertragen wird");
   assert.match(ds, /Problem melden/, "der Rueckkanal ist nicht erwaehnt");
-  assert.match(ds, /nichts automatisch übertragen/, "es steht nicht da, dass von selbst nichts hinausgeht");
+  assert.match(ds, /nichts übertragen, solange du nicht auf „Absenden“ drückst/,
+    "es steht nicht da, dass ohne Absenden nichts hinausgeht");
+  assert.match(ds, /Ladung mitschicken/, "das abwaehlbare Kaestchen ist nicht erklaert");
+  assert.match(ds, /Netlify/, "der Empfaenger der Formulardaten ist nicht genannt");
+  // Der wichtigste Satz der Seite darf nicht mehr pauschal behaupten, es gehe NIE etwas
+  // hinaus -- seit dem Formular gibt es eine Ausnahme, und die muss dort stehen.
+  assert.match(ds, /von selbst nicht an einen Server gesendet/,
+    "das Versprechen in Abschnitt 2 ist nicht auf das automatische Verhalten eingegrenzt");
+  assert.match(ds, /containerload\.feedback\.v1|Hat der Plan gepasst/,
+    "der neue Speicher-Schluessel ist nicht erwaehnt");
+});
+
+// ── Das Formular ────────────────────────────────────────────────────────────
+//
+// Es laeuft OHNE Server: Netlify erkennt beim Deploy ein statisches <form
+// data-netlify="true"> im ausgelieferten HTML und nimmt dafuer POSTs entgegen. Der sichtbare
+// Dialog kommt aus React und schickt dieselben Felder per fetch dorthin.
+//
+// Genau daran haengt aber eine Falle: stimmen die Feldnamen im versteckten Formular nicht mit
+// denen im Dialog ueberein, verwirft Netlify die Eingabe still. Es gibt keine Fehlermeldung,
+// der Absender sieht "Danke", und die Rueckmeldung ist weg. Deshalb werden beide Listen hier
+// gegeneinander geprueft.
+
+const formular = schnitt('<form name="feedback"', "</form>");
+const dialogSenden = schnitt("const senden = async () => {", "const feld = {");
+
+test("es gibt ein statisches Formular, an dem Netlify die Adresse erkennt", () => {
+  assert.match(formular, /data-netlify="true"/, "ohne data-netlify nimmt Netlify keine POSTs an");
+  assert.match(formular, /netlify-honeypot="bot-field"/, "kein Spam-Schutz");
+  assert.match(formular, /name="form-name" value="feedback"/, "der Formularname fehlt im Rumpf");
+  assert.ok(/\shidden(\s|>)/.test(formular), "das Formular ist nicht versteckt und wuerde im Rechner auftauchen");
+});
+
+test("die Feldnamen im Dialog und im Formular stimmen ueberein", () => {
+  const imFormular = [...formular.matchAll(/name="([^"]+)"/g)].map((m) => m[1])
+    .filter((n) => n !== "feedback" && n !== "bot-field").sort();
+  const imDialog = [...dialogSenden.matchAll(/^\s*"?([a-zA-Z-]+)"?:/gm)].map((m) => m[1]).sort();
+  assert.deepStrictEqual(imDialog, imFormular,
+    `Dialog schickt [${imDialog}], das Formular kennt [${imFormular}] — Netlify wuerde die Abweichung still verwerfen`);
+});
+
+test("gesendet wird als Formular, nicht als JSON", () => {
+  // Netlify Forms nimmt urlencoded (oder multipart) entgegen. JSON wird stillschweigend
+  // verworfen -- wieder ohne Fehlermeldung.
+  assert.match(dialogSenden, /"Content-Type": "application\/x-www-form-urlencoded"/, "falscher Inhaltstyp");
+  assert.match(dialogSenden, /new URLSearchParams\(daten\)/, "der Rumpf ist nicht urlencodiert");
+  assert.match(dialogSenden, /if \(!r\.ok\) throw/, "ein abgelehnter POST wird als Erfolg gewertet");
+});
+
+test("die Ladung geht nur mit, wenn das Kaestchen steht", () => {
+  assert.match(dialogSenden, /plan: mitPlan \? kontext\.plan : ""/,
+    "der Plan wird unabhaengig vom Kaestchen mitgeschickt");
+  const dlg = schnitt("function FeedbackDialog(", "function PlansDialog(");
+  assert.match(dlg, /type: "checkbox", checked: mitPlan/, "es gibt gar kein Kaestchen");
+  assert.match(dlg, /T\.fbSendPlanHint/, "es steht nicht dabei, was mitgeschickt wird");
+});
+
+test("geht das Absenden schief, faellt der Dialog auf die E-Mail zurueck", () => {
+  // Datei lokal geoeffnet, Formulare nicht aktiviert, offline -- dann darf die Rueckmeldung
+  // nicht einfach verschluckt werden.
+  const dlg = schnitt("function FeedbackDialog(", "function PlansDialog(");
+  assert.match(dlg, /setStand\("fehler"\)/, "ein Fehlschlag wird gar nicht bemerkt");
+  assert.match(dlg, /stand === "fehler" \? \/\* @__PURE__ \*\/ React\.createElement\(Btn[^)]*onMailto/,
+    "im Fehlerfall gibt es keinen Weg per E-Mail");
+});
+
+test("die Frage nach dem Plan kommt hoechstens einmal — und nicht im eingebetteten Rechner", () => {
+  const block = schnitt("const fbFragen = () => {", "};");
+  assert.match(block, /EMBEDDED \|\| fbSchonGefragt\.current/, "kein Schutz gegen Mehrfach-Fragen");
+  assert.match(block, /localStorage\.getItem\(FB_KEY\)/, "die Frage kommt bei jedem Besuch wieder");
+  const vorbei = schnitt("const fbVorbei = () => {", "};");
+  assert.match(vorbei, /localStorage\.setItem\(FB_KEY/, "die Antwort wird nicht gemerkt");
 });

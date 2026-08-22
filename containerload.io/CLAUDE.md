@@ -343,9 +343,22 @@ Bis August 2026 zählte GoatCounter **nur Seitenaufrufe**, und im Rechner gab es
 
 Die Liste der Ereignisse steht **im Test**, nicht nur im Code: wer eines ergänzt, fällt dort auf und muss sich dabei die Frage stellen, ob der Name wirklich nichts über die Ladung verrät. Sie bildet eine Kette ab — *Plan per Link geöffnet · Beispiel aus dem Container-Wissen · Ladung eingegeben · gerechnet · mehrere Container · passt nicht · geteilt · exportiert*. `beispiel-geoeffnet` ist dabei die Zahl, an der hängt, ob sich die Arbeit an den Wissens-Seiten in **Nutzung** übersetzt und nicht nur in Impressionen.
 
-**Der Rückkanal** steht als „Problem melden" in der Fußzeile des Rechners — leise, aber genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Er öffnet ein `mailto` mit dem **Link zu genau diesem Plan**, dazu Equipment, Positionszahl, Fenstergröße und Browser.
+**Der Rückkanal** steht als „Problem melden" in der Fußzeile des Rechners — leise, aber genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Dazu kommt **einmal je Browser** die Frage „Hat der Plan gepasst?" — unten in der Mitte, dort, wo sonst der Hinweis steht.
 
-Bewusst ein `mailto` und **kein Formular**: es braucht keinen Server, **von sich aus geht nichts hinaus**, und der Absender sieht vor dem Senden genau, was mitgeht. Der Text sagt ausdrücklich, dass die Ladung im Link steckt und dass man ihn herauslöschen kann. Die Adresse wird **aus dem Impressum gelesen**, nicht abgeschrieben — der Test vergleicht beide. Passt der Plan nicht mehr in die Adresszeile (über 1.900 Zeichen), geht die Meldung lieber ohne Link raus als halb.
+**Es ist ein echtes Formular, ohne Server und ohne Build-Schritt.** Die erste Fassung war ein `mailto`; das verlangt aber ein eingerichtetes Mailprogramm und wirft den Absender aus dem Rechner heraus — an einem Arbeitsplatz mit Webmail passiert schlicht nichts. Möglich wird das Formular dadurch, dass die Seite bei **Netlify** liegt: Netlify erkennt beim Deploy ein statisches `<form data-netlify="true">` im ausgelieferten HTML und nimmt dafür POSTs entgegen.
+
+| | |
+|---|---|
+| **Das versteckte Formular** steht statisch in `app.html` | Der sichtbare Dialog kommt aus React — Netlify erkennt Formulare aber beim **Deploy**, nicht zur Laufzeit. Ohne das statische Formular gäbe es keinen Endpunkt |
+| **Die Feldnamen müssen übereinstimmen** | Weichen Dialog und Formular ab, verwirft Netlify die Eingabe **still**: keine Fehlermeldung, der Absender sieht „Danke", und die Rückmeldung ist weg. Der Test vergleicht beide Listen gegeneinander |
+| **`application/x-www-form-urlencoded`**, nicht JSON | JSON wird ebenso stillschweigend verworfen |
+| **Fehlschlag fällt auf das `mailto` zurück** | Datei lokal geöffnet, Formulare nicht aktiviert, offline — dann darf die Rückmeldung nicht verschluckt werden. Die Adresse wird **aus dem Impressum gelesen**, nicht abgeschrieben |
+
+**Die Ladung geht nur mit, wenn das Kästchen steht.** Es ist sichtbar, beschriftet und abwählbar, und es ist standardmäßig angehakt — ohne den Plan-Link muss jeder Fall wieder von Hand nachgebaut werden. Die Datenschutzseite verspricht in Abschnitt 2, dass die Eingaben das Gerät **von selbst** nicht verlassen; dieses Formular ist die eine Ausnahme, und sie ist eine bewusste Handlung des Absenders. Der Satz dort wurde deshalb präzisiert — er behauptete vorher pauschal, es gehe nie etwas hinaus. `test/messen-und-melden.test.mjs` prüft genau diese Eingrenzung mit.
+
+**Die Frage kommt einmal und dann nie wieder** (`containerload.feedback.v1`, gehört damit auch in die Datenschutzseite) — und erst, wenn jemand wirklich etwas vom Rechner hatte: nach dem ersten Weitergeben (Teilen, Bild, CSV, Ladevorschlag) oder nach einer Minute mit einem fertigen Plan. **Im eingebetteten Rechner der Startseite gar nicht:** dort schaut man sich um, man arbeitet nicht. Steht gerade ein Hinweis unten in der Mitte, wartet die Frage — zwei Kästen übereinander an derselben Stelle wären schlechter als gar keine Frage.
+
+> **Zwei Dinge, die nur der Projektinhaber entscheiden kann** und die außerhalb des Codes liegen: dass **Netlify Forms aktiv** ist und eine **E-Mail-Benachrichtigung** auf das Formular `feedback` zeigt (sonst landen die Meldungen nur im Netlify-Dashboard), und ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist. Das Formular funktioniert ohne beides — die Meldungen kommen dann nur nicht per Mail an.
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
