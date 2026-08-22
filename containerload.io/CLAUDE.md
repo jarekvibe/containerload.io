@@ -344,6 +344,12 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 
 **„Leeren" fragt nicht nach.** Ein Dialog, den man wegklickt, schützt niemanden; ein Rückgängig, das danebensteht, schon. Der Hinweis bleibt dafür 6 statt 2,6 Sekunden stehen.
 
+**Der Knopf trägt ein Symbol** (Papierkorb, `ICO.s` / `ICO.sw`). Gemeldet als *„mir fehlt der Button, mit dem ich die Ladung zurücksetze"* — es gab ihn, genau dort im Kopf der Ladungsliste, aber als **reines Wort in der leisesten Variante** zwischen einer Trennlinie und dem cm/mm-Umschalter. Er las sich wie eine Beschriftung, nicht wie eine Handlung. Leise bleibt richtig; unsichtbar war es nicht.
+
+**„Leeren" verwirft auch die manuell gesetzten Folgecontainer** (`chainOverride`). Sie gehörten zur alten Ladung: wer C2 für eine Sendung auf einen 20-Füßer gestellt, dann geleert und etwas ganz anderes eingetippt hat, bekam den 20-Füßer wieder vorgesetzt. Beim Laden eines gespeicherten Plans wurde genau deshalb längst geleert — beim Leeren fehlte es. Die manuell platzierten Stücke räumt `remapPlaced` von selbst ab; ohne Ladung gibt es keine `cid` mehr, auf die sie zeigen könnten.
+
+**Der Rückgängig-Stapel hält deshalb `{ cargo, ov }`**, nicht mehr nur die Ladung. Ein Zurücknehmen, das die Ladung wiederbringt und die Container darunter auf „Auto" stehen lässt, wäre nur halb.
+
 > **Die Falle, die eine Stunde gekostet hat:** `setToastAct(fn)` liest React als **Updater** und **ruft `fn(bisherigerZustand)` auf**, statt `fn` zu speichern. Das Löschen machte sich dadurch sofort selbst rückgängig — ohne eine einzige Fehlermeldung, ohne Konsolenausgabe, ohne dass ein Render stattfand. Wer eine Funktion in einen Zustand legt, muss sie verpacken: `setToastAct(() => fn)`. `test/entwurf-und-undo.test.mjs` hält das fest.
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
