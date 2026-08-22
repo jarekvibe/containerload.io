@@ -140,3 +140,54 @@ test("die Datenschutzseite kennt den Entwurf", () => {
   // Und der Weg, es wieder loszuwerden, muss dort auch stehen.
   assert.match(dsg, /„Leeren“|Leeren/, "der Weg zum Entfernen fehlt");
 });
+
+// ── "Leeren" ist ein Knopf, und er raeumt wirklich auf ─────────────────────────
+//
+// Gemeldet: "mir fehlt der Button, mit dem ich die Ladung zuruecksetze." Es gab ihn --
+// im Kopf der Ladungsliste, als reines Wort in der leisesten Knopf-Variante zwischen
+// einer Trennlinie und dem cm/mm-Umschalter. Er las sich wie eine Beschriftung.
+//
+// Und er raeumte nicht alles weg: die manuell gesetzten Folgecontainer blieben stehen.
+// Wer C2 fuer eine alte Ladung auf einen 20-Fuesser gestellt, dann geleert und etwas
+// ganz anderes eingetippt hat, bekam den 20-Fuesser wieder vorgesetzt.
+
+const schnitt = (von, bis) => {
+  const a = src.indexOf(von);
+  assert.ok(a >= 0, `nicht gefunden: ${von}`);
+  const b = src.indexOf(bis, a);
+  assert.ok(b > a, `Ende nicht gefunden: ${bis}`);
+  return src.slice(a, b);
+};
+
+test("Leeren traegt ein Symbol und ist damit als Knopf erkennbar", () => {
+  const knopf = schnitt("onClick: resetCargo", "T.cargoReset) : null");
+  assert.match(knopf, /React\.createElement\("svg"/, "der Knopf ist wieder ein blosses Wort");
+  // Dieselbe Linienstaerke und Groesse wie jedes andere Symbol im Rechner.
+  assert.match(knopf, /strokeWidth: ICO\.sw/, "eigene Linienstaerke statt ICO.sw");
+  assert.match(knopf, /width: ICO\.s, height: ICO\.s/, "eigene Symbolgroesse statt ICO.s");
+});
+
+test("Leeren verwirft auch die manuell gesetzten Folgecontainer", () => {
+  const fn = schnitt("const resetCargo = () =>", "const enableAllRotate");
+  assert.match(fn, /setCargo\(\[\]\)/, "die Ladung wird gar nicht geleert");
+  assert.match(fn, /setChainOverride\(\{\}\)/,
+    "die Slot-Wahl der alten Ladung bleibt stehen — die naechste Ladung zeigt fremde Container");
+  assert.match(fn, /sag\(T\.cargoCleared\(n2\), undo\)/, "ohne Rueckgaengig im Hinweis fragt der Knopf auch nicht nach");
+});
+
+test("Rueckgaengig holt die Ladung UND die Slot-Wahl zurueck", () => {
+  // Sonst waere das Zuruecknehmen unvollstaendig: die Ladung staende wieder da, die
+  // Container darunter aber auf "Auto".
+  const merk = schnitt("const merk = (cs) =>", "const undo = () =>");
+  assert.match(merk, /ov: chainOverride/, "der Stapel merkt sich die Slot-Wahl nicht mit");
+  const undo = schnitt("const undo = () => {", "// Ein Hinweis, der etwas anbieten kann");
+  assert.match(undo, /setCargo\(v\.cargo\)/, "die Ladung wird nicht zurueckgeholt");
+  assert.match(undo, /setChainOverride\(v\.ov \|\| \{\}\)/, "die Slot-Wahl wird nicht zurueckgeholt");
+});
+
+test("beide Sprachen beschriften den Knopf", () => {
+  for (const key of ["cargoReset", "cargoResetTitle"]) {
+    const treffer = [...src.matchAll(new RegExp(`${key}: "`, "g"))];
+    assert.strictEqual(treffer.length, 2, `${key} steht ${treffer.length}× da statt zweimal (DE und EN)`);
+  }
+});

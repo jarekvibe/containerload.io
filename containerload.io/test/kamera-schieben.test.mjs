@@ -86,3 +86,85 @@ test("die Bedienung steht dran, kurz und in beiden Sprachen", () => {
   assert.strictEqual((roh.match(/title: T\.orbitHintLong/g) || []).length, 2,
     "beide 3D-Ansichten (Rechner und Palettendialog) sollen den langen Hinweis tragen");
 });
+
+// ── Der Sprung beim Radschritt ───────────────────────────────────────────────
+//
+// Gemeldet: "wenn ich das Mausrad nach vorne bewege, werde ich teilweise teleportiert."
+//
+// Ursache war punktUnterZeiger. Es schnitt nur eine UNENDLICHE waagerechte Ebene auf
+// Zielhoehe -- und die trifft der Strahl auch dann, wenn der Zeiger neben der Ladung ins
+// Leere zeigt. Bei flachem Blickwinkel liegt der Schnittpunkt dann Dutzende Meter weiter
+// hinten; ein Radschritt zieht das Ziel um 13 % dieser Strecke dorthin, und zielKlemmen
+// setzt es anschliessend hart an den Rand der Reihe. Derselbe Fehler steckte im Doppelklick.
+
+// Ein Ausschnitt aus app.html, von "von" bis "bis".
+const schnitt = (von, bis) => {
+  const a = roh.indexOf(von);
+  assert.ok(a >= 0, `nicht gefunden: ${von}`);
+  const b = roh.indexOf(bis, a);
+  assert.ok(b > a, `Ende nicht gefunden: ${bis}`);
+  return roh.slice(a, b);
+};
+const zahl = (re, was) => {
+  const m = roh.match(re);
+  assert.ok(m, `${was} nicht in app.html gefunden`);
+  return Number(m[1]);
+};
+
+test("der Zeiger trifft zuerst die Ladung, nicht irgendeine Ebene", () => {
+  const fn = schnitt("const punktUnterZeiger = (e) =>", "const zielKlemmen");
+  assert.match(fn, /isInstancedMesh/, "es wird gar nicht erst auf die Kisten geschossen");
+  assert.match(fn, /intersectObjects/, "kein Raycast auf die Ladung");
+  // Und die Ebene bleibt der Notnagel -- mit Schranke.
+  const i = fn.indexOf("intersectObjects"), j = fn.indexOf("intersectPlane");
+  assert.ok(i >= 0 && j > i, "die Bodenebene wird vor der Ladung befragt");
+  assert.match(fn, /imRahmen\(hit\) \? hit : null/, "der Ebenentreffer wird ungeprueft zurueckgegeben");
+});
+
+test("die Schranke ist dieselbe wie beim Klemmen des Ziels", () => {
+  // Zwei verschiedene Auslaufmasse waeren genau die Art Abweichung, die spaeter niemand
+  // mehr erklaeren kann: das Ziel duerfte an eine Stelle springen, an der es nicht bleiben darf.
+  const r = schnitt("const imRahmen = (p) =>", "const punktUnterZeiger");
+  assert.match(r, /const m = 2;/, "imRahmen benutzt einen anderen Auslauf als zielKlemmen");
+  assert.match(r, /Math\.abs\(p\.x - f\.cx\) <= f\.hx \+ m/, "die x-Grenze fehlt");
+  assert.match(r, /Math\.abs\(p\.z - f\.cz\) <= f\.hz \+ m/, "die z-Grenze fehlt");
+  const k = schnitt("const zielKlemmen = () =>", "const updateGhost");
+  assert.match(k, /const m = 2;/, "zielKlemmen benutzt einen anderen Auslauf als imRahmen");
+});
+
+test("gerechnet: ohne Schranke reisst ein einziger Radschritt die Ansicht meterweit weg", () => {
+  // Die Rechnung, die den Fehler erklaert -- mit den echten Werten aus app.html, damit sie
+  // nicht stillschweigend veraltet, wenn jemand Bildwinkel oder Zoomschritt aendert.
+  const fov = zahl(/PerspectiveCamera\((\d+), W \/ H/, "Bildwinkel der 3D-Buehne") * Math.PI / 180;
+  const r = zahl(/const sph = \{ r: (\d+(?:\.\d+)?), theta: -0\.92, phi: 1 \}/, "Ruhelage der Kamera");
+  const schrittFaktor = zahl(/sph\.r \* \(1 \+ e\.deltaY \* (\d+(?:e-\d+)?)\)/, "Zoomschritt");
+  const rein = 1 - (1 + (-120) * schrittFaktor);   // ein Radschritt nach vorne
+  assert.ok(rein > 0.05 && rein < 0.4, `ein Radschritt schrumpft die Entfernung um ${(rein * 100).toFixed(1)} %`);
+
+  // Kamera bei flachem Blick (so steht sie, nachdem man zu einer Seitenansicht gedreht hat).
+  const phi = 1.4, theta = -0.92;
+  const pos = { x: r * Math.sin(phi) * Math.sin(theta), y: r * Math.cos(phi), z: r * Math.sin(phi) * Math.cos(theta) };
+  const norm = (v) => { const l = Math.hypot(v.x, v.y, v.z); return { x: v.x / l, y: v.y / l, z: v.z / l }; };
+  const fwd = norm({ x: -pos.x, y: -pos.y, z: -pos.z });
+  const cross = (a, b) => ({ x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x });
+  const rechts = norm(cross(fwd, { x: 0, y: 1, z: 0 }));
+  const oben = cross(rechts, fwd);
+  const th = Math.tan(fov / 2), asp = 1200 / 640;
+  // Zeiger im oberen Bilddrittel, leicht links -- also neben der Ladung im Leeren.
+  const nx = -0.5, ny = 0.35;
+  const d = norm({ x: fwd.x + rechts.x * nx * th * asp + oben.x * ny * th,
+                   y: fwd.y + rechts.y * nx * th * asp + oben.y * ny * th,
+                   z: fwd.z + rechts.z * nx * th * asp + oben.z * ny * th });
+  assert.ok(d.y < 0, "der Strahl zeigt nach oben -- fuer diesen Fall gibt es keinen Bodentreffer");
+  const t = -pos.y / d.y;
+  const treffer = { x: pos.x + d.x * t, z: pos.z + d.z * t };
+  const entfernung = Math.hypot(treffer.x, treffer.z);
+  const sprung = entfernung * rein;
+
+  // Ein 40-Fuss-Container ist 12 m lang. Ein Sprung in dieser Groessenordnung ist der
+  // gemeldete "Teleport" -- und imRahmen faengt ihn ab, weil der Punkt weit ausserhalb
+  // selbst einer dreigliedrigen Reihe (Halbmass rund 18 m) plus 2 m Auslauf liegt.
+  assert.ok(entfernung > 20, `Bodentreffer nur ${entfernung.toFixed(1)} m entfernt — der Fall bildet den Fehler nicht mehr ab`);
+  assert.ok(sprung > 3, `ein Radschritt versetzt das Ziel nur um ${sprung.toFixed(2)} m`);
+  assert.ok(entfernung > 18 + 2, "der Punkt laege noch innerhalb der Reihe — imRahmen wuerde ihn durchlassen");
+});

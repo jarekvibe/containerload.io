@@ -328,6 +328,45 @@ Fünf Dinge, die dabei nicht kippen dürfen — `test/container-guide-en.test.mj
 
 **Slugs sind übersetzt, nicht transkribiert:** `euro-pallets-40ft-container`, `wire-mesh-pallets-container`, `how-to-calculate-cbm`. Gesucht wird auf Englisch nach „40ft", nicht nach „40-fuss".
 
+### Messen und melden: die zwei Rückkanäle
+Bis August 2026 zählte GoatCounter **nur Seitenaufrufe**, und im Rechner gab es **keinen Weg, etwas zu melden**. Damit fehlten die zwei Signale, an denen jede Priorisierung hängt: ob nach dem Aufruf überhaupt etwas passiert, und ob etwas kaputt ist. Fünf Fehlermeldungen in einer Woche kamen alle als Bildschirmfoto, und jeder Fall musste erst von Hand nachgebaut werden.
+
+**Die Ereigniszählung** (`zaehl(name)` in `app.html`) folgt drei Regeln, und `test/messen-und-melden.test.mjs` prüft alle drei:
+
+| | |
+|---|---|
+| **Nur der Name geht mit** | Jeder Aufruf trägt eine **feste Zeichenkette** — nie eine Variable, nie eine Interpolation. Der Test liest alle `zaehl(…)`-Aufrufe und lässt nur `"[a-z0-9-]+"` durch. Ein einziges `zaehl("csv-" + preset)` würde die Zusage der Datenschutzseite brechen, ohne dass es auffiele |
+| **Je Seitenaufruf höchstens einmal** | Sonst zählt jeder Tastendruck im Mengenfeld eine „Ladung eingegeben" |
+| **Eingebettet zählt getrennt** | `demo/…` statt `app/…`. Jeder Startseiten-Besuch lädt den Rechner im iframe mit; ohne die Trennung wäre jede Zahl davon verwässert |
+
+`count.js` lädt async — die Ereignisse **warten in einer Schlange**, bis der Zähler da ist. Ohne das ginge ausgerechnet das erste verloren, und das ist das wichtigste.
+
+Die Liste der Ereignisse steht **im Test**, nicht nur im Code: wer eines ergänzt, fällt dort auf und muss sich dabei die Frage stellen, ob der Name wirklich nichts über die Ladung verrät. Sie bildet eine Kette ab — *Plan per Link geöffnet · Beispiel aus dem Container-Wissen · Ladung eingegeben · gerechnet · mehrere Container · passt nicht · geteilt · exportiert*. `beispiel-geoeffnet` ist dabei die Zahl, an der hängt, ob sich die Arbeit an den Wissens-Seiten in **Nutzung** übersetzt und nicht nur in Impressionen.
+
+**Der Rückkanal** steht als Knopf **„Feedback"** in der Fußzeile des Rechners — genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Dazu kommt **einmal je Browser** die Frage „Hat der Plan gepasst?" — unten in der Mitte, dort, wo sonst der Hinweis steht.
+
+Zwei Korrekturen nach der ersten Fassung, beide gemeldet:
+
+- **Er hieß „Problem melden".** Das Formular nimmt Lob genauso entgegen wie Kritik — und wer etwas Nettes schreiben will, klickt nicht auf „Problem melden". Der Name ist irreführend, sobald das Formular mehr kann als Fehler.
+- **Er war zu unscheinbar.** Als unterstrichene Textstelle in derselben Farbe wie die Fußzeile drumherum las er sich zwischen zwei grauen Sätzen wie eine Fußnote. Jetzt ein `ghost`-Knopf mit Umriss und Sprechblasen-Symbol. Kostet 10 px Fußzeilenhöhe (42 → 52); bei 1920 und 1440 px bleibt sie einzeilig, seitlich schiebbar wird nichts. Wer daran dreht, misst bei **390 px** nach — dort ist sie ohnehin zweizeilig.
+
+**Es ist ein echtes Formular, ohne Server und ohne Build-Schritt.** Die erste Fassung war ein `mailto`; das verlangt aber ein eingerichtetes Mailprogramm und wirft den Absender aus dem Rechner heraus — an einem Arbeitsplatz mit Webmail passiert schlicht nichts. Möglich wird das Formular dadurch, dass die Seite bei **Netlify** liegt: Netlify erkennt beim Deploy ein statisches `<form data-netlify="true">` im ausgelieferten HTML und nimmt dafür POSTs entgegen.
+
+| | |
+|---|---|
+| **Das versteckte Formular** steht statisch in `app.html` | Der sichtbare Dialog kommt aus React — Netlify erkennt Formulare aber beim **Deploy**, nicht zur Laufzeit. Ohne das statische Formular gäbe es keinen Endpunkt |
+| **Die Feldnamen müssen übereinstimmen** | Weichen Dialog und Formular ab, verwirft Netlify die Eingabe **still**: keine Fehlermeldung, der Absender sieht „Danke", und die Rückmeldung ist weg. Der Test vergleicht beide Listen gegeneinander |
+| **`application/x-www-form-urlencoded`**, nicht JSON | JSON wird ebenso stillschweigend verworfen |
+| **Fehlschlag fällt auf das `mailto` zurück** | Datei lokal geöffnet, Formulare nicht aktiviert, offline — dann darf die Rückmeldung nicht verschluckt werden. Die Adresse wird **aus dem Impressum gelesen**, nicht abgeschrieben |
+
+**Die Ladung geht nur mit, wenn das Kästchen steht.** Es ist sichtbar, beschriftet und abwählbar, und es ist standardmäßig angehakt — ohne den Plan-Link muss jeder Fall wieder von Hand nachgebaut werden. Die Datenschutzseite verspricht in Abschnitt 2, dass die Eingaben das Gerät **von selbst** nicht verlassen; dieses Formular ist die eine Ausnahme, und sie ist eine bewusste Handlung des Absenders. Der Satz dort wurde deshalb präzisiert — er behauptete vorher pauschal, es gehe nie etwas hinaus. `test/messen-und-melden.test.mjs` prüft genau diese Eingrenzung mit.
+
+**Die Frage kommt einmal und dann nie wieder** (`containerload.feedback.v1`, gehört damit auch in die Datenschutzseite) — und erst, wenn jemand wirklich etwas vom Rechner hatte: nach dem ersten Weitergeben (Teilen, Bild, CSV, Ladevorschlag) oder nach einer Minute mit einem fertigen Plan. **Im eingebetteten Rechner der Startseite gar nicht:** dort schaut man sich um, man arbeitet nicht. Steht gerade ein Hinweis unten in der Mitte, wartet die Frage — zwei Kästen übereinander an derselben Stelle wären schlechter als gar keine Frage.
+
+> **Zwei Dinge, die nur der Projektinhaber entscheiden kann** und die außerhalb des Codes liegen: dass **Netlify Forms aktiv** ist und eine **E-Mail-Benachrichtigung** auf das Formular `feedback` zeigt (sonst landen die Meldungen nur im Netlify-Dashboard), und ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist. Das Formular funktioniert ohne beides — die Meldungen kommen dann nur nicht per Mail an.
+
+**Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
+
 ### Der Entwurf, das Rückgängig und der leere Start
 **Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.
 
@@ -343,6 +382,12 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 **Rückgängig** (`hist`, Strg+Z und der Knopf im Hinweis) fängt nur **strukturelle** Änderungen ab: löschen, leeren, eine Liste einfügen, Paletten übernehmen, alles drehbar setzen. Nicht jeden Tastendruck in einem Zahlenfeld — dort gehört das Rückgängig dem Browser, und ein Stapel mit tausend Zwischenständen wäre für niemanden zu bedienen. Deshalb greift der Tastaturweg auch nicht, solange der Fokus in einem Eingabefeld steht.
 
 **„Leeren" fragt nicht nach.** Ein Dialog, den man wegklickt, schützt niemanden; ein Rückgängig, das danebensteht, schon. Der Hinweis bleibt dafür 6 statt 2,6 Sekunden stehen.
+
+**Der Knopf trägt ein Symbol** (Papierkorb, `ICO.s` / `ICO.sw`). Gemeldet als *„mir fehlt der Button, mit dem ich die Ladung zurücksetze"* — es gab ihn, genau dort im Kopf der Ladungsliste, aber als **reines Wort in der leisesten Variante** zwischen einer Trennlinie und dem cm/mm-Umschalter. Er las sich wie eine Beschriftung, nicht wie eine Handlung. Leise bleibt richtig; unsichtbar war es nicht.
+
+**„Leeren" verwirft auch die manuell gesetzten Folgecontainer** (`chainOverride`). Sie gehörten zur alten Ladung: wer C2 für eine Sendung auf einen 20-Füßer gestellt, dann geleert und etwas ganz anderes eingetippt hat, bekam den 20-Füßer wieder vorgesetzt. Beim Laden eines gespeicherten Plans wurde genau deshalb längst geleert — beim Leeren fehlte es. Die manuell platzierten Stücke räumt `remapPlaced` von selbst ab; ohne Ladung gibt es keine `cid` mehr, auf die sie zeigen könnten.
+
+**Der Rückgängig-Stapel hält deshalb `{ cargo, ov }`**, nicht mehr nur die Ladung. Ein Zurücknehmen, das die Ladung wiederbringt und die Container darunter auf „Auto" stehen lässt, wäre nur halb.
 
 > **Die Falle, die eine Stunde gekostet hat:** `setToastAct(fn)` liest React als **Updater** und **ruft `fn(bisherigerZustand)` auf**, statt `fn` zu speichern. Das Löschen machte sich dadurch sofort selbst rückgängig — ohne eine einzige Fehlermeldung, ohne Konsolenausgabe, ohne dass ein Render stattfand. Wer eine Funktion in einen Zustand legt, muss sie verpacken: `setToastAct(() => fn)`. `test/entwurf-und-undo.test.mjs` hält das fest.
 
@@ -377,6 +422,20 @@ Die 3D-Ansicht kreiste um `t.target`, und das war die **Mitte der Reihe**. Zoome
 Zwei Dinge halten das zusammen: `zielKlemmen()` begrenzt das Ziel auf die Reihe plus zwei Meter Auslauf (die Halbmaße stehen in `t.frame`) — sonst schiebt man sich mit zwei Handbewegungen ins Nichts und findet ohne „Ansicht zurücksetzen" nicht zurück. Und ein Schiebe-Zug setzt im manuellen Modus **keine** Kiste (`warSchieben` in `up`), sonst platziert jeder Rechtsklick eine.
 
 Der sichtbare Hinweis bleibt kurz — daneben sitzt das Empfehlungsbanner, unter dem ein langer Text durchläuft. Das Ganze steht im `title`. Er stand übrigens fest auf Deutsch im Markup, obwohl `T.orbitHint` seit jeher existierte.
+
+**Der Punkt unter dem Zeiger muss ein echter Punkt sein.** Gemeldet als *„beim Mausrad nach vorne werde ich teilweise teleportiert"* — und der Fehler saß in `punktUnterZeiger`. Es schnitt nur eine **unendliche** waagerechte Ebene auf Zielhöhe, und die trifft der Strahl auch dann, wenn der Zeiger neben der Ladung ins Leere zeigt. Gerechnet mit den echten Kamerawerten:
+
+| Blick | Zeiger | Bodentreffer | ein Radschritt versetzt das Ziel um |
+|---|---|---|---|
+| Ruhelage (φ = 1,0) | Bildmitte | 0 m | 0 m |
+| Ruhelage | oben links, leer | 18,9 m | **2,5 m** |
+| flach (φ = 1,4, nach dem Drehen) | oberes Bilddrittel | 44,1 m | **5,8 m** |
+
+Ein 40-Fuß-Container ist 12 m lang. Danach klemmt `zielKlemmen` das Ziel hart an den Rand der Reihe — genau das sieht aus wie ein Sprung. Derselbe Fehler steckte im Doppelklick.
+
+Jetzt zwei Stufen: **erst auf die Kisten selbst schießen** (nur `isInstancedMesh` — Hüllen, Boden und Raster sind Linien und Flächen, die der Strahl weit außerhalb der Reihe trifft), und nur wenn das nichts trifft, auf die Bodenebene — und die auch nur, solange der Punkt zur Reihe gehört (`imRahmen`). Zeigt der Zeiger ins Leere, **passiert nichts**; das ist hier die richtige Antwort, denn der Nutzer hat auf nichts gezeigt.
+
+`imRahmen` und `zielKlemmen` benutzen **denselben Auslauf** (`m = 2`). Zwei verschiedene Maße wären genau die Art Abweichung, die später niemand mehr erklären kann: das Ziel dürfte an eine Stelle springen, an der es nicht bleiben darf. `test/kamera-schieben.test.mjs` hält beides fest — den Vertrag im Quelltext **und** die Rechnung, die den Fehler erklärt (sie liest Bildwinkel, Ruhelage und Zoomschritt aus `app.html`, damit sie nicht stillschweigend veraltet).
 
 ### Volumen und Gewicht je Container
 Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
