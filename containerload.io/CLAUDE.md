@@ -328,6 +328,27 @@ Fünf Dinge, die dabei nicht kippen dürfen — `test/container-guide-en.test.mj
 
 **Slugs sind übersetzt, nicht transkribiert:** `euro-pallets-40ft-container`, `wire-mesh-pallets-container`, `how-to-calculate-cbm`. Gesucht wird auf Englisch nach „40ft", nicht nach „40-fuss".
 
+### Messen und melden: die zwei Rückkanäle
+Bis August 2026 zählte GoatCounter **nur Seitenaufrufe**, und im Rechner gab es **keinen Weg, etwas zu melden**. Damit fehlten die zwei Signale, an denen jede Priorisierung hängt: ob nach dem Aufruf überhaupt etwas passiert, und ob etwas kaputt ist. Fünf Fehlermeldungen in einer Woche kamen alle als Bildschirmfoto, und jeder Fall musste erst von Hand nachgebaut werden.
+
+**Die Ereigniszählung** (`zaehl(name)` in `app.html`) folgt drei Regeln, und `test/messen-und-melden.test.mjs` prüft alle drei:
+
+| | |
+|---|---|
+| **Nur der Name geht mit** | Jeder Aufruf trägt eine **feste Zeichenkette** — nie eine Variable, nie eine Interpolation. Der Test liest alle `zaehl(…)`-Aufrufe und lässt nur `"[a-z0-9-]+"` durch. Ein einziges `zaehl("csv-" + preset)` würde die Zusage der Datenschutzseite brechen, ohne dass es auffiele |
+| **Je Seitenaufruf höchstens einmal** | Sonst zählt jeder Tastendruck im Mengenfeld eine „Ladung eingegeben" |
+| **Eingebettet zählt getrennt** | `demo/…` statt `app/…`. Jeder Startseiten-Besuch lädt den Rechner im iframe mit; ohne die Trennung wäre jede Zahl davon verwässert |
+
+`count.js` lädt async — die Ereignisse **warten in einer Schlange**, bis der Zähler da ist. Ohne das ginge ausgerechnet das erste verloren, und das ist das wichtigste.
+
+Die Liste der Ereignisse steht **im Test**, nicht nur im Code: wer eines ergänzt, fällt dort auf und muss sich dabei die Frage stellen, ob der Name wirklich nichts über die Ladung verrät. Sie bildet eine Kette ab — *Plan per Link geöffnet · Beispiel aus dem Container-Wissen · Ladung eingegeben · gerechnet · mehrere Container · passt nicht · geteilt · exportiert*. `beispiel-geoeffnet` ist dabei die Zahl, an der hängt, ob sich die Arbeit an den Wissens-Seiten in **Nutzung** übersetzt und nicht nur in Impressionen.
+
+**Der Rückkanal** steht als „Problem melden" in der Fußzeile des Rechners — leise, aber genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Er öffnet ein `mailto` mit dem **Link zu genau diesem Plan**, dazu Equipment, Positionszahl, Fenstergröße und Browser.
+
+Bewusst ein `mailto` und **kein Formular**: es braucht keinen Server, **von sich aus geht nichts hinaus**, und der Absender sieht vor dem Senden genau, was mitgeht. Der Text sagt ausdrücklich, dass die Ladung im Link steckt und dass man ihn herauslöschen kann. Die Adresse wird **aus dem Impressum gelesen**, nicht abgeschrieben — der Test vergleicht beide. Passt der Plan nicht mehr in die Adresszeile (über 1.900 Zeichen), geht die Meldung lieber ohne Link raus als halb.
+
+**Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
+
 ### Der Entwurf, das Rückgängig und der leere Start
 **Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.
 
