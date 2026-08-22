@@ -3487,42 +3487,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Der Punkt unter dem Zeiger auf ZIELHOEHE (nicht auf dem Boden): danach richtet sich,
       // wohin das Rad zoomt und was ein Doppelklick in die Mitte holt.
       const zielEbene = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-      // Der Punkt, auf den der Zeiger WIRKLICH zeigt.
-      //
-      // Gemeldet: "beim Mausrad nach vorne werde ich teilweise teleportiert." Ursache war
-      // diese Funktion. Sie schnitt nur eine UNENDLICHE waagerechte Ebene auf Zielhoehe --
-      // und die trifft der Strahl auch dann, wenn der Zeiger neben der Ladung ins Leere
-      // zeigt. Bei flachem Blickwinkel liegt dieser Schnittpunkt dann hundert Meter weiter
-      // hinten; ein einziger Radschritt zieht das Ziel um zehn Prozent dieser Strecke
-      // dorthin, und zielKlemmen setzt es anschliessend hart an den Rand der Reihe. Das ist
-      // der Sprung. Derselbe Fehler steckte im Doppelklick.
-      //
-      // Jetzt zwei Stufen: erst auf die Kisten selbst schiessen (das ist der Punkt, den man
-      // meint), und nur wenn das nichts trifft, auf die Bodenebene -- und die auch nur,
-      // solange der Punkt zur Reihe gehoert. Zeigt der Zeiger ins Leere, passiert nichts.
-      // Nichts zu tun ist hier die richtige Antwort: der Nutzer hat auf nichts gezeigt.
-      const imRahmen = (p) => {
-        const f = three.current && three.current.frame;
-        if (!f) return true; // noch kein Rahmen gerechnet -> nicht ausbremsen
-        const m = 2; // derselbe Auslauf wie in zielKlemmen
-        return Math.abs(p.x - f.cx) <= f.hx + m && Math.abs(p.z - f.cz) <= f.hz + m;
-      };
       const punktUnterZeiger = (e) => {
         ndcFromEvent(e);
         raycaster.setFromCamera(ndc, camera);
-        // 1) Die Ladung selbst. Nur InstancedMesh -- Huellen, Boden und Raster sind Linien
-        //    bzw. Flaechen, die der Strahl weit ausserhalb der Reihe treffen wuerde.
-        const ziele = [];
-        group.traverse((o) => { if (o.isInstancedMesh && o.visible) ziele.push(o); });
-        if (ziele.length) {
-          const tr = raycaster.intersectObjects(ziele, false);
-          if (tr.length) return tr[0].point.clone();
-        }
-        // 2) Sonst die Bodenebene -- aber nur innerhalb der Reihe.
         zielEbene.constant = -target.y;
         const hit = new THREE.Vector3();
-        if (!raycaster.ray.intersectPlane(zielEbene, hit)) return null;
-        return imRahmen(hit) ? hit : null;
+        return raycaster.ray.intersectPlane(zielEbene, hit) ? hit : null;
       };
       // Das Ziel darf sich bewegen, aber nicht verlorengehen. Grenze ist die Reihe selbst
       // plus etwas Auslauf - sonst schiebt man sich mit zwei Handbewegungen ins Nichts und

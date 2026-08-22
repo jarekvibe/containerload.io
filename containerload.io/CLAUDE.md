@@ -384,6 +384,20 @@ Zwei Dinge halten das zusammen: `zielKlemmen()` begrenzt das Ziel auf die Reihe 
 
 Der sichtbare Hinweis bleibt kurz — daneben sitzt das Empfehlungsbanner, unter dem ein langer Text durchläuft. Das Ganze steht im `title`. Er stand übrigens fest auf Deutsch im Markup, obwohl `T.orbitHint` seit jeher existierte.
 
+**Der Punkt unter dem Zeiger muss ein echter Punkt sein.** Gemeldet als *„beim Mausrad nach vorne werde ich teilweise teleportiert"* — und der Fehler saß in `punktUnterZeiger`. Es schnitt nur eine **unendliche** waagerechte Ebene auf Zielhöhe, und die trifft der Strahl auch dann, wenn der Zeiger neben der Ladung ins Leere zeigt. Gerechnet mit den echten Kamerawerten:
+
+| Blick | Zeiger | Bodentreffer | ein Radschritt versetzt das Ziel um |
+|---|---|---|---|
+| Ruhelage (φ = 1,0) | Bildmitte | 0 m | 0 m |
+| Ruhelage | oben links, leer | 18,9 m | **2,5 m** |
+| flach (φ = 1,4, nach dem Drehen) | oberes Bilddrittel | 44,1 m | **5,8 m** |
+
+Ein 40-Fuß-Container ist 12 m lang. Danach klemmt `zielKlemmen` das Ziel hart an den Rand der Reihe — genau das sieht aus wie ein Sprung. Derselbe Fehler steckte im Doppelklick.
+
+Jetzt zwei Stufen: **erst auf die Kisten selbst schießen** (nur `isInstancedMesh` — Hüllen, Boden und Raster sind Linien und Flächen, die der Strahl weit außerhalb der Reihe trifft), und nur wenn das nichts trifft, auf die Bodenebene — und die auch nur, solange der Punkt zur Reihe gehört (`imRahmen`). Zeigt der Zeiger ins Leere, **passiert nichts**; das ist hier die richtige Antwort, denn der Nutzer hat auf nichts gezeigt.
+
+`imRahmen` und `zielKlemmen` benutzen **denselben Auslauf** (`m = 2`). Zwei verschiedene Maße wären genau die Art Abweichung, die später niemand mehr erklären kann: das Ziel dürfte an eine Stelle springen, an der es nicht bleiben darf. `test/kamera-schieben.test.mjs` hält beides fest — den Vertrag im Quelltext **und** die Rechnung, die den Fehler erklärt (sie liest Bildwinkel, Ruhelage und Zoomschritt aus `app.html`, damit sie nicht stillschweigend veraltet).
+
 ### Volumen und Gewicht je Container
 Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
 
