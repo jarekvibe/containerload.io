@@ -5251,11 +5251,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // einfuegen, Paletten uebernehmen, alles drehbar setzen. Nicht jeder Tastendruck in
     // einem Zahlenfeld - dort macht der Browser sein eigenes Rueckgaengig, und ein
     // Stapel mit tausend Zwischenstaenden waere fuer niemanden zu bedienen.
-    const merk = (cs) => setHist((h) => [...h.slice(-29), cs]);
+    // Auf den Stapel kommt die Ladung UND die Slot-Wahl. Seit "Leeren" die manuell
+    // gesetzten Folgecontainer mit verwirft (siehe resetCargo), waere ein Rueckgaengig,
+    // das nur die Ladung zurueckholt, unvollstaendig: die Ladung staende wieder da, die
+    // Container darunter aber auf "Auto".
+    const merk = (cs) => setHist((h) => [...h.slice(-29), { cargo: cs, ov: chainOverride }]);
     const undo = () => {
       setHist((h) => {
         if (!h.length) return h;
-        setCargo(h[h.length - 1]);
+        const v = h[h.length - 1];
+        setCargo(v.cargo);
+        setChainOverride(v.ov || {});
         sag(T.undone);
         return h.slice(0, -1);
       });
@@ -5277,6 +5283,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       merk(cargo);
       setCargo([]);
       setOpenCargo(null);
+      // Die manuell gesetzten Folgecontainer gehoerten zur alten Ladung. Blieben sie
+      // stehen, zeigte die naechste Ladung fremde Container -- C2 haenge weiter auf einem
+      // 20-Fuesser, den man fuer etwas ganz anderes gewaehlt hatte. Beim Laden eines
+      // gespeicherten Plans wird genau deshalb schon geleert; beim Leeren fehlte es.
+      // Die manuell platzierten Stuecke raeumt remapPlaced von selbst ab: ohne Ladung
+      // gibt es keine cargo-id mehr, auf die sie zeigen koennten.
+      setChainOverride({});
       sag(T.cargoCleared(n2), undo);
     };
     const enableAllRotate = () => { merk(cargo); setCargo((cs) => cs.map((c) => ({ ...c, rotatable: true }))); };
@@ -6072,7 +6085,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Zustaende zugreift wie bisher und keine zwanzig Eigenschaften durchgereicht werden muessen.
     const cargoEl = /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-3" }, /* @__PURE__ */ React.createElement(SectionTitle, { noMargin: true }, T.cargo), /* @__PURE__ */ React.createElement("span", { className: "h-px flex-1", style: { background: "linear-gradient(90deg,#232C38,transparent)" } }),
         // Nur da, wenn es etwas zu leeren gibt. Ein Knopf, der nichts tun kann, ist Ballast.
-        cargo.length > 0 ? /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "s", onClick: resetCargo, title: T.cargoResetTitle }, T.cargoReset) : null,
+        // Gemeldet: "mir fehlt der Knopf, mit dem ich die Ladung zuruecksetze" -- er stand
+        // genau hier, aber als reines Wort in der leisesten Variante, zwischen einer
+        // Trennlinie und dem cm/mm-Umschalter. Er las sich wie eine Beschriftung, nicht wie
+        // eine Handlung. Das Symbol davor macht daraus wieder einen Knopf, ohne ihn laut zu
+        // machen: leise bleibt richtig, unsichtbar war es nicht.
+        cargo.length > 0 ? /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "s", onClick: resetCargo, title: T.cargoResetTitle },
+          /* @__PURE__ */ React.createElement("svg", { width: ICO.s, height: ICO.s, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" },
+            /* @__PURE__ */ React.createElement("path", { d: "M4 7h16M10 4h4M6 7l1 13h10l1-13M10 11v5M14 11v5" })),
+          T.cargoReset) : null,
         /* @__PURE__ */ React.createElement("div", { title: unit === "mm" ? T.unitToCm : T.unitToMm }, /* @__PURE__ */ React.createElement(Seg, { size: "s", items: [["cm", "cm"], ["mm", "mm"]], value: unit, onPick: setUnitTo }))), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch gap-2 mb-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "s", onClick: () => { setImportText(""); setImportRows(null); setImportOpen(true); }, style: { flex: 1 } }, T.impBtn), /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "s", onClick: addCargo, style: { flex: 1 } }, T.addItem), /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "s", onClick: () => { setPalEdit(null); setPalOpen(true); }, title: T.palBtn, style: { flex: 1 } }, T.palAddBtn)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-3" },
         // Der Rechner startet leer. Ohne diesen Kasten stuende hier eine weisse Flaeche,
         // und niemand wuesste, dass die drei Knoepfe darueber der Anfang sind.
