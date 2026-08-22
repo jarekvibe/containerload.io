@@ -38,7 +38,7 @@ const schnitt = (von, bis) => {
 const EREIGNISSE = [
   "plan-per-link-geoeffnet", "beispiel-geoeffnet", "ladung-eingegeben", "excel-import",
   "palettierer", "plan-gerechnet", "mehrere-container", "passt-nicht", "empfehlung",
-  "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "problem-gemeldet"
+  "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {
@@ -115,7 +115,7 @@ test("die Datenschutzseite sagt, was gezaehlt wird und was der Rueckkanal tut", 
   const ds = fs.readFileSync(path.join(dir, "..", "datenschutz.html"), "utf8");
   assert.match(ds, /anonyme Ereignisse/, "die Ereigniszaehlung ist nicht erwaehnt");
   assert.match(ds, /ausschließlich der Name des Ereignisses/, "es steht nicht da, dass nur der Name uebertragen wird");
-  assert.match(ds, /Problem melden/, "der Rueckkanal ist nicht erwaehnt");
+  assert.match(ds, /Feedback-Formular|Knopf „Feedback“/, "der Rueckkanal ist nicht erwaehnt");
   assert.match(ds, /nichts übertragen, solange du nicht auf „Absenden“ drückst/,
     "es steht nicht da, dass ohne Absenden nichts hinausgeht");
   assert.match(ds, /Ladung mitschicken/, "das abwaehlbare Kaestchen ist nicht erklaert");

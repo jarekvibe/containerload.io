@@ -343,7 +343,12 @@ Bis August 2026 zählte GoatCounter **nur Seitenaufrufe**, und im Rechner gab es
 
 Die Liste der Ereignisse steht **im Test**, nicht nur im Code: wer eines ergänzt, fällt dort auf und muss sich dabei die Frage stellen, ob der Name wirklich nichts über die Ladung verrät. Sie bildet eine Kette ab — *Plan per Link geöffnet · Beispiel aus dem Container-Wissen · Ladung eingegeben · gerechnet · mehrere Container · passt nicht · geteilt · exportiert*. `beispiel-geoeffnet` ist dabei die Zahl, an der hängt, ob sich die Arbeit an den Wissens-Seiten in **Nutzung** übersetzt und nicht nur in Impressionen.
 
-**Der Rückkanal** steht als „Problem melden" in der Fußzeile des Rechners — leise, aber genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Dazu kommt **einmal je Browser** die Frage „Hat der Plan gepasst?" — unten in der Mitte, dort, wo sonst der Hinweis steht.
+**Der Rückkanal** steht als Knopf **„Feedback"** in der Fußzeile des Rechners — genau dort, wo man hinsieht, wenn das Ergebnis daneben nicht stimmt: direkt unter der 3D-Ansicht, neben „geometrische Schätzung". Dazu kommt **einmal je Browser** die Frage „Hat der Plan gepasst?" — unten in der Mitte, dort, wo sonst der Hinweis steht.
+
+Zwei Korrekturen nach der ersten Fassung, beide gemeldet:
+
+- **Er hieß „Problem melden".** Das Formular nimmt Lob genauso entgegen wie Kritik — und wer etwas Nettes schreiben will, klickt nicht auf „Problem melden". Der Name ist irreführend, sobald das Formular mehr kann als Fehler.
+- **Er war zu unscheinbar.** Als unterstrichene Textstelle in derselben Farbe wie die Fußzeile drumherum las er sich zwischen zwei grauen Sätzen wie eine Fußnote. Jetzt ein `ghost`-Knopf mit Umriss und Sprechblasen-Symbol. Kostet 10 px Fußzeilenhöhe (42 → 52); bei 1920 und 1440 px bleibt sie einzeilig, seitlich schiebbar wird nichts. Wer daran dreht, misst bei **390 px** nach — dort ist sie ohnehin zweizeilig.
 
 **Es ist ein echtes Formular, ohne Server und ohne Build-Schritt.** Die erste Fassung war ein `mailto`; das verlangt aber ein eingerichtetes Mailprogramm und wirft den Absender aus dem Rechner heraus — an einem Arbeitsplatz mit Webmail passiert schlicht nichts. Möglich wird das Formular dadurch, dass die Seite bei **Netlify** liegt: Netlify erkennt beim Deploy ein statisches `<form data-netlify="true">` im ausgelieferten HTML und nimmt dafür POSTs entgegen.
 
