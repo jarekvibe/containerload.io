@@ -81,8 +81,14 @@ test("jedes Packstueck ist entweder ganz verladen oder ehrlich offen", () => {
 
 // ── Was die Oberflaeche daraus macht ────────────────────────────────────────
 test("die Oberflaeche liest die Bilanz des Plans, nicht die des ersten Containers", () => {
-  assert.ok(/const pt = \(result\.perTypeAll \|\| result\.perType\)\[i\];/.test(roh),
-    "die Ladungsliste zaehlt wieder nur den ersten Container");
+  // Die Zeile las frueher direkt (result.perTypeAll || result.perType). Seit es den Fokus
+  // gibt, laeuft sie ueber sichtPerType -- und dessen Rueckfall OHNE Fokus ist genau
+  // dieselbe Bilanz. Geprueft wird deshalb beides: dass die Zeile die Sicht liest, und dass
+  // die Sicht ohne Fokus die Kettenbilanz ist. Nur eins von beiden waere die halbe Zusage.
+  assert.ok(/const pt = sichtPerType\[i\];/.test(roh),
+    "die Ladungsliste liest nicht mehr die Sicht");
+  assert.ok(/const sichtPerType = fokusSlot[\s\S]{0,320}?: \(result\.perTypeAll \|\| result\.perType\);/.test(roh),
+    "ohne Fokus zaehlt die Ladungsliste wieder nur den ersten Container");
   assert.ok(/const planFit = offenGesamt <= 0 && result\.totalBoxes > 0;/.test(roh),
     "die Statuszeile bewertet wieder nur den ersten Container");
   assert.ok(/const offenGesamt = kette \? \(result\.remainingBoxes \|\| 0\) : unplaced;/.test(roh),

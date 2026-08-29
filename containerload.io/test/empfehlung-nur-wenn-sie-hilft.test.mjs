@@ -99,7 +99,14 @@ test("das Banner haengt an offenGesamt, nicht mehr am ersten Container", () => {
     "das Banner haengt wieder an unplaced -- das zaehlt nur den ersten Container");
   const m = roh.match(/const zeigeBanner = ([^;]+);/);
   assert.ok(m, "zeigeBanner ist nicht mehr definiert");
-  assert.ok(/offenGesamt > 0/.test(m[1]), `zeigeBanner fragt nicht nach offenGesamt: ${m[1]}`);
+  // Seit der Zuweisung je Position ist es der Rest OHNE das, was jemand selbst einem
+  // Container zugewiesen hat: "du brauchst ca. 1x 40' HC + 1x 40' GP" stand sonst unter
+  // einem Plan, der genau diese zwei bucht -- derselbe gemeldete Fehler, neue Tuer.
+  assert.ok(/offenOhnePin > 0/.test(m[1]), `zeigeBanner fragt nicht nach dem offenen Rest: ${m[1]}`);
+  const o = roh.match(/const offenOhnePin = ([^;]+);/);
+  assert.ok(o, "offenOhnePin ist nicht definiert");
+  assert.ok(/offenGesamt/.test(o[1]) && /pinOffen/.test(o[1]),
+    `offenOhnePin muss aus offenGesamt und pinOffen entstehen: ${o[1]}`);
   assert.ok(/empfBesser/.test(m[1]), `zeigeBanner kennt den Ausnahmefall nicht: ${m[1]}`);
   assert.ok(/const empfBesser = [^;]*planFit/.test(roh),
     "empfBesser darf nur greifen, wenn der Plan die ganze Ladung haelt (planFit)");

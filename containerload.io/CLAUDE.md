@@ -506,6 +506,179 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Der manuelle Modus je Container
+Schritt 06, der letzte aus dem Mehr-Container-Entwurf — und dort mit einem Satz beschrieben, der sich als richtig herausgestellt hat: *„Fällt danach fast von selbst ab: der Fokus sagt, welcher Container, die Vorbelegung trägt die gesetzten Kisten."*
+
+Bis dahin war der manuelle Modus ein **eigener Zustand ohne Kette**. Er klappte die Ansicht auf einen Container zusammen, die Ergebnisleiste zeigte daneben weiter die Zahlen des **Automaten** — man staute von Hand und las die Zahlen einer anderen Verteilung —, und Ladevorschlag, CSV und Bildexport waren gesperrt.
+
+**Jede gesetzte Kiste trägt jetzt ihren `slot`.** Daran hängt alles Weitere:
+
+| | |
+|---|---|
+| **Welcher Container gemeint ist, entscheidet der Klick** | Man klickt in den Container, in den man stauen will. Ein eigener Zielschalter wäre ein zweiter Zustand für eine Frage, die der Zeiger schon beantwortet hat |
+| **Setzen, drehen, schieben, löschen spielen sich IM Slot ab** | Nur die Kisten desselben Containers sind Hindernis, Auflage und Gewicht. Ohne diese Trennung stünde eine Kiste in C2 auf einer Palette in C1 — die beiden stehen im Bild nebeneinander, in der Rechnung aber im selben Koordinatensystem |
+| **Wie viele Container es gibt, sagt der Mensch** | `manualSlots`, bedient über „+ Container" / „− Container". Beim Einschalten stehen so viele da, wie der Automat gerade vorschlägt; weggenommen wird nur ein **leerer** und nur der letzte |
+| **Der Typ je Slot kommt aus derselben Tabelle wie sonst** (`chainOverride`) | Der Umschalter im Bild tut in beiden Betriebsarten dasselbe |
+
+**Der eigentliche Gewinn aus Schritt 04 heißt „Rest automatisch füllen".** Was von Hand steht, ist eine **Vorbelegung**; der Packer füllt darum herum, Container für Container, und schreibt den Rest zwischen ihnen fort. Das ist eine **ausdrückliche Handlung, kein Automatismus** — wer von Hand staut, will nicht, dass sich der Container von selbst füllt. Gemessen an der gemeldeten Sendung: fünf Paletten von Hand in C2, dann füllen → C1 22, C2 9, nichts offen.
+
+**`manuellBilanz` ist die Naht, und sie rechnet nichts.** Sie summiert, was steht, in genau der Form eines `packCargo`-Ergebnisses: Kette, `placed`, `perType` (erster Container), `perTypeAll` (Plan), Volumen, Gewicht, Lagen, offen. Alles, was am **Container und an der Ladung** hängt — Gesamtmenge, Containervolumen, Dreh-Hinweise, Übermaß —, bleibt aus dem Auto-Ergebnis stehen. Weil es reine Summation ist, darf es bei jedem Klick neu entstehen (`useMemo`, kein Effekt).
+
+Darüber liegt ein **Ein-Zeilen-Kniff**, der die halbe Aufräumarbeit erledigt hat: die Zustandsvariable heißt jetzt `rohResult`, und daneben steht
+
+```js
+const result = manuellRes || rohResult;
+```
+
+Ab dieser Zeile heißt `result` überall **das, was die Oberfläche zeigen soll**. Damit fielen vier Sonderwege ersatzlos weg (Bild-Kennzahlen, Kacheln, Blatt-Anordnung, Türprüfung), der Fokus gilt auch von Hand, und **Ladevorschlag und CSV sind nicht mehr gesperrt** — sie lesen `result`, und das stimmt jetzt auch im manuellen Modus. Nachgesehen: Deckblatt + Blatt je Container, und die CSV trägt die Container-Spalte samt `offen`-Marke.
+
+„Meine Pläne" bleibt gesperrt: ein geladener Plan ersetzt die Ladung, und die von Hand gesetzten Kisten wären damit weg.
+
+**Zwei Fehler, die dabei sichtbar wurden — beide älter als dieser Schritt:**
+
+> **Ein unsichtbarer Ghost hinterließ seinen Kandidaten.** Zeigte der Mauszeiger neben die Reihe, wurde der Ghost ausgeblendet, `t.ghostCandidate` blieb aber stehen — und der nächste Klick setzte die Kiste dorthin, wo der Zeiger zuletzt **gültig** stand. Mit einem Container fiel das kaum auf; mit mehreren landet sie im falschen. `ghostWeg(t)` nimmt jetzt beides zusammen weg. Gefunden beim Vermessen der Klickpositionen im Browser: von acht Klicks auf leere Fläche setzten acht eine Kiste.
+
+> **`manualArmed === 0` ist ein gültiger Index.** Die Bedingung hieß `!manualArmed`, also stand bei der **ersten** Position der Ladungsliste der Hinweis „Wähle unten ein Packstück …" neben dem Hinweis „Klicke im Bild, um … abzulegen". Zwei Sätze, die einander widersprechen, weil eine Null falsch gelesen wurde.
+
+**Die Mengengrenze gilt über ALLE Container.** `remapPlaced` räumt ungültig gewordene Kisten weg, sieht dabei aber immer nur **einen** Container — es prüft die Menge je Container. Bei zwei Containern ließe es 22 Paletten in C1 **und** 22 in C2 stehen, obwohl 22 eingegeben sind. Deshalb läuft danach `mengenGrenze` einmal über die zusammengelegte Liste; was zuerst gesetzt wurde, bleibt stehen.
+
+`test/manueller-modus-je-container.test.mjs` prüft die Bilanz (nichts geht verloren, nichts zählt zweimal, ohne gesetzte Kiste ist alles offen), die Mengengrenze **und** den Vertrag im Quelltext — mit sechs Gegenproben: zusammengeklappte Kette, Nachbarn über alle Container, `result`-Schatten weg, Füllen ohne Vorbelegung, stillgelegte `mengenGrenze` und stehengebliebener Ghost-Kandidat legen jeweils genau den Teil um, der die Zusage trägt.
+
+**Was der manuelle Modus weiterhin nicht kann, und zwar bewusst:** eine Kiste **von einem Container in den anderen ziehen**. Der Entwurf hat es als eigenen Schritt geführt und begründet: erst musste der Modus überhaupt mehrere Container kennen. Das tut er jetzt — das Ziehen ist danach ein kleiner Schritt und eine eigene Entscheidung. Bis dahin: löschen und neu setzen.
+
+### Die Zuweisung je Position: „dieses Packstück kommt in Container 2"
+Schritt 05 aus dem Mehr-Container-Entwurf, und der ausdrücklich gewünschte Teil davon: *„Evtl auch einbauen, dass der User selbst auswählen kann, welche der Packstücke in welchen Container kommen, wenn es mehrere gibt?"*
+
+Jede Position trägt jetzt ein `slot` — den Index des Containers, in den sie gehört, oder `null` für „Auto". Das Auswahlfeld steht in der aufgeklappten Zeile neben Menge und Maßen und erscheint erst, wenn es **mehr als einen** Container gibt; vorher gäbe es nichts zu wählen.
+
+**Die Zuweisung heißt „dort zuerst", nicht „nur dort".** Der Unterschied ist gemessen, nicht gefühlt: bei der gemeldeten Sendung (9 flache Stücke 250 × 80 × 30 nicht stapelbar + 22 Paletten) landen unter *nur dort* **2 von 9** gepinnten Stücken im Container — die Paletten sind schlicht früher dran und belegen den Boden —, unter *dort zuerst* **8 von 9**. Mehr passen auch allein nicht hinein.
+
+Umgesetzt ist das als **zwei Packläufe je Container** (`slotPacken`), und der zweite ist genau der Baustein aus Schritt 04:
+
+| | |
+|---|---|
+| **Lauf 1** | nur die auf diesen Container gepinnte Ware (`packCargo`) |
+| **Lauf 2** | alles **Ungepinnte** obendrauf, mit Lauf 1 als `vorbelegt` |
+| **Ohne Pin auf diesem Container** | genau ein Lauf, Wort für Wort der alte Aufruf |
+
+Ware, die auf einen **anderen** Container gepinnt ist, steht in keinem der beiden Läufe zur Verfügung — sonst wäre die Zuweisung nur ein Wunsch. **Auch der Gewichtsausgleich läuft durch `slotPacken`**; täte er es nicht, verteilte Stufe 2 die gerade zugewiesene Ware sofort wieder um.
+
+**Geht eine Zuweisung nicht auf, bleibt das Stück offen und sagt es.** Es rutscht nicht heimlich in den nächsten Container — das wäre die eine Sache, die eine Zuweisung nicht tun darf. Die Zeile trägt dafür einen eigenen Satz (`T.slotOffen`: „1 Stück passt nicht in den zugewiesenen Container"). Genau das ist im gemeldeten Fall das neunte flache Stück.
+
+**Die Zuweisung reist im Teilen-Link mit** — als `sl` im `?p=`-Format und als Tag **`S`** im kompakten `?c=`. Beide zählen **ab 1**, damit Container 1 nicht als `0` und damit als „kein Wert" verschwindet. Der Tag ist neu vergeben und kein alter umgewidmet: die Codetabelle des `?c=`-Formats darf ausdrücklich nur **ergänzt** werden.
+
+> **Der Fehler, den erst der Browser gezeigt hat:** Die Kette lief `while (totRem > 0 …)` — und `totRem` zählt auch das, was auf einen **längst gebauten** Container gepinnt ist. Für dieses eine Stück baute sie Container um Container bis `MAXCHAIN`; in der Anzeige stand „1 offen · **mehr als 24 Container**". Die Abbruchbedingung fragt jetzt `nochMoeglich(remaining)` — was überhaupt noch untergebracht werden **kann** —, und meldet daneben unverändert `totRem` als das, was offen **ist**. Zwei verschiedene Fragen, die vorher dieselbe Zahl benutzt haben.
+
+> **Und der Satz daneben war ohnehin falsch**, schon vor der Zuweisung: `T.openMore` („N offen · mehr als 24 Container") stand bei **jedem** Rest. 30 Paletten plus zwei Stücke, die in keinen Container passen, ergeben eine Kette aus zwei Containern und zwei offenen Stücken — die Ansicht behauptete dort „2 offen · mehr als 24 Container". Die Kette liefert deshalb `gekappt` — wahr nur, wenn sie wirklich an der Grenze abgeschnitten wurde. Sonst steht dort `T.openStuck`: „N offen · ein weiterer Container hilft nicht." Dasselbe Signal entscheidet, ob die Pille „**≥** 2 Container" oder „2 Container" sagt.
+
+**Und das Empfehlungsbanner schweigt dazu.** Unter dem Plan stand sonst „Du brauchst ca. **1× 40′ HC + 1× 40′ GP**" — unter einem Plan, der genau diese zwei bucht. Das ist Wort für Wort der gemeldete Fehler von oben, nur durch eine neue Tür hereingekommen: das Banner hängt an dem, was liegenbleibt, und ein zugewiesenes Stück bleibt liegen. Die Kette liefert deshalb `pinOffen` — wie viel vom Rest auf das Konto der Zuweisung geht —, und `zeigeBanner` fragt den Rest **ohne** diesen Anteil. Ein Vorschlag, der auf mehr Equipment hinausläuft, ist hier leer: Der Container steht schon da, und die Anweisung sagt, dass die Ware dort hinein soll. Gesagt wird es trotzdem, nur an der richtigen Stelle — an der Position selbst und im Bild.
+
+**Gemessen.** Ohne Zuweisung ist die Kette **Zahl für Zahl identisch** — über 200 zufällige Ketten 1.820 Container, 131.549,6 m³ gebuchtes Volumen, Sortenstreuung 2.429, 77 offen, und die Rechenzeit liegt innerhalb der Streuung zweier Läufe derselben Fassung (13,7–15,6 s in beiden). Mit Zuweisung kostet der zweite Packlauf, was er kosten muss: die gemeldete Sendung 38,8 → **80,3 ms** im teuersten der drei Fälle.
+
+Was dabei herauskommt, und es ist genau das, was der Nutzer sehen will:
+
+| Zuweisung | C1 | C2 | offen |
+|---|---|---|---|
+| keine | 2 flache + 22 Paletten | 7 flache | 0 |
+| flache → C1 | **8 flache** + 4 Paletten | 18 Paletten | 1 |
+| flache → C2 | 22 Paletten | **8 flache** | 1 |
+| Paletten → C2 | 8 flache | **22 Paletten** + 1 flaches | 0 |
+
+**Ein Wächter hält die Zuweisung gültig.** Wird die Ladung kleiner oder fällt die Kette auf einen Container zusammen, zeigen Zuweisungen auf Container, die es nicht mehr gibt; sie fallen dann auf „Auto" zurück — dieselbe Regel wie beim Fokus, und aus demselben Grund.
+
+`test/zuweisung-je-position.test.mjs` prüft die Rechnung **und** den Vertrag im Quelltext, mit drei Gegenproben: mit alter Abbruchbedingung, mit `gekappt` wieder an `remainingBoxes` gehängt und mit stillgelegtem `slotPins` fällt jeweils genau der Teil um, der die Zusage trägt.
+
+### Weiterpacken auf einer Vorbelegung (`opts.vorbelegt`)
+Schritt 04 aus dem Mehr-Container-Entwurf. **Sichtbar ändert diese Stufe nichts** — sie ist der Baustein, den zwei kommende Funktionen brauchen:
+
+- die Zuweisung **„dort zuerst"** (Schritt 05, inzwischen gebaut): erst die gepinnte Ware, dann der Rest in den Rest. Ohne das heißt eine Zuweisung nur „dort", und dann landen von neun gepinnten Stücken **zwei** im Container, weil die Paletten früher dran sind;
+- der **manuelle Modus je Container** (Schritt 06, inzwischen gebaut): von Hand gesetzte Kisten sind nichts anderes als eine Vorbelegung, auf der der Automat weitermacht — im Werkzeugkasten heißt das „Rest automatisch füllen".
+
+**Umgesetzt ohne neue Datenstruktur.** `emsPackOnce` zerteilt seinen einen freien Raum nach *jeder* gesetzten Kiste ohnehin — dieselbe Schleife einmal vorab über die schon stehenden Kisten gefahren ergibt genau den Startzustand: freie Räume um die Vorbelegung herum. `emsSplit`, `emsOverlap` und `emsPrune` gab es dafür längst.
+
+**Der Vertrag:**
+
+| | |
+|---|---|
+| Die Vorbelegung ist **Hindernis, Auflage und Gewicht** | Sie wird nicht neu gesetzt, sondern nur berücksichtigt |
+| Sie kommt **nicht im Ergebnis zurück** | „Pack das hier noch dazu" liefert, was dazukam — der Aufrufer hängt es an seine eigene Liste |
+| Ihr Gewicht zieht **`packCargo`** vorher ab (`payFrei`) | `emsPackOnce` rechnet unverändert weiter und muss von der Vorbelegung nichts wissen |
+| Mit Vorbelegung führt **immer der gemischte Pfad** | Der Einzeltyp-Pfad legt ein Bodenraster und kennt keine Hindernisse — er würde die Vorbelegung schlicht überbauen |
+
+> **Die Falle, und sie ist die eigentliche Arbeit an dieser Stufe:** Eine von Hand gesetzte Kiste bringt `pos` / `lim` / `hlim` **nicht** mit. Ohne sie fällt der Packer auf „keine Grenze" zurück und stapelt auf ein Stück, auf das nichts darf — genau der Fehler, den „nicht stapelbar heißt beides" gerade erst behoben hat. `grenzenAus(B, placed, t)` rechnet Lage und beide Grenzen deshalb aus dem, was unter der Kiste steht, plus der Tragfähigkeit ihrer Ware. Das passiert in **`packCargo`**, nicht in `emsPackOnce`: nur `packCargo` kennt die Ladungsliste. Von unten nach oben, damit jede Kiste ihre Träger schon kennt.
+
+**Gemessen.** Der Füllgrad-Messstand ist **Ziffer für Ziffer identisch** (14.746 Packstücke, 5.392,790 m³, 290 mit Etagen) — ohne `vorbelegt` läuft alles wie vorher. Mit Vorbelegung: die gemeldete Sendung in zwei Läufen 17,9 ms (gegen 38,4 ms in einem), und eine Vorbelegung aus **440 Kisten** kostet 50 ms.
+
+**Was dabei sichtbar wurde und für Schritt 05 zählt:** Werden die neun flachen Stücke auf C1 gepinnt, passen dort **8 Flache + 4 Paletten = 12 Stück** statt der 26, die der freie Packer findet. Acht Flache belegen den Boden so, dass für Paletten nur die Restlänge von 203 cm bleibt — und über den nicht stapelbaren Flachen sind 240 cm tote Luft. Das ist kein Fehler, sondern der Preis der Anweisung. Die Oberfläche muss ihn zeigen, nicht verstecken.
+
+`test/weiterpacken.test.mjs` prüft die Fähigkeit selbst, unabhängig von ihren Aufrufern (`slotPacken` aus Schritt 05 und `manualAutoFill` aus Schritt 06): nichts durchdringt die Vorbelegung, nichts schwebt darüber, die Stapelregel gilt über die Naht hinweg (**mit Gegenprobe**: dieselbe Kiste als stapelbare Ware *muss* belastet werden), das Gewicht zählt gegen die Zuladung, und über 60 Zufallsfälle bleibt die Vorbelegung unberührt.
+
+### Ladevorschlag und CSV je Container
+Schritt 03 aus dem Mehr-Container-Entwurf. Beide Ausgaben kannten bis dahin nur den ersten Container.
+
+**Der Ladevorschlag ist jetzt ein Deckblatt plus ein Blatt je Container.** Vorher war er *ein* Blatt: die Stauplan-Zeichnung zeigte C1, darunter stand ein Hinweissatz „Zeichnung zeigt Container 1 von N". Wer drei Container buchte, bekam ein Dokument über einen davon — und die Ladeliste darin nannte die **eingegebene** Menge, nicht die im gezeichneten Container.
+
+| | |
+|---|---|
+| **Deckblatt** | Das, was in die Buchung geht: die gebuchte Kombination (`2× 40′ HC + 1× 20′ GP`), das gebuchte Gesamtvolumen, die Zuladung des **Plans**, die volle Positionsliste — und an der Stelle, an der sonst die Zeichnung steht, die **Übersicht je Container** (`LV_UEBERSICHT`) |
+| **Je Container ein Blatt** | Eigene Innenmaße, eigene Zuladung, eigener Stauplan, und **nur die Positionen mit der Menge, die dort liegt** |
+| **Ein Container** | Bleibt **ein** Blatt, Zeichen für Zeichen wie vorher. Ein Deckblatt für eine einzige Seite wäre Papier ohne Inhalt |
+
+Gebaut ist das ohne zweite Vorlage: `LV_PAGE` wird je Blatt erneut aufgerufen. `STOWAGE` ist ohnehin nur ein HTML-Platz — auf dem Deckblatt steht dort die Übersicht, auf einem Containerblatt die Zeichnung. **Ein Platz, zwei Inhalte.** Neu parametrisiert sind nur zwei Kleinigkeiten: `SEITE` (die Fußzeile stand fest auf „Seite 1 / 1") und `MITTE_LABEL` (zwei Container haben zwei Innenmaße; ein Gedankenstrich dort sieht aus wie ein Fehler, deshalb steht auf dem Deckblatt „GEBUCHT 143,9 m³").
+
+Drei Fallen, alle erlebt:
+- **`LV_ROW` rechnet Gewicht und Volumen aus `it.qty`.** Ein Containerblatt bekommt deshalb `{ ...it, qty: n }` — sonst summiert sich das Blatt auf ein Gewicht, das nie in dem Container war.
+- **Die Legende unter der Zeichnung auch.** Sie las `cargo[ti]` direkt und schrieb „9×" unter einen Container mit zwei Stück.
+- **`chainLen: 1`** auf jedem Containerblatt: der Hinweis „Zeichnung zeigt Container 1 von N" gehört dort nicht mehr hin — das Blatt *ist* der Container.
+
+**„Passt in" nennt auf dem Deckblatt die gebuchte Kette**, nicht die frei gerechnete Empfehlung. Bei einer Kette ist `allFit` falsch (es zählt nur den ersten Container), und ohne einen eigenen Zweig stünde in einem Dokument, das genau diese Kette bucht, eine Empfehlung, die davon abweichen kann.
+
+**Mehrere `.page`-Blöcke brauchen zwei Zeilen CSS** in `LV_DOC`: `break-after:page` im Druck (und `:last-of-type` wieder zurück, sonst folgt eine leere Seite) sowie ein Abstand am Bildschirm.
+
+**Die CSV hat eine Container-Spalte** und damit **eine Zeile je Position und Container**:
+
+```
+Container;Position;Menge;…;Gewicht_kg_gesamt;…;Eingegeben
+C1;Package;2;…;600;…;9
+C1;Package;22;…;6600;…;22
+C2;Package;7;…;2100;…;9
+```
+
+`Menge` ist ab jetzt die Menge **in diesem Container** und `Gewicht_kg_gesamt` das Gewicht dieser Menge — damit ergibt eine Summe je Container das, was der Container wiegt. Die eingegebene Menge steht daneben als `Eingegeben`. Was nicht verladen ist, bekommt die Marke **`offen`**; so taucht jede Position mindestens einmal auf, auch eine, von der nichts hineingeht. Bei einem Container ist das Ergebnis dasselbe wie vorher, nur mit der Spalte davor.
+
+> **`test/csv.test.mjs` hatte eine eigene KOPIE von `buildCargoCSV`**, mit dem Kommentar „byte-identisch zur Inline-Fassung in app.html". Sie war es längst nicht mehr — der Kopie fehlten `stackH` und `perTypeAll`, und der Test hätte jede Änderung an `app.html` stillschweigend durchgewunken. Er schneidet die Funktion jetzt aus `app.html` heraus, wie die übrigen Tests dieses Projekts auch. **Eine Kopie im Test ist kein Test.**
+
+### Der Fokus: worüber die Oberfläche gerade spricht
+Gemeldet: *„Ich finde, dass das Tool aktuell mehr darauf ausgelegt ist, die Darstellung für einen Container zu machen, wir sollten uns aber auch darum kümmern, wie es ist wenn mehrere Container zustande kommen."*
+
+Nachgesehen, Zeile für Zeile: **neun Stellen** kannten nur den ersten Container — manueller Modus, Ladevorschlag, CSV, Schwerpunkt, Türprüfung, Übermaß, Ergebnisleiste, Ansicht, und die Zuweisung gab es gar nicht. Acht davon haben **dieselbe Ursache**: Es gab keinen Begriff dafür, welcher Container gemeint ist, also nahm sich jede Stelle den erstbesten.
+
+**Der Fokus ist dieser Begriff** — eine einzige Zustandsvariable: `"alle"` oder der Index eines Containers.
+
+| | |
+|---|---|
+| Er gehört zum **Hinsehen**, nicht zur Sendung | Deshalb steht er weder im `?c=`-Link noch im Entwurf. Ein geteilter Plan öffnet auf „alle" |
+| Bedient wird er **im Bild** | Die Pille „2 Container · mit dieser Wahl" ist der Weg zurück zu „alle"; die Marke `C1`/`C2` in der Slot-Zeile setzt den Fokus. Das Auswahlfeld daneben bleibt, was es war — es wählt den **Typ**. Zwei Handlungen, zwei Ziele, eine Zeile |
+| Ein **Wächter** hält ihn gültig | Wird die Ladung kleiner, ein Plan geladen oder die Domäne gewechselt, fällt er auf „alle" zurück. Sonst stünden in der Leiste die Zahlen eines Slots, den es nicht mehr gibt. Der **manuelle Modus stand hier bis Schritt 06 mit in der Bedingung** — er klappte die Kette zusammen; seit er selbst mehrere Container stellt, gilt für ihn dieselbe Regel wie sonst |
+
+**Die Naht heißt `sicht*`.** Alles, was die Leiste, die Ladungsliste, die Türprüfung und der Schwerpunkt lesen, läuft über `sichtCont` / `sichtPlaced` / `sichtVol` / `sichtKg` / `sichtBoxes` / `sichtPerType` statt über `result.*` und `container.*`. **Ohne Fokus ist das Wort für Wort das alte Verhalten** (der erste Container); mit Fokus derselbe Satz Zahlen für einen anderen. Wer eine neue Kennzahl einbaut, liest die Sicht — sonst fällt genau sie beim Umschalten aus der Reihe.
+
+Zwei Dinge ändern sich dabei sichtbar, und beide mit Absicht:
+- **Die Marke „C1" verschwindet mit Fokus.** Sie sagt, dass die Leiste nur den ersten Container zählt — steht oben im Bild, worüber geredet wird, ist sie überflüssig.
+- **„Verladen" bekommt keinen Nenner mehr.** „24 Stück" in diesem Container, nicht „24 / 31" — die 31 gehören dem Plan, nicht dem Container.
+
+**Im Bild verschwindet die Ladung der anderen, nicht ihre Hülle.** Ganz ausblenden wäre verwirrend (wo ist der zweite Container?), unverändert stehenlassen auch (was ist gemeint?). Ausgeblendet werden nur Objekte, die zu **einem** Container gehören: seine Instanzsätze (`cg.userData.boxMeshes`) und die Kantenlinien (`userData.ladung`).
+
+> **Finger weg von den Hüllen-Materialien.** Sie kommen aus `shellCache` und sind zwischen **gleich großen** Containern geteilt. Wer dort die Deckkraft senkt, blasst den fokussierten mit ab. `test/fokus-je-container.test.mjs` prüft ausdrücklich, dass `fokusAnwenden` keine Materialien anfasst.
+
+**Der Fokuswechsel baut die Szene nicht neu.** `fokusAnwenden` hängt an einem eigenen Effekt (`[fokus, result]`); der große Aufbau-Effekt ruft es am Ende zusätzlich auf, weil er auch ohne Fokuswechsel läuft. Andernfalls liefe die Aufbau-Animation bei jedem Klick von vorn und der Wechsel kostete bei 1.900 Kisten eine halbe Sekunde. Die Kamera passt über `camFit` auf `t.frame.slots[i]` ein — dieselbe Einpassung, die der Bildexport je Container längst benutzt.
+
+**Die wichtigste Zusage ist eine negative: der Fokus ändert keine einzige Zahl**, nur welche gezeigt wird. `test/fokus-je-container.test.mjs` prüft beides — die Arithmetik (die Sichten summieren sich über 40 Zufallsketten auf die Kettenbilanz, kein Stück zählt zweimal) **und** den Vertrag im Quelltext. Eine nachgebaute Rechnung allein sagt nichts darüber, was die Oberfläche liest.
+
+> **Der Mehr-Container-Entwurf ist gebaut:** Fokus (01/02), Ladevorschlag und CSV je Container (03), das Weiterpacken auf einer Vorbelegung (04), die Zuweisung je Position (05) und der manuelle Modus je Container (06) — jeweils mit eigenem Abschnitt oben. **Nicht gebaut und ausdrücklich abgegrenzt:** eine Kiste von einem Container in den anderen ziehen, und Mengen als eigenes Feld splitten — dafür gibt es „Position teilen".
+
+> **Nebenbefund, nicht von dieser Änderung:** Die Ergebnisleiste ist bei **1440 und 1500 px zweizeilig**, obwohl oben steht, sie bleibe bis 1800 px einzeilig. Gegen `origin/main` gemessen — identisch, also älter als der Fokus. Eigene Baustelle.
+
 ### Die Kamera darf ihren Mittelpunkt verlassen
 Die 3D-Ansicht kreiste um `t.target`, und das war die **Mitte der Reihe**. Zoomen hieß damit immer „in die Mitte hinein" — bei drei Containern also in die Lücke zwischen dem ersten und dem zweiten. An den ersten oder letzten Container kam man gar nicht heran. Drei Wege heraus, alle drei Standard in 3D-Betrachtern:
 

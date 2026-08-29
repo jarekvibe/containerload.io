@@ -16,10 +16,14 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 
 test("die Kacheln kommen aus derselben Quelle wie die Tabelle", () => {
-  assert.ok(/const slotsImBild = manualMode \? \[\] : \(slotRows \|\| \[\]\)\.slice\(0, 8\);/.test(roh),
+  assert.ok(/const slotsImBild = \(slotRows \|\| \[\]\)\.slice\(0, 8\);/.test(roh),
     "das Bild rechnet eigene Zahlen statt slotRows zu benutzen - dann koennen sie auseinanderlaufen");
-  assert.ok(/const mehrSlots = manualMode \? 0 : Math\.max\(0, \(slotRows \|\| \[\]\)\.length - 8\);/.test(roh),
+  assert.ok(/const mehrSlots = Math\.max\(0, \(slotRows \|\| \[\]\)\.length - 8\);/.test(roh),
     "ohne diesen Rest verschwiegen mehr als acht Container ihre Zahl");
+  // Seit Schritt 06 gilt das auch von Hand: result ist dort die manuell gestaute Kette,
+  // slotRows liest sie, und das Bild liest slotRows. Ein Sonderweg waere eine zweite Quelle.
+  assert.ok(!/const slotsImBild = manualMode/.test(roh),
+    "das Bild sperrt die Kacheln im manuellen Modus aus -- der stellt seit Schritt 06 selbst Container");
 });
 
 test("bei einem einzelnen Container bleibt das Bild, wie es war", () => {
