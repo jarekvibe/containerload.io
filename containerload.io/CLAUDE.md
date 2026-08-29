@@ -224,6 +224,37 @@ Gemessen über 200 zufällige Ketten: **kein einziger Fall braucht mehr Containe
 
 > **Die Falle, die fünf Testdateien auf einmal umgeworfen hat:** Beim Umbau wurde aus `return { chain, remainingBoxes: … }` ein `const out = { … }; return out;`. Fünf Test-Slices schneiden das Ende von `chainContainers` an genau dieser Zeichenkette ab — sie liefen ins Leere, und die halbe Kette war nicht mehr getestet. Die Zeile beginnt jetzt in **beiden** Ketten-Funktionen wieder wörtlich mit `return { chain, remainingBoxes`, mit einem Kommentar darüber.
 
+### Stufe 3: ordentlich stauen, solange es nichts kostet
+Gemeldet: *„die Ladung wird teilweise auch weird gestaut … Ich weiß, dass es schwierig ist umzusetzen, dass nach Logik gestaut wird, aber vielleicht kann man das probieren?"*
+
+Erst gemessen, dann gebaut. Als Zahl taugt die **Streuung**: die Summe der quadratischen Abstände jedes Packstücks vom Schwerpunkt seiner eigenen Sorte (in m²). Bei der gemeldeten Sendung — 9 flache Stücke 250 × 80 × 30 „nicht stapelbar" plus 22 Paletten — lag sie bei **266 m²**; Sorte für Sorte gelegt sind es **85**. Der Anteil gleicher Nachbarn: 69 % gegen 95 %.
+
+**Die Ursache sind ausgerechnet die Zufalls-Neustarts von `emsSearch`.** Die festen Sortierungen legen Sorte für Sorte (gleiche Ware hat gleiche Maße, und die stabile Sortierung hält sie beieinander); ein gemischter Wurf bringt hier **26 Packstücke statt 24** unter — und dafür steht jede Sorte hinterher an vier Stellen. Nachgerechnet: keine der acht festen Sortierungen erreicht 26, das kommt nur aus einem Shuffle.
+
+**Die Frage ist deshalb nicht „ordentlich ODER voll", sondern auf welcher Ebene bezahlt wird.** Zwei Packstücke weniger im ersten Container sind kein Verlust, solange sie im zweiten mitfahren, den es ohnehin gibt: **gebucht und bezahlt werden Container, nicht Stellplätze.** Genau deshalb sitzt die Entscheidung in der Kette und nicht im Packer.
+
+- **`packCargo(…, { ordentlich: true })`** schaltet in `emsSearch` die Neustarts ab (`rs = 0`). Sonst ändert sich dort nichts — der Füllgrad-Messstand ist **Ziffer für Ziffer identisch** (14.746 Packstücke, 5.392,790 m³).
+- **Stufe 3 in `chainContainers` / `chainVehicles`** baut nach dem Gewichtsausgleich eine zweite, ordentliche Kette und übernimmt sie nur, wenn sie **nichts kostet**: nicht mehr liegen lässt, nicht mehr Container braucht, **und die Gewichtsspanne nicht verschlechtert.** Der letzte Punkt ist nicht theoretisch — Stufe 2 hat die Spanne bei der 37-Paletten-Sendung gerade erst von 9.700 auf 800 kg gedrückt, und eine ordentliche Kette hat weniger Spielraum dafür. Ordentlich darf **nichts** kosten, auch keinen Ausgleich.
+
+**Bei genau einem Container fällt die Stufe aus.** Dort gibt es keine nächste Ladung, in die ein Packstück ausweichen könnte — ordentlich wäre dann schlicht weniger Ladung, und das ist nicht der Auftrag.
+
+Zwei weitere Wächter, aus demselben Grund wie bei der sortenreinen Kette:
+- **Trägt kein Container mehr als eine Sorte, gibt es nichts zu entmischen.** Bei einer einzigen Sorte ist das immer so — und dort kostete die Stufe am meisten: 1.900 Kisten, **445 → 932 ms** für exakt dasselbe Ergebnis. Mit dem Wächter: 459 ms.
+- **Ab `MAXDRAW` Containern** zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese Ketten sind die teuren (600 Kisten auf 14 Containern: 805 → 395 ms).
+
+**Gemessen.** Die gemeldete Sendung, unverändert 2 Container und nichts offen:
+
+| | vorher | nachher |
+|---|---|---|
+| C1 | 26 Stück · Streuung **266 m²** · 69 % gleiche Nachbarn | 24 Stück · Streuung **85 m²** · 95 % |
+| C2 | 5 Stück (5 flache) | 7 Stück (alle übrigen flachen) |
+
+Über 120 zufällige Ketten: **293 Container vorher wie nachher, 5.898 Packstücke vorher wie nachher, nichts liegengeblieben**, Streuung 35.959 → 33.854 (−5,9 %), Rechenzeit +10 % (15,5 → 17,0 s).
+
+`test/ordentlich-stauen.test.mjs` baut die **Gegenprobe aus derselben Quelle**: es lädt `app.html` ein zweites Mal mit ausgeschalteter Stufe 3 (`const ord = bauen(…)` → `const ord = null`) und vergleicht beide Ketten über 60 Zufallsfälle gegeneinander. So kann die Zusage „kostet nichts" nicht stillschweigend veralten.
+
+> **Ein Signal hat dabei die Bedeutung gewechselt:** `slot0` im Rückgabewert der Kette hieß bis dahin faktisch „der Gewichtsausgleich hat gegriffen". Stufe 3 legt den ersten Container ebenfalls neu und liefert dafür ein `slot0` — völlig zu Recht. Wer den **Ausgleich** meint, fragt jetzt `ausgeglichen`.
+
 ### Karton auf Palette (Vorstufe)
 `palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
 
@@ -363,7 +394,19 @@ Zwei Korrekturen nach der ersten Fassung, beide gemeldet:
 
 **Die Frage kommt einmal und dann nie wieder** (`containerload.feedback.v1`, gehört damit auch in die Datenschutzseite) — und erst, wenn jemand wirklich etwas vom Rechner hatte: nach dem ersten Weitergeben (Teilen, Bild, CSV, Ladevorschlag) oder nach einer Minute mit einem fertigen Plan. **Im eingebetteten Rechner der Startseite gar nicht:** dort schaut man sich um, man arbeitet nicht. Steht gerade ein Hinweis unten in der Mitte, wartet die Frage — zwei Kästen übereinander an derselben Stelle wären schlechter als gar keine Frage.
 
-> **Zwei Dinge, die nur der Projektinhaber entscheiden kann** und die außerhalb des Codes liegen: dass **Netlify Forms aktiv** ist und eine **E-Mail-Benachrichtigung** auf das Formular `feedback` zeigt (sonst landen die Meldungen nur im Netlify-Dashboard), und ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist. Das Formular funktioniert ohne beides — die Meldungen kommen dann nur nicht per Mail an.
+**Die Netlify-Einrichtung ist ein Deploy-Schritt, kein Laufzeit-Schalter.** Beim ersten Anlauf kam ein **404** auf den POST: Formularerkennung war aus. Der Weg, in dieser Reihenfolge — der mittlere Schritt wird gern übersehen:
+1. Forms → **Enable form detection**
+2. **Neu deployen** — Netlify erkennt Formulare beim Deploy, nicht rückwirkend
+3. Forms → das Formular **`feedback`** muss dort auftauchen (noch ohne Einsendungen)
+4. Notifications → **Email notification** auf *New form submission*
+
+Wer die Felder ändert, muss deshalb **neu deployen**, sonst verwirft Netlify die unbekannten stillschweigend.
+
+**Die Benachrichtigungs-Mail lässt sich nicht gestalten** — Netlify verschickt schmucklosen Text und schreibt den Wert des **ersten Feldes** in die Betreffzeile. Das erste Feld ist deshalb `zusammenfassung` (*„Passt nicht · 40′ HC · 3 Positionen"*): vorher stand im Posteingang „Form submission from feedback form: **gut**", was nichts sagt. Netlify stellt 36 Zeichen voran — die Zusammenfassung bleibt darum kurz und beginnt mit dem, was zählt.
+
+Die übrigen Felder sind so zusammengefasst, dass die Mail **ohne Gestaltung lesbar** bleibt: neun Zeilen mit halb leeren Überschriften waren schlechter als sechs volle. Leere freiwillige Angaben tragen einen Gedankenstrich — eine Überschrift ohne Inhalt liest sich wie ein Fehler. **Der Inhalt ist deutsch, unabhängig von der Sprache der Oberfläche:** diese Mail liest der Projektinhaber, nicht der Absender. Deshalb steht dort auch kein `T`-Schlüssel — sichtbar ist davon im Rechner nichts.
+
+> **Was außerhalb des Codes bleibt:** ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist.
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
@@ -392,6 +435,57 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 > **Die Falle, die eine Stunde gekostet hat:** `setToastAct(fn)` liest React als **Updater** und **ruft `fn(bisherigerZustand)` auf**, statt `fn` zu speichern. Das Löschen machte sich dadurch sofort selbst rückgängig — ohne eine einzige Fehlermeldung, ohne Konsolenausgabe, ohne dass ein Render stattfand. Wer eine Funktion in einen Zustand legt, muss sie verpacken: `setToastAct(() => fn)`. `test/entwurf-und-undo.test.mjs` hält das fest.
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
+
+### Das Empfehlungsbanner spricht nur, wenn es etwas zu sagen hat
+Gemeldet: *„Wenn man mehrere Container hat, zum Beispiel 2× 20 GP, wird einem unten trotzdem noch irgendwas vorgeschlagen mit ‚Du brauchst ca. 1× 40HC + 1× 20GP', obwohl man die Auswahl ja selbst bereits getroffen hat."* Daneben stand gleichzeitig **„Alles verladen · 2 Container"** in Grün. Zwei Antworten auf dieselbe Frage, und die untere war die falsche.
+
+Ursache: das Banner hing an **`unplaced`** — der Differenz im *ersten* Container. Genau die halbe Wahrheit, die die Statuszeile schon einmal erzählt hat und die seither über `offenGesamt` läuft (siehe „Mehr als ein Container ist ein Entschluss").
+
+Es hängt jetzt an **`zeigeBanner`**:
+- **`offenGesamt > 0`** — es bleibt wirklich etwas liegen. Dann ist das Banner die Antwort auf „was nun?", wie bisher.
+- **`result.rotHintAll`** — mit erlaubter Drehung ginge alles in einen.
+- **`empfBesser`** — die Ausnahme, die Geld wert ist: der Plan hält zwar alles, aber die frei gerechnete Empfehlung kommt mit **weniger Equipment** aus. Verglichen wird in derselben Rangfolge wie in `ketteBesser` — erst die Zahl der Container, dann das gebuchte Volumen. Der Text ist dann ein Angebot und keine Warnung (`recBetter`: „Es ginge auch mit 1× 40′ GP — weniger Equipment für dieselbe Ladung"), und der Rahmen trägt `C.hint` statt `C.warn`.
+
+`test/empfehlung-nur-wenn-sie-hilft.test.mjs` rechnet alle drei Fälle nach **und** prüft den Vertrag im Quelltext — eine nachgebaute Rechnung im Test sagt nichts darüber, ob `app.html` sie auch benutzt.
+
+> **Offen geblieben, und ausdrücklich als eigene Aufgabe gemeldet:** das gesamte Erlebnis bei mehreren Containern. Der Rechner ist auf **einen** Container hin gebaut — eine Ergebnisleiste (C1), ein Bild, eine Ladungsliste — und die Kette ist überall darübergelegt. Gewünscht wurde unter anderem, Packstücke **einem bestimmten Container zuweisen** zu können. Das ist ein Konzept, keine Korrektur.
+
+### Die Vorschaubilder beim Teilen (`og.png`, `share-og.png`)
+Gemeldet: *„Wenn ich Kollegen den Plan per Teams teile, kommt da so eine Art Header … ist noch im alten Design, sieht ziemlich kacke aus. Außerdem auch nur auf Deutsch."* Beides stimmte. Die zwei Karten waren die letzten Stellen mit **Farbverlauf, Türkis-Akzent und dem alten Markenzeichen** — dieselbe Abweichung, die auf den Randseiten und im Container-Wissen schon einmal aufgeräumt wurde. Selten angesehene Dateien driften am weitesten.
+
+| | |
+|---|---|
+| `og.png` | Startseite **und alle Wissens-/Guide-Seiten** — die häufiger geteilte der beiden |
+| `share-og.png` | `share.html`, also der weitergegebene Plan |
+| Quelle | `test/og/karte.html` — eine Seite, zwei Fassungen über `?v=start` / `?v=share`, mit Playwright bei 1200 × 630 abfotografiert |
+
+**Beide Karten sind zweisprachig**, und das ist keine Bequemlichkeit: ein Vorschaubild ist **statisch**. Der Scraper von Teams, Slack oder LinkedIn liest die Meta-Angaben, bevor irgendein `?lang=en` gewirkt hätte. Getrennte Fassungen je Sprache bräuchten eine zweite Seite plus eine Netlify-Weiterleitung auf den Query-Parameter — das wäre eine eigene Entscheidung. Dieselbe Zweisprachigkeit tragen `og:title`, `og:description` und `og:image:alt` in `share.html`.
+
+Nebenbei korrigiert: auf der alten Karte stand **„Ein Ladeplan wurde dir geteilt"**. Man teilt etwas **mit** jemandem.
+
+**Die Maße müssen 1200 × 630 bleiben** — `og:image:width` / `og:image:height` nennen genau diese Zahlen.
+
+`test/vorschaubild.test.mjs` **liest die PNG-Pixel selbst** (ein kleiner Decoder für 8 bit RGB ohne Interlace, mehr braucht es nicht) statt einem Kommentar zu glauben:
+- Die **vier häufigsten Farben der Textspalte** müssen genau `C.bg`, `C.accent`, `C.text`, `C.dim` sein — **aus `app.html` gelesen**, nicht abgeschrieben.
+- Der Grundton deckt über 80 % und **alle vier Ecken sind derselbe Ton** — daran scheitert jeder Farbverlauf.
+- Gegenprobe gemacht: mit der alten Datei fällt der Test mit „Ecke #070a0f statt Grundton #0e1116" und „häufigste Farbe 28,2 %" um.
+
+Die rechte Bildhälfte ist ausgenommen: dort stehen die **Kennfarben der Packstücke** (`TYPE_COLORS`), und die sind absichtlich bunt — sie tragen Information.
+
+**Die Malerreihenfolge ist nachrechenbar — und war zweimal falsch.** Gemeldet: *„die Ladung dadrinne sieht voll buggy aus."*
+
+1. Erster Anlauf: sortiert nach der **Summe der Eckkoordinaten**. Das stimmt nur, solange alle Kisten gleich groß sind; bei gemischten Größen wurde eine hintere Palette über den flachen Block davor gemalt.
+2. Zweiter Anlauf: Tiefensuche mit der Regel *„A liegt hinter B, wenn beide entlang einer Achse getrennt sind und A dort die kleineren Werte hat"* — mit `<=`. Damit zählt jede **Berührung** als Verdeckung, und weil eine gestaute Ladung fast nur aus Berührungen besteht, nannten sich Paare **gegenseitig** „hinter" (eine Palette weiter hinten in x, die andere weiter unten in z). Die Suche lief im Kreis: **33 von 61 Paaren** standen falsch herum, und das Bild sah schlimmer aus als vorher.
+
+Richtig ist die Frage „**verdeckt B ein Stück von A?**", und die lässt sich für achsparallele Kästen ausrechnen. Der Blick geht aus Richtung (1, 1, 1); ein Sehstrahl ist also A + t·(1,1,1). Er trifft B, wenn sich die drei Intervalle `[B.min_k − A.max_k, B.max_k − A.min_k]` in einem t schneiden — und A liegt hinter B, wenn dieses t **echt größer als null** ist. Zwei Kisten, die sich nur an einer Kante berühren, ergeben t = 0 und damit keine Verdeckung. Danach: 0 falsche Paare, 0 Ringe.
+
+`test/vorschaubild.test.mjs` lädt Kistenliste **und** Sortierung aus der Bildquelle und rechnet jedes Paar nach. Gegenprobe gemacht: mit `>=` statt `>` fällt der Test mit „46 Paare nennen sich gegenseitig hinter" um. Dazu prüft er, dass keine Kiste über den Container hinausragt und keine zwei sich durchdringen.
+
+**Zwei geschlossene Blöcke statt eines gezackten Umrisses.** Auch mit richtiger Reihenfolge las sich die alte Anordnung wie ein Zeichenfehler: der flache Block in der Mitte ließ eine Lücke über sich, und die Silhouette sprang dreimal. Jetzt hinten links zwölf Paletten (drei Reihen, zwei nebeneinander, zwei hoch) und vorne am Türende zwei Lagen flacher Ware. Hier wird nichts gerechnet, hier wird geworben.
+
+**Der Zeichenbereich wird gerechnet, nicht gesetzt.** Zweite Meldung zur selben Karte: *„der Container ist oben in der Ecke abgeschnitten."* Dort stand ein festes `translate(232,58)`; die hintere Oberkante der Hülle liegt aber bei y = −104 und fiel damit aus dem SVG heraus. Jetzt bestimmt die tatsächliche Ausdehnung der acht Hüllenecken die `viewBox` — **und `width`/`height` dazu**, sonst wird die Zeichnung in den alten Kasten hineinskaliert und dabei größer. Wer an Größe, Winkel oder Ladung dreht, verschiebt genau diese Ecke; eine feste Zahl geht dann wieder daneben.
+
+**Die Ladung ist deckend gezeichnet, die Hülle liegt dahinter.** Erste Fassung: die Seitenflächen waren mit `fill-opacity` abgedunkelt und das Drahtgitter lag über den Kisten — gemeldet als *„Packstücke sind irgendwie weirdly transparent"*, und genau so sah es aus. Abgedunkelt wird jetzt **gerechnet** (`dunkler()` mischt gegen den Grundton, nicht gegen Schwarz — sonst kippen die Flanken ins Graue): oben voll, rechte Flanke 72 %, linke 50 %. Dieselbe Staffelung, die im 3D-Bild das Licht macht, nur ausgerechnet statt beleuchtet. Der Test prüft beides — kein `fill-opacity`-Attribut, und die Hülle steht im Quelltext **vor** den Kisten.
 
 ### Die Container-Kette: zwei Grenzen, zwei Fragen
 `MAXCHAIN = 24` wird **gerechnet**, `MAXDRAW = 8` wird **gezeichnet**. Vorher galt für beides 4 — an zwei Stellen unabhängig voneinander als Literal. Wer 39 Paletten eingab, sah vier Hüllen und darunter „15 offen · weitere Container nötig", ohne je zu erfahren, wie viele. Es sind sieben.
@@ -436,6 +530,18 @@ Ein 40-Fuß-Container ist 12 m lang. Danach klemmt `zielKlemmen` das Ziel hart a
 Jetzt zwei Stufen: **erst auf die Kisten selbst schießen** (nur `isInstancedMesh` — Hüllen, Boden und Raster sind Linien und Flächen, die der Strahl weit außerhalb der Reihe trifft), und nur wenn das nichts trifft, auf die Bodenebene — und die auch nur, solange der Punkt zur Reihe gehört (`imRahmen`). Zeigt der Zeiger ins Leere, **passiert nichts**; das ist hier die richtige Antwort, denn der Nutzer hat auf nichts gezeigt.
 
 `imRahmen` und `zielKlemmen` benutzen **denselben Auslauf** (`m = 2`). Zwei verschiedene Maße wären genau die Art Abweichung, die später niemand mehr erklären kann: das Ziel dürfte an eine Stelle springen, an der es nicht bleiben darf. `test/kamera-schieben.test.mjs` hält beides fest — den Vertrag im Quelltext **und** die Rechnung, die den Fehler erklärt (sie liest Bildwinkel, Ruhelage und Zoomschritt aus `app.html`, damit sie nicht stillschweigend veraltet).
+
+### Die 3D-Ansicht zeigt kein Türblatt mehr
+Am Türende des letzten Containers standen zwei aufgeschwungene Türblätter (rund 80°). Gemeldet: *„anfangs wollte ich die Containertür in der 3D View drinne haben, jetzt nerven die mich irgendwie."*
+
+Drei Gründe, warum das Entfernen richtig ist und nicht nur Geschmack:
+- Sie ragten **über einen Meter** über das Containerende hinaus und standen bei jeder Kameradrehung als zwei große Flächen im Bild.
+- Sie **vergrößerten den Rahmen**, auf den `camFit` einpasst — die Ladung wurde dadurch kleiner gezeichnet, ohne dass dafür etwas zu sehen gewesen wäre.
+- Was sie sagen sollten, sagt das Türende ohnehin selbst.
+
+**Geblieben ist genau das:** das Türende trägt **keine Stirnwand** (man sieht in den Container hinein) und ist mit einer dünnen Rahmenkante gefasst, damit erkennbar bleibt, an welchem Ende geladen wird. Das Prädikat `openDoors = (ci === chain.length - 1)` entscheidet weiterhin, welcher Container der Kette so gezeichnet wird — die davor bekommen ihre flache Stirnwand. `test/tuerfluegel-gate.test.mjs` prüft beide Seiten: dass die Blätter weg sind (`DOOR_OPEN`, Scharniere, Blattgeometrie) **und** dass das offene, gefasste Türende steht.
+
+**Die Türprüfung bleibt davon unberührt.** `doorFailCheck` und die Warnung „passt nicht durch die Türöffnung" sind eine Rechnung, kein Bild — sie hingen nie an den Blättern.
 
 ### Volumen und Gewicht je Container
 Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
@@ -486,7 +592,33 @@ Im Auswahlfeld schließen sie einander aus („bis Höhe …" **oder** „2× st
 
 **Was dabei KEIN Fehler war:** die Meldung lautete „das Tool macht vier Lagen, obwohl ich nur 2× stapelbar gewählt habe". Das Stück mit „2× stapelbar" stand auf Lage 2 und trug zwei — genau das, was die Angabe bedeutet. Der Fehler lag eine Ebene darüber, in der Übersetzung der Vorgabe in Lagenzahlen. Vor dem Ändern nachrechnen, nicht dem ersten Eindruck folgen.
 
-**„Nicht stapelbar" ist etwas anderes** und bleibt, wie es war: das Stück darf **auf nichts stehen** (`S.y > 1e-6` in `emsPackOnce`). Es trägt in diesem Rechner weiterhin — `test/pack-order.test.mjs` hält das fest (11 nicht stapelbare am Boden, 11 stapelbare darüber). Ob das dem Verständnis an der Rampe entspricht, ist eine **offene fachliche Frage** und nicht beiläufig zu ändern.
+**„Nicht stapelbar" ist etwas anderes** — siehe den eigenen Abschnitt gleich darunter.
+
+### „Nicht stapelbar" heißt beides
+Gemeldet mit Link (`?c=d~250x80x30w300q9snPackage~120x80x110w300q22y3nPackage`): 9 Packstücke 250 × 80 × 30, ausdrücklich **nicht stapelbar**, dazu 22 Paletten. Im Ergebnis trugen **sechs der acht** verladenen Stücke je zwei bis drei Paletten. Nachgestellt und Zeile für Zeile bestätigt.
+
+Der Rechner hat die Angabe bis dahin **zur Hälfte** befolgt: „nicht stapelbar" hieß nur *„ich darf auf nichts stehen"* (`S.y > 1e-6` in `emsPackOnce`), nicht *„auf mir steht nichts"* — die Tragfähigkeit solcher Stücke stand ausdrücklich auf `Infinity`. Das war als fachliche Festlegung dokumentiert und ist trotzdem falsch, aus drei Gründen, die alle in dieselbe Richtung zeigen:
+
+- **Das eigene Auswahlfeld sagt es anders.** Dort steht „nicht stapelbar / 1× / 2× / 3× stapelbar / bis Höhe … / frei stapelbar". Jede andere Stufe dieser Reihe begrenzt genau eine Sache — **was oben drauf darf**. Nur die erste meinte etwas anderes.
+- **Der Aufkleber am Packstück sagt es anders.** „Stapelverbot" / „do not stack" ist eine Aussage über die Oberseite.
+- **Der eigene Ladevorschlag sagte es anders** („Nicht stapelbare Positionen zuletzt bzw. oben verladen") — der Hinweis widersprach dem Bild daneben und ist jetzt mit angepasst.
+
+Seitdem gilt **beides**: das Stück steht auf nichts *und* trägt nichts. Umgesetzt ohne Sonderweg — `stackCapOf` liefert für solche Stücke ohnehin 1, also ist ihre Tragfähigkeit einfach ihr `stackMax` wie bei jedem anderen Stück auch (`lim = pos` heißt: über dieser Lage geht in dieser Säule nichts mehr).
+
+**Der manuelle Pfad zog nach, und dabei fiel ein zweiter Fehler auf.** `manualCandidate` prüfte die **eigene** Tragfähigkeit des gezogenen Stückes gegen die Turmhöhe. Bei gleicher Ware kommt dasselbe heraus, bei gemischter ist es die falsche Zahl: was ich tragen kann, sagt nichts darüber, was **unter** mir aushält. `towerCapLimit` rechnet jetzt dieselbe Grenze wie `lim` im Auto-Packer. Fehlt die Ladungsliste (ältere Aufrufer, Tests), fällt es auf die alte Annahme „unter mir steht dieselbe Ware" zurück.
+
+**Was es gekostet hat, und zwar bewusst** — über die 300 Ladungen des Messstands **381 von 15.127 Packstücken (2,5 %)** und **136,7 von 5.529 m³ (2,5 %)**:
+
+```
+vorher   {"szenarien":300,"verladen":15127,"volumen":5529.496,"mitEtagen":295,"ySumme":1051180}
+nachher  {"szenarien":300,"verladen":14746,"volumen":5392.790,"mitEtagen":290,"ySumme":933040}
+```
+
+Das ist der teuerste Einzelposten in diesem Rechner, und er ist trotzdem richtig: die vorher mitgezählten Packstücke standen auf Ware, die niemand belädt. Sichtbar wird es dort, wo beide Sorten gleich groß sind — in einem 20′ GP fallen 11 nicht stapelbare + 11 stapelbare Paletten von 22 auf 16 (die Rechnung dazu steht in `test/pack-order.test.mjs`).
+
+`test/nicht-stapelbar.test.mjs` hält beide Hälften fest, in beiden Pfaden, mit **Gegenprobe**: dieselbe Ladung als stapelbar *muss* belastet werden, sonst prüfte der Test nur, dass der Packer gar nicht mehr stapelt.
+
+> **Offen geblieben:** die Ladung wird weiterhin **verstreut** gestaut statt in Blöcken — im gemeldeten Fall liegen die flachen Stücke einzeln zwischen den Paletten, und über ihnen sind 240 cm Luft, die jetzt niemand mehr nutzen kann. Das ist kein Regelverstoß, sondern die Extrempunkt-Heuristik: sie maximiert Stückzahl und Volumen, nicht Ordnung. „Nach Logik stauen" (gleiche Sorte im Block, nicht stapelbares an einem Ende, Ladung nach vorn geschoben) wäre ein eigener Durchgang **nach** dem Packen, der an Anzahl und Volumen nichts ändern darf.
 
 ### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
 Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:

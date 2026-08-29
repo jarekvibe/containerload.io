@@ -68,14 +68,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
        Die Feldnamen muessen mit denen im Dialog uebereinstimmen (FeedbackDialog.senden). -->
   <form name="feedback" data-netlify="true" netlify-honeypot="bot-field" hidden>
     <input type="hidden" name="form-name" value="feedback" />
+    <input type="text" name="zusammenfassung" />
     <input type="text" name="bewertung" />
-    <textarea name="text"></textarea>
-    <input type="email" name="email" />
-    <input type="text" name="plan" />
     <input type="text" name="equipment" />
-    <input type="text" name="positionen" />
-    <input type="text" name="ansicht" />
-    <input type="text" name="sprache" />
+    <textarea name="nachricht"></textarea>
+    <input type="email" name="antwort" />
+    <input type="text" name="plan" />
+    <input type="text" name="umfang" />
+    <input type="text" name="umgebung" />
     <input type="text" name="browser" />
     <input type="text" name="bot-field" />
   </form>
@@ -1109,6 +1109,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return grenze;
   }
+  // Kleinste Lagengrenze in dieser Saeule -- wie weit die Stuecke DARUNTER tragen.
+  // Gegenstueck zu lim in emsPackOnce; beide muessen dasselbe ergeben, sonst verhaelt sich
+  // Ziehen von Hand anders als automatisches Packen (test/stackmax-manuell.test.mjs).
+  //
+  // Vorher stand hier nur die eigene Tragfaehigkeit des gezogenen Stueckes gegen die Turmhoehe.
+  // Bei gleicher Ware kommt dasselbe heraus; bei gemischter Ladung ist es die falsche Zahl --
+  // was ich tragen kann, sagt nichts darueber, was UNTER mir aushaelt. Ein nicht stapelbares
+  // Stueck (stackCapOf = 1) macht damit seine Oberseite auch von Hand dicht.
+  function towerCapLimit(px, pz, dx, dz, y, placed, cargo, item) {
+    const saeule = [];
+    let cur = y;
+    for (let guard = 0; guard <= placed.length; guard++) {
+      const below = placed.find((b) =>
+        Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
+        Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
+      if (!below) break;
+      saeule.push(below);
+      cur = below.y;
+    }
+    let grenze = Infinity;
+    for (let i = 0; i < saeule.length; i++) {
+      // Ohne Ladungsliste (oder bei unbekanntem ti) bleibt nur die Annahme, dass unter mir
+      // dieselbe Ware steht -- genau die Rechnung, die hier vorher fuer alle galt.
+      const it = (cargo && cargo[saeule[i].ti]) || item;
+      const cap = it ? stackCapOf(it) : Infinity;
+      if (!isFinite(cap)) continue;
+      const lage = saeule.length - i;   // saeule[0] ist direkt unter mir, das letzte steht am Boden
+      grenze = Math.min(grenze, lage + cap - 1);
+    }
+    return grenze;
+  }
   function manualCandidate(container, item, rotated, px, pz, placed, weightUsed, cargo) {
     const l = num(item.l), w = num(item.w), h = num(item.h);
     const dx = rotated ? w : l, dz = rotated ? l : w, dy = h;
@@ -1127,8 +1159,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     const y = dropHeight(px, pz, dx, dz, dy, placed);
     if (y == null) return { ok: false, reason: "overlap" };
-    const cap = stackCapOf(item);
-    if (isFinite(cap) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > cap) return { ok: false, reason: "stackmax" };
+    const capLim = towerCapLimit(px, pz, dx, dz, y, placed, cargo, item);
+    if (isFinite(capLim) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > capLim) return { ok: false, reason: "stackmax" };
     const hcap = towerHLimit(px, pz, dx, dz, y, placed, cargo, item);
     if (isFinite(hcap) && y + dy > hcap + 1e-6) return { ok: false, reason: "stackheight" };
     const cand = { x: px, y, z: pz, dx, dy, dz };
@@ -1246,14 +1278,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             }
             if (isFinite(u.stackH)) hlim = Math.min(hlim, u.stackH);
             if (py + dy > hlim + 1e-6) continue;   // der Turm wuerde zu hoch
-            // WICHTIG, und bewusst so: "nicht stapelbar" heisst in diesem Rechner seit jeher
-            // "ICH darf auf nichts stehen" (die Pruefung oben, S.y > 1e-6) -- NICHT "auf mich
-            // darf nichts". Ein nicht stapelbares Stueck traegt hier also weiterhin. Das ist
-            // eine fachliche Festlegung, keine Folge dieser Korrektur, und wird von
-            // test/pack-order.test.mjs festgehalten (11 nicht stapelbare am Boden, 11
-            // stapelbare darueber). stackCapOf liefert fuer solche Stuecke 1 -- das gilt fuer
-            // ihre eigene Lage, nicht fuer ihre Tragfaehigkeit.
-            const tragCap = u.stackable === false ? Infinity : u.stackMax;
+            // "nicht stapelbar" heisst BEIDES: ich stehe auf nichts (die Pruefung oben,
+            // S.y > 1e-6) UND auf mir steht nichts.
+            //
+            // Frueher galt nur die erste Haelfte -- ein nicht stapelbares Stueck durfte also
+            // weiter tragen. Das war gegen die eigene Oberflaeche gerichtet: derselbe Selektor
+            // bietet "nicht stapelbar / 1x stapelbar / 2x / 3x / bis 180 cm / frei stapelbar",
+            // und jede andere Stufe darin begrenzt genau eine Sache -- was OBEN drauf darf.
+            // Nur "nicht stapelbar" meinte etwas anderes. Auf dem Aufkleber am Packstueck
+            // ("Stapelverbot", "do not stack") und im Ladevorschlag dieses Tools ("Nicht
+            // stapelbare Positionen zuletzt bzw. oben verladen") heisst es ebenfalls: da kommt
+            // nichts drauf. Genau so gemeldet -- 9 nicht stapelbare Stuecke, auf sechsen davon
+            // standen zwei bis drei Paletten.
+            //
+            // Umgesetzt ohne Sonderweg: stackCapOf liefert fuer solche Stuecke bereits 1, also
+            // ist ihre Tragfaehigkeit einfach ihr stackMax wie bei jedem anderen Stueck auch.
+            // lim = pos heisst: ueber dieser Lage geht in dieser Saeule nichts mehr.
+            const tragCap = u.stackMax;
             if (isFinite(tragCap)) lim = Math.min(lim, pos + tragCap - 1);
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
@@ -1292,7 +1333,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return x;
   }
-  function emsSearch(C2, items, pay, restarts) {
+  function emsSearch(C2, items, pay, restarts, ordentlich) {
     let units = [];
     items.forEach((t) => {
       for (let i = 0; i < t.qty; i++) units.push(t);
@@ -1320,7 +1361,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     });
     const sorts = big > 300 ? [allSorts[0], allSorts[1], allSorts[6], allSorts[7]] : allSorts;
     const orderN = big > 300 ? 2 : 4;
-    const rs = big > 400 ? Math.min(restarts, 6) : restarts;
+    // ORDENTLICH: nur die festen Sortierungen, keine Zufalls-Neustarts.
+    //
+    // Gemeldet als "die Ladung wird teilweise weird gestaut": gleiche Ware lag ueber den
+    // ganzen Container verstreut, dazwischen einzelne Stuecke einer anderen Sorte. Nachgemessen
+    // an der gemeldeten Ladung -- die Streuung (mittlerer Abstand vom Schwerpunkt der eigenen
+    // Sorte) lag bei 266 m^2, sortenrein gelegt bei 85.
+    //
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts. Die festen Sortierungen legen Sorte
+    // fuer Sorte (gleiche Ware hat gleiche Masse, und die stabile Sortierung haelt sie
+    // zusammen); ein gemischter Wurf findet oft ein paar Stueck mehr -- im gemeldeten Fall
+    // 26 statt 24 -- und dafuer steht jede Sorte hinterher an vier Stellen.
+    //
+    // Deshalb ist das hier eine SCHRANKE und keine Regel: wer ordentlich packen laesst,
+    // bekommt eventuell weniger unter. Ob sich das lohnt, entscheidet die Kette (Stufe 3) --
+    // dort ist die Frage "kostet es einen Container?" und nicht "kostet es ein Packstueck?".
+    const rs = ordentlich ? 0 : big > 400 ? Math.min(restarts, 6) : restarts;
     const vol = (p) => p.reduce((s, b) => s + b.dx * b.dy * b.dz, 0);
     // Hoehensumme als DRITTES Kriterium — erst wenn Anzahl UND Volumen gleich sind. Die
     // Suche laeuft ohnehin viele Varianten; unter denen, die gleich viel unterbringen, ist
@@ -1400,7 +1456,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     } else if (valid.length > 1) {
       const totalU = valid.reduce((s, t) => s + t.qty, 0);
       const restarts = opts.quick ? 0 : opts.intensive ? totalU <= 60 ? 280 : totalU <= 200 ? 70 : 18 : totalU <= 40 ? 60 : totalU <= 120 ? 12 : 0;
-      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, pay, restarts);
+      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, pay, restarts, opts.ordentlich);
       placed = res.placed;
       weight = res.weight;
       placed.forEach((p) => loaded[p.ti] = (loaded[p.ti] || 0) + 1);
@@ -1944,7 +2000,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
     return kg;
   }
-  function ketteAusgleichen(chain, cargo) {
+  function ketteAusgleichen(chain, cargo, ordentlich) {
     const N = chain.length;
     if (N < 2 || N > MAXDRAW) return null;
     const stueck = cargo.map((t) => Math.max(0, Math.floor(num(t.qty))));
@@ -1979,7 +2035,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // anderen". Der letzte nimmt, was bleibt -- ohne ihn als Auffangbecken ginge die
         // Rechnung am letzten Rundungsrest auf.
         const ziel = i === N - 1 ? voll : Math.min(voll, restKg * (voll / restPay) * f);
-        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true });
+        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true, ordentlich });
         neu.push({ ...chain[i], placed: rr.placed, res: rr });
         rest = rest.map((t, k) => ({ ...t, qty: t.qty - (rr.perType[k] ? rr.perType[k].loaded : 0) }));
         restKg -= rr.weight;
@@ -2020,11 +2076,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // sortenrein. Der erste Container ist der gewaehlte; gierig uebernimmt ihn fertig aus
     // slot0, sortenrein packt ihn neu (und gibt ihn als slot0 zurueck, damit die Leiste
     // dieselben Zahlen zeigt wie die Tabelle darunter).
-    const bauen = (sortenrein) => {
+    const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
+      const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
+      // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
+      // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
+      // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
+      // andere Zahlen als die Tabelle darunter.
+      if (sortenrein || ordentlich) {
+        erst = sortenrein
+          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+          : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2038,7 +2101,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const ov = overrides && overrides[slot];
         const manual = ov && PRESETS[ov];
         const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
+        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2046,7 +2109,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
     // Die sortenreine Kette lohnt nur bei mehr als einer Sorte, und nur beim gewoehnlichen
@@ -2067,19 +2130,69 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     let { chain, remaining, totRem } = erg;
     let slot0Neu = erg.slot0;
+    let ausgeglichen = false;
     // Stufe 2: bei festem N das Gewicht ausgleichen. Nur wenn alles verladen ist (sonst waere
     // die Frage nicht "wie verteile ich", sondern "was bleibt liegen") und nur bei einem
     // gewoehnlichen Trockencontainer -- Special Equipment packt packKind, nicht packCargo.
     if (totRem === 0 && chain.length > 1 && (container0.kind || "dry") === "dry") {
-      const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
+    }
+    // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
+    //
+    // Gemeldet: "die Ladung wird teilweise weird gestaut". Nachgemessen an der gemeldeten
+    // Sendung -- gleiche Ware lag an vier Stellen im Container, dazwischen einzelne Stuecke
+    // der anderen Sorte (Streuung 266 m^2 gegen 85, wenn Sorte fuer Sorte gelegt wird).
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts in emsSearch: sie finden dort 26
+    // Packstuecke statt 24, und zwar indem sie die Sorten durcheinanderwerfen.
+    //
+    // Die Frage ist deshalb nicht "ordentlich ODER voll", sondern auf WELCHER Ebene bezahlt
+    // wird. Zwei Packstuecke weniger im ersten Container sind kein Verlust, solange sie im
+    // zweiten mitfahren, den es ohnehin gibt: gebucht und bezahlt werden Container, nicht
+    // Stellplaetze.
+    //
+    // Dieselbe Bauart wie Stufe 2: eine zweite Kette, die sich beweisen muss. Sie wird nur
+    // uebernommen, wenn sie
+    //   * nicht mehr liegen laesst,
+    //   * nicht mehr Container braucht,
+    //   * und die Gewichtsspanne nicht verschlechtert.
+    // Der letzte Punkt ist nicht theoretisch: bei schweren Sendungen hat Stufe 2 die Spanne
+    // gerade erst von 9.700 auf 800 kg gedrueckt, und eine ordentliche Kette hat weniger
+    // Spielraum dafuer. Ordentlich darf nichts kosten -- auch keinen Gewichtsausgleich.
+    //
+    // Bei genau EINEM Container faellt die Stufe aus: dort gibt es keine naechste Ladung, in
+    // die zwei Packstuecke ausweichen koennten, und Ordentlichkeit waere schlicht weniger
+    // Ladung. Die Suche laeuft ausserdem ohne Neustarts und ist damit billiger als Stufe 1.
+    //
+    // Zwei Waechter, beide aus demselben Grund wie bei der sortenreinen Kette: Stufe 3 kostet
+    // eine weitere Kette, und sie soll nur laufen, wo sie etwas ausrichten kann.
+    //   * Traegt kein Container mehr als EINE Sorte, gibt es nichts zu entmischen. Bei einer
+    //     einzigen Sorte ist das immer so -- und dort kostete die Stufe am meisten
+    //     (1.900 Kisten: 445 -> 932 ms fuer exakt dasselbe Ergebnis).
+    //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
+    //     Ketten sind die teuren.
+    const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
+    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+      const ord = bauen(erg.sortenrein, true);
+      if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
+        let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
+        if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
+          const b2 = ketteAusgleichen(oChain, cargo, true);
+          if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
+        }
+        const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
+        if (spanne(oChain) <= spanne(chain) + 1e-6) {
+          chain = oChain; slot0Neu = oSlot0; totRem = ord.totRem; ausgeglichen = oAus;
+          remaining = ord.totRem === 0 ? cargo.map(() => ({ qty: 0 })) : ord.remaining;
+        }
+      }
     }
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
@@ -2089,11 +2202,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // gibt keinen kleineren. Uebrig bleibt "gleiche Ware zusammen" -- an der Rampe genauso
     // wertvoll wie im Hafen, und wer die Seefracht anders behandelt als die Landfracht,
     // baut sich zwei Algorithmen, die auseinanderlaufen.
-    const bauen = (sortenrein) => {
+    const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
+      const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
+      // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
+      // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
+      // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
+      // andere Zahlen als die Tabelle darunter.
+      if (sortenrein || ordentlich) {
+        erst = sortenrein
+          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+          : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2107,7 +2227,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const ov = overrides && overrides[slot];
         const manual = ov && VEHICLES[ov];
         const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
+        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2115,7 +2235,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
@@ -2126,16 +2246,66 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     let { chain, remaining, totRem } = erg;
     let slot0Neu = erg.slot0;
+    let ausgeglichen = false;
     if (totRem === 0 && chain.length > 1) {
-      const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
+    }
+    // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
+    //
+    // Gemeldet: "die Ladung wird teilweise weird gestaut". Nachgemessen an der gemeldeten
+    // Sendung -- gleiche Ware lag an vier Stellen im Container, dazwischen einzelne Stuecke
+    // der anderen Sorte (Streuung 266 m^2 gegen 85, wenn Sorte fuer Sorte gelegt wird).
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts in emsSearch: sie finden dort 26
+    // Packstuecke statt 24, und zwar indem sie die Sorten durcheinanderwerfen.
+    //
+    // Die Frage ist deshalb nicht "ordentlich ODER voll", sondern auf WELCHER Ebene bezahlt
+    // wird. Zwei Packstuecke weniger im ersten Container sind kein Verlust, solange sie im
+    // zweiten mitfahren, den es ohnehin gibt: gebucht und bezahlt werden Container, nicht
+    // Stellplaetze.
+    //
+    // Dieselbe Bauart wie Stufe 2: eine zweite Kette, die sich beweisen muss. Sie wird nur
+    // uebernommen, wenn sie
+    //   * nicht mehr liegen laesst,
+    //   * nicht mehr Container braucht,
+    //   * und die Gewichtsspanne nicht verschlechtert.
+    // Der letzte Punkt ist nicht theoretisch: bei schweren Sendungen hat Stufe 2 die Spanne
+    // gerade erst von 9.700 auf 800 kg gedrueckt, und eine ordentliche Kette hat weniger
+    // Spielraum dafuer. Ordentlich darf nichts kosten -- auch keinen Gewichtsausgleich.
+    //
+    // Bei genau EINEM Container faellt die Stufe aus: dort gibt es keine naechste Ladung, in
+    // die zwei Packstuecke ausweichen koennten, und Ordentlichkeit waere schlicht weniger
+    // Ladung. Die Suche laeuft ausserdem ohne Neustarts und ist damit billiger als Stufe 1.
+    //
+    // Zwei Waechter, beide aus demselben Grund wie bei der sortenreinen Kette: Stufe 3 kostet
+    // eine weitere Kette, und sie soll nur laufen, wo sie etwas ausrichten kann.
+    //   * Traegt kein Container mehr als EINE Sorte, gibt es nichts zu entmischen. Bei einer
+    //     einzigen Sorte ist das immer so -- und dort kostete die Stufe am meisten
+    //     (1.900 Kisten: 445 -> 932 ms fuer exakt dasselbe Ergebnis).
+    //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
+    //     Ketten sind die teuren.
+    const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
+    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+      const ord = bauen(erg.sortenrein, true);
+      if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
+        let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
+        if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
+          const b2 = ketteAusgleichen(oChain, cargo, true);
+          if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
+        }
+        const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
+        if (spanne(oChain) <= spanne(chain) + 1e-6) {
+          chain = oChain; slot0Neu = oSlot0; totRem = ord.totRem; ausgeglichen = oAus;
+          remaining = ord.totRem === 0 ? cargo.map(() => ({ qty: 0 })) : ord.remaining;
+        }
+      }
     }
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   var LANG = (() => {
     try {
@@ -2261,7 +2431,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fbAskNo: "Nein",
       fbAskLater: "Sp\xE4ter",
       feedbackTitle: "Lob, Kritik oder ein Fehler? \xD6ffnet ein kurzes Formular \u2013 mit dem Link zu genau diesem Plan",
-      feedbackSubject: "ContainerLoad: Problem melden",
+      feedbackSubject: "ContainerLoad: Feedback",
       feedbackIntro: "Was stimmt nicht? Bitte hier kurz beschreiben:",
       feedbackFacts: "Damit ich den Fall nachstellen kann",
       feedbackNoLink: "(Plan zu gro\xDF f\xFCr die Adresszeile \u2013 bitte den Teilen-Link von Hand einf\xFCgen.)",
@@ -2325,6 +2495,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       recSingle: (n) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Empfehlung: ein ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), " \u2014 dann passt alles rein."),
       recEquip: (n, r) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Passt nicht in einen Standard-Container \u2014 ", { width: "zu breit", height: "zu hoch", len: "zu lang" }[r.axis], r.cm > 0 ? ` (${r.cm} cm \u00fcber Standard)` : "", ". Empfehlung: ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), "."),
       recMulti: (c) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Du brauchst ca. ", /* @__PURE__ */ React.createElement("b", { style: { color: "#ffd9a0" } }, c), "."),
+      recBetter: (c) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Es ginge auch mit ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, c), " \u2014 weniger Equipment f\xFCr dieselbe Ladung."),
       recTooBig: (i) => /* @__PURE__ */ React.createElement(React.Fragment, null, "\u201E", i, '" ist gr\xF6\xDFer als jeder Standard-Container.'),
       recTooHeavy: (i) => /* @__PURE__ */ React.createElement(React.Fragment, null, "\u201E", i, '" ist schwerer als die Zuladung jedes Standard-Containers.'),
       recVehicles: (n, name) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Passt nicht auf ein Fahrzeug \u2013 du brauchst ca. ", /* @__PURE__ */ React.createElement("b", { style: { color: "#ffd9a0" } }, n + "\xD7 " + name), "."),
@@ -2550,7 +2721,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fbAskNo: "No",
       fbAskLater: "Later",
       feedbackTitle: "Praise, criticism or a bug? Opens a short form \u2013 with a link to this exact plan",
-      feedbackSubject: "ContainerLoad: problem report",
+      feedbackSubject: "ContainerLoad: feedback",
       feedbackIntro: "What is wrong? Please describe it briefly here:",
       feedbackFacts: "So the case can be reproduced",
       feedbackNoLink: "(Plan too large for the address line \u2013 please paste the share link manually.)",
@@ -2614,6 +2785,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       recSingle: (n) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Recommendation: one ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), " \u2014 then it all fits."),
       recEquip: (n, r) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Doesn\u2019t fit a standard container \u2014 ", { width: "too wide", height: "too tall", len: "too long" }[r.axis], r.cm > 0 ? ` (${r.cm} cm over standard)` : "", ". Suggested: ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, n), "."),
       recMulti: (c) => /* @__PURE__ */ React.createElement(React.Fragment, null, "You need approx. ", /* @__PURE__ */ React.createElement("b", { style: { color: "#ffd9a0" } }, c), "."),
+      recBetter: (c) => /* @__PURE__ */ React.createElement(React.Fragment, null, "It would also fit in ", /* @__PURE__ */ React.createElement("b", { style: { color: "#9ecbff" } }, c), " \u2014 less equipment for the same cargo."),
       recTooBig: (i) => /* @__PURE__ */ React.createElement(React.Fragment, null, '"', i, '" is larger than any standard container.'),
       recTooHeavy: (i) => /* @__PURE__ */ React.createElement(React.Fragment, null, '"', i, '" exceeds the payload of every standard container.'),
       recVehicles: (n, name) => /* @__PURE__ */ React.createElement(React.Fragment, null, "Won’t fit on one vehicle – you need approx. ", /* @__PURE__ */ React.createElement("b", { style: { color: "#ffd9a0" } }, n + "\xD7 " + name), "."),
@@ -3278,7 +3450,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       notesK: "NOTES", nonbind: "\xB7 NON-BINDING",
       hints: [
         "Plan heavy pallets low and evenly distributed.",
-        "Load non-stackable items last / on top.",
+        "Non-stackable items are planned on the floor \u2014 nothing is placed on top of them.",
         "Check axle load, centre of gravity and load securing separately.",
         "Weights = your inputs, not verified by the tool."
       ],
@@ -3303,7 +3475,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       notesK: "HINWEISE", nonbind: "\xB7 UNVERBINDLICH",
       hints: [
         "Schwere Paletten bodennah und gleichm\xE4\xDFig verteilt einplanen.",
-        "Nicht stapelbare Positionen zuletzt bzw. oben verladen.",
+        "Nicht stapelbare Positionen stehen bodennah \u2014 auf ihnen steht nichts.",
         "Achslast, Schwerpunkt und Ladungssicherung separat fachlich pr\xFCfen.",
         "Gewichte = Ihre Eingaben, vom Tool nicht verifiziert."
       ],
@@ -4143,44 +4315,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             parent.add(w4);
           }
         }
-        // ── Offene Tuerblaetter (nur dry, nur am letzten Container der Kette). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
+        // ── Das Tuerende bleibt OFFEN, aber ohne Tuerblaetter ──
+        //
+        // Hier standen zwei aufgeschwungene Blaetter (rund 80 Grad nach aussen). Gemeldet:
+        // "anfangs wollte ich die Containertuer in der 3D View drinne haben, jetzt nerven die
+        // mich irgendwie". Zu Recht -- sie ragten ueber einen Meter ueber das Containerende
+        // hinaus, standen bei jeder Kameradrehung als zwei grosse Flaechen im Bild und
+        // vergroesserten den Rahmen, auf den die Kamera einpasst: die Ladung wurde dadurch
+        // kleiner gezeichnet, ohne dass dafuer etwas zu sehen gewesen waere.
+        //
+        // Geblieben ist, wofuer die Tuer im Bild da war: das Tuerende traegt KEINE Stirnwand
+        // (man sieht in den Container hinein) und ist mit einer duennen Rahmenkante gefasst,
+        // damit erkennbar bleibt, an welchem Ende geladen wird. Das Praedikat openDoors
+        // entscheidet weiterhin, welcher Container der Kette so gezeichnet wird -- nur der
+        // letzte; die davor bekommen ihre flache Stirnwand (siehe w4 oben).
         if (kind === "dry" && openDoors) {
-          const DOOR_OPEN = 1.40;  // ~80 Grad -> Blattflaeche zeigt zur Kamera (war 1.95/~112)
-          // Blattfarbe ist zustandsunabhaengig Stahl -- NIE amber (0xffb454 nur an Oeffnungsrahmen + Ghost).
-          const doorMat = new THREE.MeshStandardMaterial({
-            color: STEEL, transparent: true, opacity: 0.22, depthWrite: false,
-            roughness: 0.8, metalness: 0.28, side: THREE.DoubleSide
-          });
-          const geoLeaf = new THREE.PlaneGeometry(CW / 2, CH);
-          const leafEdgeGeo = new THREE.EdgesGeometry(geoLeaf);
-          const leafEdgeMat = new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.7 }); // Stahl, nie amber
-          // Linkes Blatt: Scharnier bei z=0, schwingt nach +x auf.
-          const hingeL = new THREE.Group();
-          hingeL.position.set(CL, cy, 0);
-          const leafL = new THREE.Mesh(geoLeaf, doorMat);
-          leafL.rotation.y = Math.PI / 2;   // in die Tuerebene drehen (wie w4)
-          leafL.position.z = CW / 4;        // Blattmitte; Scharnierkante bei z=0
-          hingeL.add(leafL);
-          const edgeL = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
-          edgeL.rotation.y = Math.PI / 2;
-          edgeL.position.z = CW / 4;
-          hingeL.add(edgeL);
-          hingeL.rotation.y = DOOR_OPEN;    // + = nach aussen
-          parent.add(hingeL);
-          // Rechtes Blatt: Scharnier bei z=CW, spiegelbildlich.
-          const hingeR = new THREE.Group();
-          hingeR.position.set(CL, cy, CW);
-          const leafR = new THREE.Mesh(geoLeaf, doorMat);
-          leafR.rotation.y = Math.PI / 2;
-          leafR.position.z = -CW / 4;
-          hingeR.add(leafR);
-          const edgeR = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
-          edgeR.rotation.y = Math.PI / 2;
-          edgeR.position.z = -CW / 4;
-          hingeR.add(edgeR);
-          hingeR.rotation.y = -DOOR_OPEN;
-          parent.add(hingeR);
-          // Duenne Rahmenkante am Tuerende (Bezug, damit die offene Oeffnung "gefasst" wirkt)
           const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(CW, CH));
           const frameEdge = new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.5 }));
           frameEdge.rotation.y = Math.PI / 2;
@@ -4923,17 +5072,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const kannSenden = stand !== "senden" && (note || text.trim());
     const senden = async () => {
       setStand("senden");
+      // Netlify verschickt eine schmucklose Text-Mail und schreibt den Wert des ERSTEN
+      // Feldes in die Betreffzeile. Vorher stand dort "Form submission from feedback form:
+      // gut" -- im Posteingang wertlos. Deshalb steht "zusammenfassung" jetzt an erster
+      // Stelle: der Betreff sagt damit auf einen Blick, ob etwas nicht passt, womit
+      // gerechnet wurde und wie gross die Ladung war.
+      //
+      // Die uebrigen Felder sind so zusammengefasst, dass die Mail ohne Gestaltung lesbar
+      // bleibt: neun Zeilen mit halb leeren Ueberschriften waren schlechter als sechs volle.
+      // Leere Pflichtangaben tragen einen Strich statt gar nichts -- eine Ueberschrift ohne
+      // Inhalt liest sich wie ein Fehler.
+      //
+      // Der Inhalt ist bewusst DEUTSCH, unabhaengig von der Sprache der Oberflaeche: diese
+      // Mail liest der Projektinhaber, nicht der Absender. Deshalb steht hier auch kein
+      // T-Schluessel -- sichtbar ist davon im Rechner nichts.
+      const strich = (v) => (v && String(v).trim()) || "\u2014";
+      const bewertung = note === "gut" ? "Passt" : note === "schlecht" ? "Passt nicht" : "ohne Bewertung";
       const daten = {
         "form-name": "feedback",
-        bewertung: note || "",
-        text: text.trim(),
-        email: mail.trim(),
-        plan: mitPlan ? kontext.plan : "",
+        zusammenfassung: [bewertung, kontext.preset, kontext.positionen + (kontext.positionen === 1 ? " Position" : " Positionen")].join(" \xB7 "),
+        bewertung: bewertung,
         equipment: kontext.equipment,
-        positionen: String(kontext.positionen),
-        ansicht: kontext.ansicht,
-        sprache: kontext.sprache,
-        browser: kontext.browser
+        nachricht: strich(text),
+        antwort: strich(mail),
+        plan: mitPlan ? strich(kontext.plan) : "nicht mitgeschickt",
+        umfang: kontext.positionen + (kontext.positionen === 1 ? " Position" : " Positionen") + " \xB7 " + kontext.stueck + " Packst\xFCcke",
+        umgebung: kontext.ansicht + " \xB7 Sprache " + kontext.sprache,
+        browser: strich(kontext.browser)
       };
       try {
         const r = await fetch("/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(daten).toString() });
@@ -6269,6 +6434,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       )
     );
     const sug = result.suggestion;
+    // Das Empfehlungsbanner beantwortet die Frage "was nun?" -- und die hat nur dann eine
+    // Antwort, wenn etwas offen ist. Nimmt die Kette die ganze Ladung auf, ist sie beantwortet:
+    // oben steht "2 Container - mit dieser Wahl", die Tabelle in den Details nennt beide, und
+    // ein "Du brauchst ca. 1x 40' HC + 1x 40' GP" darunter wiederholt bestenfalls die eigene
+    // Wahl des Nutzers. Genau so gemeldet. Vorher hing das Banner an "unplaced" -- das zaehlt
+    // nur den ERSTEN Container, dieselbe halbe Wahrheit, die die Leiste schon einmal erzaehlt
+    // hat (siehe offenGesamt).
+    //
+    // Eine Ausnahme bleibt, und die ist Geld wert: wenn die frei gerechnete Empfehlung mit
+    // WENIGER Equipment auskommt als die gewaehlte Kette. Verglichen wird in derselben
+    // Rangfolge wie in ketteBesser -- erst die Zahl der Container, dann das gebuchte Volumen
+    // (2x 40' + 1x 20' ist billiger als 3x 40', auch wenn es dieselben drei sind).
+    const equipVol = (n) => { const q = PRESETS[n]; return q ? q.l * q.w * q.h : 0; };
+    const ketteKosten = result.chain && result.chain.length
+      ? { n: result.chain.length, vol: result.chain.reduce((a, c) => a + num(c.preset.l) * num(c.preset.w) * num(c.preset.h), 0) }
+      : null;
+    const sugKosten = sug && sug.type === "multi" && sug.combo && sug.combo.length
+      ? { n: sug.combo.reduce((a, x) => a + x.count, 0), vol: sug.combo.reduce((a, x) => a + x.count * equipVol(x.name), 0) }
+      : sug && sug.type === "single" ? { n: 1, vol: equipVol(sug.name) } : null;
+    const sugLabel = sug && sug.type === "multi" && sug.combo ? sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ") : sug && sug.type === "single" ? `1\xD7 ${sug.name}` : "";
+    const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel
+      && (sugKosten.n < ketteKosten.n || (sugKosten.n === ketteKosten.n && sugKosten.vol < ketteKosten.vol - 1e-6)));
+    const zeigeBanner = offenGesamt > 0 || empfBesser || !!result.rotHintAll;
     const doorOpening = container.door && preset !== "Custom" ? container.door : { w: num(container.w), h: num(container.h) };
     // Special Equipment wird von oben/seitlich beladen – die Tuerpruefung ist hier nicht aussagekraeftig.
     const doorPlaced = manualMode ? manualPlaced || [] : (result.chain && result.chain[0] && result.chain[0].placed) || result.placed || [];
@@ -6456,7 +6644,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi } }, e.label),
               e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 4 } }, e.sub) : null))
-        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && unplaced > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : sug && (sug.type === "single" || sug.type === "equip") ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && sug && sug.type === "multi" && T.recMulti(sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ")), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(unplaced)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
+        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
           /* @__PURE__ */ React.createElement("span", null, T.footR),
           // Der Weg zurueck. Er stand hier als unterstrichene Textstelle in derselben Farbe wie
           // die Fusszeile drumherum -- gemeldet als "zu unscheinbar", und das war er auch:
@@ -6529,8 +6717,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         T, C, vorgabe: fbNote,
         kontext: {
           plan: (() => { try { return encodePlanURL(preset, container, cargo, forceCentered, domain); } catch (e) { return ""; } })(),
-          equipment: preset + " \xB7 " + (domain === "road" ? T.domRoad : T.domSea),
+          // Deutsch und nicht ueber T: diese Angaben landen ausschliesslich in der
+          // Benachrichtigungs-Mail, nie auf dem Bildschirm.
+          preset,
+          equipment: preset + " \xB7 " + (domain === "road" ? "Landfracht" : "Seefracht"),
           positionen: cargo.length,
+          stueck: cargo.reduce((a, c) => a + Math.max(0, Math.floor(num(c.qty))), 0),
           ansicht: window.innerWidth + "\xD7" + window.innerHeight,
           sprache: LANG,
           browser: String(navigator.userAgent || "").slice(0, 160)
