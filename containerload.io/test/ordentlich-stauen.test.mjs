@@ -153,9 +153,11 @@ test("bei einem einzelnen Container wird weiterhin voll gepackt", () => {
 test("ordentlich heisst: keine Zufalls-Neustarts", () => {
   assert.ok(/const rs = ordentlich \? 0 :/.test(roh),
     "emsSearch schaltet die Neustarts nicht mehr ueber ordentlich ab -- dann mischt es weiter durch");
-  assert.ok(/function emsSearch\(C2, items, pay, restarts, ordentlich\)/.test(roh),
+  // Die Signatur ist seit der Vorbelegung laenger -- geprueft wird die Stelle, nicht die Zahl
+  // der Parameter dahinter.
+  assert.ok(/function emsSearch\(C2, items, pay, restarts, ordentlich[,)]/.test(roh),
     "emsSearch nimmt ordentlich nicht mehr entgegen");
-  assert.ok(/emsSearch\(\{ l: CL, w: CW, h: CH \}, valid, pay, restarts, opts\.ordentlich\)/.test(roh),
+  assert.ok(/emsSearch\(\{ l: CL, w: CW, h: CH \}, valid, payFrei, restarts, opts\.ordentlich[,)]/.test(roh),
     "packCargo reicht opts.ordentlich nicht mehr durch");
   // Die drei Bedingungen der Uebernahme muessen alle drei dastehen.
   const stelle = roh.slice(roh.indexOf(AUS_MARKE), roh.indexOf(AUS_MARKE) + 1400);

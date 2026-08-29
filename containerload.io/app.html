@@ -1219,10 +1219,71 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return changed ? next : placed;
   }
-  function emsPackOnce(C2, units, order, pay, cap) {
+  // Lage im Turm (pos) und die beiden Grenzen (lim in Lagen, hlim in cm), abgeleitet aus dem,
+  // was schon unter der Kiste steht -- dieselbe Rechnung, die emsPackOnce beim Setzen inline
+  // fuehrt (dort billiger, weil die Werte ohnehin gebraucht werden).
+  //
+  // Gebraucht wird sie fuer die VORBELEGUNG: Kisten, die schon stehen, bringen diese Angaben
+  // nicht zwingend mit. Aus packCargo kommen sie mit, von Hand gesetzte nicht -- und ohne sie
+  // faellt der Packer auf "keine Grenze" zurueck und stapelt auf ein nicht stapelbares Stueck.
+  function grenzenAus(B, placed, t) {
+    let pos = 1, lim = Infinity, hlim = Infinity;
+    if (B.y > 1e-4) {
+      let untenPos = 0, untenLim = Infinity, untenH = Infinity;
+      for (const b of placed) {
+        if (Math.abs(b.y + b.dy - B.y) > 1e-3) continue;
+        const ox = Math.min(B.x + B.dx, b.x + b.dx) - Math.max(B.x, b.x);
+        if (ox <= 1e-6) continue;
+        const oz = Math.min(B.z + B.dz, b.z + b.dz) - Math.max(B.z, b.z);
+        if (oz <= 1e-6) continue;
+        untenPos = Math.max(untenPos, b.pos || 1);
+        untenLim = Math.min(untenLim, b.lim === void 0 ? Infinity : b.lim);
+        untenH = Math.min(untenH, b.hlim === void 0 ? Infinity : b.hlim);
+      }
+      pos = untenPos + 1;
+      lim = untenLim;
+      hlim = untenH;
+    }
+    if (t) {
+      const hh = stackHOf(t);
+      if (isFinite(hh)) hlim = Math.min(hlim, hh);
+      const cap = stackCapOf(t);
+      if (isFinite(cap)) lim = Math.min(lim, pos + cap - 1);
+    }
+    return { pos, lim, hlim };
+  }
+  // WEITERPACKEN AUF EINER VORBELEGUNG (opts.vorbelegt).
+  //
+  // Jeder Packlauf fing bisher beim leeren Container an. Zwei Dinge brauchen das Gegenteil:
+  // eine Zuweisung, die "dort ZUERST" heisst (erst die gepinnte Ware, dann der Rest in den
+  // Rest), und der manuelle Modus je Container (von Hand gesetzte Kisten sind nichts anderes
+  // als eine Vorbelegung, auf der der Automat weitermachen soll).
+  //
+  // Umgesetzt ohne neue Datenstruktur: emsPackOnce zerteilt seinen einen freien Raum nach
+  // JEDER gesetzten Kiste ohnehin. Dieselbe Schleife einmal vorab ueber die schon stehenden
+  // Kisten gefahren ergibt genau den Startzustand -- freie Raeume um die Vorbelegung herum.
+  //
+  // Vertrag: die vorbelegten Kisten sind Hindernis, Auflage und Gewicht, aber sie kommen
+  // NICHT im Ergebnis zurueck. "Pack das hier noch dazu" liefert, was dazukam -- der Aufrufer
+  // haengt es an seine eigene Liste. Das Gewicht der Vorbelegung zieht packCargo vorher von
+  // der Zuladung ab; emsPackOnce rechnet deshalb unveraendert weiter.
+  function emsPackOnce(C2, units, order, pay, cap, vorbelegt) {
     let ems = [{ x: 0, y: 0, z: 0, dx: C2.l, dy: C2.h, dz: C2.w }];
     const placed = [];
     let weight = 0;
+    const vorN = vorbelegt && vorbelegt.length ? vorbelegt.length : 0;
+    if (vorN) {
+      // Von unten nach oben, damit grenzenAus die Traeger schon kennt.
+      for (const B of vorbelegt.slice().sort((a2, b2) => a2.y - b2.y)) {
+        placed.push(B);
+        const next = [];
+        for (const S of ems) {
+          if (emsOverlap(S, B)) { for (const ns of emsSplit(S, B)) next.push(ns); } else next.push(S);
+        }
+        ems = emsPrune(next);
+        if (ems.length > cap) ems = ems.slice(0, cap);
+      }
+    }
     for (const u of units) {
       if (weight + u.weight > pay + 1e-6) continue;
       let best = null;
@@ -1318,7 +1379,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ems = emsPrune(next);
       if (ems.length > cap) ems = ems.slice(0, cap);
     }
-    return { placed, weight };
+    return { placed: vorN ? placed.slice(vorN) : placed, weight };
   }
   function emsShuffle(a, seed) {
     let s = seed >>> 0;
@@ -1333,7 +1394,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return x;
   }
-  function emsSearch(C2, items, pay, restarts, ordentlich) {
+  function emsSearch(C2, items, pay, restarts, ordentlich, vorbelegt) {
     let units = [];
     items.forEach((t) => {
       for (let i = 0; i < t.qty; i++) units.push(t);
@@ -1396,10 +1457,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const besser = n > best.n || (!gleichV && v > best.v) || (gleichV && yTot(res.placed) > best.y);
       if (besser) best = { placed: res.placed, weight: res.weight, n, v, y: yTot(res.placed) };
     };
-    for (const sf of sorts) for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sf(units), o, pay, cap));
+    for (const sf of sorts) for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sf(units), o, pay, cap, vorbelegt));
     for (let r = 0; r < rs; r++) {
       const sh = emsShuffle(units, r * 2654435761 + 7);
-      for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sh, o, pay, cap));
+      for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sh, o, pay, cap, vorbelegt));
     }
     return best;
   }
@@ -1415,8 +1476,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // ausgehebelt, weil die Summe nach unten statt nach oben lief.
     const valid = types.map((t, ti) => ({ ti, rotatable: t.rotatable !== false, stackable: t.stackable !== false, stackMax: stackCapOf(t), stackH: stackHOf(t), l: num(t.l), w: num(t.w), h: num(t.h), qty: Math.max(0, Math.floor(num(t.qty))), weight: Math.max(0, num(t.weight)) })).filter((t) => t.l > 0 && t.w > 0 && t.h > 0 && t.qty > 0);
     const loaded = types.map(() => 0);
+    // Vorbelegung: Kisten, die schon stehen (siehe emsPackOnce). Ihre Lage im Turm und ihre
+    // beiden Grenzen werden HIER ausgerechnet und nicht dort -- nur packCargo kennt die
+    // Ladungsliste, und eine von Hand gesetzte Kiste bringt die Angaben nicht mit. Von unten
+    // nach oben, damit jede Kiste ihre Traeger schon kennt.
+    const vorRoh = Array.isArray(opts.vorbelegt) && opts.vorbelegt.length ? opts.vorbelegt : null;
+    let vorbelegt = null, vorKg = 0;
+    if (vorRoh) {
+      vorbelegt = [];
+      vorRoh.slice().sort((a, b) => a.y - b.y).forEach((B) => {
+        const g = grenzenAus(B, vorbelegt, types[B.ti]);
+        vorbelegt.push({ ...B, pos: g.pos, lim: g.lim, hlim: g.hlim });
+        vorKg += Math.max(0, num(types[B.ti] && types[B.ti].weight));
+      });
+    }
+    // Was die Vorbelegung wiegt, ist von der Zuladung schon weg. Damit rechnet emsPackOnce
+    // unveraendert weiter und muss von der Vorbelegung nichts wissen.
+    const payFrei = pay === Infinity ? Infinity : Math.max(0, pay - vorKg);
     let placed = [], weight = 0, layers = 0, single = false;
-    if (valid.length === 1) {
+    // Der Einzeltyp-Pfad legt ein Bodenraster und kennt keine Hindernisse. Mit einer
+    // Vorbelegung fuehrt deshalb auch bei einer Sorte der gemischte Pfad -- er ist der
+    // einzige, der um schon stehende Kisten herum packen kann.
+    if (valid.length === 1 && !vorbelegt) {
       single = true;
       const t = valid[0];
       const maxLay = Math.floor((CH + 1e-6) / t.h);
@@ -1453,10 +1534,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       // Gleiche Zaehlweise wie im gemischten Pfad: tatsaechlich belegte Hoehen, nicht moegliche.
       layers = placed.length ? new Set(placed.map((p) => Math.round(p.y))).size : 0;
-    } else if (valid.length > 1) {
+    } else if (valid.length >= 1) {
       const totalU = valid.reduce((s, t) => s + t.qty, 0);
       const restarts = opts.quick ? 0 : opts.intensive ? totalU <= 60 ? 280 : totalU <= 200 ? 70 : 18 : totalU <= 40 ? 60 : totalU <= 120 ? 12 : 0;
-      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, pay, restarts, opts.ordentlich);
+      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, payFrei, restarts, opts.ordentlich, vorbelegt);
       placed = res.placed;
       weight = res.weight;
       placed.forEach((p) => loaded[p.ti] = (loaded[p.ti] || 0) + 1);

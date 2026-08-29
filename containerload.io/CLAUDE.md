@@ -506,6 +506,31 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Weiterpacken auf einer Vorbelegung (`opts.vorbelegt`)
+Schritt 04 aus dem Mehr-Container-Entwurf. **Sichtbar ändert diese Stufe nichts** — sie ist der Baustein, den zwei kommende Funktionen brauchen:
+
+- die Zuweisung **„dort zuerst"**: erst die gepinnte Ware, dann der Rest in den Rest. Ohne das heißt eine Zuweisung nur „dort", und dann landen von neun gepinnten Stücken **zwei** im Container, weil die Paletten früher dran sind;
+- der **manuelle Modus je Container**: von Hand gesetzte Kisten sind nichts anderes als eine Vorbelegung, auf der der Automat weitermachen soll.
+
+**Umgesetzt ohne neue Datenstruktur.** `emsPackOnce` zerteilt seinen einen freien Raum nach *jeder* gesetzten Kiste ohnehin — dieselbe Schleife einmal vorab über die schon stehenden Kisten gefahren ergibt genau den Startzustand: freie Räume um die Vorbelegung herum. `emsSplit`, `emsOverlap` und `emsPrune` gab es dafür längst.
+
+**Der Vertrag:**
+
+| | |
+|---|---|
+| Die Vorbelegung ist **Hindernis, Auflage und Gewicht** | Sie wird nicht neu gesetzt, sondern nur berücksichtigt |
+| Sie kommt **nicht im Ergebnis zurück** | „Pack das hier noch dazu" liefert, was dazukam — der Aufrufer hängt es an seine eigene Liste |
+| Ihr Gewicht zieht **`packCargo`** vorher ab (`payFrei`) | `emsPackOnce` rechnet unverändert weiter und muss von der Vorbelegung nichts wissen |
+| Mit Vorbelegung führt **immer der gemischte Pfad** | Der Einzeltyp-Pfad legt ein Bodenraster und kennt keine Hindernisse — er würde die Vorbelegung schlicht überbauen |
+
+> **Die Falle, und sie ist die eigentliche Arbeit an dieser Stufe:** Eine von Hand gesetzte Kiste bringt `pos` / `lim` / `hlim` **nicht** mit. Ohne sie fällt der Packer auf „keine Grenze" zurück und stapelt auf ein Stück, auf das nichts darf — genau der Fehler, den „nicht stapelbar heißt beides" gerade erst behoben hat. `grenzenAus(B, placed, t)` rechnet Lage und beide Grenzen deshalb aus dem, was unter der Kiste steht, plus der Tragfähigkeit ihrer Ware. Das passiert in **`packCargo`**, nicht in `emsPackOnce`: nur `packCargo` kennt die Ladungsliste. Von unten nach oben, damit jede Kiste ihre Träger schon kennt.
+
+**Gemessen.** Der Füllgrad-Messstand ist **Ziffer für Ziffer identisch** (14.746 Packstücke, 5.392,790 m³, 290 mit Etagen) — ohne `vorbelegt` läuft alles wie vorher. Mit Vorbelegung: die gemeldete Sendung in zwei Läufen 17,9 ms (gegen 38,4 ms in einem), und eine Vorbelegung aus **440 Kisten** kostet 50 ms.
+
+**Was dabei sichtbar wurde und für Schritt 05 zählt:** Werden die neun flachen Stücke auf C1 gepinnt, passen dort **8 Flache + 4 Paletten = 12 Stück** statt der 26, die der freie Packer findet. Acht Flache belegen den Boden so, dass für Paletten nur die Restlänge von 203 cm bleibt — und über den nicht stapelbaren Flachen sind 240 cm tote Luft. Das ist kein Fehler, sondern der Preis der Anweisung. Die Oberfläche muss ihn zeigen, nicht verstecken.
+
+`test/weiterpacken.test.mjs` prüft die Fähigkeit selbst — sie hat noch keinen Aufrufer, der Test ist die einzige Probe: nichts durchdringt die Vorbelegung, nichts schwebt darüber, die Stapelregel gilt über die Naht hinweg (**mit Gegenprobe**: dieselbe Kiste als stapelbare Ware *muss* belastet werden), das Gewicht zählt gegen die Zuladung, und über 60 Zufallsfälle bleibt die Vorbelegung unberührt.
+
 ### Ladevorschlag und CSV je Container
 Schritt 03 aus dem Mehr-Container-Entwurf. Beide Ausgaben kannten bis dahin nur den ersten Container.
 
