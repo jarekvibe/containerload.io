@@ -74,9 +74,13 @@ test("jeder Container kennt seinen eigenen Rahmen", () => {
 });
 
 test("das Blatt kommt nur, wenn es etwas zu trennen gibt", () => {
-  assert.ok(/const blatt = !manualMode && exportLayout === "blatt" && slotsImBild\.length > 1;/.test(roh),
-    "bei einem Container gibt es nichts aufzuteilen, und im manuellen Modus keine Kette");
-  assert.ok(/result\.chain && result\.chain\.length > 1 && !manualMode \? \/\* @__PURE__ \*\/ React\.createElement\("div", \{ style: \{ marginBottom: 16 \} \}, \/\* @__PURE__ \*\/ React\.createElement\(Lbl/.test(roh),
+  // Der manuelle Modus stand hier bis Schritt 06 mit in der Bedingung -- er kannte keine
+  // Kette. Seit er selbst mehrere Container stellt, gilt fuer ihn dieselbe Regel wie sonst.
+  assert.ok(/const blatt = exportLayout === "blatt" && slotsImBild\.length > 1;/.test(roh),
+    "bei einem Container gibt es nichts aufzuteilen");
+  assert.ok(!/const blatt = !manualMode/.test(roh),
+    "das Blatt ist im manuellen Modus gesperrt -- der kennt seit Schritt 06 mehrere Container");
+  assert.ok(/result\.chain && result\.chain\.length > 1 \? \/\* @__PURE__ \*\/ React\.createElement\("div", \{ style: \{ marginBottom: 16 \} \}, \/\* @__PURE__ \*\/ React\.createElement\(Lbl/.test(roh),
     "der Umschalter darf nicht erscheinen, wenn es nur einen Container gibt");
   for (const k of ["shotLayoutLabel", "shotLayoutRow", "shotLayoutSheet", "shotLayoutRowHint", "shotLayoutSheetHint"]) {
     const n = (roh.match(new RegExp(`[{,\\n]\\s*${k}:`, "g")) || []).length;

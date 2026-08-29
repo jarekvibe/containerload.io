@@ -127,7 +127,9 @@ test("die Leiste liest die Sicht und nicht mehr das Ergebnis des ersten Containe
   assert.ok(/const utilColor = sichtUtil > 80/.test(roh), "die Auslastungsfarbe haengt wieder am ersten Container");
   assert.ok(/const payPct = num\(sichtCont\.payload\) > 0 \? sichtKg/.test(roh), "die Zuladungsampel haengt wieder am ersten Container");
   assert.ok(/const cog = computeLongCog\(sichtPlaced,[\s\S]{0,120}?num\(sichtCont\.l\)\);/.test(roh), "der Schwerpunkt rechnet wieder gegen den ersten Container");
-  assert.ok(/const doorPlaced = manualMode \? manualPlaced \|\| \[\] : sichtPlaced;/.test(roh), "die Tuerpruefung prueft wieder den ersten Container");
+  // Seit Schritt 06 ohne Sonderweg fuer den manuellen Modus: dort ist result die von Hand
+  // gestaute Kette, und sichtPlaced damit ohnehin der Container, um den es geht.
+  assert.ok(/const doorPlaced = sichtPlaced;/.test(roh), "die Tuerpruefung prueft wieder den ersten Container");
 });
 
 test("ohne Fokus bleibt alles, wie es war", () => {
@@ -141,11 +143,15 @@ test("ohne Fokus bleibt alles, wie es war", () => {
 });
 
 test("der Fokus zeigt nie auf einen Container, den es nicht gibt", () => {
-  const m = roh.match(/useEffect\(\(\) => \{\s*if \(fokus === "alle"\) return;[\s\S]{0,400}?\}, \[result, manualMode, fokus\]\);/);
+  const m = roh.match(/useEffect\(\(\) => \{\s*if \(fokus === "alle"\) return;[\s\S]{0,400}?\}, \[result, fokus\]\);/);
   assert.ok(m, "der Waechter fuer den Fokus fehlt");
   assert.ok(/result\.chain \? result\.chain\.length : 0/.test(m[0]), "der Waechter misst nicht die Kettenlaenge");
-  assert.ok(/if \(manualMode \|\| !\(fokus < n\)\) setFokus\("alle"\)/.test(m[0]),
-    "der Waechter faellt nicht auf 'alle' zurueck (manueller Modus klappt die Kette zusammen)");
+  assert.ok(/if \(!\(fokus < n\)\) setFokus\("alle"\)/.test(m[0]),
+    "der Waechter faellt nicht auf 'alle' zurueck");
+  // Der manuelle Modus stand hier bis Schritt 06 mit in der Bedingung -- er klappte die Kette
+  // auf einen Container zusammen. Seit er selbst mehrere stellt, gilt fuer ihn dieselbe Regel.
+  assert.ok(!/manualMode/.test(m[0]),
+    "der Waechter wirft den Fokus im manuellen Modus weg -- der kennt seit Schritt 06 mehrere Container");
 });
 
 test("im Bild verschwindet die Ladung der anderen, nicht ihre Huelle", () => {
