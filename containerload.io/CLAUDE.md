@@ -224,6 +224,37 @@ Gemessen über 200 zufällige Ketten: **kein einziger Fall braucht mehr Containe
 
 > **Die Falle, die fünf Testdateien auf einmal umgeworfen hat:** Beim Umbau wurde aus `return { chain, remainingBoxes: … }` ein `const out = { … }; return out;`. Fünf Test-Slices schneiden das Ende von `chainContainers` an genau dieser Zeichenkette ab — sie liefen ins Leere, und die halbe Kette war nicht mehr getestet. Die Zeile beginnt jetzt in **beiden** Ketten-Funktionen wieder wörtlich mit `return { chain, remainingBoxes`, mit einem Kommentar darüber.
 
+### Stufe 3: ordentlich stauen, solange es nichts kostet
+Gemeldet: *„die Ladung wird teilweise auch weird gestaut … Ich weiß, dass es schwierig ist umzusetzen, dass nach Logik gestaut wird, aber vielleicht kann man das probieren?"*
+
+Erst gemessen, dann gebaut. Als Zahl taugt die **Streuung**: die Summe der quadratischen Abstände jedes Packstücks vom Schwerpunkt seiner eigenen Sorte (in m²). Bei der gemeldeten Sendung — 9 flache Stücke 250 × 80 × 30 „nicht stapelbar" plus 22 Paletten — lag sie bei **266 m²**; Sorte für Sorte gelegt sind es **85**. Der Anteil gleicher Nachbarn: 69 % gegen 95 %.
+
+**Die Ursache sind ausgerechnet die Zufalls-Neustarts von `emsSearch`.** Die festen Sortierungen legen Sorte für Sorte (gleiche Ware hat gleiche Maße, und die stabile Sortierung hält sie beieinander); ein gemischter Wurf bringt hier **26 Packstücke statt 24** unter — und dafür steht jede Sorte hinterher an vier Stellen. Nachgerechnet: keine der acht festen Sortierungen erreicht 26, das kommt nur aus einem Shuffle.
+
+**Die Frage ist deshalb nicht „ordentlich ODER voll", sondern auf welcher Ebene bezahlt wird.** Zwei Packstücke weniger im ersten Container sind kein Verlust, solange sie im zweiten mitfahren, den es ohnehin gibt: **gebucht und bezahlt werden Container, nicht Stellplätze.** Genau deshalb sitzt die Entscheidung in der Kette und nicht im Packer.
+
+- **`packCargo(…, { ordentlich: true })`** schaltet in `emsSearch` die Neustarts ab (`rs = 0`). Sonst ändert sich dort nichts — der Füllgrad-Messstand ist **Ziffer für Ziffer identisch** (14.746 Packstücke, 5.392,790 m³).
+- **Stufe 3 in `chainContainers` / `chainVehicles`** baut nach dem Gewichtsausgleich eine zweite, ordentliche Kette und übernimmt sie nur, wenn sie **nichts kostet**: nicht mehr liegen lässt, nicht mehr Container braucht, **und die Gewichtsspanne nicht verschlechtert.** Der letzte Punkt ist nicht theoretisch — Stufe 2 hat die Spanne bei der 37-Paletten-Sendung gerade erst von 9.700 auf 800 kg gedrückt, und eine ordentliche Kette hat weniger Spielraum dafür. Ordentlich darf **nichts** kosten, auch keinen Ausgleich.
+
+**Bei genau einem Container fällt die Stufe aus.** Dort gibt es keine nächste Ladung, in die ein Packstück ausweichen könnte — ordentlich wäre dann schlicht weniger Ladung, und das ist nicht der Auftrag.
+
+Zwei weitere Wächter, aus demselben Grund wie bei der sortenreinen Kette:
+- **Trägt kein Container mehr als eine Sorte, gibt es nichts zu entmischen.** Bei einer einzigen Sorte ist das immer so — und dort kostete die Stufe am meisten: 1.900 Kisten, **445 → 932 ms** für exakt dasselbe Ergebnis. Mit dem Wächter: 459 ms.
+- **Ab `MAXDRAW` Containern** zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese Ketten sind die teuren (600 Kisten auf 14 Containern: 805 → 395 ms).
+
+**Gemessen.** Die gemeldete Sendung, unverändert 2 Container und nichts offen:
+
+| | vorher | nachher |
+|---|---|---|
+| C1 | 26 Stück · Streuung **266 m²** · 69 % gleiche Nachbarn | 24 Stück · Streuung **85 m²** · 95 % |
+| C2 | 5 Stück (5 flache) | 7 Stück (alle übrigen flachen) |
+
+Über 120 zufällige Ketten: **293 Container vorher wie nachher, 5.898 Packstücke vorher wie nachher, nichts liegengeblieben**, Streuung 35.959 → 33.854 (−5,9 %), Rechenzeit +10 % (15,5 → 17,0 s).
+
+`test/ordentlich-stauen.test.mjs` baut die **Gegenprobe aus derselben Quelle**: es lädt `app.html` ein zweites Mal mit ausgeschalteter Stufe 3 (`const ord = bauen(…)` → `const ord = null`) und vergleicht beide Ketten über 60 Zufallsfälle gegeneinander. So kann die Zusage „kostet nichts" nicht stillschweigend veralten.
+
+> **Ein Signal hat dabei die Bedeutung gewechselt:** `slot0` im Rückgabewert der Kette hieß bis dahin faktisch „der Gewichtsausgleich hat gegriffen". Stufe 3 legt den ersten Container ebenfalls neu und liefert dafür ein `slot0` — völlig zu Recht. Wer den **Ausgleich** meint, fragt jetzt `ausgeglichen`.
+
 ### Karton auf Palette (Vorstufe)
 `palletize()` in `app.html` rechnet **einen** Kartontyp auf **eine** Palette und liefert Lagenmuster, Lagenzahl und die fertigen Paletten. Der Dialog dahinter (`PalletDialog`) endet damit, dass Paletten in der Ladungsliste stehen — danach rechnet der bestehende Rechner weiter.
 

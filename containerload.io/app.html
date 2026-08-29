@@ -1333,7 +1333,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return x;
   }
-  function emsSearch(C2, items, pay, restarts) {
+  function emsSearch(C2, items, pay, restarts, ordentlich) {
     let units = [];
     items.forEach((t) => {
       for (let i = 0; i < t.qty; i++) units.push(t);
@@ -1361,7 +1361,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     });
     const sorts = big > 300 ? [allSorts[0], allSorts[1], allSorts[6], allSorts[7]] : allSorts;
     const orderN = big > 300 ? 2 : 4;
-    const rs = big > 400 ? Math.min(restarts, 6) : restarts;
+    // ORDENTLICH: nur die festen Sortierungen, keine Zufalls-Neustarts.
+    //
+    // Gemeldet als "die Ladung wird teilweise weird gestaut": gleiche Ware lag ueber den
+    // ganzen Container verstreut, dazwischen einzelne Stuecke einer anderen Sorte. Nachgemessen
+    // an der gemeldeten Ladung -- die Streuung (mittlerer Abstand vom Schwerpunkt der eigenen
+    // Sorte) lag bei 266 m^2, sortenrein gelegt bei 85.
+    //
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts. Die festen Sortierungen legen Sorte
+    // fuer Sorte (gleiche Ware hat gleiche Masse, und die stabile Sortierung haelt sie
+    // zusammen); ein gemischter Wurf findet oft ein paar Stueck mehr -- im gemeldeten Fall
+    // 26 statt 24 -- und dafuer steht jede Sorte hinterher an vier Stellen.
+    //
+    // Deshalb ist das hier eine SCHRANKE und keine Regel: wer ordentlich packen laesst,
+    // bekommt eventuell weniger unter. Ob sich das lohnt, entscheidet die Kette (Stufe 3) --
+    // dort ist die Frage "kostet es einen Container?" und nicht "kostet es ein Packstueck?".
+    const rs = ordentlich ? 0 : big > 400 ? Math.min(restarts, 6) : restarts;
     const vol = (p) => p.reduce((s, b) => s + b.dx * b.dy * b.dz, 0);
     // Hoehensumme als DRITTES Kriterium — erst wenn Anzahl UND Volumen gleich sind. Die
     // Suche laeuft ohnehin viele Varianten; unter denen, die gleich viel unterbringen, ist
@@ -1441,7 +1456,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     } else if (valid.length > 1) {
       const totalU = valid.reduce((s, t) => s + t.qty, 0);
       const restarts = opts.quick ? 0 : opts.intensive ? totalU <= 60 ? 280 : totalU <= 200 ? 70 : 18 : totalU <= 40 ? 60 : totalU <= 120 ? 12 : 0;
-      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, pay, restarts);
+      const res = emsSearch({ l: CL, w: CW, h: CH }, valid, pay, restarts, opts.ordentlich);
       placed = res.placed;
       weight = res.weight;
       placed.forEach((p) => loaded[p.ti] = (loaded[p.ti] || 0) + 1);
@@ -1985,7 +2000,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
     return kg;
   }
-  function ketteAusgleichen(chain, cargo) {
+  function ketteAusgleichen(chain, cargo, ordentlich) {
     const N = chain.length;
     if (N < 2 || N > MAXDRAW) return null;
     const stueck = cargo.map((t) => Math.max(0, Math.floor(num(t.qty))));
@@ -2020,7 +2035,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // anderen". Der letzte nimmt, was bleibt -- ohne ihn als Auffangbecken ginge die
         // Rechnung am letzten Rundungsrest auf.
         const ziel = i === N - 1 ? voll : Math.min(voll, restKg * (voll / restPay) * f);
-        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true });
+        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true, ordentlich });
         neu.push({ ...chain[i], placed: rr.placed, res: rr });
         rest = rest.map((t, k) => ({ ...t, qty: t.qty - (rr.perType[k] ? rr.perType[k].loaded : 0) }));
         restKg -= rr.weight;
@@ -2061,11 +2076,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // sortenrein. Der erste Container ist der gewaehlte; gierig uebernimmt ihn fertig aus
     // slot0, sortenrein packt ihn neu (und gibt ihn als slot0 zurueck, damit die Leiste
     // dieselben Zahlen zeigt wie die Tabelle darunter).
-    const bauen = (sortenrein) => {
+    const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
+      const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
+      // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
+      // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
+      // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
+      // andere Zahlen als die Tabelle darunter.
+      if (sortenrein || ordentlich) {
+        erst = sortenrein
+          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+          : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2079,7 +2101,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const ov = overrides && overrides[slot];
         const manual = ov && PRESETS[ov];
         const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
+        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2087,7 +2109,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
     // Die sortenreine Kette lohnt nur bei mehr als einer Sorte, und nur beim gewoehnlichen
@@ -2108,19 +2130,69 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     let { chain, remaining, totRem } = erg;
     let slot0Neu = erg.slot0;
+    let ausgeglichen = false;
     // Stufe 2: bei festem N das Gewicht ausgleichen. Nur wenn alles verladen ist (sonst waere
     // die Frage nicht "wie verteile ich", sondern "was bleibt liegen") und nur bei einem
     // gewoehnlichen Trockencontainer -- Special Equipment packt packKind, nicht packCargo.
     if (totRem === 0 && chain.length > 1 && (container0.kind || "dry") === "dry") {
-      const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
+    }
+    // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
+    //
+    // Gemeldet: "die Ladung wird teilweise weird gestaut". Nachgemessen an der gemeldeten
+    // Sendung -- gleiche Ware lag an vier Stellen im Container, dazwischen einzelne Stuecke
+    // der anderen Sorte (Streuung 266 m^2 gegen 85, wenn Sorte fuer Sorte gelegt wird).
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts in emsSearch: sie finden dort 26
+    // Packstuecke statt 24, und zwar indem sie die Sorten durcheinanderwerfen.
+    //
+    // Die Frage ist deshalb nicht "ordentlich ODER voll", sondern auf WELCHER Ebene bezahlt
+    // wird. Zwei Packstuecke weniger im ersten Container sind kein Verlust, solange sie im
+    // zweiten mitfahren, den es ohnehin gibt: gebucht und bezahlt werden Container, nicht
+    // Stellplaetze.
+    //
+    // Dieselbe Bauart wie Stufe 2: eine zweite Kette, die sich beweisen muss. Sie wird nur
+    // uebernommen, wenn sie
+    //   * nicht mehr liegen laesst,
+    //   * nicht mehr Container braucht,
+    //   * und die Gewichtsspanne nicht verschlechtert.
+    // Der letzte Punkt ist nicht theoretisch: bei schweren Sendungen hat Stufe 2 die Spanne
+    // gerade erst von 9.700 auf 800 kg gedrueckt, und eine ordentliche Kette hat weniger
+    // Spielraum dafuer. Ordentlich darf nichts kosten -- auch keinen Gewichtsausgleich.
+    //
+    // Bei genau EINEM Container faellt die Stufe aus: dort gibt es keine naechste Ladung, in
+    // die zwei Packstuecke ausweichen koennten, und Ordentlichkeit waere schlicht weniger
+    // Ladung. Die Suche laeuft ausserdem ohne Neustarts und ist damit billiger als Stufe 1.
+    //
+    // Zwei Waechter, beide aus demselben Grund wie bei der sortenreinen Kette: Stufe 3 kostet
+    // eine weitere Kette, und sie soll nur laufen, wo sie etwas ausrichten kann.
+    //   * Traegt kein Container mehr als EINE Sorte, gibt es nichts zu entmischen. Bei einer
+    //     einzigen Sorte ist das immer so -- und dort kostete die Stufe am meisten
+    //     (1.900 Kisten: 445 -> 932 ms fuer exakt dasselbe Ergebnis).
+    //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
+    //     Ketten sind die teuren.
+    const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
+    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+      const ord = bauen(erg.sortenrein, true);
+      if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
+        let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
+        if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
+          const b2 = ketteAusgleichen(oChain, cargo, true);
+          if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
+        }
+        const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
+        if (spanne(oChain) <= spanne(chain) + 1e-6) {
+          chain = oChain; slot0Neu = oSlot0; totRem = ord.totRem; ausgeglichen = oAus;
+          remaining = ord.totRem === 0 ? cargo.map(() => ({ qty: 0 })) : ord.remaining;
+        }
+      }
     }
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
@@ -2130,11 +2202,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // gibt keinen kleineren. Uebrig bleibt "gleiche Ware zusammen" -- an der Rampe genauso
     // wertvoll wie im Hafen, und wer die Seefracht anders behandelt als die Landfracht,
     // baut sich zwei Algorithmen, die auseinanderlaufen.
-    const bauen = (sortenrein) => {
+    const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
+      const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
-      if (sortenrein) {
-        erst = packSortenrein(container0, start, sortenReihenfolge(start), slot0);
+      // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
+      // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
+      // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
+      // andere Zahlen als die Tabelle darunter.
+      if (sortenrein || ordentlich) {
+        erst = sortenrein
+          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+          : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2148,7 +2227,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const ov = overrides && overrides[slot];
         const manual = ov && VEHICLES[ov];
         const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining)) : packCargo(pick.p, remaining, { noHint: true });
+        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2156,7 +2235,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
@@ -2167,16 +2246,66 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     let { chain, remaining, totRem } = erg;
     let slot0Neu = erg.slot0;
+    let ausgeglichen = false;
     if (totRem === 0 && chain.length > 1) {
-      const bal = ketteAusgleichen(chain, cargo);
-      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); }
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
+    }
+    // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
+    //
+    // Gemeldet: "die Ladung wird teilweise weird gestaut". Nachgemessen an der gemeldeten
+    // Sendung -- gleiche Ware lag an vier Stellen im Container, dazwischen einzelne Stuecke
+    // der anderen Sorte (Streuung 266 m^2 gegen 85, wenn Sorte fuer Sorte gelegt wird).
+    // Die Ursache sind ausgerechnet die Zufalls-Neustarts in emsSearch: sie finden dort 26
+    // Packstuecke statt 24, und zwar indem sie die Sorten durcheinanderwerfen.
+    //
+    // Die Frage ist deshalb nicht "ordentlich ODER voll", sondern auf WELCHER Ebene bezahlt
+    // wird. Zwei Packstuecke weniger im ersten Container sind kein Verlust, solange sie im
+    // zweiten mitfahren, den es ohnehin gibt: gebucht und bezahlt werden Container, nicht
+    // Stellplaetze.
+    //
+    // Dieselbe Bauart wie Stufe 2: eine zweite Kette, die sich beweisen muss. Sie wird nur
+    // uebernommen, wenn sie
+    //   * nicht mehr liegen laesst,
+    //   * nicht mehr Container braucht,
+    //   * und die Gewichtsspanne nicht verschlechtert.
+    // Der letzte Punkt ist nicht theoretisch: bei schweren Sendungen hat Stufe 2 die Spanne
+    // gerade erst von 9.700 auf 800 kg gedrueckt, und eine ordentliche Kette hat weniger
+    // Spielraum dafuer. Ordentlich darf nichts kosten -- auch keinen Gewichtsausgleich.
+    //
+    // Bei genau EINEM Container faellt die Stufe aus: dort gibt es keine naechste Ladung, in
+    // die zwei Packstuecke ausweichen koennten, und Ordentlichkeit waere schlicht weniger
+    // Ladung. Die Suche laeuft ausserdem ohne Neustarts und ist damit billiger als Stufe 1.
+    //
+    // Zwei Waechter, beide aus demselben Grund wie bei der sortenreinen Kette: Stufe 3 kostet
+    // eine weitere Kette, und sie soll nur laufen, wo sie etwas ausrichten kann.
+    //   * Traegt kein Container mehr als EINE Sorte, gibt es nichts zu entmischen. Bei einer
+    //     einzigen Sorte ist das immer so -- und dort kostete die Stufe am meisten
+    //     (1.900 Kisten: 445 -> 932 ms fuer exakt dasselbe Ergebnis).
+    //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
+    //     Ketten sind die teuren.
+    const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
+    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+      const ord = bauen(erg.sortenrein, true);
+      if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
+        let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
+        if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
+          const b2 = ketteAusgleichen(oChain, cargo, true);
+          if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
+        }
+        const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
+        if (spanne(oChain) <= spanne(chain) + 1e-6) {
+          chain = oChain; slot0Neu = oSlot0; totRem = ord.totRem; ausgeglichen = oAus;
+          remaining = ord.totRem === 0 ? cargo.map(() => ({ qty: 0 })) : ord.remaining;
+        }
+      }
     }
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining) };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   var LANG = (() => {
     try {

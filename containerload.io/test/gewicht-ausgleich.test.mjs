@@ -115,9 +115,14 @@ test("bei nur einem Container gibt es nichts auszugleichen", () => {
 test("ohne Gewichtsangaben bleibt die gierige Verteilung stehen", () => {
   // Alles 0 kg: es gibt kein Gewicht zu verteilen, und ein zweiter Packdurchgang waere reine
   // Rechenzeit -- schlimmer noch, er wuerde die Kette ohne jeden Gewinn umbauen.
+  //
+  // Gefragt wird ausdruecklich nach ch.ausgeglichen und nicht mehr nach ch.slot0. Seit es
+  // Stufe 3 gibt (ordentlich stauen), legt auch SIE den ersten Container neu und liefert
+  // dafuer ein slot0 -- voellig zu Recht. "slot0 ist da" heisst seitdem nur noch "Container 1
+  // wurde neu gelegt", nicht mehr "der Gewichtsausgleich hat gegriffen".
   const ohne = JAREK.map((t) => ({ ...t, weight: 0 }));
   const { ch } = kette("40' HC", ohne);
-  assert.ok(!ch.slot0, "ohne Gewichte darf der Ausgleich nicht anspringen");
+  assert.strictEqual(ch.ausgeglichen, false, "ohne Gewichte darf der Ausgleich nicht anspringen");
 });
 
 test("die Stufenleiter faengt bei genau der Zielverteilung an", () => {
