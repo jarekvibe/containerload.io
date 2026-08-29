@@ -148,6 +148,58 @@ test("beide Karten sprechen Deutsch und Englisch", () => {
   }
 });
 
+// Die Malerreihenfolge ist keine Geschmacksfrage, sondern nachrechenbar -- und sie war
+// zweimal falsch. Erst nach der Summe der Eckkoordinaten sortiert (stimmt nur bei gleich
+// grossen Kisten; eine hintere Palette wurde ueber den flachen Block davor gemalt), dann mit
+// einer Tiefensuche, die jede BERUEHRUNG als Verdeckung zaehlte -- und weil eine gestaute
+// Ladung fast nur aus Beruehrungen besteht, nannten sich Paare gegenseitig "hinter" und die
+// Suche lief im Kreis. Gemeldet als "die Ladung dadrinne sieht voll buggy aus".
+//
+// Der Test laedt die Kistenliste UND die Sortierung aus der Bildquelle und rechnet jedes
+// Paar nach: liegt A hinter B, muss A vorher gemalt worden sein.
+test("die Kisten werden von hinten nach vorne gemalt", () => {
+  const q = lies("test/og/karte.html").toString("utf8");
+  // Zwei Ausschnitte, weil zwischen Liste und Sortierung das Zeichnen selbst steht (das
+  // braucht die Projektion P und laesst sich hier nicht ausfuehren).
+  const l0 = q.indexOf("  var kisten = ["), l1 = q.indexOf("  ];", l0);
+  const s0 = q.indexOf("  var hinter = function"), s1 = q.indexOf("besuche(i);", s0);
+  assert.ok(l0 > 0 && l1 > l0 && s0 > l1 && s1 > s0, "Kistenliste oder Sortierung nicht gefunden");
+  const { kisten, reihe, hinter } = new Function(
+    q.slice(l0, l1 + 4) + q.slice(s0, s1 + "besuche(i);".length) + "\nreturn { kisten, reihe, hinter };"
+  )();
+  assert.strictEqual(reihe.length, kisten.length, "beim Sortieren ist eine Kiste verlorengegangen");
+
+  const platz = new Map(reihe.map((k, i) => [k, i]));
+  let paare = 0, falsch = 0, ringe = 0;
+  for (const a of kisten) {
+    for (const b of kisten) {
+      if (a === b) continue;
+      if (!hinter(a, b)) continue;
+      if (hinter(b, a)) { ringe++; continue; }   // Ring: dann verdecken sie sich gar nicht
+      paare++;
+      if (platz.get(a) > platz.get(b)) falsch++;
+    }
+  }
+  assert.ok(paare > 20, `nur ${paare} sich verdeckende Paare -- steht da ueberhaupt eine Ladung?`);
+  assert.strictEqual(falsch, 0, `${falsch} von ${paare} Paaren stehen in der falschen Reihenfolge`);
+  assert.strictEqual(ringe, 0,
+    `${ringe} Paare nennen sich gegenseitig "hinter" -- die Beruehrungs-Toleranz ist wieder zu grob`);
+
+  // Und die Ladung steht wirklich IM Container: nichts ragt hinaus, nichts durchdringt sich.
+  const CL = +q.match(/var CL = ([\d.]+)/)[1], CW = +q.match(/CW = ([\d.]+)/)[1], CH = +q.match(/CH = ([\d.]+)/)[1];
+  for (const k of kisten) {
+    assert.ok(k[0] >= -1e-9 && k[0] + k[3] <= CL + 1e-9, `Kiste ragt in der Laenge hinaus: ${k.join()}`);
+    assert.ok(k[1] >= -1e-9 && k[1] + k[4] <= CW + 1e-9, `Kiste ragt in der Breite hinaus: ${k.join()}`);
+    assert.ok(k[2] >= -1e-9 && k[2] + k[5] <= CH + 1e-9, `Kiste ragt in der Hoehe hinaus: ${k.join()}`);
+  }
+  const schneidet = (a, b) => [0, 1, 2].every((i) => Math.min(a[i] + a[i + 3], b[i] + b[i + 3]) - Math.max(a[i], b[i]) > 1e-9);
+  for (let i = 0; i < kisten.length; i++) {
+    for (let j = i + 1; j < kisten.length; j++) {
+      assert.ok(!schneidet(kisten[i], kisten[j]), `zwei Kisten durchdringen sich: ${kisten[i].join()} / ${kisten[j].join()}`);
+    }
+  }
+});
+
 test("die Bildquelle haelt sich an dasselbe Regelwerk wie der Rest", () => {
   const q = lies("test/og/karte.html").toString("utf8");
   assert.ok(!/linear-gradient|radial-gradient/.test(q), "Farbverlauf in der Vorschaubild-Quelle");
@@ -169,7 +221,7 @@ test("die Bildquelle haelt sich an dasselbe Regelwerk wie der Rest", () => {
   assert.ok(/el\.setAttribute\("viewBox"/.test(q) && /ecken\.push\(P\(x, y, z\)\)/.test(q),
     "die viewBox wird nicht mehr aus den Huellenecken gerechnet");
   const iHuelle = q.indexOf('e.forEach(function (q)');
-  const iKisten = q.indexOf("kisten.slice().sort");
+  const iKisten = q.indexOf("reihe.forEach(function (k)");
   assert.ok(iHuelle > 0 && iKisten > 0 && iHuelle < iKisten,
     "die Huelle wird nach der Ladung gezeichnet und zieht Linien quer durch die Kisten");
 });

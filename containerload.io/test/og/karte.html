@@ -95,6 +95,11 @@
   var CL = 5.9, CW = 2.35, CH = 2.6;
   var kisten = [
     // x, y, z, dx, dy, dz, Farbe (Kennfarben aus TYPE_COLORS -- sie tragen Information)
+    //
+    // Bewusst zwei geschlossene Bloecke: hinten links zwoelf Paletten (drei Reihen, zwei
+    // nebeneinander, zwei hoch), vorne rechts zwei Lagen flacher Ware. Eine Ladung mit
+    // Zacken im Umriss liest sich auf einem Vorschaubild wie ein Zeichenfehler, auch wenn
+    // sie rechnerisch stimmt -- und hier wird nichts gerechnet, hier wird geworben.
     [0.0, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
     [0.0, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
     [0.0, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
@@ -103,13 +108,14 @@
     [1.2, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
     [1.2, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
     [1.2, 1.20, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
-    [2.4, 0.10, 0.0, 1.7, 2.15, 0.7, "#16D9C4"],
-    [2.4, 0.10, 0.7, 1.7, 2.15, 0.7, "#16D9C4"],
-    [4.1, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
-    [4.1, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
-    [4.1, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
-    [4.1, 1.20, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"]
+    [2.4, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [2.4, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [2.4, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [2.4, 1.20, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [3.6, 0.10, 0.0, 1.7, 2.15, 0.7, "#16D9C4"],
+    [3.6, 0.10, 0.7, 1.7, 2.15, 0.7, "#16D9C4"]
   ];
+
   var teile
   var teile = [];
   // Deckende Flaechen, keine Transparenz. Mit fill-opacity schien das Drahtgitter durch die
@@ -138,8 +144,48 @@
            [0,0,CH,CL,0,CH],[0,CW,CH,CL,CW,CH],[0,0,CH,0,CW,CH],[CL,0,CH,CL,CW,CH],
            [0,0,0,0,0,CH],[CL,0,0,CL,0,CH],[0,CW,0,0,CW,CH],[CL,CW,0,CL,CW,CH]];
   e.forEach(function (q) { teile.push(linie(P(q[0],q[1],q[2]), P(q[3],q[4],q[5]), "#2E3A49", 1.6)); });
-  // Kisten von hinten nach vorne
-  kisten.slice().sort(function (a, b) { return (a[0]+a[1]+a[2]) - (b[0]+b[1]+b[2]); }).forEach(function (k) {
+  // Kisten von hinten nach vorne.
+  //
+  // Ein einzelner Schluessel je Kiste (die Summe der Eckkoordinaten) reicht dafuer NICHT --
+  // er stimmt nur, solange alle Kisten gleich gross sind. Bei gemischten Groessen wurde eine
+  // hintere Palette ueber den flachen Block davor gemalt; gemeldet als "die Ladung dadrinne
+  // sieht voll buggy aus".
+  //
+  // Gebraucht wird die Frage "verdeckt B ein Stueck von A?", und die laesst sich fuer
+  // achsparallele Kaesten ausrechnen. Der Blick geht aus Richtung (1,1,1); ein Sehstrahl ist
+  // also A + t*(1,1,1). Er trifft B, wenn sich die drei Intervalle
+  //     [B.min_k - A.max_k , B.max_k - A.min_k]
+  // in einem t schneiden -- und A liegt hinter B, wenn dieses t groesser als null ist.
+  //
+  // Wichtig ist dabei das ECHTE Groesserzeichen. Mit ">=" gilt jede Beruehrung als
+  // Verdeckung, und weil eine gestaute Ladung fast nur aus Beruehrungen besteht, nennen sich
+  // dann Paare gegenseitig "hinter" (eine Palette weiter hinten in x, die andere weiter
+  // unten in z). Genau daran ist der erste Anlauf gescheitert: 33 von 61 Paaren standen
+  // falsch herum, und das Bild sah schlimmer aus als vorher.
+  var hinter = function (a, b) {
+    var lo = -Infinity, hi = Infinity;
+    for (var k = 0; k < 3; k++) {
+      lo = Math.max(lo, b[k] - (a[k] + a[k + 3]));
+      hi = Math.min(hi, b[k] + b[k + 3] - a[k]);
+    }
+    return hi > Math.max(lo, 0) + 1e-6;
+  };
+  // Tiefensuche: vor einer Kiste kommt alles dran, was hinter ihr liegt. Die Marke
+  // "laeuft gerade" bricht die Ringe auf, die bei achsparallelen Kaesten theoretisch
+  // moeglich sind (drei Kisten, die sich im Kreis verdecken).
+  var zustand = kisten.map(function () { return 0; });   // 0 = neu, 1 = laeuft, 2 = fertig
+  var reihe = [];
+  var besuche = function (i) {
+    if (zustand[i]) return;
+    zustand[i] = 1;
+    for (var j = 0; j < kisten.length; j++) {
+      if (j !== i && zustand[j] === 0 && hinter(kisten[j], kisten[i])) besuche(j);
+    }
+    zustand[i] = 2;
+    reihe.push(kisten[i]);
+  };
+  for (var i = 0; i < kisten.length; i++) besuche(i);
+  reihe.forEach(function (k) {
     var x=k[0],y=k[1],z=k[2],dx=k[3],dy=k[4],dz=k[5],f=k[6];
     var A=P(x,y,z+dz), B=P(x+dx,y,z+dz), Cq=P(x+dx,y+dy,z+dz), D=P(x,y+dy,z+dz);
     teile.push(poly([B,Cq,P(x+dx,y+dy,z),P(x+dx,y,z)], dunkler(f, 0.72)));   // rechte Flanke

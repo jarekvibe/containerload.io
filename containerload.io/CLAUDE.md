@@ -472,6 +472,17 @@ Nebenbei korrigiert: auf der alten Karte stand **„Ein Ladeplan wurde dir getei
 
 Die rechte Bildhälfte ist ausgenommen: dort stehen die **Kennfarben der Packstücke** (`TYPE_COLORS`), und die sind absichtlich bunt — sie tragen Information.
 
+**Die Malerreihenfolge ist nachrechenbar — und war zweimal falsch.** Gemeldet: *„die Ladung dadrinne sieht voll buggy aus."*
+
+1. Erster Anlauf: sortiert nach der **Summe der Eckkoordinaten**. Das stimmt nur, solange alle Kisten gleich groß sind; bei gemischten Größen wurde eine hintere Palette über den flachen Block davor gemalt.
+2. Zweiter Anlauf: Tiefensuche mit der Regel *„A liegt hinter B, wenn beide entlang einer Achse getrennt sind und A dort die kleineren Werte hat"* — mit `<=`. Damit zählt jede **Berührung** als Verdeckung, und weil eine gestaute Ladung fast nur aus Berührungen besteht, nannten sich Paare **gegenseitig** „hinter" (eine Palette weiter hinten in x, die andere weiter unten in z). Die Suche lief im Kreis: **33 von 61 Paaren** standen falsch herum, und das Bild sah schlimmer aus als vorher.
+
+Richtig ist die Frage „**verdeckt B ein Stück von A?**", und die lässt sich für achsparallele Kästen ausrechnen. Der Blick geht aus Richtung (1, 1, 1); ein Sehstrahl ist also A + t·(1,1,1). Er trifft B, wenn sich die drei Intervalle `[B.min_k − A.max_k, B.max_k − A.min_k]` in einem t schneiden — und A liegt hinter B, wenn dieses t **echt größer als null** ist. Zwei Kisten, die sich nur an einer Kante berühren, ergeben t = 0 und damit keine Verdeckung. Danach: 0 falsche Paare, 0 Ringe.
+
+`test/vorschaubild.test.mjs` lädt Kistenliste **und** Sortierung aus der Bildquelle und rechnet jedes Paar nach. Gegenprobe gemacht: mit `>=` statt `>` fällt der Test mit „46 Paare nennen sich gegenseitig hinter" um. Dazu prüft er, dass keine Kiste über den Container hinausragt und keine zwei sich durchdringen.
+
+**Zwei geschlossene Blöcke statt eines gezackten Umrisses.** Auch mit richtiger Reihenfolge las sich die alte Anordnung wie ein Zeichenfehler: der flache Block in der Mitte ließ eine Lücke über sich, und die Silhouette sprang dreimal. Jetzt hinten links zwölf Paletten (drei Reihen, zwei nebeneinander, zwei hoch) und vorne am Türende zwei Lagen flacher Ware. Hier wird nichts gerechnet, hier wird geworben.
+
 **Der Zeichenbereich wird gerechnet, nicht gesetzt.** Zweite Meldung zur selben Karte: *„der Container ist oben in der Ecke abgeschnitten."* Dort stand ein festes `translate(232,58)`; die hintere Oberkante der Hülle liegt aber bei y = −104 und fiel damit aus dem SVG heraus. Jetzt bestimmt die tatsächliche Ausdehnung der acht Hüllenecken die `viewBox` — **und `width`/`height` dazu**, sonst wird die Zeichnung in den alten Kasten hineinskaliert und dabei größer. Wer an Größe, Winkel oder Ladung dreht, verschiebt genau diese Ecke; eine feste Zahl geht dann wieder daneben.
 
 **Die Ladung ist deckend gezeichnet, die Hülle liegt dahinter.** Erste Fassung: die Seitenflächen waren mit `fill-opacity` abgedunkelt und das Drahtgitter lag über den Kisten — gemeldet als *„Packstücke sind irgendwie weirdly transparent"*, und genau so sah es aus. Abgedunkelt wird jetzt **gerechnet** (`dunkler()` mischt gegen den Grundton, nicht gegen Schwarz — sonst kippen die Flanken ins Graue): oben voll, rechte Flanke 72 %, linke 50 %. Dieselbe Staffelung, die im 3D-Bild das Licht macht, nur ausgerechnet statt beleuchtet. Der Test prüft beides — kein `fill-opacity`-Attribut, und die Hülle steht im Quelltext **vor** den Kisten.
