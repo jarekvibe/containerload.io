@@ -1109,6 +1109,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return grenze;
   }
+  // Kleinste Lagengrenze in dieser Saeule -- wie weit die Stuecke DARUNTER tragen.
+  // Gegenstueck zu lim in emsPackOnce; beide muessen dasselbe ergeben, sonst verhaelt sich
+  // Ziehen von Hand anders als automatisches Packen (test/stackmax-manuell.test.mjs).
+  //
+  // Vorher stand hier nur die eigene Tragfaehigkeit des gezogenen Stueckes gegen die Turmhoehe.
+  // Bei gleicher Ware kommt dasselbe heraus; bei gemischter Ladung ist es die falsche Zahl --
+  // was ich tragen kann, sagt nichts darueber, was UNTER mir aushaelt. Ein nicht stapelbares
+  // Stueck (stackCapOf = 1) macht damit seine Oberseite auch von Hand dicht.
+  function towerCapLimit(px, pz, dx, dz, y, placed, cargo, item) {
+    const saeule = [];
+    let cur = y;
+    for (let guard = 0; guard <= placed.length; guard++) {
+      const below = placed.find((b) =>
+        Math.abs(b.y + b.dy - cur) < 1e-3 &&
+        Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x) > 1e-6 &&
+        Math.min(pz + dz, b.z + b.dz) - Math.max(pz, b.z) > 1e-6);
+      if (!below) break;
+      saeule.push(below);
+      cur = below.y;
+    }
+    let grenze = Infinity;
+    for (let i = 0; i < saeule.length; i++) {
+      // Ohne Ladungsliste (oder bei unbekanntem ti) bleibt nur die Annahme, dass unter mir
+      // dieselbe Ware steht -- genau die Rechnung, die hier vorher fuer alle galt.
+      const it = (cargo && cargo[saeule[i].ti]) || item;
+      const cap = it ? stackCapOf(it) : Infinity;
+      if (!isFinite(cap)) continue;
+      const lage = saeule.length - i;   // saeule[0] ist direkt unter mir, das letzte steht am Boden
+      grenze = Math.min(grenze, lage + cap - 1);
+    }
+    return grenze;
+  }
   function manualCandidate(container, item, rotated, px, pz, placed, weightUsed, cargo) {
     const l = num(item.l), w = num(item.w), h = num(item.h);
     const dx = rotated ? w : l, dz = rotated ? l : w, dy = h;
@@ -1127,8 +1159,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     const y = dropHeight(px, pz, dx, dz, dy, placed);
     if (y == null) return { ok: false, reason: "overlap" };
-    const cap = stackCapOf(item);
-    if (isFinite(cap) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > cap) return { ok: false, reason: "stackmax" };
+    const capLim = towerCapLimit(px, pz, dx, dz, y, placed, cargo, item);
+    if (isFinite(capLim) && y > 1e-4 && towerAt(px, pz, dx, dz, dy, y, placed) > capLim) return { ok: false, reason: "stackmax" };
     const hcap = towerHLimit(px, pz, dx, dz, y, placed, cargo, item);
     if (isFinite(hcap) && y + dy > hcap + 1e-6) return { ok: false, reason: "stackheight" };
     const cand = { x: px, y, z: pz, dx, dy, dz };
@@ -1246,14 +1278,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             }
             if (isFinite(u.stackH)) hlim = Math.min(hlim, u.stackH);
             if (py + dy > hlim + 1e-6) continue;   // der Turm wuerde zu hoch
-            // WICHTIG, und bewusst so: "nicht stapelbar" heisst in diesem Rechner seit jeher
-            // "ICH darf auf nichts stehen" (die Pruefung oben, S.y > 1e-6) -- NICHT "auf mich
-            // darf nichts". Ein nicht stapelbares Stueck traegt hier also weiterhin. Das ist
-            // eine fachliche Festlegung, keine Folge dieser Korrektur, und wird von
-            // test/pack-order.test.mjs festgehalten (11 nicht stapelbare am Boden, 11
-            // stapelbare darueber). stackCapOf liefert fuer solche Stuecke 1 -- das gilt fuer
-            // ihre eigene Lage, nicht fuer ihre Tragfaehigkeit.
-            const tragCap = u.stackable === false ? Infinity : u.stackMax;
+            // "nicht stapelbar" heisst BEIDES: ich stehe auf nichts (die Pruefung oben,
+            // S.y > 1e-6) UND auf mir steht nichts.
+            //
+            // Frueher galt nur die erste Haelfte -- ein nicht stapelbares Stueck durfte also
+            // weiter tragen. Das war gegen die eigene Oberflaeche gerichtet: derselbe Selektor
+            // bietet "nicht stapelbar / 1x stapelbar / 2x / 3x / bis 180 cm / frei stapelbar",
+            // und jede andere Stufe darin begrenzt genau eine Sache -- was OBEN drauf darf.
+            // Nur "nicht stapelbar" meinte etwas anderes. Auf dem Aufkleber am Packstueck
+            // ("Stapelverbot", "do not stack") und im Ladevorschlag dieses Tools ("Nicht
+            // stapelbare Positionen zuletzt bzw. oben verladen") heisst es ebenfalls: da kommt
+            // nichts drauf. Genau so gemeldet -- 9 nicht stapelbare Stuecke, auf sechsen davon
+            // standen zwei bis drei Paletten.
+            //
+            // Umgesetzt ohne Sonderweg: stackCapOf liefert fuer solche Stuecke bereits 1, also
+            // ist ihre Tragfaehigkeit einfach ihr stackMax wie bei jedem anderen Stueck auch.
+            // lim = pos heisst: ueber dieser Lage geht in dieser Saeule nichts mehr.
+            const tragCap = u.stackMax;
             if (isFinite(tragCap)) lim = Math.min(lim, pos + tragCap - 1);
             let score;
             if (order === 0) score = py * 1e12 + px * 1e6 + pz;
@@ -3278,7 +3319,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       notesK: "NOTES", nonbind: "\xB7 NON-BINDING",
       hints: [
         "Plan heavy pallets low and evenly distributed.",
-        "Load non-stackable items last / on top.",
+        "Non-stackable items are planned on the floor \u2014 nothing is placed on top of them.",
         "Check axle load, centre of gravity and load securing separately.",
         "Weights = your inputs, not verified by the tool."
       ],
@@ -3303,7 +3344,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       notesK: "HINWEISE", nonbind: "\xB7 UNVERBINDLICH",
       hints: [
         "Schwere Paletten bodennah und gleichm\xE4\xDFig verteilt einplanen.",
-        "Nicht stapelbare Positionen zuletzt bzw. oben verladen.",
+        "Nicht stapelbare Positionen stehen bodennah \u2014 auf ihnen steht nichts.",
         "Achslast, Schwerpunkt und Ladungssicherung separat fachlich pr\xFCfen.",
         "Gewichte = Ihre Eingaben, vom Tool nicht verifiziert."
       ],

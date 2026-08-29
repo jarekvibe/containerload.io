@@ -498,7 +498,33 @@ Im Auswahlfeld schließen sie einander aus („bis Höhe …" **oder** „2× st
 
 **Was dabei KEIN Fehler war:** die Meldung lautete „das Tool macht vier Lagen, obwohl ich nur 2× stapelbar gewählt habe". Das Stück mit „2× stapelbar" stand auf Lage 2 und trug zwei — genau das, was die Angabe bedeutet. Der Fehler lag eine Ebene darüber, in der Übersetzung der Vorgabe in Lagenzahlen. Vor dem Ändern nachrechnen, nicht dem ersten Eindruck folgen.
 
-**„Nicht stapelbar" ist etwas anderes** und bleibt, wie es war: das Stück darf **auf nichts stehen** (`S.y > 1e-6` in `emsPackOnce`). Es trägt in diesem Rechner weiterhin — `test/pack-order.test.mjs` hält das fest (11 nicht stapelbare am Boden, 11 stapelbare darüber). Ob das dem Verständnis an der Rampe entspricht, ist eine **offene fachliche Frage** und nicht beiläufig zu ändern.
+**„Nicht stapelbar" ist etwas anderes** — siehe den eigenen Abschnitt gleich darunter.
+
+### „Nicht stapelbar" heißt beides
+Gemeldet mit Link (`?c=d~250x80x30w300q9snPackage~120x80x110w300q22y3nPackage`): 9 Packstücke 250 × 80 × 30, ausdrücklich **nicht stapelbar**, dazu 22 Paletten. Im Ergebnis trugen **sechs der acht** verladenen Stücke je zwei bis drei Paletten. Nachgestellt und Zeile für Zeile bestätigt.
+
+Der Rechner hat die Angabe bis dahin **zur Hälfte** befolgt: „nicht stapelbar" hieß nur *„ich darf auf nichts stehen"* (`S.y > 1e-6` in `emsPackOnce`), nicht *„auf mir steht nichts"* — die Tragfähigkeit solcher Stücke stand ausdrücklich auf `Infinity`. Das war als fachliche Festlegung dokumentiert und ist trotzdem falsch, aus drei Gründen, die alle in dieselbe Richtung zeigen:
+
+- **Das eigene Auswahlfeld sagt es anders.** Dort steht „nicht stapelbar / 1× / 2× / 3× stapelbar / bis Höhe … / frei stapelbar". Jede andere Stufe dieser Reihe begrenzt genau eine Sache — **was oben drauf darf**. Nur die erste meinte etwas anderes.
+- **Der Aufkleber am Packstück sagt es anders.** „Stapelverbot" / „do not stack" ist eine Aussage über die Oberseite.
+- **Der eigene Ladevorschlag sagte es anders** („Nicht stapelbare Positionen zuletzt bzw. oben verladen") — der Hinweis widersprach dem Bild daneben und ist jetzt mit angepasst.
+
+Seitdem gilt **beides**: das Stück steht auf nichts *und* trägt nichts. Umgesetzt ohne Sonderweg — `stackCapOf` liefert für solche Stücke ohnehin 1, also ist ihre Tragfähigkeit einfach ihr `stackMax` wie bei jedem anderen Stück auch (`lim = pos` heißt: über dieser Lage geht in dieser Säule nichts mehr).
+
+**Der manuelle Pfad zog nach, und dabei fiel ein zweiter Fehler auf.** `manualCandidate` prüfte die **eigene** Tragfähigkeit des gezogenen Stückes gegen die Turmhöhe. Bei gleicher Ware kommt dasselbe heraus, bei gemischter ist es die falsche Zahl: was ich tragen kann, sagt nichts darüber, was **unter** mir aushält. `towerCapLimit` rechnet jetzt dieselbe Grenze wie `lim` im Auto-Packer. Fehlt die Ladungsliste (ältere Aufrufer, Tests), fällt es auf die alte Annahme „unter mir steht dieselbe Ware" zurück.
+
+**Was es gekostet hat, und zwar bewusst** — über die 300 Ladungen des Messstands **381 von 15.127 Packstücken (2,5 %)** und **136,7 von 5.529 m³ (2,5 %)**:
+
+```
+vorher   {"szenarien":300,"verladen":15127,"volumen":5529.496,"mitEtagen":295,"ySumme":1051180}
+nachher  {"szenarien":300,"verladen":14746,"volumen":5392.790,"mitEtagen":290,"ySumme":933040}
+```
+
+Das ist der teuerste Einzelposten in diesem Rechner, und er ist trotzdem richtig: die vorher mitgezählten Packstücke standen auf Ware, die niemand belädt. Sichtbar wird es dort, wo beide Sorten gleich groß sind — in einem 20′ GP fallen 11 nicht stapelbare + 11 stapelbare Paletten von 22 auf 16 (die Rechnung dazu steht in `test/pack-order.test.mjs`).
+
+`test/nicht-stapelbar.test.mjs` hält beide Hälften fest, in beiden Pfaden, mit **Gegenprobe**: dieselbe Ladung als stapelbar *muss* belastet werden, sonst prüfte der Test nur, dass der Packer gar nicht mehr stapelt.
+
+> **Offen geblieben:** die Ladung wird weiterhin **verstreut** gestaut statt in Blöcken — im gemeldeten Fall liegen die flachen Stücke einzeln zwischen den Paletten, und über ihnen sind 240 cm Luft, die jetzt niemand mehr nutzen kann. Das ist kein Regelverstoß, sondern die Extrempunkt-Heuristik: sie maximiert Stückzahl und Volumen, nicht Ordnung. „Nach Logik stauen" (gleiche Sorte im Block, nicht stapelbares an einem Ende, Ladung nach vorn geschoben) wäre ein eigener Durchgang **nach** dem Packen, der an Anzahl und Volumen nichts ändern darf.
 
 ### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
 Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:
