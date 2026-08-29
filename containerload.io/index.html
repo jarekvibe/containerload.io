@@ -276,7 +276,6 @@ details[open] .faq-plus{transform:rotate(45deg)}
     <div class="hidden md:flex items-center gap-1">
       <a href="#demo" class="navlink px-3 py-1.5 rounded-md">Tool</a>
       <a data-i18n="nav_features" href="#features" class="navlink px-3 py-1.5 rounded-md">Funktionen</a>
-      <a data-i18n="nav_how" href="#how" class="navlink px-3 py-1.5 rounded-md">So funktioniert’s</a>
       <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink px-3 py-1.5 rounded-md">Container-Wissen</a>
       <a href="#faq" class="navlink px-3 py-1.5 rounded-md">FAQ</a>
     </div>
@@ -298,7 +297,6 @@ details[open] .faq-plus{transform:rotate(45deg)}
     <div class="flex flex-col gap-0.5">
       <a href="#demo" class="navlink py-2">Tool</a>
       <a data-i18n="nav_features" href="#features" class="navlink py-2">Funktionen</a>
-      <a data-i18n="nav_how" href="#how" class="navlink py-2">So funktioniert’s</a>
       <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink py-2">Container-Wissen</a>
       <a href="#faq" class="navlink py-2">FAQ</a>
       <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
@@ -319,17 +317,17 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <span class="live-dot"></span> Palettengenau · 3D-Ansicht
       </div>
       <h1 data-i18n="hero_h1" class="font-bold leading-[1.08] tracking-tight text-[42px] md:text-[52px]">
-        Jede Ladung.<br><span style="color:var(--dim)">Im richtigen Container.</span>
+        11 Paletten statt 8<br><span style="color:var(--dim)">im selben Container.</span>
       </h1>
-      <p data-i18n="hero_sub" class="mt-5 text-[16.5px] md:text-[18px] leading-relaxed max-w-[540px] mx-auto lg:mx-0" style="color:var(--dim)">
-        Kartons auf Paletten, Paletten in den Container: Maße eingeben und in 3D sehen, wie die Ladung steht — und welcher Container passt. Kostenlos im Browser, ohne Anmeldung.
+      <p data-i18n="hero_sub" class="mt-5 text-[16.5px] md:text-[18px] leading-relaxed max-w-[560px] mx-auto lg:mx-0" style="color:var(--dim)">
+        Weil der Rechner gedrehte Lademuster erkennt — und damit im 20-Fuß auf die Zahlen aus den Speditionstabellen kommt statt auf eine Schätzung. Maße eingeben, Ladung in 3D sehen, Plan als Link weitergeben.
       </p>
       <div class="mt-8 flex flex-wrap gap-3 justify-center lg:justify-start">
         <a data-i18n="hero_cta1" href="/app" class="btn btn-primary text-[15px] px-6 py-3">Tool öffnen – kostenlos</a>
         <a data-i18n="hero_cta2" href="#demo" class="btn btn-ghost text-[15px] px-6 py-3">Reinschauen <span style="color:var(--faint)">↓</span></a>
       </div>
-      <div data-i18n="hero_trust" class="mt-7 flex items-center gap-5 justify-center lg:justify-start text-[13px]" style="color:var(--faint)">
-        <span>Ohne Account</span><span>Kostenlos</span><span>Maße nach ISO 668</span>
+      <div data-i18n="hero_trust" class="mt-7 flex flex-wrap items-center gap-x-5 gap-y-2 justify-center lg:justify-start text-[13px]" style="color:var(--faint)">
+        <span>Kostenlos, ohne Limit</span><span>Ohne Anmeldung</span><span>Keine Cookies, kein Banner</span>
       </div>
     </div>
     <!-- Re-Solve 3D-Hero (rechte Spalte): Status-Strip steht ueber der Animation, damit klar wird, dass beides zusammengehoert -->
@@ -385,6 +383,25 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <div class="clh-step on"><span class="clh-sd" style="background:#35BE87"></span><span class="clh-sl">Gelöst</span></div>
       </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Kennzahlenband: drei Zahlen, die wir belegen koennen. Vorher standen hier drei
+       Eigenschaften ("Ohne Account · Kostenlos · ISO 668") -- das sagt, was wir NICHT
+       verlangen, nicht, was der Rechner kann. Die Zahlen kommen aus PRESETS, VEHICLES
+       und CARRIERS in app.html; test/startseite-zahlen.test.mjs rechnet sie nach. -->
+  <div class="mt-14 grid grid-cols-1 sm:grid-cols-3 gap-4 reveal">
+    <div class="card p-5">
+      <div class="mono font-bold tracking-tight text-[30px] leading-none" style="color:var(--text)">18</div>
+      <div data-i18n="kpi1" class="mt-2 text-[13.5px] leading-snug" style="color:var(--dim)">Container- und Fahrzeugtypen — inklusive Open Top, Flat Rack, Platform und Reefer</div>
+    </div>
+    <div class="card p-5">
+      <div class="mono font-bold tracking-tight text-[30px] leading-none" style="color:var(--text)">8</div>
+      <div data-i18n="kpi2" class="mt-2 text-[13.5px] leading-snug" style="color:var(--dim)">Reedereien mit ihren echten Innenmaßen — auf den Millimeter, jede mit Quelle</div>
+    </div>
+    <div class="card p-5">
+      <div class="mono font-bold tracking-tight text-[30px] leading-none" style="color:var(--text)">0</div>
+      <div data-i18n="kpi3" class="mt-2 text-[13.5px] leading-snug" style="color:var(--dim)">Anmeldungen — deine wie die deines Kunden. Der Plan geht als Link raus und öffnet sich sofort in 3D</div>
     </div>
   </div>
 
@@ -464,7 +481,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
 
   <div class="sc-cta reveal">
     <a data-i18n="sc_cta_open" href="/app" class="btn btn-primary text-[15px] px-6 py-3">Tool kostenlos öffnen ↗</a>
-    <a href="#how" class="btn btn-ghost text-[15px] px-6 py-3"><span data-i18n="sc_cta_how">So funktioniert’s</span> <span style="color:var(--faint)">↓</span></a>
+    <a href="#features" class="btn btn-ghost text-[15px] px-6 py-3"><span data-i18n="sc_cta_how">Alle Funktionen</span> <span style="color:var(--faint)">↓</span></a>
   </div>
   <p data-i18n="sc_cap" class="text-center mt-4 text-[12.5px]" style="color:var(--faint)">Kostenlos · ohne Account · direkt im Browser</p>
 </section>
@@ -500,61 +517,39 @@ details[open] .faq-plus{transform:rotate(45deg)}
     <div data-i18n="feat_ey" class="eyebrow mb-3">Funktionen</div>
     <h2 data-i18n="feat_h" class="font-bold text-[34px] md:text-[42px] tracking-tight leading-tight">Was der Rechner kann</h2>
   </div>
+  <!-- Sechs gleich grosse Karten, EIN Satz je Karte. Vorher lief das Raster ueber
+       col-span-2 und col-span-3, und die Texte reichten von einem Satz bis zu fuenf
+       Zeilen -- das war der Hauptgrund, warum die Seite unruhig wirkte. -->
   <div class="mt-12 grid md:grid-cols-3 gap-4">
-    <div class="card p-6 reveal md:col-span-2">
-      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M12 2.6 21 7.2v9.6L12 21.4 3 16.8V7.2z"/><path d="M3 7.2l9 4.6 9-4.6"/><path d="M12 11.8v9.6"/></svg></div>
+    <div class="card p-6 reveal">
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6 21 7.2v9.6L12 21.4 3 16.8V7.2z"/><path d="M3 7.2l9 4.6 9-4.6"/><path d="M12 11.8v9.6"/></svg></div>
       <h3 data-i18n="f1_h" class="font-bold text-[19px]">3D-Ansicht</h3>
-      <p data-i18n="f1_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Drehen, zoomen, prüfen. Die Packstücke erscheinen nacheinander im Container, damit du siehst, wie deine Ladung tatsächlich steht.</p>
+      <p data-i18n="f1_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Drehen, zoomen, prüfen — die Packstücke erscheinen nacheinander, damit du siehst, wie deine Ladung wirklich steht.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="1"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="1"/></svg></div>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="1"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="1"/></svg></div>
       <h3 data-i18n="f2_h" class="font-bold text-[19px]">Palettengenau gerechnet</h3>
-      <p data-i18n="f2_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Erkennt auch gedrehte Lademuster – so passen <b style="color:var(--text)">11 EUR-Paletten statt 8</b> in den 20-Fuß. Genau die Werte aus den Speditionstabellen.</p>
-    </div>
-    <div class="card p-6 reveal md:col-span-3">
-      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="3" y="15.5" width="18" height="5" rx="1"/><rect x="5.5" y="9" width="6.2" height="5.2" rx="1"/><rect x="13" y="9" width="5.5" height="5.2" rx="1"/><rect x="7.5" y="3.2" width="9" height="4.6" rx="1"/></svg></div>
-      <h3 data-i18n="f6_h" class="font-bold text-[19px]">Karton auf Palette</h3>
-      <p data-i18n="f6_p" class="mt-2 text-[14px] leading-relaxed max-w-[760px]" style="color:var(--dim)">Vom Kunden kommen nur Kartonmaße und Stückzahl? Das Tool legt das Lagenmuster, zählt die Lagen und sagt dir, <b style="color:var(--text)">wie viele Paletten dabei herauskommen</b> — inklusive angebrochener Restpalette. Auch mehrere Kartongrößen: getrennt palettiert oder lagenweise auf eine Mischpalette. Die fertigen Paletten wandern per Klick weiter in den Container.</p>
+      <p data-i18n="f2_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Gedrehte Lademuster werden erkannt: <b style="color:var(--text)">25 EUR-Paletten statt 20</b> in den 40-Fuß. Genau die Werte aus den Speditionstabellen.</p>
     </div>
     <div class="card p-6 reveal">
-      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M7.8 12.2l2.9 2.9 5.5-6.2"/></svg></div>
-      <h3 data-i18n="f3_h" class="font-bold text-[19px]">Container-Empfehlung</h3>
-      <p data-i18n="f3_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Passt nicht alles rein? Das Tool schlägt die günstigste Kombination vor – <b style="color:var(--text)">1× 45' + 1× 20'</b> statt 2× 45'.</p>
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="15.5" width="18" height="5" rx="1"/><rect x="5.5" y="9" width="6.2" height="5.2" rx="1"/><rect x="13" y="9" width="5.5" height="5.2" rx="1"/><rect x="7.5" y="3.2" width="9" height="4.6" rx="1"/></svg></div>
+      <h3 data-i18n="f6_h" class="font-bold text-[19px]">Karton auf Palette</h3>
+      <p data-i18n="f6_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Nur Kartonmaße und Stückzahl vom Kunden? Der Rechner legt das Lagenmuster und sagt, wie viele Paletten dabei herauskommen — Restpalette inklusive.</p>
+    </div>
+    <div class="card p-6 reveal">
+      <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="8.5" height="8" rx="1"/><rect x="13" y="8" width="8.5" height="8" rx="1"/><path d="M6.75 8V5.5M17.25 8V5.5"/></svg></div>
+      <h3 data-i18n="f3_h" class="font-bold text-[19px]">Mehrere Container</h3>
+      <p data-i18n="f3_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Passt nicht alles rein, sagt der Rechner, wie viele es werden und welche Kombination billiger ist — und du legst fest, welches Packstück in welchen kommt.</p>
     </div>
     <div class="card p-6 reveal">
       <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v6h-6"/></svg></div>
       <h3 data-i18n="f4_h" class="font-bold text-[19px]">Dreh- & Stapel-Regeln</h3>
-      <p data-i18n="f4_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Für jedes Packstück einzeln: stapelbar, nicht stapelbar, um 90° drehbar. Realistisch wie an der Rampe.</p>
+      <p data-i18n="f4_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Für jedes Packstück einzeln: nicht stapelbar, bis zu einer Höhe stapelbar, um 90° drehbar. Realistisch wie an der Rampe.</p>
     </div>
     <div class="card p-6 reveal">
       <div class="feature-ic mb-4"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17"/><path d="M5.5 7.5h13"/><path d="M8.5 20.5h7"/><path d="M5.5 7.5 2.5 14a3 3 0 0 0 6 0z"/><path d="M18.5 7.5 21.5 14a3 3 0 0 1-6 0z"/></svg></div>
       <h3 data-i18n="f5_h" class="font-bold text-[19px]">Gewicht & Zuladung</h3>
-      <p data-i18n="f5_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Die maximale Zuladung jedes Containers ist hinterlegt – du wirst gewarnt, bevor du überladen losfährst.</p>
-    </div>
-  </div>
-</section>
-
-<!-- HOW IT WORKS -->
-<section id="how" class="relative z-10 max-w-7xl mx-auto px-5 py-16">
-  <div class="reveal text-center max-w-2xl mx-auto">
-    <div data-i18n="how_ey" class="eyebrow mb-3">So funktioniert's</div>
-    <h2 data-i18n="how_h" class="font-bold text-[32px] md:text-[40px] tracking-tight">In drei Schritten zum Ladeplan</h2>
-  </div>
-  <div class="mt-12 grid md:grid-cols-3 gap-4">
-    <div class="card p-6 reveal">
-      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">01</div>
-      <h3 data-i18n="s1_h" class="font-bold text-[18px]">Container & Ladung</h3>
-      <p data-i18n="s1_p" class="mt-2 text-[14px]" style="color:var(--dim)">Container wählen oder eigene Maße eingeben. Dann die Packstücke mit Anzahl, Maßen und Gewicht – alles in Zentimetern.</p>
-    </div>
-    <div class="card p-6 reveal">
-      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">02</div>
-      <h3 data-i18n="s2_h" class="font-bold text-[18px]">Berechnung</h3>
-      <p data-i18n="s2_p" class="mt-2 text-[14px]" style="color:var(--dim)">ContainerLoad berechnet die beste Stauung — bei einer Palettensorte palettengenau, bei gemischter Ladung sucht ein Algorithmus danach.</p>
-    </div>
-    <div class="card p-6 reveal">
-      <div class="mono text-[12px] font-medium mb-3" style="color:var(--faint)">03</div>
-      <h3 data-i18n="s3_h" class="font-bold text-[18px]">Ergebnis & Plan</h3>
-      <p data-i18n="s3_p" class="mt-2 text-[14px]" style="color:var(--dim)">Du siehst Auslastung, Lagen und Gewicht – und bekommst eine klare Empfehlung, falls nicht alles passt. Dazu der 3D-Plan zum Drehen.</p>
+      <p data-i18n="f5_p" class="mt-2 text-[14px] leading-relaxed" style="color:var(--dim)">Die Zuladung jedes Containers ist hinterlegt — du wirst gewarnt, bevor du überladen losfährst.</p>
     </div>
   </div>
 </section>
@@ -631,7 +626,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
       </div>
       <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Kein Excel. Kein Schätzen.<br>Nur der richtige Container.<br><span style="white-space:nowrap">Bremen, Deutschland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
     </div>
-    <div><div data-i18n="footer_prod" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Produkt</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app" class="navlink">Tool öffnen</a><a data-i18n="nav_features" href="#features" class="navlink">Funktionen</a><a data-i18n="nav_how" href="#how" class="navlink">So funktioniert’s</a><a href="#faq" class="navlink">FAQ</a></div></div>
+    <div><div data-i18n="footer_prod" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Produkt</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app" class="navlink">Tool öffnen</a><a data-i18n="nav_features" href="#features" class="navlink">Funktionen</a><a data-i18n="fl_demo2" href="#demo" class="navlink">Der Rechner</a><a href="#faq" class="navlink">FAQ</a></div></div>
     <div><div data-i18n="footer_res" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Wissen</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_demo" href="#demo" class="navlink">Vorschau</a><a data-i18n="fl_ratgeber" href="/ratgeber/" class="navlink">Container-Wissen</a><a href="#faq" class="navlink">FAQ</a></div></div>
     <div><div data-i18n="footer_legal" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Rechtliches</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_imp" href="/impressum" class="navlink">Impressum</a><a data-i18n="fl_priv" href="/datenschutz" class="navlink">Datenschutz</a><a data-i18n="fl_contact" href="mailto:info@containerload.io" class="navlink">Kontakt</a></div></div>
   </div>
@@ -668,7 +663,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
 <script>
 (function(){
-  var EN={"nav_features": "Features", "nav_how": "How it works", "nav_ratgeber": "Container facts", "nav_open": "Open tool", "rg_ey": "Container facts", "rg_h": "Look it up", "rg_p": "Every page links straight into the 3D calculator — free, no sign-up.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked – more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "Exactly 25 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example and calculator.", "rg_all": "See all pages →","hero_badge": "<span class=\"live-dot\"></span> Pallet-exact · 3D view", "hero_h1": "Every load.<br><span style=\"color:var(--dim)\">In the right container.</span>", "hero_sub": "Cartons onto pallets, pallets into the container: enter your dimensions and see in 3D how the load sits — and which container fits. Free in your browser, no sign-up.", "hero_cta1": "Open the tool – free", "hero_cta2": "Take a look <span style=\"color:var(--faint)\">↓</span>", "hero_trust": "<span>No account</span><span>Free</span><span>ISO 668 dimensions</span>", "tool_ey": "The calculator", "tool_h": "How the calculator works", "tool_p": "Enter, check in 3D, share — there are no more steps than that. No sign-up, nothing to install.", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "— paste your packing list", "sc1_h": "Enter the dimensions", "sc1_p": "Enter items one by one or paste your packing list from Excel — quantity, dimensions, weight. All in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "The load in 3D", "sc2_p": "You see straight away how the load sits in the container — rotate, zoom, check. Pallet-exact for a single pallet type; for mixed loads an algorithm finds the best stow.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share and print", "sc3_p": "Pass the load on as a link — the recipient sees it instantly in 3D, no sign-up. Or as a PDF with a QR code that leads back to the plan.", "sc_cta_open": "Open the tool – free ↗", "sc_cta_how": "How it works", "sc_cap": "Free · no account · right in your browser", "feat_ey": "Features", "feat_h": "What the calculator does", "f1_h": "3D view", "f1_p": "Rotate, zoom, check. The items appear one by one in the container so you can see how your load actually sits.", "f2_h": "Pallet-exact calculation", "f2_p": "Detects rotated loading patterns too – so <b style=\"color:var(--text)\">11 EUR pallets fit instead of 8</b> in a 20-ft. Exactly the values from the forwarder tables.", "f3_h": "Container recommendation", "f3_p": "Not everything fits? The tool suggests the cheapest combination – <b style=\"color:var(--text)\">1× 45' + 1× 20'</b> instead of 2× 45'.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: stackable, non-stackable, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's max payload is built in – you're warned before you set off overloaded.", "f6_h": "Cartons on pallets", "f6_p": "All the customer sent you is carton dimensions and a quantity? The tool builds the layer pattern, counts the layers and tells you <b style=\"color:var(--text)\">how many pallets that comes to</b> — including the part-filled last one. Several carton sizes work too: on separate pallets, or layer by layer onto one mixed pallet. The finished pallets carry straight on into the container.", "how_ey": "How it works", "how_h": "Your load plan in three steps", "s1_h": "Container & cargo", "s1_p": "Pick a container or enter your own dimensions. Then the items with quantity, dimensions and weight – all in centimetres.", "s2_h": "Calculation", "s2_p": "ContainerLoad works out the best stow — pallet-exact for a single pallet type, with an algorithm searching for mixed loads.", "s3_h": "Result & plan", "s3_p": "You see usage, layers and weight – plus a clear recommendation if not everything fits. Along with the 3D plan to rotate.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "q5_s": "How many cartons fit on a pallet?<span class=\"faq-plus text-[22px]\">+</span>", "q5_a": "The calculator works it out: enter carton dimensions, weight and total quantity, pick a Euro pallet (120×80) or industrial pallet (120×100) and the maximum stack height. You get the layer pattern from above, cartons per layer, the number of layers and the total number of pallets — including the part-filled last one. Several carton sizes work too, separately or layer by layer on one mixed pallet. The calculation is purely geometric: no interlocking pattern, no load securing, and pallet weight and capacity are guide values.", "cta_h": "Plan your next load", "cta_p": "Enter the dimensions and you'll know whether it fits — and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Reference", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Preview", "fl_ratgeber": "Container facts", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No retyping.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
+  var EN={"nav_features": "Features", "nav_ratgeber": "Container facts", "nav_open": "Open tool", "rg_ey": "Container facts", "rg_h": "Look it up", "rg_p": "Every page links straight into the 3D calculator — free, no sign-up.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked – more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "Exactly 25 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example and calculator.", "rg_all": "See all pages →","hero_badge": "<span class=\"live-dot\"></span> Pallet-exact · 3D view", "hero_h1": "11 pallets instead of 8<br><span style=\"color:var(--dim)\">in the same container.</span>", "hero_sub": "Because the calculator spots rotated loading patterns — which is how it lands on the forwarder-table figures for a 20-ft instead of a guess. Enter your dimensions, see the load in 3D, pass the plan on as a link.", "hero_cta1": "Open the tool – free", "hero_cta2": "Take a look <span style=\"color:var(--faint)\">↓</span>", "hero_trust": "<span>Free, no limit</span><span>No sign-up</span><span>No cookies, no banner</span>", "tool_ey": "The calculator", "tool_h": "How the calculator works", "tool_p": "Enter, check in 3D, share — there are no more steps than that. No sign-up, nothing to install.", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "— paste your packing list", "sc1_h": "Enter the dimensions", "sc1_p": "Enter items one by one or paste your packing list from Excel — quantity, dimensions, weight. All in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "The load in 3D", "sc2_p": "You see straight away how the load sits in the container — rotate, zoom, check. Pallet-exact for a single pallet type; for mixed loads an algorithm finds the best stow.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share and print", "sc3_p": "Pass the load on as a link — the recipient sees it instantly in 3D, no sign-up. Or as a PDF with a QR code that leads back to the plan.", "sc_cta_open": "Open the tool – free ↗", "sc_cta_how": "All features", "sc_cap": "Free · no account · right in your browser", "kpi1": "Container and vehicle types — including open top, flat rack, platform and reefer", "kpi2": "Shipping lines with their real internal dimensions — to the millimetre, each with a source", "kpi3": "Sign-ups — yours or your customer's. The plan goes out as a link and opens straight into 3D", "feat_ey": "Features", "feat_h": "What the calculator does", "f1_h": "3D view", "f1_p": "Rotate, zoom, check — the items appear one after another so you can see how your load really sits.", "f2_h": "Pallet-exact calculation", "f2_p": "Rotated loading patterns are recognised: <b style=\"color:var(--text)\">25 EUR pallets instead of 20</b> in a 40-ft. Exactly the values from the forwarder tables.", "f3_h": "More than one container", "f3_p": "If it does not all fit, the calculator says how many you need and which combination is cheaper — and you decide which item goes into which.", "f4_h": "Rotation & stacking rules", "f4_p": "For each item individually: non-stackable, stackable up to a height, rotatable by 90°. Realistic, like at the ramp.", "f5_h": "Weight & payload", "f5_p": "Every container's payload is built in — you are warned before you set off overloaded.", "f6_h": "Cartons on pallets", "f6_p": "All the customer sent is carton dimensions and a quantity? The calculator builds the layer pattern and tells you how many pallets that comes to — part-filled one included.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account – just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. It's purely geometric – centre of gravity and axle load aren't included yet, so no guarantee for the real weight distribution.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away — nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "q5_s": "How many cartons fit on a pallet?<span class=\"faq-plus text-[22px]\">+</span>", "q5_a": "The calculator works it out: enter carton dimensions, weight and total quantity, pick a Euro pallet (120×80) or industrial pallet (120×100) and the maximum stack height. You get the layer pattern from above, cartons per layer, the number of layers and the total number of pallets — including the part-filled last one. Several carton sizes work too, separately or layer by layer on one mixed pallet. The calculation is purely geometric: no interlocking pattern, no load securing, and pallet weight and capacity are guide values.", "cta_h": "Plan your next load", "cta_p": "Enter the dimensions and you'll know whether it fits — and in which container.", "cta_a": "Open the tool – free", "footer_prod": "Product", "footer_res": "Reference", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo": "Preview", "fl_demo2": "The calculator", "fl_ratgeber": "Container facts", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_ey": "Packing list import", "imp_h": "From Excel.<br><span style=\"color:var(--dim)\">Into the container.</span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — ContainerLoad detects columns, dimensions and weights automatically. No retyping.", "imp_c1": "<span style=\"color:var(--good)\">✓</span> Detects German and English header rows", "imp_c2": "<span style=\"color:var(--good)\">✓</span> Converts mm and tonnes automatically", "imp_c3": "<span style=\"color:var(--good)\">✓</span> No login, right in your browser", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool — dimensions in cm unless stated otherwise", "imp_toolong": "List too long — please paste directly in the tool via “Excel / text”.", "imp_ph": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12"};
   var els=[].slice.call(document.querySelectorAll('[data-i18n]'));
   var DE={};
   els.forEach(function(el){var k=el.getAttribute('data-i18n'); if(DE[k]===undefined) DE[k]=el.innerHTML;});

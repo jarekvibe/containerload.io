@@ -150,19 +150,35 @@ test("die Uebersichtskarten der Startseite nennen die gerechneten Zahlen", () =>
 // nennen, und das sind 8, nicht 9. Ausgerechnet der Satz, mit dem das Werkzeug seine
 // Genauigkeit belegt, war die einzige Zahl auf der Seite, die niemand nachrechnen
 // konnte. Beide Zahlen kommen jetzt aus demselben Packer, mit und ohne Drehung.
-test("die Vergleichszahl im Merkmal 'palettengenau' stimmt", () => {
+// Der Dreh-Gewinn "x statt y" steht auf der Startseite an ZWEI Stellen: in der Ueberschrift
+// (20-Fuss) und im Merkmal "palettengenau" (40-Fuss). Welcher Container gemeint ist, liest
+// der Test aus dem Satz selbst -- sonst muesste man ihn nachziehen, sobald jemand die
+// Ueberschrift auf einen anderen Container umschreibt, und genau das faellt niemandem auf.
+test("die Dreh-Gewinne auf der Startseite stimmen, in beiden Sprachen", () => {
   const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
-  const C = PRESETS["20' GP"];
-  const mit = makeFloorPacker(120, 80, true)(C.l, C.w).count;
-  const ohne = makeFloorPacker(120, 80, false)(C.l, C.w).count;
-  assert.ok(mit > ohne, "ohne Drehung duerfte nicht mehr passen als mit");
-  for (const [was, txt] of [
-    ["deutsch", (start.match(/data-i18n="f2_p"[^>]*>(.*?)<\/p>/s) || [])[1]],
-    ["englisch", (start.match(/"f2_p": "(.*?)", "f3_h"/s) || [])[1]]
-  ]) {
-    assert.ok(txt, `${was}: Merkmal f2_p nicht gefunden`);
-    const zahlen = (txt.match(/\d+/g) || []).map(Number);
-    assert.ok(zahlen.includes(mit), `${was}: die gerechnete Zahl ${mit} fehlt in "${txt}"`);
+  const stellen = [
+    // Ueberschrift und Unterzeile gehoeren zusammen: die Zahlen stehen oben, der Container
+    // darunter. Getrennt geprueft muesste eine der beiden Stellen etwas wiederholen.
+    ["Hero, deutsch", (start.match(/data-i18n="hero_h1"[^>]*>(.*?)<\/h1>/s) || [])[1] + " " + (start.match(/data-i18n="hero_sub"[^>]*>(.*?)<\/p>/s) || [])[1]],
+    ["Hero, englisch", (start.match(/"hero_h1": "(.*?)", "hero_sub": "(.*?)", "hero_cta1"/s) || []).slice(1, 3).join(" ")],
+    ["Merkmal, deutsch", (start.match(/data-i18n="f2_p"[^>]*>(.*?)<\/p>/s) || [])[1]],
+    ["Merkmal, englisch", (start.match(/"f2_p": "(.*?)", "f6_h"/s) || [])[1]],
+  ];
+  for (const [was, roh] of stellen) {
+    assert.ok(roh, `${was}: Stelle nicht gefunden`);
+    const txt = roh.replace(/<[^>]*>/g, " ");
+    // Welcher Container? Der Satz sagt es -- "20-Fuss", "20-ft" oder das Kuerzel 20\u2032,
+    // das im Rechner selbst steht.
+    const fuss = txt.match(/\b(20|40|45)\s?(?:[-\s]?(?:Fu|ft|foot)|\u2032|')/i);
+    assert.ok(fuss, `${was}: der Satz nennt keinen Container — "${txt.trim()}"`);
+    const C = PRESETS[fuss[1] + "' " + (fuss[1] === "45" ? "HC" : "GP")];
+    assert.ok(C, `${was}: kein Preset zu ${fuss[1]}'`);
+    const mit = makeFloorPacker(120, 80, true)(C.l, C.w).count;
+    const ohne = makeFloorPacker(120, 80, false)(C.l, C.w).count;
+    assert.ok(mit > ohne, "ohne Drehung duerfte nicht mehr passen als mit");
+    // Der Containername steht selbst als Zahl im Satz -- er zaehlt hier nicht mit.
+    const zahlen = (txt.replace(fuss[0], " ").match(/\d+/g) || []).map(Number);
+    assert.ok(zahlen.includes(mit), `${was}: die gerechnete Zahl ${mit} fehlt in "${txt.trim()}"`);
     assert.ok(zahlen.includes(ohne), `${was}: die Vergleichszahl muesste ${ohne} sein — im Text steht ${zahlen.join(", ")}`);
   }
 });
