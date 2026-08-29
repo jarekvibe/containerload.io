@@ -147,7 +147,24 @@
     teile.push(poly([A,B,Cq,D], f));                                          // oben
   });
   var el = document.getElementById("bild");
-  el.innerHTML = `<g transform="translate(232,58)">${teile.join("")}</g>`;
+  // Der Rahmen wird GERECHNET, nicht gesetzt. Vorher stand hier ein festes translate(232,58);
+  // die hintere Oberkante des Containers liegt aber bei y = -104, und genau die schnitt oben
+  // ab -- so gemeldet ("der Container ist oben in der Ecke abgeschnitten"). Wer an Groesse,
+  // Winkel oder Ladung dreht, verschiebt diese Ecke, und ein festes Mass geht wieder daneben.
+  //
+  // Statt einer Zahl also die tatsaechliche Ausdehnung aller acht Huellenecken, plus einem
+  // Rand. viewBox uebernimmt sie; das SVG behaelt seine Kastengroesse und passt den Inhalt ein.
+  const rand = 10;
+  const ecken = [];
+  [0, CL].forEach((x) => [0, CW].forEach((y) => [0, CH].forEach((z) => ecken.push(P(x, y, z)))));
+  const x0 = Math.min(...ecken.map((p) => p[0])) - rand, x1 = Math.max(...ecken.map((p) => p[0])) + rand;
+  const y0 = Math.min(...ecken.map((p) => p[1])) - rand, y1 = Math.max(...ecken.map((p) => p[1])) + rand;
+  // width/height MIT der viewBox setzen, sonst wird die Zeichnung in den alten Kasten
+  // hineinskaliert und dabei groesser -- sie soll aber 1:1 bleiben (1 Einheit = 1 Pixel).
+  el.setAttribute("viewBox", `${x0.toFixed(1)} ${y0.toFixed(1)} ${(x1 - x0).toFixed(1)} ${(y1 - y0).toFixed(1)}`);
+  el.setAttribute("width", (x1 - x0).toFixed(1));
+  el.setAttribute("height", (y1 - y0).toFixed(1));
+  el.innerHTML = teile.join("");
 })();
 </script>
 </body></html>

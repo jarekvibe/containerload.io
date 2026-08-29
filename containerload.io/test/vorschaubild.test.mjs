@@ -160,6 +160,14 @@ test("die Bildquelle haelt sich an dasselbe Regelwerk wie der Rest", () => {
   // und die Kisten sahen aus wie aus Glas. Abgedunkelt wird jetzt gerechnet (dunkler()),
   // die Flaechen sind deckend, und die Huelle liegt hinter der Ladung statt darueber.
   assert.ok(!/fill-opacity\s*=/.test(q), "fill-opacity-Attribut in der Zeichnung -- die Ladung wird wieder durchsichtig");
+  // Gemeldet: "der Container ist oben in der Ecke abgeschnitten". Der Zeichenbereich stand
+  // auf einem festen translate(232,58); die hintere Oberkante liegt aber bei y = -104 und
+  // fiel damit aus dem SVG heraus. Der Rahmen wird jetzt aus den acht Huellenecken gerechnet
+  // -- wer wieder eine feste Zahl einsetzt, verschiebt beim naechsten Eingriff dieselbe Ecke.
+  assert.ok(!/transform="translate\(\d/.test(q),
+    "fester Versatz in der Zeichnung -- der Rahmen muss aus der Geometrie kommen");
+  assert.ok(/el\.setAttribute\("viewBox"/.test(q) && /ecken\.push\(P\(x, y, z\)\)/.test(q),
+    "die viewBox wird nicht mehr aus den Huellenecken gerechnet");
   const iHuelle = q.indexOf('e.forEach(function (q)');
   const iKisten = q.indexOf("kisten.slice().sort");
   assert.ok(iHuelle > 0 && iKisten > 0 && iHuelle < iKisten,

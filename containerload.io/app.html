@@ -4315,44 +4315,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             parent.add(w4);
           }
         }
-        // ── Offene Tuerblaetter (nur dry, nur am letzten Container der Kette). Ersetzen die flache w4-Stirnwand am Tuerende (x=CL). ──
+        // ── Das Tuerende bleibt OFFEN, aber ohne Tuerblaetter ──
+        //
+        // Hier standen zwei aufgeschwungene Blaetter (rund 80 Grad nach aussen). Gemeldet:
+        // "anfangs wollte ich die Containertuer in der 3D View drinne haben, jetzt nerven die
+        // mich irgendwie". Zu Recht -- sie ragten ueber einen Meter ueber das Containerende
+        // hinaus, standen bei jeder Kameradrehung als zwei grosse Flaechen im Bild und
+        // vergroesserten den Rahmen, auf den die Kamera einpasst: die Ladung wurde dadurch
+        // kleiner gezeichnet, ohne dass dafuer etwas zu sehen gewesen waere.
+        //
+        // Geblieben ist, wofuer die Tuer im Bild da war: das Tuerende traegt KEINE Stirnwand
+        // (man sieht in den Container hinein) und ist mit einer duennen Rahmenkante gefasst,
+        // damit erkennbar bleibt, an welchem Ende geladen wird. Das Praedikat openDoors
+        // entscheidet weiterhin, welcher Container der Kette so gezeichnet wird -- nur der
+        // letzte; die davor bekommen ihre flache Stirnwand (siehe w4 oben).
         if (kind === "dry" && openDoors) {
-          const DOOR_OPEN = 1.40;  // ~80 Grad -> Blattflaeche zeigt zur Kamera (war 1.95/~112)
-          // Blattfarbe ist zustandsunabhaengig Stahl -- NIE amber (0xffb454 nur an Oeffnungsrahmen + Ghost).
-          const doorMat = new THREE.MeshStandardMaterial({
-            color: STEEL, transparent: true, opacity: 0.22, depthWrite: false,
-            roughness: 0.8, metalness: 0.28, side: THREE.DoubleSide
-          });
-          const geoLeaf = new THREE.PlaneGeometry(CW / 2, CH);
-          const leafEdgeGeo = new THREE.EdgesGeometry(geoLeaf);
-          const leafEdgeMat = new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.7 }); // Stahl, nie amber
-          // Linkes Blatt: Scharnier bei z=0, schwingt nach +x auf.
-          const hingeL = new THREE.Group();
-          hingeL.position.set(CL, cy, 0);
-          const leafL = new THREE.Mesh(geoLeaf, doorMat);
-          leafL.rotation.y = Math.PI / 2;   // in die Tuerebene drehen (wie w4)
-          leafL.position.z = CW / 4;        // Blattmitte; Scharnierkante bei z=0
-          hingeL.add(leafL);
-          const edgeL = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
-          edgeL.rotation.y = Math.PI / 2;
-          edgeL.position.z = CW / 4;
-          hingeL.add(edgeL);
-          hingeL.rotation.y = DOOR_OPEN;    // + = nach aussen
-          parent.add(hingeL);
-          // Rechtes Blatt: Scharnier bei z=CW, spiegelbildlich.
-          const hingeR = new THREE.Group();
-          hingeR.position.set(CL, cy, CW);
-          const leafR = new THREE.Mesh(geoLeaf, doorMat);
-          leafR.rotation.y = Math.PI / 2;
-          leafR.position.z = -CW / 4;
-          hingeR.add(leafR);
-          const edgeR = new THREE.LineSegments(leafEdgeGeo, leafEdgeMat);
-          edgeR.rotation.y = Math.PI / 2;
-          edgeR.position.z = -CW / 4;
-          hingeR.add(edgeR);
-          hingeR.rotation.y = -DOOR_OPEN;
-          parent.add(hingeR);
-          // Duenne Rahmenkante am Tuerende (Bezug, damit die offene Oeffnung "gefasst" wirkt)
           const frameGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(CW, CH));
           const frameEdge = new THREE.LineSegments(frameGeo, new THREE.LineBasicMaterial({ color: FRAME, transparent: true, opacity: 0.5 }));
           frameEdge.rotation.y = Math.PI / 2;

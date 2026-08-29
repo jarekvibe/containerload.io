@@ -472,6 +472,8 @@ Nebenbei korrigiert: auf der alten Karte stand **„Ein Ladeplan wurde dir getei
 
 Die rechte Bildhälfte ist ausgenommen: dort stehen die **Kennfarben der Packstücke** (`TYPE_COLORS`), und die sind absichtlich bunt — sie tragen Information.
 
+**Der Zeichenbereich wird gerechnet, nicht gesetzt.** Zweite Meldung zur selben Karte: *„der Container ist oben in der Ecke abgeschnitten."* Dort stand ein festes `translate(232,58)`; die hintere Oberkante der Hülle liegt aber bei y = −104 und fiel damit aus dem SVG heraus. Jetzt bestimmt die tatsächliche Ausdehnung der acht Hüllenecken die `viewBox` — **und `width`/`height` dazu**, sonst wird die Zeichnung in den alten Kasten hineinskaliert und dabei größer. Wer an Größe, Winkel oder Ladung dreht, verschiebt genau diese Ecke; eine feste Zahl geht dann wieder daneben.
+
 **Die Ladung ist deckend gezeichnet, die Hülle liegt dahinter.** Erste Fassung: die Seitenflächen waren mit `fill-opacity` abgedunkelt und das Drahtgitter lag über den Kisten — gemeldet als *„Packstücke sind irgendwie weirdly transparent"*, und genau so sah es aus. Abgedunkelt wird jetzt **gerechnet** (`dunkler()` mischt gegen den Grundton, nicht gegen Schwarz — sonst kippen die Flanken ins Graue): oben voll, rechte Flanke 72 %, linke 50 %. Dieselbe Staffelung, die im 3D-Bild das Licht macht, nur ausgerechnet statt beleuchtet. Der Test prüft beides — kein `fill-opacity`-Attribut, und die Hülle steht im Quelltext **vor** den Kisten.
 
 ### Die Container-Kette: zwei Grenzen, zwei Fragen
@@ -517,6 +519,18 @@ Ein 40-Fuß-Container ist 12 m lang. Danach klemmt `zielKlemmen` das Ziel hart a
 Jetzt zwei Stufen: **erst auf die Kisten selbst schießen** (nur `isInstancedMesh` — Hüllen, Boden und Raster sind Linien und Flächen, die der Strahl weit außerhalb der Reihe trifft), und nur wenn das nichts trifft, auf die Bodenebene — und die auch nur, solange der Punkt zur Reihe gehört (`imRahmen`). Zeigt der Zeiger ins Leere, **passiert nichts**; das ist hier die richtige Antwort, denn der Nutzer hat auf nichts gezeigt.
 
 `imRahmen` und `zielKlemmen` benutzen **denselben Auslauf** (`m = 2`). Zwei verschiedene Maße wären genau die Art Abweichung, die später niemand mehr erklären kann: das Ziel dürfte an eine Stelle springen, an der es nicht bleiben darf. `test/kamera-schieben.test.mjs` hält beides fest — den Vertrag im Quelltext **und** die Rechnung, die den Fehler erklärt (sie liest Bildwinkel, Ruhelage und Zoomschritt aus `app.html`, damit sie nicht stillschweigend veraltet).
+
+### Die 3D-Ansicht zeigt kein Türblatt mehr
+Am Türende des letzten Containers standen zwei aufgeschwungene Türblätter (rund 80°). Gemeldet: *„anfangs wollte ich die Containertür in der 3D View drinne haben, jetzt nerven die mich irgendwie."*
+
+Drei Gründe, warum das Entfernen richtig ist und nicht nur Geschmack:
+- Sie ragten **über einen Meter** über das Containerende hinaus und standen bei jeder Kameradrehung als zwei große Flächen im Bild.
+- Sie **vergrößerten den Rahmen**, auf den `camFit` einpasst — die Ladung wurde dadurch kleiner gezeichnet, ohne dass dafür etwas zu sehen gewesen wäre.
+- Was sie sagen sollten, sagt das Türende ohnehin selbst.
+
+**Geblieben ist genau das:** das Türende trägt **keine Stirnwand** (man sieht in den Container hinein) und ist mit einer dünnen Rahmenkante gefasst, damit erkennbar bleibt, an welchem Ende geladen wird. Das Prädikat `openDoors = (ci === chain.length - 1)` entscheidet weiterhin, welcher Container der Kette so gezeichnet wird — die davor bekommen ihre flache Stirnwand. `test/tuerfluegel-gate.test.mjs` prüft beide Seiten: dass die Blätter weg sind (`DOOR_OPEN`, Scharniere, Blattgeometrie) **und** dass das offene, gefasste Türende steht.
+
+**Die Türprüfung bleibt davon unberührt.** `doorFailCheck` und die Warnung „passt nicht durch die Türöffnung" sind eine Rechnung, kein Bild — sie hingen nie an den Blättern.
 
 ### Volumen und Gewicht je Container
 Die Leiste nennt immer nur C1 (und sagt es dazu), das Bild nennt die Summe. Dazwischen fehlte die Frage, die beim Buchen zählt: *wie voll ist eigentlich der zweite?* Jeder Container hat seine eigene Zuladung und wird einzeln gestellt. In der Details-Schublade steht deshalb eine Zeile je Container: **Verladen · Volumen · Gewicht · Voll**, gerechnet aus derselben Quelle wie das Bild (den `placed`-Listen der Kette).
