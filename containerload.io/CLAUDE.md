@@ -441,6 +441,8 @@ Nebenbei korrigiert: auf der alten Karte stand **„Ein Ladeplan wurde dir getei
 
 Die rechte Bildhälfte ist ausgenommen: dort stehen die **Kennfarben der Packstücke** (`TYPE_COLORS`), und die sind absichtlich bunt — sie tragen Information.
 
+**Die Ladung ist deckend gezeichnet, die Hülle liegt dahinter.** Erste Fassung: die Seitenflächen waren mit `fill-opacity` abgedunkelt und das Drahtgitter lag über den Kisten — gemeldet als *„Packstücke sind irgendwie weirdly transparent"*, und genau so sah es aus. Abgedunkelt wird jetzt **gerechnet** (`dunkler()` mischt gegen den Grundton, nicht gegen Schwarz — sonst kippen die Flanken ins Graue): oben voll, rechte Flanke 72 %, linke 50 %. Dieselbe Staffelung, die im 3D-Bild das Licht macht, nur ausgerechnet statt beleuchtet. Der Test prüft beides — kein `fill-opacity`-Attribut, und die Hülle steht im Quelltext **vor** den Kisten.
+
 ### Die Container-Kette: zwei Grenzen, zwei Fragen
 `MAXCHAIN = 24` wird **gerechnet**, `MAXDRAW = 8` wird **gezeichnet**. Vorher galt für beides 4 — an zwei Stellen unabhängig voneinander als Literal. Wer 39 Paletten eingab, sah vier Hüllen und darunter „15 offen · weitere Container nötig", ohne je zu erfahren, wie viele. Es sind sieben.
 

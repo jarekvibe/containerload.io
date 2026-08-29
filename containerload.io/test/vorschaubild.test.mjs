@@ -155,4 +155,13 @@ test("die Bildquelle haelt sich an dasselbe Regelwerk wie der Rest", () => {
   assert.strictEqual(schwer.length, 0, `Schriftgewicht ueber 700: ${schwer.join(", ")}`);
   assert.ok(q.includes(BG.toUpperCase()) || q.includes(BG), "die Quelle benutzt einen anderen Grundton");
   assert.ok(q.includes(ACCENT.toUpperCase()) || q.includes(ACCENT), "die Quelle benutzt einen anderen Akzent");
+  // Gemeldet: "Packstuecke sind irgendwie weirdly transparent". Die Seitenflaechen waren mit
+  // fill-opacity abgedunkelt -- dadurch schien das Drahtgitter der Huelle durch die Ladung,
+  // und die Kisten sahen aus wie aus Glas. Abgedunkelt wird jetzt gerechnet (dunkler()),
+  // die Flaechen sind deckend, und die Huelle liegt hinter der Ladung statt darueber.
+  assert.ok(!/fill-opacity\s*=/.test(q), "fill-opacity-Attribut in der Zeichnung -- die Ladung wird wieder durchsichtig");
+  const iHuelle = q.indexOf('e.forEach(function (q)');
+  const iKisten = q.indexOf("kisten.slice().sort");
+  assert.ok(iHuelle > 0 && iKisten > 0 && iHuelle < iKisten,
+    "die Huelle wird nach der Ladung gezeichnet und zieht Linien quer durch die Kisten");
 });
