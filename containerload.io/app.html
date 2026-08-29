@@ -2024,6 +2024,63 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   //      3x 40'. Das ist der Unterschied, um den es in der Meldung ging, und es ist Geld.
   //   4. Sortenstreuung     -- gleiche Ware in einem Container laesst sich laden, verzollen
   //      und ausliefern. Nur der Gleichstand-Entscheid, nie ein Grund fuer einen Container mehr.
+  // ── Die Zuweisung: welche Position in welchen Container ─────────────────────────────
+  //
+  // Gewuenscht als "der User waehlt selbst aus, welche Packstuecke in welchen Container
+  // kommen". Eine Position traegt dafuer "slot" -- null heisst Auto (der Normalfall und die
+  // Voreinstellung), sonst der Index eines Containers der Kette.
+  //
+  // ENTSCHIEDEN wurde "DORT ZUERST", nicht "nur dort". Der Unterschied ist die ganze
+  // Funktion: nachgerechnet an der gemeldeten Sendung landen unter "nur dort" 2 von 9
+  // gepinnten Stuecken im Container (die Paletten sind frueher dran), unter "dort zuerst" 8
+  // von 9 -- mehr passen auch allein nicht hinein. Eine Zuweisung, die schwaecher ist als die
+  // Reihenfolge im Packer, ist schlimmer als gar keine.
+  //
+  // Umgesetzt in zwei Laeufen: erst die zugewiesene Ware in den leeren Container, dann der
+  // Rest auf ihr als Vorbelegung (siehe opts.vorbelegt). Ohne Zuweisung an diesem Slot
+  // laeuft genau ein Lauf -- Wort fuer Wort der alte Weg.
+  //
+  // Was einem ANDEREN Slot zugewiesen ist, wird hier gar nicht erst angeboten. Und was nicht
+  // hineingeht, bleibt OFFEN und sagt es; es rutscht nicht heimlich in den naechsten
+  // Container. Sonst waere die Zuweisung wieder nur ein Vorschlag.
+  function slotPins(cargo) {
+    const p = cargo.map((t) => (Number.isInteger(t.slot) && t.slot >= 0 ? t.slot : null));
+    return p.some((v) => v != null) ? p : null;
+  }
+  function slotPacken(preset, rest, slotIdx, pins, opts, sortenrein) {
+    const frei = pins ? rest.map((t, i) => (pins[i] == null ? t : { ...t, qty: 0 })) : rest;
+    const hatPin = !!pins && rest.some((t, i) => t.qty > 0 && pins[i] === slotIdx);
+    if (!hatPin) {
+      // Ohne Zuweisung an diesem Slot: der alte Weg. Angeboten wird alles Freie; was einem
+      // anderen Container gehoert, bleibt aussen vor.
+      return sortenrein ? packSortenrein(preset, frei, sortenReihenfolge(frei), null, opts) : packCargo(preset, frei, opts);
+    }
+    const gepinnt = rest.map((t, i) => (pins[i] === slotIdx ? t : { ...t, qty: 0 }));
+    const p1 = packCargo(preset, gepinnt, opts);
+    // Der zweite Lauf ist bewusst NICHT sortenrein: welche Sorte wohin gehoert, hat der
+    // Nutzer mit der Zuweisung schon beantwortet.
+    const p2 = packCargo(preset, frei, { ...opts, vorbelegt: p1.placed });
+    // Zusammengefuehrt in der VOLLEN Form eines packCargo-Ergebnisses. Der erste Container
+    // der Kette wird als slot0 in die Oberflaeche uebernommen (Leiste, Details, Bild) und
+    // braucht jedes Feld -- ein halbes Ergebnis dort waere eine zweite Wahrheit.
+    const placed = p1.placed.concat(p2.placed);
+    const usedVol = p1.usedVol + p2.usedVol;
+    return {
+      placed,
+      perType: rest.map((t, i) => ({
+        loaded: (p1.perType[i] ? p1.perType[i].loaded : 0) + (p2.perType[i] ? p2.perType[i].loaded : 0),
+        total: Math.max(0, Math.floor(num(t.qty)))
+      })),
+      contVol: p1.contVol,
+      usedVol,
+      util: p1.contVol > 0 ? usedVol / p1.contVol * 100 : 0,
+      weight: p1.weight + p2.weight,
+      boxes: p1.boxes + p2.boxes,
+      totalBoxes: rest.reduce((a2, t) => a2 + Math.max(0, Math.floor(num(t.qty))), 0),
+      layers: placed.length ? new Set(placed.map((b) => Math.round(b.y))).size : 0,
+      single: false, rotHint: false, rotHintAll: false
+    };
+  }
   function ketteBesser(a, b) {
     if (!a || !b) return !!a;
     const masse = (k) => [k.totRem, k.chain.length,
@@ -2081,7 +2138,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
     return kg;
   }
-  function ketteAusgleichen(chain, cargo, ordentlich) {
+  function ketteAusgleichen(chain, cargo, ordentlich, pins) {
     const N = chain.length;
     if (N < 2 || N > MAXDRAW) return null;
     const stueck = cargo.map((t) => Math.max(0, Math.floor(num(t.qty))));
@@ -2116,7 +2173,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // anderen". Der letzte nimmt, was bleibt -- ohne ihn als Auffangbecken ginge die
         // Rechnung am letzten Rundungsrest auf.
         const ziel = i === N - 1 ? voll : Math.min(voll, restKg * (voll / restPay) * f);
-        const rr = packCargo({ ...p, payload: ziel }, rest, { noHint: true, ordentlich });
+        const rr = slotPacken({ ...p, payload: ziel }, rest, i, pins, { noHint: true, ordentlich }, false);
         neu.push({ ...chain[i], placed: rr.placed, res: rr });
         rest = rest.map((t, k) => ({ ...t, qty: t.qty - (rr.perType[k] ? rr.perType[k].loaded : 0) }));
         restKg -= rr.weight;
@@ -2157,6 +2214,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // sortenrein. Der erste Container ist der gewaehlte; gierig uebernimmt ihn fertig aus
     // slot0, sortenrein packt ihn neu (und gibt ihn als slot0 zurueck, damit die Leiste
     // dieselben Zahlen zeigt wie die Tabelle darunter).
+    const pins = slotPins(cargo);
     const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
       const OPT = { noHint: true, ordentlich };
@@ -2165,10 +2223,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
       // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
       // andere Zahlen als die Tabelle darunter.
-      if (sortenrein || ordentlich) {
-        erst = sortenrein
-          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
-          : packCargo(container0, start, OPT);
+      // Eine Zuweisung zwingt auch den ersten Container zu einem eigenen Lauf: slot0 ist ohne
+      // sie entstanden und wuesste nichts davon.
+      if (sortenrein || ordentlich || pins) {
+        erst = pins
+          ? slotPacken(container0, start, 0, pins, OPT, sortenrein)
+          : sortenrein
+            ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+            : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2177,12 +2239,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
       }
       let totRem = remaining.reduce((s, t) => s + t.qty, 0);
+      // Was noch untergebracht werden KANN -- und das ist nicht dasselbe wie das,
+      // was offen ist. Ware, die auf einen bereits gebauten Container gepinnt ist,
+      // findet in keinem weiteren Container mehr Platz; ohne diese Unterscheidung
+      // baut die Kette bis MAXCHAIN Container fuer ein Stueck, das nie hineingeht.
+      const nochMoeglich = (rem) =>
+        rem.reduce((s, t, i) => s + (pins && pins[i] != null && pins[i] < chain.length ? 0 : t.qty), 0);
       let slot = 1;
-      while (totRem > 0 && chain.length < MAXVIS) {
+      while (nochMoeglich(remaining) > 0 && chain.length < MAXVIS) {
         const ov = overrides && overrides[slot];
         const manual = ov && PRESETS[ov];
         const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
+        const rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2216,7 +2284,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // die Frage nicht "wie verteile ich", sondern "was bleibt liegen") und nur bei einem
     // gewoehnlichen Trockencontainer -- Special Equipment packt packKind, nicht packCargo.
     if (totRem === 0 && chain.length > 1 && (container0.kind || "dry") === "dry") {
-      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich, pins);
       if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
     }
     // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
@@ -2258,7 +2326,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
         let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
         if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
-          const b2 = ketteAusgleichen(oChain, cargo, true);
+          const b2 = ketteAusgleichen(oChain, cargo, true, pins);
           if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
         }
         const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
@@ -2268,12 +2336,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
       }
     }
+    // Zwei Gruende, warum etwas offen bleibt, und sie verlangen zwei verschiedene Saetze:
+    // Die Kette ist an der Grenze abgeschnitten (gekappt -- es gaebe weitere Container),
+    // oder sie ist zu Ende und ein weiterer Container wuerde nichts aendern (zu grosses
+    // Stueck, oder auf einen bereits gebauten Container gepinnte Ware).
+    const gekappt = totRem > 0 && chain.length >= MAXVIS;
+    // Und wie viel vom Rest geht auf das Konto der Zuweisung? Was jemand selbst einem
+    // Container zugewiesen hat, bleibt dort liegen, wenn es nicht hineinpasst -- ein
+    // weiterer Container aendert daran nichts, und ein Vorschlag dafuer waere leer.
+    const pinOffen = pins ? remaining.reduce((s, t, i) => s + (pins[i] != null ? Math.max(0, t.qty) : 0), 0) : 0;
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, gekappt, pinOffen, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, gekappt, pinOffen, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   // Landfracht-Kette: Folgefahrzeuge = dasselbe (aktuell gewaehlte) Fahrzeug, sofern nicht pro Slot
   // manuell ueberschrieben. Analog zu chainContainers, nur ohne Auto-Typwahl (Entscheidung: N× gleich).
@@ -2283,6 +2360,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // gibt keinen kleineren. Uebrig bleibt "gleiche Ware zusammen" -- an der Rampe genauso
     // wertvoll wie im Hafen, und wer die Seefracht anders behandelt als die Landfracht,
     // baut sich zwei Algorithmen, die auseinanderlaufen.
+    const pins = slotPins(cargo);
     const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
       const OPT = { noHint: true, ordentlich };
@@ -2291,10 +2369,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // unordentlich gepackt wird -- genau so ist slot0 naemlich entstanden. Jede andere
       // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
       // andere Zahlen als die Tabelle darunter.
-      if (sortenrein || ordentlich) {
-        erst = sortenrein
-          ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
-          : packCargo(container0, start, OPT);
+      // Eine Zuweisung zwingt auch den ersten Container zu einem eigenen Lauf: slot0 ist ohne
+      // sie entstanden und wuesste nichts davon.
+      if (sortenrein || ordentlich || pins) {
+        erst = pins
+          ? slotPacken(container0, start, 0, pins, OPT, sortenrein)
+          : sortenrein
+            ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
+            : packCargo(container0, start, OPT);
         if (!erst.boxes) return null;
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
@@ -2303,12 +2385,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
       }
       let totRem = remaining.reduce((s, t) => s + t.qty, 0);
+      // Was noch untergebracht werden KANN -- und das ist nicht dasselbe wie das,
+      // was offen ist. Ware, die auf einen bereits gebauten Container gepinnt ist,
+      // findet in keinem weiteren Container mehr Platz; ohne diese Unterscheidung
+      // baut die Kette bis MAXCHAIN Container fuer ein Stueck, das nie hineingeht.
+      const nochMoeglich = (rem) =>
+        rem.reduce((s, t, i) => s + (pins && pins[i] != null && pins[i] < chain.length ? 0 : t.qty), 0);
       let slot = 1;
-      while (totRem > 0 && chain.length < MAXVIS) {
+      while (nochMoeglich(remaining) > 0 && chain.length < MAXVIS) {
         const ov = overrides && overrides[slot];
         const manual = ov && VEHICLES[ov];
         const pick = manual ? { name: ov, p: VEHICLES[ov] } : { name: preset0, p: container0 };
-        const rr = sortenrein ? packSortenrein(pick.p, remaining, sortenReihenfolge(remaining), null, OPT) : packCargo(pick.p, remaining, OPT);
+        const rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -2329,7 +2417,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     let slot0Neu = erg.slot0;
     let ausgeglichen = false;
     if (totRem === 0 && chain.length > 1) {
-      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich);
+      const bal = ketteAusgleichen(chain, cargo, erg.ordentlich, pins);
       if (bal) { chain = bal.chain; slot0Neu = bal.slot0; remaining = cargo.map(() => ({ qty: 0 })); ausgeglichen = true; }
     }
     // ── Stufe 3: ordentlich stauen, solange es nichts kostet ──
@@ -2371,7 +2459,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
         let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
         if (ord.totRem === 0 && oChain.length > 1 && (container0.kind || "dry") === "dry") {
-          const b2 = ketteAusgleichen(oChain, cargo, true);
+          const b2 = ketteAusgleichen(oChain, cargo, true, pins);
           if (b2) { oChain = b2.chain; oSlot0 = b2.slot0; oAus = true; }
         }
         const spanne = (k) => { const kg = k.map((c) => slotKg(c.placed, cargo)); return Math.max(...kg) - Math.min(...kg); };
@@ -2381,12 +2469,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
       }
     }
+    // Zwei Gruende, warum etwas offen bleibt, und sie verlangen zwei verschiedene Saetze:
+    // Die Kette ist an der Grenze abgeschnitten (gekappt -- es gaebe weitere Container),
+    // oder sie ist zu Ende und ein weiterer Container wuerde nichts aendern (zu grosses
+    // Stueck, oder auf einen bereits gebauten Container gepinnte Ware).
+    const gekappt = totRem > 0 && chain.length >= MAXVIS;
+    // Und wie viel vom Rest geht auf das Konto der Zuweisung? Was jemand selbst einem
+    // Container zugewiesen hat, bleibt dort liegen, wenn es nicht hineinpasst -- ein
+    // weiterer Container aendert daran nichts, und ein Vorschlag dafuer waere leer.
+    const pinOffen = pins ? remaining.reduce((s, t, i) => s + (pins[i] != null ? Math.max(0, t.qty) : 0), 0) : 0;
     // Die Zeile darunter beginnt bewusst woertlich mit "return { chain, remainingBoxes" --
     // fuenf Test-Slices schneiden genau an ihr das Ende dieser Funktion ab. Wer sie zu
     // einem Objekt-Literal mit anschliessendem "return out" umbaut, laesst die Slices ins
     // Leere laufen, und die halbe Kette ist nicht mehr getestet.
-    if (slot0Neu) return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
-    return { chain, remainingBoxes: totRem, perType: kettenBilanz(cargo, remaining), ausgeglichen };
+    if (slot0Neu) return { chain, remainingBoxes: totRem, gekappt, pinOffen, perType: kettenBilanz(cargo, remaining), slot0: slot0Neu, ausgeglichen };
+    return { chain, remainingBoxes: totRem, gekappt, pinOffen, perType: kettenBilanz(cargo, remaining), ausgeglichen };
   }
   var LANG = (() => {
     try {
@@ -2602,11 +2699,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       autoCont: "Auto",
       chainN: (n) => `${n} Container \xB7 mit dieser Wahl`,
       fokusAlle: "Alle",
+      slotLabel: "Container",
+      slotAuto: "Auto \u00B7 der Rechner entscheidet",
+      slotTitel: "In welchen Container diese Position kommt. Zugewiesene Ware bekommt dort den ersten Zugriff; was nicht hineingeht, bleibt offen.",
+      slotOffen: (n) => n === 1 ? "1 St\u00FCck passt nicht in den zugewiesenen Container" : `${n} St\u00FCcke passen nicht in den zugewiesenen Container`,
       fokusAlleTitel: "Den ganzen Plan zeigen",
       fokusEinTitel: (m) => `Nur ${m} zeigen \u2013 Ansicht, Kennzahlen und Ladungsliste`,
       chainNRoad: (n) => `${n} Fahrzeuge \xB7 mit dieser Wahl`,
       chainMore: (n) => `+ ${n} weitere \xB7 nicht gezeichnet`,
       openMore: (n, c) => `${n} offen \xB7 mehr als ${c} Container`,
+      openStuck: (n) => `${n} offen \xB7 ein weiterer Container hilft nicht`,
       forceCenter: "mittig stauen erzwingen",
       oogTitle: "Out of Gauge (Sch\xE4tzung)",
       oogH: "\xDCberh\xF6he",
@@ -2895,11 +2997,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       autoCont: "Auto",
       chainN: (n) => `${n} containers \xB7 with this pick`,
       fokusAlle: "All",
+      slotLabel: "Container",
+      slotAuto: "Auto \u00B7 let the calculator decide",
+      slotTitel: "Which container this item goes into. Assigned goods get first claim there; whatever does not fit stays open.",
+      slotOffen: (n) => n === 1 ? "1 piece does not fit into the assigned container" : `${n} pieces do not fit into the assigned container`,
       fokusAlleTitel: "Show the whole plan",
       fokusEinTitel: (m) => `Show ${m} only \u2013 view, figures and cargo list`,
       chainNRoad: (n) => `${n} vehicles \xB7 with this pick`,
       chainMore: (n) => `+ ${n} more \xB7 not drawn`,
       openMore: (n, c) => `${n} open \xB7 more than ${c} containers`,
+      openStuck: (n) => `${n} open \xB7 another container will not help`,
       forceCenter: "force centered stow",
       oogTitle: "Out of Gauge (estimate)",
       oogH: "Over height",
@@ -3057,10 +3164,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
-  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0 })) });
+  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0, sl: Number.isInteger(c.slot) && c.slot >= 0 ? c.slot + 1 : void 0 })) });
   var decodePlanState = (st) => {
     if (!st || !Array.isArray(st.it) || !st.it.length) return null;
-    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0 }));
+    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0, slot: +r.sl >= 1 ? Math.round(+r.sl) - 1 : null }));
     // Domain zuerst lesen: alter Link ohne dm => "sea" (Rueckwaerts-Kompatibilitaet).
     const domain = st.dm === "road" ? "road" : "sea";
     const table = domain === "road" ? VEHICLES : PRESETS;
@@ -3125,6 +3232,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       else if (r.s >= 2) t += "y" + v2num(r.s);
       if (+r.sh > 0) t += "H" + v2num(r.sh);
       if (r.r === 0) t += "r";
+      // Zuweisung an einen Container. Grossbuchstabe, weil die Tabelle nur ergaenzt werden
+      // darf; 1-basiert, so wie die Marke in der Oberflaeche heisst (C1 -> S1). Ohne den Tag
+      // verliesse die Zuweisung den Link stillschweigend, und der Empfaenger saehe eine
+      // andere Aufteilung als der Absender.
+      if (+r.sl >= 1) t += "S" + v2num(r.sl);
       if (typeof r.cl === "string" && /^#[0-9a-fA-F]{6}$/.test(r.cl)) t += "k" + r.cl.slice(1).toLowerCase();
       if (typeof r.n === "string" && r.n !== V2_DEFAULT_NAME && r.n !== "") t += "n" + encodeURIComponent(r.n.slice(0, 40)).replace(/~/g, "%7E");
       return t;
@@ -3186,6 +3298,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           else if (tg === "y") { var vy = rn(); if (vy == null) return null; it.s = vy; }
           else if (tg === "H") { var vh = rn(); if (vh == null) return null; it.sh = vh; }
           else if (tg === "r") it.r = 0;
+          else if (tg === "S") { var vs = rn(); if (vs == null) return null; it.sl = vs; }
           else if (tg === "k") { var hx = raw.slice(j, j + 6); if (!/^[0-9a-fA-F]{6}$/.test(hx)) return null; it.cl = "#" + hx.toLowerCase(); j += 6; }
           else if (tg === "n") { it.n = decodeURIComponent(raw.slice(j)).slice(0, 40); j = raw.length; }
           else return null;
@@ -4924,10 +5037,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // Die Pille nennt die Zahl, mit der jemand hier hinschaut -- und ist zugleich der
             // Weg zurueck zum ganzen Plan. Ein zweites Element daneben waere dasselbe zweimal.
             /* @__PURE__ */ React.createElement("button", { key: "n", onClick: () => onFokus("alle"), title: T.fokusAlleTitel, "aria-pressed": fokus === "alle" ? "true" : "false", style: { pointerEvents: "auto", cursor: "pointer", textAlign: "right", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, fokus === "alle" ? 0.9 : 0.45)}`, borderRadius: R.s, padding: "4px 8px" } },
-              (fokus === "alle" ? "" : T.fokusAlle + " \xB7 ") + (result.remainingBoxes > 0 ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
+              (fokus === "alle" ? "" : T.fokusAlle + " \xB7 ") + (result.gekappt ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
             result.chain.slice(0, MAXDRAW).map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain, fokus, onFokus })),
             result.chain.length > MAXDRAW && /* @__PURE__ */ React.createElement("div", { key: "rest", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, background: hexA("#161D27", 0.82), border: "1px solid #2E3A49", borderRadius: R.s, padding: "4px 8px" } }, T.chainMore(result.chain.length - MAXDRAW)),
-            result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, T.openMore(result.remainingBoxes, MAXCHAIN))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+            result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, result.gekappt ? T.openMore(result.remainingBoxes, MAXCHAIN) : T.openStuck(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   // ── Knopf ─────────────────────────────────────────────────────────────────
   // Vier Auspraegungen, mehr braucht der Rechner nicht:
@@ -5657,6 +5770,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : chainContainers(container, preset, cargo, r, chainOverride, MAXVIS, carrier);
           r.chain = ch.chain;
           r.remainingBoxes = ch.remainingBoxes;
+          r.gekappt = !!ch.gekappt;
+          r.pinOffen = ch.pinOffen || 0;
           // Die Bilanz ueber ALLE Container des Plans. r.perType bleibt daneben stehen und
           // meint weiterhin den ersten - die Leiste weist ihn ausdruecklich als "C1" aus.
           r.perTypeAll = ch.perType;
@@ -5679,6 +5794,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         } else {
           r.chain = [{ name: preset, preset: container, placed: r.placed }];
           r.remainingBoxes = 0;
+          r.gekappt = false;
+          r.pinOffen = 0;
           r.perTypeAll = r.perType;
         }
         // Gezaehlt wird das ERGEBNIS, nicht der Effektlauf: eine Ladung, die tatsaechlich
@@ -5703,6 +5820,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const n = result && result.chain ? result.chain.length : 0;
       if (manualMode || !(fokus < n)) setFokus("alle");
     }, [result, manualMode, fokus]);
+    // Dasselbe fuer die Zuweisung: sie zeigt auf einen Container, den es geben MUSS.
+    // Schrumpft die Kette -- weniger Ladung, anderer Containertyp, geladener Plan --, faellt
+    // sie auf Auto zurueck. Sonst zeigte eine Position auf einen Container, den es nicht
+    // gibt, und ihre Ware bliebe fuer immer offen, ohne dass irgendwo stuende warum.
+    //
+    // Bei genau EINEM Container werden alle Zuweisungen verworfen: dort ist nichts zu
+    // verteilen, und ein Zwei-Lauf-Packen brauchte es auch nicht. Das laeuft nicht im Kreis,
+    // weil Zuweisungen dabei nur verschwinden und allein der Nutzer sie setzt.
+    useEffect(() => {
+      const n = result && result.chain ? result.chain.length : 0;
+      const daneben = (v) => Number.isInteger(v) && v >= 0 && (n <= 1 || v >= n);
+      if (!cargo.some((c) => daneben(c.slot))) return;
+      setCargo((cs) => cs.map((c) => (daneben(c.slot) ? { ...c, slot: null } : c)));
+    }, [result]);
     // Escape schliesst den obersten offenen Dialog. Vorher fuehrte aus jedem Dialog nur
     // der Weg ueber den Schliessen-Knopf oder einen Klick auf die Flaeche daneben — mit
     // der Tastatur allein kam man nicht wieder heraus. Die Reihenfolge ist die der
@@ -6694,7 +6825,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const sugLabel = sug && sug.type === "multi" && sug.combo ? sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ") : sug && sug.type === "single" ? `1\xD7 ${sug.name}` : "";
     const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel
       && (sugKosten.n < ketteKosten.n || (sugKosten.n === ketteKosten.n && sugKosten.vol < ketteKosten.vol - 1e-6)));
-    const zeigeBanner = offenGesamt > 0 || empfBesser || !!result.rotHintAll;
+    // Was wegen einer ZUWEISUNG liegenbleibt, zaehlt hier nicht: der Vorschlag "du brauchst
+    // ca. 1x 40' HC + 1x 40' GP" stand sonst unter einem Plan, der genau diese zwei bucht --
+    // exakt der gemeldete Fehler, nur durch eine neue Tuer. Die Position sagt es selbst
+    // (T.slotOffen), und im Bild steht "ein weiterer Container hilft nicht".
+    const offenOhnePin = Math.max(0, offenGesamt - (result.pinOffen || 0));
+    const zeigeBanner = offenOhnePin > 0 || empfBesser || !!result.rotHintAll;
     // Die Tueroeffnung des Containers, ueber den gerade geredet wird. Ein Folgecontainer
     // kann eine andere haben als der gewaehlte.
     const doorOpening = sichtCont.door && (fokusSlot || preset !== "Custom") ? sichtCont.door : { w: num(sichtCont.w), h: num(sichtCont.h) };
@@ -6908,6 +7044,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Ladungsbereich als eigener Baustein – er steht je nach Fensterbreite in der rechten
     // Spalte oder unten in der linken. Als Variable statt als Komponente, damit er auf dieselben
     // Zustaende zugreift wie bisher und keine zwanzig Eigenschaften durchgereicht werden muessen.
+    // Die Marken, unter denen eine Position waehlbar ist. Nur bei einer Kette -- bei einem
+    // einzigen Container gibt es nichts zuzuweisen.
+    const slotWahl = result.chain && result.chain.length > 1
+      ? result.chain.map((c2, i2) => (domain === "road" ? "F" : "C") + (i2 + 1) + " \xB7 " + (c2.name || preset))
+      : null;
     const cargoEl = /* @__PURE__ */ React.createElement("div", { className: "p-6" }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mb-3" }, /* @__PURE__ */ React.createElement(SectionTitle, { noMargin: true }, T.cargo), /* @__PURE__ */ React.createElement("span", { className: "h-px flex-1", style: { background: "linear-gradient(90deg,#232C38,transparent)" } }),
         // Nur da, wenn es etwas zu leeren gibt. Ein Knopf, der nichts tun kann, ist Ballast.
         // Gemeldet: "mir fehlt der Knopf, mit dem ich die Ladung zuruecksetze" -- er stand
@@ -6934,7 +7075,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const open = openCargo === c.id;
       return /* @__PURE__ */ React.createElement("div", { key: c.id, style: { background: open ? C.raised : C.surface, borderRadius: R.l, padding: open ? SP.l : `${SP.m}px ${SP.l}px`, ...(c.grp ? { boxShadow: `inset 2px 0 0 0 ${hexA(col, 0.7)}` } : null), transition: "background-color .15s" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3", style: open ? { paddingBottom: SP.m, marginBottom: SP.m, borderBottom: `1px solid ${C.line}` } : null }, /* @__PURE__ */ React.createElement("span", { style: { position: "relative", flexShrink: 0, display: "inline-flex" } }, /* @__PURE__ */ React.createElement("button", { onClick: () => setColorPickFor(colorPickFor === c.id ? null : c.id), title: T.colorTitle, style: { width: ICO.s, height: ICO.s, borderRadius: R.s, background: col, boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.25)", border: 0, cursor: "pointer", padding: 0 } }), colorPickFor === c.id && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { onClick: () => setColorPickFor(null), style: { position: "fixed", inset: 0, zIndex: 40 } }), /* @__PURE__ */ React.createElement("div", { style: { position: "absolute", top: SP.xl, left: 0, zIndex: 41, background: "#0c1320", borderRadius: R.l, padding: SP.s, width: 132, boxShadow: "0 16px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: SP.s } }, TYPE_COLORS.map((hex) => /* @__PURE__ */ React.createElement("button", { key: hex, onClick: () => { upd(c.id, "color", hex); setColorPickFor(null); }, style: { width: SP.xl, height: SP.xl, borderRadius: R.s, background: hex, cursor: "pointer", border: 0, boxShadow: (c.color || col) === hex ? "inset 0 0 0 2px #E9F0F7" : "inset 0 0 0 1px rgba(255,255,255,0.15)", padding: 0 } }))), /* @__PURE__ */ React.createElement("button", { onClick: () => { upd(c.id, "color", null); setColorPickFor(null); }, style: { marginTop: SP.s, width: "100%", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: C.dim, background: C.field, border: 0, borderRadius: R.s, padding: `${SP.xs}px 0`, cursor: "pointer" } }, T.colorAuto)))), /* @__PURE__ */ React.createElement("input", { value: c.name, onChange: (e) => upd(c.id, "name", e.target.value), className: "flex-1 min-w-0 bg-transparent focus:outline-none", style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text, borderBottom: "1px solid transparent", paddingBottom: 4 }, onFocus: (e) => e.target.style.borderBottomColor = hexA(C.accent, 0.6), onBlur: (e) => e.target.style.borderBottomColor = "transparent" }), pt && /* @__PURE__ */ React.createElement("span", { className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: MONO, fontSize: FS.small, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", background: hexA(done ? C.good : C.warn, 0.14), color: done ? C.good : C.warn } }, pt.loaded, "/", pt.total), doorCheck.idx.has(i) && /* @__PURE__ */ React.createElement("span", { title: T.doorHint(doorOpening.w, doorOpening.h), className: "px-2 py-1 rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, background: hexA(C.warn, 0.16), color: C.warn } }, T.doorChip), /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(open ? null : c.id), title: T.cargoToggle, "aria-expanded": open ? "true" : "false", style: { flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", width: SP.xl, height: SP.xl, borderRadius: R.s, border: 0, background: open ? hexA(C.accent, 0.16) : C.field, color: open ? "#bcd9ff" : C.dim, fontSize: FS.small, lineHeight: 1, cursor: "pointer", transform: open ? "rotate(180deg)" : "none", transition: "transform .2s" } }, "▾"), cargo.length > 0 && /* @__PURE__ */ React.createElement("button", { "aria-label": T.cargoDelete, title: T.cargoDelete, onClick: () => del(c.id), style: { color: C.faint, fontSize: FS.h3, lineHeight: 1, padding: `0 ${SP.xs}px`, cursor: "pointer" }, onMouseOver: (e) => e.target.style.color = C.bad, onMouseOut: (e) => e.target.style.color = C.faint }, "\xD7")),
       !open && /* @__PURE__ */ React.createElement("button", { onClick: () => setOpenCargo(c.id), style: { display: "block", width: "100%", textAlign: "left", marginTop: SP.s, padding: 0, background: "transparent", border: 0, cursor: "pointer", fontFamily: SANS, fontSize: FS.label, lineHeight: 1.4, color: C.faint } }, cargoSummary(c)),
-      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
+      // Eine Zuweisung, die nicht aufgeht, sagt es -- und zwar auch in der zugeklappten
+      // Zeile. Die orange Pille "8 / 9" daneben nennt die Zahl, nicht den Grund; ohne diesen
+      // Satz sucht man den Fehler in den Massen.
+      Number.isInteger(c.slot) && c.slot >= 0 && pt && pt.loaded < pt.total && /* @__PURE__ */ React.createElement("div", { style: { marginTop: SP.s, fontSize: FS.label, lineHeight: 1.4, color: C.warn } }, T.slotOffen(pt.total - pt.loaded)),
+      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ slotWahl && /* @__PURE__ */ React.createElement("div", { style: { width: 96, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.slotLabel), /* @__PURE__ */ React.createElement("select", { value: Number.isInteger(c.slot) && c.slot >= 0 ? String(c.slot) : "__auto", onChange: (e) => upd(c.id, "slot", e.target.value === "__auto" ? null : +e.target.value), title: T.slotTitel, "aria-label": T.slotLabel, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "__auto", style: { background: "#161D27", color: C.text } }, T.slotAuto), slotWahl.map((m, k) => /* @__PURE__ */ React.createElement("option", { key: k, value: String(k), style: { background: "#161D27", color: C.text } }, m)))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
         const on = c.rotatable !== false;
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "transition flex items-center gap-1", style: { height: SP.xxl, padding: `0 ${SP.m}px`, borderRadius: R.s, border: 0, cursor: "pointer", fontSize: FS.small, fontWeight: on ? FW.semi : FW.label, background: on ? hexA(C.accent, 0.16) : C.field, color: on ? "#BCD9FF" : C.dim } }, "\u21BB 90\xB0");
       })())),

@@ -506,10 +506,52 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Die Zuweisung je Position: „dieses Packstück kommt in Container 2"
+Schritt 05 aus dem Mehr-Container-Entwurf, und der ausdrücklich gewünschte Teil davon: *„Evtl auch einbauen, dass der User selbst auswählen kann, welche der Packstücke in welchen Container kommen, wenn es mehrere gibt?"*
+
+Jede Position trägt jetzt ein `slot` — den Index des Containers, in den sie gehört, oder `null` für „Auto". Das Auswahlfeld steht in der aufgeklappten Zeile neben Menge und Maßen und erscheint erst, wenn es **mehr als einen** Container gibt; vorher gäbe es nichts zu wählen.
+
+**Die Zuweisung heißt „dort zuerst", nicht „nur dort".** Der Unterschied ist gemessen, nicht gefühlt: bei der gemeldeten Sendung (9 flache Stücke 250 × 80 × 30 nicht stapelbar + 22 Paletten) landen unter *nur dort* **2 von 9** gepinnten Stücken im Container — die Paletten sind schlicht früher dran und belegen den Boden —, unter *dort zuerst* **8 von 9**. Mehr passen auch allein nicht hinein.
+
+Umgesetzt ist das als **zwei Packläufe je Container** (`slotPacken`), und der zweite ist genau der Baustein aus Schritt 04:
+
+| | |
+|---|---|
+| **Lauf 1** | nur die auf diesen Container gepinnte Ware (`packCargo`) |
+| **Lauf 2** | alles **Ungepinnte** obendrauf, mit Lauf 1 als `vorbelegt` |
+| **Ohne Pin auf diesem Container** | genau ein Lauf, Wort für Wort der alte Aufruf |
+
+Ware, die auf einen **anderen** Container gepinnt ist, steht in keinem der beiden Läufe zur Verfügung — sonst wäre die Zuweisung nur ein Wunsch. **Auch der Gewichtsausgleich läuft durch `slotPacken`**; täte er es nicht, verteilte Stufe 2 die gerade zugewiesene Ware sofort wieder um.
+
+**Geht eine Zuweisung nicht auf, bleibt das Stück offen und sagt es.** Es rutscht nicht heimlich in den nächsten Container — das wäre die eine Sache, die eine Zuweisung nicht tun darf. Die Zeile trägt dafür einen eigenen Satz (`T.slotOffen`: „1 Stück passt nicht in den zugewiesenen Container"). Genau das ist im gemeldeten Fall das neunte flache Stück.
+
+**Die Zuweisung reist im Teilen-Link mit** — als `sl` im `?p=`-Format und als Tag **`S`** im kompakten `?c=`. Beide zählen **ab 1**, damit Container 1 nicht als `0` und damit als „kein Wert" verschwindet. Der Tag ist neu vergeben und kein alter umgewidmet: die Codetabelle des `?c=`-Formats darf ausdrücklich nur **ergänzt** werden.
+
+> **Der Fehler, den erst der Browser gezeigt hat:** Die Kette lief `while (totRem > 0 …)` — und `totRem` zählt auch das, was auf einen **längst gebauten** Container gepinnt ist. Für dieses eine Stück baute sie Container um Container bis `MAXCHAIN`; in der Anzeige stand „1 offen · **mehr als 24 Container**". Die Abbruchbedingung fragt jetzt `nochMoeglich(remaining)` — was überhaupt noch untergebracht werden **kann** —, und meldet daneben unverändert `totRem` als das, was offen **ist**. Zwei verschiedene Fragen, die vorher dieselbe Zahl benutzt haben.
+
+> **Und der Satz daneben war ohnehin falsch**, schon vor der Zuweisung: `T.openMore` („N offen · mehr als 24 Container") stand bei **jedem** Rest. 30 Paletten plus zwei Stücke, die in keinen Container passen, ergeben eine Kette aus zwei Containern und zwei offenen Stücken — die Ansicht behauptete dort „2 offen · mehr als 24 Container". Die Kette liefert deshalb `gekappt` — wahr nur, wenn sie wirklich an der Grenze abgeschnitten wurde. Sonst steht dort `T.openStuck`: „N offen · ein weiterer Container hilft nicht." Dasselbe Signal entscheidet, ob die Pille „**≥** 2 Container" oder „2 Container" sagt.
+
+**Und das Empfehlungsbanner schweigt dazu.** Unter dem Plan stand sonst „Du brauchst ca. **1× 40′ HC + 1× 40′ GP**" — unter einem Plan, der genau diese zwei bucht. Das ist Wort für Wort der gemeldete Fehler von oben, nur durch eine neue Tür hereingekommen: das Banner hängt an dem, was liegenbleibt, und ein zugewiesenes Stück bleibt liegen. Die Kette liefert deshalb `pinOffen` — wie viel vom Rest auf das Konto der Zuweisung geht —, und `zeigeBanner` fragt den Rest **ohne** diesen Anteil. Ein Vorschlag, der auf mehr Equipment hinausläuft, ist hier leer: Der Container steht schon da, und die Anweisung sagt, dass die Ware dort hinein soll. Gesagt wird es trotzdem, nur an der richtigen Stelle — an der Position selbst und im Bild.
+
+**Gemessen.** Ohne Zuweisung ist die Kette **Zahl für Zahl identisch** — über 200 zufällige Ketten 1.820 Container, 131.549,6 m³ gebuchtes Volumen, Sortenstreuung 2.429, 77 offen, und die Rechenzeit liegt innerhalb der Streuung zweier Läufe derselben Fassung (13,7–15,6 s in beiden). Mit Zuweisung kostet der zweite Packlauf, was er kosten muss: die gemeldete Sendung 38,8 → **80,3 ms** im teuersten der drei Fälle.
+
+Was dabei herauskommt, und es ist genau das, was der Nutzer sehen will:
+
+| Zuweisung | C1 | C2 | offen |
+|---|---|---|---|
+| keine | 2 flache + 22 Paletten | 7 flache | 0 |
+| flache → C1 | **8 flache** + 4 Paletten | 18 Paletten | 1 |
+| flache → C2 | 22 Paletten | **8 flache** | 1 |
+| Paletten → C2 | 8 flache | **22 Paletten** + 1 flaches | 0 |
+
+**Ein Wächter hält die Zuweisung gültig.** Wird die Ladung kleiner oder fällt die Kette auf einen Container zusammen, zeigen Zuweisungen auf Container, die es nicht mehr gibt; sie fallen dann auf „Auto" zurück — dieselbe Regel wie beim Fokus, und aus demselben Grund.
+
+`test/zuweisung-je-position.test.mjs` prüft die Rechnung **und** den Vertrag im Quelltext, mit drei Gegenproben: mit alter Abbruchbedingung, mit `gekappt` wieder an `remainingBoxes` gehängt und mit stillgelegtem `slotPins` fällt jeweils genau der Teil um, der die Zusage trägt.
+
 ### Weiterpacken auf einer Vorbelegung (`opts.vorbelegt`)
 Schritt 04 aus dem Mehr-Container-Entwurf. **Sichtbar ändert diese Stufe nichts** — sie ist der Baustein, den zwei kommende Funktionen brauchen:
 
-- die Zuweisung **„dort zuerst"**: erst die gepinnte Ware, dann der Rest in den Rest. Ohne das heißt eine Zuweisung nur „dort", und dann landen von neun gepinnten Stücken **zwei** im Container, weil die Paletten früher dran sind;
+- die Zuweisung **„dort zuerst"** (Schritt 05, inzwischen gebaut): erst die gepinnte Ware, dann der Rest in den Rest. Ohne das heißt eine Zuweisung nur „dort", und dann landen von neun gepinnten Stücken **zwei** im Container, weil die Paletten früher dran sind;
 - der **manuelle Modus je Container**: von Hand gesetzte Kisten sind nichts anderes als eine Vorbelegung, auf der der Automat weitermachen soll.
 
 **Umgesetzt ohne neue Datenstruktur.** `emsPackOnce` zerteilt seinen einen freien Raum nach *jeder* gesetzten Kiste ohnehin — dieselbe Schleife einmal vorab über die schon stehenden Kisten gefahren ergibt genau den Startzustand: freie Räume um die Vorbelegung herum. `emsSplit`, `emsOverlap` und `emsPrune` gab es dafür längst.
@@ -529,7 +571,7 @@ Schritt 04 aus dem Mehr-Container-Entwurf. **Sichtbar ändert diese Stufe nichts
 
 **Was dabei sichtbar wurde und für Schritt 05 zählt:** Werden die neun flachen Stücke auf C1 gepinnt, passen dort **8 Flache + 4 Paletten = 12 Stück** statt der 26, die der freie Packer findet. Acht Flache belegen den Boden so, dass für Paletten nur die Restlänge von 203 cm bleibt — und über den nicht stapelbaren Flachen sind 240 cm tote Luft. Das ist kein Fehler, sondern der Preis der Anweisung. Die Oberfläche muss ihn zeigen, nicht verstecken.
 
-`test/weiterpacken.test.mjs` prüft die Fähigkeit selbst — sie hat noch keinen Aufrufer, der Test ist die einzige Probe: nichts durchdringt die Vorbelegung, nichts schwebt darüber, die Stapelregel gilt über die Naht hinweg (**mit Gegenprobe**: dieselbe Kiste als stapelbare Ware *muss* belastet werden), das Gewicht zählt gegen die Zuladung, und über 60 Zufallsfälle bleibt die Vorbelegung unberührt.
+`test/weiterpacken.test.mjs` prüft die Fähigkeit selbst, unabhängig von ihrem Aufrufer (seit Schritt 05 ist das `slotPacken`): nichts durchdringt die Vorbelegung, nichts schwebt darüber, die Stapelregel gilt über die Naht hinweg (**mit Gegenprobe**: dieselbe Kiste als stapelbare Ware *muss* belastet werden), das Gewicht zählt gegen die Zuladung, und über 60 Zufallsfälle bleibt die Vorbelegung unberührt.
 
 ### Ladevorschlag und CSV je Container
 Schritt 03 aus dem Mehr-Container-Entwurf. Beide Ausgaben kannten bis dahin nur den ersten Container.
@@ -593,7 +635,7 @@ Zwei Dinge ändern sich dabei sichtbar, und beide mit Absicht:
 
 **Die wichtigste Zusage ist eine negative: der Fokus ändert keine einzige Zahl**, nur welche gezeigt wird. `test/fokus-je-container.test.mjs` prüft beides — die Arithmetik (die Sichten summieren sich über 40 Zufallsketten auf die Kettenbilanz, kein Stück zählt zweimal) **und** den Vertrag im Quelltext. Eine nachgebaute Rechnung allein sagt nichts darüber, was die Oberfläche liest.
 
-> **Noch offen aus demselben Entwurf:** Ladevorschlag und CSV je Container (Schritt 03), das Weiterpacken auf einer Vorbelegung (04), die Zuweisung je Position (05) und der manuelle Modus je Container (06). Entschieden ist: die Zuweisung heißt **„dort zuerst"**, nicht „nur dort" — gemessen an der gemeldeten Sendung landen unter „nur dort" **2 von 9** gepinnten Stücken im Container, unter „dort zuerst" **8 von 9** (mehr passen auch allein nicht hinein). Geht eine Zuweisung nicht auf, bleibt das Stück **offen** und sagt es; es rutscht nicht heimlich weiter.
+> **Aus demselben Entwurf gebaut:** Ladevorschlag und CSV je Container (Schritt 03), das Weiterpacken auf einer Vorbelegung (04) und die Zuweisung je Position (05) — jeweils mit eigenem Abschnitt oben. **Noch offen ist der manuelle Modus je Container (06)**; er benutzt dieselbe Vorbelegung wie 04, nur mit von Hand gesetzten Kisten.
 
 > **Nebenbefund, nicht von dieser Änderung:** Die Ergebnisleiste ist bei **1440 und 1500 px zweizeilig**, obwohl oben steht, sie bleibe bis 1800 px einzeilig. Gegen `origin/main` gemessen — identisch, also älter als der Fokus. Eigene Baustelle.
 
