@@ -405,6 +405,42 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
 
+### Das Empfehlungsbanner spricht nur, wenn es etwas zu sagen hat
+Gemeldet: *„Wenn man mehrere Container hat, zum Beispiel 2× 20 GP, wird einem unten trotzdem noch irgendwas vorgeschlagen mit ‚Du brauchst ca. 1× 40HC + 1× 20GP', obwohl man die Auswahl ja selbst bereits getroffen hat."* Daneben stand gleichzeitig **„Alles verladen · 2 Container"** in Grün. Zwei Antworten auf dieselbe Frage, und die untere war die falsche.
+
+Ursache: das Banner hing an **`unplaced`** — der Differenz im *ersten* Container. Genau die halbe Wahrheit, die die Statuszeile schon einmal erzählt hat und die seither über `offenGesamt` läuft (siehe „Mehr als ein Container ist ein Entschluss").
+
+Es hängt jetzt an **`zeigeBanner`**:
+- **`offenGesamt > 0`** — es bleibt wirklich etwas liegen. Dann ist das Banner die Antwort auf „was nun?", wie bisher.
+- **`result.rotHintAll`** — mit erlaubter Drehung ginge alles in einen.
+- **`empfBesser`** — die Ausnahme, die Geld wert ist: der Plan hält zwar alles, aber die frei gerechnete Empfehlung kommt mit **weniger Equipment** aus. Verglichen wird in derselben Rangfolge wie in `ketteBesser` — erst die Zahl der Container, dann das gebuchte Volumen. Der Text ist dann ein Angebot und keine Warnung (`recBetter`: „Es ginge auch mit 1× 40′ GP — weniger Equipment für dieselbe Ladung"), und der Rahmen trägt `C.hint` statt `C.warn`.
+
+`test/empfehlung-nur-wenn-sie-hilft.test.mjs` rechnet alle drei Fälle nach **und** prüft den Vertrag im Quelltext — eine nachgebaute Rechnung im Test sagt nichts darüber, ob `app.html` sie auch benutzt.
+
+> **Offen geblieben, und ausdrücklich als eigene Aufgabe gemeldet:** das gesamte Erlebnis bei mehreren Containern. Der Rechner ist auf **einen** Container hin gebaut — eine Ergebnisleiste (C1), ein Bild, eine Ladungsliste — und die Kette ist überall darübergelegt. Gewünscht wurde unter anderem, Packstücke **einem bestimmten Container zuweisen** zu können. Das ist ein Konzept, keine Korrektur.
+
+### Die Vorschaubilder beim Teilen (`og.png`, `share-og.png`)
+Gemeldet: *„Wenn ich Kollegen den Plan per Teams teile, kommt da so eine Art Header … ist noch im alten Design, sieht ziemlich kacke aus. Außerdem auch nur auf Deutsch."* Beides stimmte. Die zwei Karten waren die letzten Stellen mit **Farbverlauf, Türkis-Akzent und dem alten Markenzeichen** — dieselbe Abweichung, die auf den Randseiten und im Container-Wissen schon einmal aufgeräumt wurde. Selten angesehene Dateien driften am weitesten.
+
+| | |
+|---|---|
+| `og.png` | Startseite **und alle Wissens-/Guide-Seiten** — die häufiger geteilte der beiden |
+| `share-og.png` | `share.html`, also der weitergegebene Plan |
+| Quelle | `test/og/karte.html` — eine Seite, zwei Fassungen über `?v=start` / `?v=share`, mit Playwright bei 1200 × 630 abfotografiert |
+
+**Beide Karten sind zweisprachig**, und das ist keine Bequemlichkeit: ein Vorschaubild ist **statisch**. Der Scraper von Teams, Slack oder LinkedIn liest die Meta-Angaben, bevor irgendein `?lang=en` gewirkt hätte. Getrennte Fassungen je Sprache bräuchten eine zweite Seite plus eine Netlify-Weiterleitung auf den Query-Parameter — das wäre eine eigene Entscheidung. Dieselbe Zweisprachigkeit tragen `og:title`, `og:description` und `og:image:alt` in `share.html`.
+
+Nebenbei korrigiert: auf der alten Karte stand **„Ein Ladeplan wurde dir geteilt"**. Man teilt etwas **mit** jemandem.
+
+**Die Maße müssen 1200 × 630 bleiben** — `og:image:width` / `og:image:height` nennen genau diese Zahlen.
+
+`test/vorschaubild.test.mjs` **liest die PNG-Pixel selbst** (ein kleiner Decoder für 8 bit RGB ohne Interlace, mehr braucht es nicht) statt einem Kommentar zu glauben:
+- Die **vier häufigsten Farben der Textspalte** müssen genau `C.bg`, `C.accent`, `C.text`, `C.dim` sein — **aus `app.html` gelesen**, nicht abgeschrieben.
+- Der Grundton deckt über 80 % und **alle vier Ecken sind derselbe Ton** — daran scheitert jeder Farbverlauf.
+- Gegenprobe gemacht: mit der alten Datei fällt der Test mit „Ecke #070a0f statt Grundton #0e1116" und „häufigste Farbe 28,2 %" um.
+
+Die rechte Bildhälfte ist ausgenommen: dort stehen die **Kennfarben der Packstücke** (`TYPE_COLORS`), und die sind absichtlich bunt — sie tragen Information.
+
 ### Die Container-Kette: zwei Grenzen, zwei Fragen
 `MAXCHAIN = 24` wird **gerechnet**, `MAXDRAW = 8` wird **gezeichnet**. Vorher galt für beides 4 — an zwei Stellen unabhängig voneinander als Literal. Wer 39 Paletten eingab, sah vier Hüllen und darunter „15 offen · weitere Container nötig", ohne je zu erfahren, wie viele. Es sind sieben.
 

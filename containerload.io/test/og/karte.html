@@ -1,0 +1,135 @@
+<!doctype html><html lang="de"><head><meta charset="utf-8">
+<title>ContainerLoad – Quelle der Vorschaubilder (og.png / share-og.png)</title>
+<meta name="robots" content="noindex" />
+<!--
+  QUELLE der beiden Social-Vorschaubilder. Keine Seite des Produkts – nichts verlinkt hierher.
+
+  ?v=start  -> og.png        (Startseite und alle Wissens-/Guide-Seiten)
+  ?v=share  -> share-og.png  (geteilter Plan, share.html)
+
+  Neu erzeugen: Seite im Browser oeffnen, Fenster auf exakt 1200 x 630 (deviceScaleFactor 1)
+  und abfotografieren – oder mit Playwright:
+
+    await pg.setViewportSize({ width: 1200, height: 630 });
+    await pg.goto("file://.../test/og/karte.html?v=share");
+    await pg.screenshot({ path: "share-og.png" });
+
+  Die Masse muessen 1200 x 630 bleiben: og:image:width / og:image:height in share.html,
+  index.html und den Wissens-Seiten nennen genau diese Zahlen.
+
+  Gestaltung: dieselben Regeln wie ueberall (siehe CLAUDE.md) – ein Markenton #2E8FFF,
+  Grundton #0E1116, KEINE Farbverlaeufe, Archivo bis Gewicht 700, Monospace nur an
+  Kicker/Domain. Die Kennfarben der Kisten sind TYPE_COLORS[0] und [1] aus app.html;
+  sie tragen Information (Packstueckart) und sind darum bunt.
+
+  Beide Karten sind ZWEISPRACHIG. Ein Vorschaubild ist statisch – der Scraper von Teams,
+  Slack oder LinkedIn liest die Meta-Angaben, bevor irgendein ?lang=en gewirkt haette.
+  Zwei Sprachen auf einer Karte ist die einzige Fassung, die ohne zweite Seite auskommt.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { width:1200px; height:630px; }
+  body { background:#0E1116; font-family:'Archivo',sans-serif; -webkit-font-smoothing:antialiased; overflow:hidden; }
+  .karte { position:relative; width:1200px; height:630px; padding:64px 72px; display:flex; flex-direction:column; justify-content:space-between; }
+  .marke { display:flex; align-items:center; gap:14px; }
+  .zeichen { width:52px; height:52px; border-radius:16px; background:#2E8FFF; display:flex; align-items:center; justify-content:center; }
+  .wort { font-size:34px; font-weight:700; color:#E9F0F7; letter-spacing:-0.01em; }
+  .wort span { color:#2E8FFF; }
+  .kicker { font-family:'JetBrains Mono',monospace; font-size:14px; font-weight:500; letter-spacing:.2em; text-transform:uppercase; color:#7689A0; display:flex; align-items:center; gap:10px; }
+  .punkt { width:7px; height:7px; border-radius:50%; background:#2E8FFF; display:inline-block; }
+  h1 { font-size:60px; line-height:1.06; font-weight:700; color:#E9F0F7; letter-spacing:-0.025em; margin-top:22px; max-width:640px; }
+  h1 em { font-style:normal; color:#2E8FFF; }
+  .en { font-size:23px; line-height:1.4; font-weight:400; color:#9DB0C2; margin-top:20px; max-width:640px; }
+  .fuss { display:flex; align-items:center; justify-content:space-between; }
+  .domain { font-family:'JetBrains Mono',monospace; font-size:19px; font-weight:500; color:#E9F0F7; display:flex; align-items:center; gap:10px; }
+  .hinweis { font-size:17px; font-weight:400; color:#7689A0; }
+  .bild { position:absolute; right:56px; top:50%; transform:translateY(-46%); }
+</style></head><body>
+<div class="karte">
+  <div>
+    <div class="marke">
+      <span class="zeichen"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+      <span class="wort">Container<span>Load</span></span>
+    </div>
+  </div>
+  <div>
+    <div class="kicker" id="k"><span class="punkt"></span><span id="kt"></span></div>
+    <h1 id="h"></h1>
+    <div class="en" id="e"></div>
+  </div>
+  <div class="fuss">
+    <span class="domain"><span class="punkt"></span>containerload.io</span>
+    <span class="hinweis" id="f"></span>
+  </div>
+  <svg class="bild" id="bild" width="470" height="360"></svg>
+</div>
+<script>
+(function () {
+  var TXT = {
+    share: {
+      k: "Geteilter Stauplan &nbsp;\u00B7&nbsp; Shared load plan",
+      h: 'Ein Ladeplan<br><em>wurde mit dir geteilt.</em>',
+      e: "Sieh in 3D, wie die Ladung in den Container passt.<br>See in 3D how the cargo fits into the container.",
+      f: "ohne Login \u00B7 no sign-up"
+    },
+    start: {
+      k: "3D-Ladungsrechner &nbsp;\u00B7&nbsp; 3D load calculator",
+      h: 'Jede Ladung.<br><em>Im richtigen Container.</em>',
+      e: "Palettengenau rechnen \u2013 in Sekunden, im Browser.<br>Pallet-accurate planning \u2013 in seconds, in the browser.",
+      f: "ISO 668 \u00B7 kostenlos \u00B7 ohne Account"
+    }
+  };
+  var t = TXT[new URLSearchParams(location.search).get("v") === "start" ? "start" : "share"];
+  document.getElementById("kt").innerHTML = t.k;
+  document.getElementById("h").innerHTML = t.h;
+  document.getElementById("e").innerHTML = t.e;
+  document.getElementById("f").innerHTML = t.f;
+})();
+(function () {
+  var s = 40, c = Math.cos(Math.PI/6), h = 0.5;
+  var P = (x,y,z) => [(x-y)*c*s, (x+y)*h*s - z*s];
+  // Container innen (m). Proportion eines 20-Fuessers, damit die Kiste im Bild kompakt bleibt.
+  var CL = 5.9, CW = 2.35, CH = 2.6;
+  var kisten = [
+    // x, y, z, dx, dy, dz, Farbe (Kennfarben aus TYPE_COLORS -- sie tragen Information)
+    [0.0, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [0.0, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [0.0, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [0.0, 1.20, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [1.2, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [1.2, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [1.2, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [1.2, 1.20, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [2.4, 0.10, 0.0, 1.7, 2.15, 0.7, "#16D9C4"],
+    [2.4, 0.10, 0.7, 1.7, 2.15, 0.7, "#16D9C4"],
+    [4.1, 0.15, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [4.1, 1.20, 0.0, 1.2, 1.0, 1.1, "#3B8CFF"],
+    [4.1, 0.15, 1.1, 1.2, 1.0, 1.1, "#3B8CFF"]
+  ];
+  var teile
+  var teile = [];
+  var poly = (pts, fill, op) => `<polygon points="${pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" ")}" fill="${fill}" fill-opacity="${op||1}"/>`;
+  var linie = (a,b,col,w) => `<line x1="${a[0].toFixed(1)}" y1="${a[1].toFixed(1)}" x2="${b[0].toFixed(1)}" y2="${b[1].toFixed(1)}" stroke="${col}" stroke-width="${w}" stroke-linecap="round"/>`;
+  // Boden des Containers
+  teile.push(poly([P(0,0,0),P(CL,0,0),P(CL,CW,0),P(0,CW,0)], "#161D27"));
+  // Kisten von hinten nach vorne
+  kisten.slice().sort((a,b)=>(a[0]+a[1]+a[2])-(b[0]+b[1]+b[2])).forEach(function (k) {
+    var x=k[0],y=k[1],z=k[2],dx=k[3],dy=k[4],dz=k[5],f=k[6];
+    var A=P(x,y,z+dz), B=P(x+dx,y,z+dz), Cq=P(x+dx,y+dy,z+dz), D=P(x,y+dy,z+dz);
+    teile.push(poly([A,B,Cq,D], f, 1));                                        // oben
+    teile.push(poly([B,Cq,P(x+dx,y+dy,z),P(x+dx,y,z)], f, 0.62));              // rechte Flanke
+    teile.push(poly([D,Cq,P(x+dx,y+dy,z),P(x,y+dy,z)], f, 0.42));              // linke Flanke
+  });
+  // Huelle als Drahtgitter
+  var e = [[0,0,0,CL,0,0],[0,CW,0,CL,CW,0],[0,0,0,0,CW,0],[CL,0,0,CL,CW,0],
+           [0,0,CH,CL,0,CH],[0,CW,CH,CL,CW,CH],[0,0,CH,0,CW,CH],[CL,0,CH,CL,CW,CH],
+           [0,0,0,0,0,CH],[CL,0,0,CL,0,CH],[0,CW,0,0,CW,CH],[CL,CW,0,CL,CW,CH]];
+  e.forEach(q => teile.push(linie(P(q[0],q[1],q[2]), P(q[3],q[4],q[5]), "#2E3A49", 1.6)));
+  var el = document.getElementById("bild");
+  el.innerHTML = `<g transform="translate(232,58)">${teile.join("")}</g>`;
+})();
+</script>
+</body></html>
