@@ -793,6 +793,30 @@ Das ist der teuerste Einzelposten in diesem Rechner, und er ist trotzdem richtig
 
 > **Offen geblieben:** die Ladung wird weiterhin **verstreut** gestaut statt in Blöcken — im gemeldeten Fall liegen die flachen Stücke einzeln zwischen den Paletten, und über ihnen sind 240 cm Luft, die jetzt niemand mehr nutzen kann. Das ist kein Regelverstoß, sondern die Extrempunkt-Heuristik: sie maximiert Stückzahl und Volumen, nicht Ordnung. „Nach Logik stauen" (gleiche Sorte im Block, nicht stapelbares an einem Ende, Ladung nach vorn geschoben) wäre ein eigener Durchgang **nach** dem Packen, der an Anzahl und Volumen nichts ändern darf.
 
+### Die Startseite verkauft, der Rechner bedient
+Ausgelöst durch einen Wettbewerber, der zwei Monate nach uns gestartet ist und dessen Seite „erschreckend clean" wirkte. Beim Nachsehen war der Unterschied **nicht die Gestaltung**: Ihre Startseite ist eine **Verkaufsseite**, unsere war ein **Werkzeug mit Seite drumherum**. Ihre Maschine ist übrigens unsere — „an extreme-point algorithm … mixed box sizes, stacks and orientations" und „a mixed fleet when the last container would ship nearly empty" beschreiben `emsSearch` und die Volumenregel in `ketteBesser`. Rechnerisch lagen wir nicht zurück, im Schaufenster schon.
+
+Vier Dinge waren konkret falsch, und alle vier sind Regeln, keine Geschmacksfragen:
+
+| | |
+|---|---|
+| **Die Überschrift hatte keine Zahl** | „Jede Ladung. Im richtigen Container." könnte jeder Ladungsrechner sagen. Jetzt steht dort **„11 Paletten statt 8 im selben Container"** — der Dreh-Gewinn im 20-Fuß, unser Beweis, dass gerechnet und nicht geschätzt wird. Er stand vorher in Feature-Kachel Nummer vier |
+| **Unter dem Hero standen Eigenschaften, keine Leistungen** | „Ohne Account · Kostenlos · ISO 668" sagt, was wir *nicht verlangen*. Jetzt drei Zahlen: **18** Equipment-Typen, **8** Reedereien, **0** Anmeldungen |
+| **Zwei Abschnitte erzählten denselben Ablauf** | „So arbeitet der Rechner" (mit Bildern) und „In drei Schritten zum Ladeplan" (nur Text), einen Bildschirm auseinander. Der zweite ist weg |
+| **Das Funktionsraster war ungleich** | Es lief über `col-span-2` und `col-span-3`, und die Texte reichten von einem Satz bis zu fünf Zeilen. Jetzt **sechs gleich große Karten, ein bis zwei Sätze je Karte** — gemessen exakt 221 px hoch, alle sechs. Das ist der größte Anteil am „clean"-Eindruck |
+
+**Die Zahlen im Band sind nachgerechnet, nicht gesetzt.** `test/startseite-zahlen.test.mjs` zählt `PRESETS` + `VEHICLES` und `CARRIERS` **aus `app.html`** und vergleicht mit dem, was auf der Startseite steht. Die Falle, gegen die das gebaut ist: jemand ergänzt einen Containertyp oder eine Reederei, und die Startseite behauptet weiter die alte Zahl. Das fällt niemandem auf — außer dem, der nachzählt und uns danach nichts mehr glaubt. Dieselbe Regel wie im Container-Wissen, aus demselben Grund.
+
+Auch der Dreh-Gewinn wird nachgerechnet, an **beiden** Stellen (Überschrift = 20-Fuß, Merkmal = 40-Fuß) und in beiden Sprachen. Welcher Container gemeint ist, liest der Test **aus dem Satz selbst** — sonst müsste man ihn nachziehen, sobald jemand die Überschrift auf einen anderen Container umschreibt, und genau das fällt niemandem auf.
+
+**Drei Zusagen stehen jetzt da, wo sie jemand liest**, weil ein bezahltes Produkt sie strukturell nicht geben kann: *kostenlos ohne Limit* (der Wettbewerber gibt drei Berechnungen im Trial), *ohne Anmeldung — auch für den Empfänger des Links*, und *keine Cookies, kein Banner*. Das Letzte ist keine Koketterie: auf deren Seite verdeckt der Einwilligungskasten die halbe Ansicht, wir zählen mit GoatCounter ohne Cookies. Es stand bis dahin nur auf der Datenschutzseite.
+
+**Was ausdrücklich nicht geändert wurde:** das dunkle Design (der Rechner ist dunkel und wird per iframe eingebunden — eine helle Startseite darüber wäre ein Bruch, kein Feinschliff, und eine eigene Entscheidung), die Drei-Akt-Animation, und der ehrliche FAQ-Satz „Schwerpunkt und Achslast sind noch nicht enthalten". Der bleibt, bis wir es können; auf einer Seite, die von Genauigkeit lebt, wird nicht geschwindelt.
+
+> **Beim Messen aufgefallen und NICHT von dieser Änderung:** Bei 390 px ragt der Knopf „Tool öffnen" in der Kopfzeile über den rechten Rand (gemessen bis 410 px). Gegen `origin/main` verglichen — identisch, also älter. Seitlich schieben lässt sich die Seite nicht (`scrollWidth` = 390), deshalb schlägt `test/mobil.test.mjs` nicht an. Eigene Baustelle.
+
+> **Für Browserprüfungen an der Startseite:** `tw.out.css` im Scratchpad ist ein **vorher erzeugtes** Tailwind-Bauergebnis. Wer eine neue Utility-Klasse benutzt (`gap-x-5`, `sm:grid-cols-3`), muss es neu bauen — sonst fehlt die Regel, das Bild zeigt ein kaputtes Layout, und man sucht den Fehler im Markup. Genau das ist hier zweimal passiert.
+
 ### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
 Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:
 
