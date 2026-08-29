@@ -152,7 +152,7 @@ test("es gibt ein statisches Formular, an dem Netlify die Adresse erkennt", () =
 test("die Feldnamen im Dialog und im Formular stimmen ueberein", () => {
   const imFormular = [...formular.matchAll(/name="([^"]+)"/g)].map((m) => m[1])
     .filter((n) => n !== "feedback" && n !== "bot-field").sort();
-  const imDialog = [...dialogSenden.matchAll(/^\s*"?([a-zA-Z-]+)"?:/gm)].map((m) => m[1]).sort();
+  const imDialog = [...dialogSenden.matchAll(/^\s*"?([a-zA-Z_-]+)"?:/gm)].map((m) => m[1]).sort();
   assert.deepStrictEqual(imDialog, imFormular,
     `Dialog schickt [${imDialog}], das Formular kennt [${imFormular}] — Netlify wuerde die Abweichung still verwerfen`);
 });
@@ -166,7 +166,7 @@ test("gesendet wird als Formular, nicht als JSON", () => {
 });
 
 test("die Ladung geht nur mit, wenn das Kaestchen steht", () => {
-  assert.match(dialogSenden, /plan: mitPlan \? kontext\.plan : ""/,
+  assert.match(dialogSenden, /plan: mitPlan \?[^:]*kontext\.plan\)? : /,
     "der Plan wird unabhaengig vom Kaestchen mitgeschickt");
   const dlg = schnitt("function FeedbackDialog(", "function PlansDialog(");
   assert.match(dlg, /type: "checkbox", checked: mitPlan/, "es gibt gar kein Kaestchen");

@@ -363,7 +363,19 @@ Zwei Korrekturen nach der ersten Fassung, beide gemeldet:
 
 **Die Frage kommt einmal und dann nie wieder** (`containerload.feedback.v1`, gehört damit auch in die Datenschutzseite) — und erst, wenn jemand wirklich etwas vom Rechner hatte: nach dem ersten Weitergeben (Teilen, Bild, CSV, Ladevorschlag) oder nach einer Minute mit einem fertigen Plan. **Im eingebetteten Rechner der Startseite gar nicht:** dort schaut man sich um, man arbeitet nicht. Steht gerade ein Hinweis unten in der Mitte, wartet die Frage — zwei Kästen übereinander an derselben Stelle wären schlechter als gar keine Frage.
 
-> **Zwei Dinge, die nur der Projektinhaber entscheiden kann** und die außerhalb des Codes liegen: dass **Netlify Forms aktiv** ist und eine **E-Mail-Benachrichtigung** auf das Formular `feedback` zeigt (sonst landen die Meldungen nur im Netlify-Dashboard), und ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist. Das Formular funktioniert ohne beides — die Meldungen kommen dann nur nicht per Mail an.
+**Die Netlify-Einrichtung ist ein Deploy-Schritt, kein Laufzeit-Schalter.** Beim ersten Anlauf kam ein **404** auf den POST: Formularerkennung war aus. Der Weg, in dieser Reihenfolge — der mittlere Schritt wird gern übersehen:
+1. Forms → **Enable form detection**
+2. **Neu deployen** — Netlify erkennt Formulare beim Deploy, nicht rückwirkend
+3. Forms → das Formular **`feedback`** muss dort auftauchen (noch ohne Einsendungen)
+4. Notifications → **Email notification** auf *New form submission*
+
+Wer die Felder ändert, muss deshalb **neu deployen**, sonst verwirft Netlify die unbekannten stillschweigend.
+
+**Die Benachrichtigungs-Mail lässt sich nicht gestalten** — Netlify verschickt schmucklosen Text und schreibt den Wert des **ersten Feldes** in die Betreffzeile. Das erste Feld ist deshalb `zusammenfassung` (*„Passt nicht · 40′ HC · 3 Positionen"*): vorher stand im Posteingang „Form submission from feedback form: **gut**", was nichts sagt. Netlify stellt 36 Zeichen voran — die Zusammenfassung bleibt darum kurz und beginnt mit dem, was zählt.
+
+Die übrigen Felder sind so zusammengefasst, dass die Mail **ohne Gestaltung lesbar** bleibt: neun Zeilen mit halb leeren Überschriften waren schlechter als sechs volle. Leere freiwillige Angaben tragen einen Gedankenstrich — eine Überschrift ohne Inhalt liest sich wie ein Fehler. **Der Inhalt ist deutsch, unabhängig von der Sprache der Oberfläche:** diese Mail liest der Projektinhaber, nicht der Absender. Deshalb steht dort auch kein `T`-Schlüssel — sichtbar ist davon im Rechner nichts.
+
+> **Was außerhalb des Codes bleibt:** ob für die Formulardaten ein **Auftragsverarbeitungsvertrag mit Netlify** nötig ist.
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
