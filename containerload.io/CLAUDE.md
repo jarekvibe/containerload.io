@@ -506,6 +506,41 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Ladevorschlag und CSV je Container
+Schritt 03 aus dem Mehr-Container-Entwurf. Beide Ausgaben kannten bis dahin nur den ersten Container.
+
+**Der Ladevorschlag ist jetzt ein Deckblatt plus ein Blatt je Container.** Vorher war er *ein* Blatt: die Stauplan-Zeichnung zeigte C1, darunter stand ein Hinweissatz „Zeichnung zeigt Container 1 von N". Wer drei Container buchte, bekam ein Dokument über einen davon — und die Ladeliste darin nannte die **eingegebene** Menge, nicht die im gezeichneten Container.
+
+| | |
+|---|---|
+| **Deckblatt** | Das, was in die Buchung geht: die gebuchte Kombination (`2× 40′ HC + 1× 20′ GP`), das gebuchte Gesamtvolumen, die Zuladung des **Plans**, die volle Positionsliste — und an der Stelle, an der sonst die Zeichnung steht, die **Übersicht je Container** (`LV_UEBERSICHT`) |
+| **Je Container ein Blatt** | Eigene Innenmaße, eigene Zuladung, eigener Stauplan, und **nur die Positionen mit der Menge, die dort liegt** |
+| **Ein Container** | Bleibt **ein** Blatt, Zeichen für Zeichen wie vorher. Ein Deckblatt für eine einzige Seite wäre Papier ohne Inhalt |
+
+Gebaut ist das ohne zweite Vorlage: `LV_PAGE` wird je Blatt erneut aufgerufen. `STOWAGE` ist ohnehin nur ein HTML-Platz — auf dem Deckblatt steht dort die Übersicht, auf einem Containerblatt die Zeichnung. **Ein Platz, zwei Inhalte.** Neu parametrisiert sind nur zwei Kleinigkeiten: `SEITE` (die Fußzeile stand fest auf „Seite 1 / 1") und `MITTE_LABEL` (zwei Container haben zwei Innenmaße; ein Gedankenstrich dort sieht aus wie ein Fehler, deshalb steht auf dem Deckblatt „GEBUCHT 143,9 m³").
+
+Drei Fallen, alle erlebt:
+- **`LV_ROW` rechnet Gewicht und Volumen aus `it.qty`.** Ein Containerblatt bekommt deshalb `{ ...it, qty: n }` — sonst summiert sich das Blatt auf ein Gewicht, das nie in dem Container war.
+- **Die Legende unter der Zeichnung auch.** Sie las `cargo[ti]` direkt und schrieb „9×" unter einen Container mit zwei Stück.
+- **`chainLen: 1`** auf jedem Containerblatt: der Hinweis „Zeichnung zeigt Container 1 von N" gehört dort nicht mehr hin — das Blatt *ist* der Container.
+
+**„Passt in" nennt auf dem Deckblatt die gebuchte Kette**, nicht die frei gerechnete Empfehlung. Bei einer Kette ist `allFit` falsch (es zählt nur den ersten Container), und ohne einen eigenen Zweig stünde in einem Dokument, das genau diese Kette bucht, eine Empfehlung, die davon abweichen kann.
+
+**Mehrere `.page`-Blöcke brauchen zwei Zeilen CSS** in `LV_DOC`: `break-after:page` im Druck (und `:last-of-type` wieder zurück, sonst folgt eine leere Seite) sowie ein Abstand am Bildschirm.
+
+**Die CSV hat eine Container-Spalte** und damit **eine Zeile je Position und Container**:
+
+```
+Container;Position;Menge;…;Gewicht_kg_gesamt;…;Eingegeben
+C1;Package;2;…;600;…;9
+C1;Package;22;…;6600;…;22
+C2;Package;7;…;2100;…;9
+```
+
+`Menge` ist ab jetzt die Menge **in diesem Container** und `Gewicht_kg_gesamt` das Gewicht dieser Menge — damit ergibt eine Summe je Container das, was der Container wiegt. Die eingegebene Menge steht daneben als `Eingegeben`. Was nicht verladen ist, bekommt die Marke **`offen`**; so taucht jede Position mindestens einmal auf, auch eine, von der nichts hineingeht. Bei einem Container ist das Ergebnis dasselbe wie vorher, nur mit der Spalte davor.
+
+> **`test/csv.test.mjs` hatte eine eigene KOPIE von `buildCargoCSV`**, mit dem Kommentar „byte-identisch zur Inline-Fassung in app.html". Sie war es längst nicht mehr — der Kopie fehlten `stackH` und `perTypeAll`, und der Test hätte jede Änderung an `app.html` stillschweigend durchgewunken. Er schneidet die Funktion jetzt aus `app.html` heraus, wie die übrigen Tests dieses Projekts auch. **Eine Kopie im Test ist kein Test.**
+
 ### Der Fokus: worüber die Oberfläche gerade spricht
 Gemeldet: *„Ich finde, dass das Tool aktuell mehr darauf ausgelegt ist, die Darstellung für einen Container zu machen, wir sollten uns aber auch darum kümmern, wie es ist wenn mehrere Container zustande kommen."*
 
