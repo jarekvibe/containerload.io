@@ -162,7 +162,7 @@ test("die Dreh-Gewinne auf der Startseite stimmen, in beiden Sprachen", () => {
     ["Hero, deutsch", (start.match(/data-i18n="hero_h1"[^>]*>(.*?)<\/h1>/s) || [])[1] + " " + (start.match(/data-i18n="hero_sub"[^>]*>(.*?)<\/p>/s) || [])[1]],
     ["Hero, englisch", (start.match(/"hero_h1": "(.*?)", "hero_sub": "(.*?)", "hero_cta1"/s) || []).slice(1, 3).join(" ")],
     ["Merkmal, deutsch", (start.match(/data-i18n="f2_p"[^>]*>(.*?)<\/p>/s) || [])[1]],
-    ["Merkmal, englisch", (start.match(/"f2_p": "(.*?)", "f6_h"/s) || [])[1]],
+    ["Merkmal, englisch", (start.match(/"f2_p": "(.*?)", "f3_h"/s) || [])[1]],
   ];
   for (const [was, roh] of stellen) {
     assert.ok(roh, `${was}: Stelle nicht gefunden`);
