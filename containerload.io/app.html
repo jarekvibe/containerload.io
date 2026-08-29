@@ -2520,6 +2520,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualBadge: "MANUELL",
       autoCont: "Auto",
       chainN: (n) => `${n} Container \xB7 mit dieser Wahl`,
+      fokusAlle: "Alle",
+      fokusAlleTitel: "Den ganzen Plan zeigen",
+      fokusEinTitel: (m) => `Nur ${m} zeigen \u2013 Ansicht, Kennzahlen und Ladungsliste`,
       chainNRoad: (n) => `${n} Fahrzeuge \xB7 mit dieser Wahl`,
       chainMore: (n) => `+ ${n} weitere \xB7 nicht gezeichnet`,
       openMore: (n, c) => `${n} offen \xB7 mehr als ${c} Container`,
@@ -2810,6 +2813,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualBadge: "MANUAL",
       autoCont: "Auto",
       chainN: (n) => `${n} containers \xB7 with this pick`,
+      fokusAlle: "All",
+      fokusAlleTitel: "Show the whole plan",
+      fokusEinTitel: (m) => `Show ${m} only \u2013 view, figures and cargo list`,
       chainNRoad: (n) => `${n} vehicles \xB7 with this pick`,
       chainMore: (n) => `+ ${n} more \xB7 not drawn`,
       openMore: (n, c) => `${n} open \xB7 more than ${c} containers`,
@@ -3646,7 +3652,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // hierher (?q=). Ob dieser Weg ueberhaupt benutzt wird, ist die Frage, an der haengt,
   // ob sich die Arbeit an den Seiten in Nutzung uebersetzt -- und nicht nur in Impressionen.
   if (QIMPORT && QIMPORT.length) zaehl("beispiel-geoeffnet");
-  function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain }) {
+  function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain, fokus, onFokus }) {
     const road = domain === "road";
     const TBL = road ? VEHICLES : PRESETS;
     const names = Object.keys(TBL);
@@ -3659,7 +3665,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!isMain) opts.push(/* @__PURE__ */ React.createElement("option", { key: "__auto", value: "__auto", style: optStyle }, T.autoCont + " \xB7 " + (name ? zeig(name) : "")));
     if (isCustomMain) opts.push(/* @__PURE__ */ React.createElement("option", { key: "__custom", value: "__custom", disabled: true, style: { background: "#161D27", color: C.dim } }, "Custom"));
     names.forEach((nm) => opts.push(/* @__PURE__ */ React.createElement("option", { key: nm, value: nm, style: optStyle }, zeig(nm))));
-    return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-2 py-1", style: { pointerEvents: "auto", background: hexA("#161D27", 0.88), border: "1px solid #2E3A49" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, (road ? "F" : "C") + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), "aria-label": (road ? T.vehicle : T.container) + " " + (idx + 1), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, opts));
+    // Die Marke ist jetzt ein Knopf: sie setzt den Fokus auf diesen Container. Das Auswahlfeld
+    // daneben bleibt, was es war -- es waehlt den TYP. Zwei Handlungen, zwei Ziele, eine Zeile.
+    const markiert = fokus === idx;
+    return /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-1 rounded-lg px-2 py-1", style: { pointerEvents: "auto", background: hexA("#161D27", 0.88), border: "1px solid " + (markiert ? C.accent : "#2E3A49") } }, /* @__PURE__ */ React.createElement("button", { onClick: () => onFokus(markiert ? "alle" : idx), title: T.fokusEinTitel((road ? "F" : "C") + (idx + 1)), "aria-pressed": markiert ? "true" : "false", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: markiert ? FW.bold : FW.body, color: markiert ? C.accent : C.faint, background: "transparent", border: 0, padding: 0, cursor: "pointer" } }, (road ? "F" : "C") + (idx + 1)), /* @__PURE__ */ React.createElement("select", { value: val, onChange: (e) => onPick(idx, e.target.value), "aria-label": (road ? T.vehicle : T.container) + " " + (idx + 1), style: { background: "transparent", color: C.text, border: "none", outline: "none", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, opts));
   }
   // Wie weit muss die Kamera weg, damit ein Quader mit den Halbmassen hx/hy/hz bei
   // Seitenverhaeltnis "aspect" vollstaendig ins Bild passt? Ruhelage der Kamera (theta/phi)
@@ -3681,7 +3690,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return need;
   }
-  function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef }) {
+  function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef, fokus, onFokus }) {
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
@@ -4563,6 +4572,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           eg.setAttribute("position", new THREE.Float32BufferAttribute(edgePos, 3));
           const el = new THREE.LineSegments(eg, new THREE.LineBasicMaterial({ color: 0x05080c, transparent: true, opacity: 0.9 }));
           el.renderOrder = 2;
+          el.userData.ladung = true;   // gehoert zur Ladung, nicht zur Huelle -- siehe fokusAnwenden
           cg.add(el);
         }
         const isNew = !REDUCED && ci >= 1 && ci >= prevC;
@@ -4685,7 +4695,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Strasse braucht mehr, weil die Zugmaschine vorne ueber die Box hinausragt.
       const camMargin = isRoad ? 1.42 : 1.2;
       const camAspect = t.camera && t.camera.aspect > 0 ? t.camera.aspect : 1.7;
-      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, hx: rowW / 2, hy: maxCH / 2, hz: maxCW / 2, margin: camMargin,
+      t.frame = { cx: rowCx, cy: maxCH / 2 + yLift, cz: maxCW / 2, hx: rowW / 2, hy: maxCH / 2, hz: maxCW / 2, margin: camMargin, aspect: camAspect,
         slots: dimsArr.map((d, i) => ({ cx: xpos[i] + d.CL / 2, cy: (isRoad ? BASE_Y : 0) + d.CH / 2, cz: d.CW / 2, hx: d.CL / 2, hy: d.CH / 2, hz: d.CW / 2 })), r: Math.max(2.5, camFit(rowW / 2, maxCH / 2, maxCW / 2, camAspect) * camMargin) };
       // Nebel & Schatten an die Szenengröße anpassen (Einzelcontainer bleibt unverändert).
       if (t.scene && t.scene.fog) {
@@ -4712,7 +4722,42 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         t.target.set(rowCx, maxCH / 2 + yLift, maxCW / 2);
         t.sph.r = t.frame.r;
       }
+      // Die Szene ist gerade neu gebaut -- der Fokus muss wieder darauf gelegt werden.
+      // fokusAnwenden steht weiter unten im Bauteil; beim Lauf dieses Effekts (nach dem
+      // Rendern) ist es laengst gesetzt.
+      fokusAnwenden(fokus);
     }, [result, container, domain, cargo, preset, manualMode, manualPlaced, manualSel]);
+    // Was der Fokus im Bild macht: die Ladung der anderen Container verschwindet, ihre Huelle
+    // bleibt als blasse Silhouette stehen. Ganz ausblenden waere verwirrend -- man wuesste
+    // nicht mehr, wo der zweite Container ist; unveraendert stehenlassen auch, denn dann sieht
+    // man nicht, worueber die Leiste gerade spricht.
+    //
+    // Ausgeblendet werden nur Objekte, die zu EINEM Container gehoeren (seine Instanzsaetze
+    // und die Kantenlinien). Die Materialien der Huelle sind zwischen gleich grossen Containern
+    // geteilt -- an ihnen darf man deshalb nichts drehen, sonst blasst der fokussierte mit ab.
+    const fokusAnwenden = (fk) => {
+      const t = three.current;
+      if (!t || !t.group) return;
+      t.group.children.forEach((cg) => {
+        const slot = cg.userData && cg.userData.slot;
+        if (slot == null) return;
+        const an = fk === "alle" || slot === fk;
+        (cg.userData.boxMeshes || []).forEach((bm) => { if (bm.inst) bm.inst.visible = an; });
+        cg.children.forEach((o) => { if (o.userData && o.userData.ladung) o.visible = an; });
+      });
+      if (!t.frame) return;
+      const z = fk === "alle" ? null : (t.frame.slots || [])[fk];
+      if (z) {
+        t.target.set(z.cx, z.cy, z.cz);
+        t.sph.r = Math.max(2.5, camFit(z.hx, z.hy, z.hz, t.frame.aspect || 1.7) * (t.frame.margin || 1));
+      } else {
+        t.target.set(t.frame.cx, t.frame.cy, t.frame.cz);
+        t.sph.r = t.frame.r;
+      }
+    };
+    // Fokuswechsel baut die Szene NICHT neu -- sonst liefe die Aufbau-Animation jedes Mal
+    // von vorn und der Wechsel kostete bei 1.900 Kisten eine halbe Sekunde.
+    useEffect(() => { fokusAnwenden(fokus); }, [fokus, result]);
     const reset = () => {
       const t = three.current;
       if (!t) return;
@@ -4730,9 +4775,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
             // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
             // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
-            /* @__PURE__ */ React.createElement("div", { key: "n", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, 0.45)}`, borderRadius: R.s, padding: "4px 8px" } },
-              (result.remainingBoxes > 0 ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
-            result.chain.slice(0, MAXDRAW).map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain })),
+            // Die Pille nennt die Zahl, mit der jemand hier hinschaut -- und ist zugleich der
+            // Weg zurueck zum ganzen Plan. Ein zweites Element daneben waere dasselbe zweimal.
+            /* @__PURE__ */ React.createElement("button", { key: "n", onClick: () => onFokus("alle"), title: T.fokusAlleTitel, "aria-pressed": fokus === "alle" ? "true" : "false", style: { pointerEvents: "auto", cursor: "pointer", textAlign: "right", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, fokus === "alle" ? 0.9 : 0.45)}`, borderRadius: R.s, padding: "4px 8px" } },
+              (fokus === "alle" ? "" : T.fokusAlle + " \xB7 ") + (result.remainingBoxes > 0 ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
+            result.chain.slice(0, MAXDRAW).map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain, fokus, onFokus })),
             result.chain.length > MAXDRAW && /* @__PURE__ */ React.createElement("div", { key: "rest", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, background: hexA("#161D27", 0.82), border: "1px solid #2E3A49", borderRadius: R.s, padding: "4px 8px" } }, T.chainMore(result.chain.length - MAXDRAW)),
             result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, T.openMore(result.remainingBoxes, MAXCHAIN))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
@@ -5245,6 +5292,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [forceCentered, setForceCentered] = useState(SHARED ? !!SHARED.forceCentered : !!(DRAFT && DRAFT.forceCentered));
     const [result, setResult] = useState(() => packKind(INIT_CONTAINER, INIT_CARGO, {}, SHARED ? !!SHARED.forceCentered : false));
     const [chainOverride, setChainOverride] = useState({});
+    // "alle" oder der Index eines Containers der Kette. Siehe die Erklaerung bei fokusSlot.
+    const [fokus, setFokus] = useState("alle");
     // ── Manuelles Platzieren (Slice 2): eigener Modus, unabhaengig vom Auto-Packer. Nur fuer den
     // Hauptcontainer/das Hauptfahrzeug (Kette wird waehrend manualMode nicht gebaut). Session-
     // lokal – bewusst NICHT Teil des ?p=/?c=-Vertrags (siehe CLAUDE.md, Slice-Notiz in PR). ──
@@ -5498,6 +5547,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }, 200);
       return () => clearTimeout(t);
     }, [container, cargo, preset, chainOverride, forceCentered, domain, carrier]);
+    // Der Fokus zeigt auf einen Container, den es geben MUSS. Wird die Ladung kleiner, ein
+    // gespeicherter Plan geladen, die Domaene gewechselt oder der manuelle Modus
+    // eingeschaltet (der die Kette auf einen Container zusammenklappt), dann faellt die
+    // Ansicht auf "alle" zurueck -- statt auf einen Container zu zeigen, den es nicht gibt.
+    // Ohne diesen Waechter stuenden in der Leiste die Zahlen eines verschwundenen Slots.
+    useEffect(() => {
+      if (fokus === "alle") return;
+      const n = result && result.chain ? result.chain.length : 0;
+      if (manualMode || !(fokus < n)) setFokus("alle");
+    }, [result, manualMode, fokus]);
     // Escape schliesst den obersten offenen Dialog. Vorher fuehrte aus jedem Dialog nur
     // der Weg ueber den Schliessen-Knopf oder einen Klick auf die Flaeche daneben — mit
     // der Tastatur allein kam man nicht wieder heraus. Die Reihenfolge ist die der
@@ -6221,90 +6280,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Leer ist kein Fehler, sondern der Anfang. Ohne diese Unterscheidung stuende beim
     // Oeffnen "0 offen" in Orange da, bevor ueberhaupt etwas eingegeben wurde.
     const leer = result.totalBoxes === 0;
-    // Gruen erst, wenn der Container wirklich gut genutzt ist. Darunter neutral: eine Sendung
-    // mit 13 % ist nicht kaputt, sie ist klein. Was dagegen zu tun waere, sagt die Empfehlung.
-    const utilColor = result.util > 80 ? C.good : C.text;
-    const payPct = num(container.payload) > 0 ? result.weight / num(container.payload) * 100 : 0;
-    // Neutral, solange Luft ist. Orange kurz vor der Grenze, rot darueber.
-    const payColor = payPct > 100 ? C.bad : payPct > 90 ? C.warn : C.text;
-    // Ehrliche Gewichts-Ampel: Summe der EINGEGEBENEN Ladung (Menge x Stueckgewicht) gegen die
-    // Zuladung. Wichtig: der Packer deckelt die Platzierung bei payload (er laedt nichts darueber,
-    // siehe packCargo), daher wuerde result.weight die Ueberladung verstecken – z. B. 1 Stueck mit
-    // 30 t auf einem 28,2-t-Container: nichts platziert, result.weight = 0. Die Absicht des Nutzers
-    // zaehlt, nicht was der Greedy-Packer noch reinbekommen hat.
-    const totalWeight = cargo.reduce((s, c) => s + Math.max(0, Math.floor(num(c.qty))) * Math.max(0, num(c.weight)), 0);
-    // Die Zuladung des PLANS, nicht die eines Containers. Bei drei Containern ist eine
-    // Ladung von 67 t nicht ueberladen, und ein rotes "33.227 kg ueber Zuladung" daneben
-    // war schlicht die falsche Rechnung.
-    const planPayload = kette
-      ? result.chain.reduce((s2, c2) => s2 + Math.max(0, num(c2.preset && c2.preset.payload)), 0)
-      : num(container.payload);
-    const overweight = planPayload > 0 && totalWeight > planPayload + 0.5;
-    const overKg = Math.round(totalWeight - planPayload);
-    // Die Zuladungs-Anzeige bleibt bei result.weight: sie misst DIESEN Container, und dafuer
-    // ist sie richtig. Was sie nicht sagen kann, sagt jetzt die Statuszeile - dass die
-    // eingegebene Ladung als Ganzes schwerer ist als der Container tragen darf. Beides
-    // zusammen ist vollstaendig, eines allein war es nicht.
-    // === Landfracht: Akzent + Lademeter-Kennzahlen ===
-    const AC = domain === "road" ? C.teal : C.accent;
-    // Belegte Lademeter = vorderste->hinterste belegte Position (max x+dx), in m. x = Laenge (cm).
-    // Ehrlich-konservativ: blockierte Ladelaenge inkl. Luecken; bei Single-Typ exakt, bei Mischladung Obergrenze.
-    const ldmBelegt = result.placed && result.placed.length ? Math.max(...result.placed.map((p) => p.x + p.dx)) / 100 : 0;
-    const ldmTotal = num(container.l) / 100;
-    const ldmPct = ldmTotal > 0 ? ldmBelegt / ldmTotal * 100 : 0;
-    const floorSpots = result.placed ? result.placed.filter((p) => p.y < 1e-6).length : 0;
-    // freeLenM: zusammenhaengende freie Laenge zwischen der vordersten Ladung und der Tuer.
-    //   Bewusst NICHT "freier Platz insgesamt" — Luecken zwischen den Colli zaehlen nicht mit,
-    //   weil man da praktisch nichts mehr reinbekommt. Die Zahl ist damit eher zu klein als zu
-    //   gross, was der Ehrlichkeits-Regel in CLAUDE.md entspricht.
-    // Freies Volumen und freie Zuladung wurden hier frueher ebenfalls ausgerechnet. Sie standen
-    // nur in der schwebenden Karte im 3D-Bild, und die ist entfallen: in der unteren Leiste steht
-    // beides ohnehin als "belegt / gesamt", die Differenz muss niemand doppelt gezeigt bekommen.
-    const loadFrontCm = (result.placed || []).reduce((m, p) => Math.max(m, (+p.x || 0) + (+p.dx || 0)), 0);
-    const freeLenM = Math.max(0, num(container.l) - loadFrontCm) / 100;
-    // primaryMeter/railColor stehen VOR statCards: die Auslastung ist jetzt eine Karte darin,
-    // und eine const, die erst darunter berechnet wird, gibt es beim Rendern noch nicht.
-    const primaryMeter = domain === "road"
-      ? { label: T.ldmUtil, pct: Math.min(ldmPct, 100), color: AC, text: `${ldmPct.toFixed(0)}%` }
-      : { label: T.volUtil, pct: result.util, color: utilColor, text: `${result.util.toFixed(0)}%` };
-    const railHot = Math.max(primaryMeter.pct || 0, payPct || 0) >= 90;
-    const railColor = payPct > 100 ? C.bad : railHot ? C.warn : primaryMeter.color;
-    // Die Auslastung stand frueher als 26px-Zahl mit eigenem Trennstrich vor der Leiste – ein
-    // Sonderfall, der nur deshalb groesser war, weil er der erste war. Sie ist eine Kennzahl
-    // wie die anderen und steht jetzt auch so da.
-    // Zeigt das 3D-Bild mehr als einen Container, dann zaehlt die Leiste den ERSTEN —
-    // sie sagt das jetzt auch, mit derselben Marke, die im Bild an den Huellen steht (C1/F1).
-    // Ohne diesen Zusatz las man "62 / 92 verladen" neben einem Bild, in dem alle 92 stehen.
-    const slot1 = result.chain && result.chain.length > 1 ? " \xB7 " + (domain === "road" ? "F1" : "C1") : "";
-    const kpiFull = { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor };
-    // Bei leerer Ladung neutral: "0 / 0" in Orange behauptet ein Problem, wo noch gar
-    // nichts eingegeben wurde.
-    const kpiLoaded = { label: T.loaded + slot1, value: `${result.boxes}`, sub: `/ ${result.totalBoxes}`, accent: leer ? C.text : allFit ? C.good : C.warn };
-    const kpiWeight = { label: T.weight, value: fmtDE(result.weight), sub: num(container.payload) > 0 ? `/ ${fmtDE(container.payload)} kg` : "kg", accent: payColor };
-    const kpiVol = domain === "road"
-      ? { label: T.volume, value: nf(result.usedVol, 2), sub: "cbm" }
-      : { label: T.volume, value: nf(result.usedVol, 1), sub: `/ ${nf(result.contVol, 1)} m\xB3` };
-    const kpiLdm = { label: T.ldm, value: nf(ldmBelegt, 2), sub: `/ ${nf(ldmTotal, 2)} ldm` };
-    // Freie Laenge bis zur Tuer stand vorher in der schwebenden Karte im 3D-Bild. Sie ist die
-    // einzige Zahl von dort, die sich nicht aus der Leiste ergibt (freies Volumen und freie
-    // Zuladung stehen als "belegt / gesamt" schon daneben) – deshalb ist sie mit umgezogen,
-    // und die Karte konnte ganz verschwinden.
-    const kpiFreeLen = { label: T.freeLen, value: nf(freeLenM, 2), sub: "m" };
-    const kpiLayers = { label: T.layers, value: `${result.boxes === 0 ? 0 : result.single ? result.layers : Math.max(1, result.layers)}`, sub: result.single ? T.stacked : T.mixed };
-    const kpiSpots = { label: T.spots, value: `${floorSpots}`, sub: T.spotsSub };
-    // Vier in der Leiste, der Rest eine Klick tiefer. Sechs Karten plus Statusblock brauchen
-    // etwa 850 px; im Dreispalten-Layout stehen der Gruppe 490 zur Verfuegung. Die Leiste ist
-    // deshalb zwischen 1440 und 1800 px immer zweizeilig umgebrochen — auf genau den Breiten,
-    // auf denen die meisten arbeiten.
-    const statCards = domain === "road"
-      ? [kpiFull, kpiLoaded, kpiLdm, kpiWeight]
-      : [kpiFull, kpiLoaded, kpiVol, kpiWeight];
-    const detailCards = domain === "road" ? [kpiVol, kpiSpots] : [kpiFreeLen, kpiLayers];
-    // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
-    // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
-    const cog = computeLongCog(result.placed || [], (ti) => num(cargo[ti] && cargo[ti].weight), num(container.l));
-    const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
-    const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // Volumen und Gewicht JE CONTAINER. Die Leiste oben nennt immer nur C1 (sie sagt es
     // auch dazu), und die Gesamtsumme steht im Bild — was dazwischen fehlte, war die Frage
     // "wie voll ist eigentlich der zweite". Beim Buchen ist genau das die Zahl: jeder
@@ -6336,6 +6311,123 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         kgColor: pPct > 100 ? C.bad : pPct > 90 ? C.warn : C.text
       };
     });
+    // ── Der Fokus: worueber die Oberflaeche gerade spricht ──────────────────────
+    //
+    // Bis hierher hiess die Antwort immer "der erste Container". Neun Stellen im Rechner
+    // nahmen sich deshalb den erstbesten -- die Leiste sagte es wenigstens dazu ("C1"), die
+    // Ladungsliste nicht. Gemeldet als "das Tool ist mehr darauf ausgelegt, die Darstellung
+    // fuer EINEN Container zu machen".
+    //
+    // Der Fokus ist genau eine Zustandsvariable: "alle" oder der Index eines Containers.
+    // Er gehoert zum Hinsehen und nicht zur Sendung -- deshalb steht er weder im Teilen-Link
+    // noch im Entwurf, und ein geteilter Plan oeffnet immer auf "alle".
+    const fokusSlot = fokus !== "alle" && result.chain && result.chain[fokus] ? result.chain[fokus] : null;
+    // Alles, was die Leiste, die Ladungsliste und die Details lesen, laeuft ab hier ueber
+    // "sicht*" statt ueber result/container. Ohne Fokus ist das Wort fuer Wort das alte
+    // Verhalten (der erste Container); mit Fokus derselbe Satz Zahlen fuer einen anderen.
+    const sichtCont = fokusSlot ? fokusSlot.preset : container;
+    const sichtPlaced = fokusSlot ? fokusSlot.placed || [] : result.placed || [];
+    const sichtReihe = fokusSlot ? slotRows[fokus] : null;
+    const sichtVol = sichtReihe ? sichtReihe.vol : result.usedVol;
+    const sichtContVol = sichtReihe ? sichtReihe.cVol : result.contVol;
+    const sichtKg = sichtReihe ? sichtReihe.kg : result.weight;
+    const sichtBoxes = sichtReihe ? sichtReihe.stueck : result.boxes;
+    // Bilanz je Position fuer die Ladungsliste. Ohne Fokus bleibt es bei der Kettenbilanz.
+    const sichtUtil = sichtContVol > 0 ? sichtVol / sichtContVol * 100 : 0;
+    const sichtPerType = fokusSlot
+      ? cargo.map((t, i) => ({ loaded: (fokusSlot.placed || []).filter((b) => b.ti === i).length, total: Math.max(0, Math.floor(num(t.qty))) }))
+      : (result.perTypeAll || result.perType);
+    // Gruen erst, wenn der Container wirklich gut genutzt ist. Darunter neutral: eine Sendung
+    // mit 13 % ist nicht kaputt, sie ist klein. Was dagegen zu tun waere, sagt die Empfehlung.
+    const utilColor = sichtUtil > 80 ? C.good : C.text;
+    const payPct = num(sichtCont.payload) > 0 ? sichtKg / num(sichtCont.payload) * 100 : 0;
+    // Neutral, solange Luft ist. Orange kurz vor der Grenze, rot darueber.
+    const payColor = payPct > 100 ? C.bad : payPct > 90 ? C.warn : C.text;
+    // Ehrliche Gewichts-Ampel: Summe der EINGEGEBENEN Ladung (Menge x Stueckgewicht) gegen die
+    // Zuladung. Wichtig: der Packer deckelt die Platzierung bei payload (er laedt nichts darueber,
+    // siehe packCargo), daher wuerde result.weight die Ueberladung verstecken – z. B. 1 Stueck mit
+    // 30 t auf einem 28,2-t-Container: nichts platziert, result.weight = 0. Die Absicht des Nutzers
+    // zaehlt, nicht was der Greedy-Packer noch reinbekommen hat.
+    const totalWeight = cargo.reduce((s, c) => s + Math.max(0, Math.floor(num(c.qty))) * Math.max(0, num(c.weight)), 0);
+    // Die Zuladung des PLANS, nicht die eines Containers. Bei drei Containern ist eine
+    // Ladung von 67 t nicht ueberladen, und ein rotes "33.227 kg ueber Zuladung" daneben
+    // war schlicht die falsche Rechnung.
+    const planPayload = kette
+      ? result.chain.reduce((s2, c2) => s2 + Math.max(0, num(c2.preset && c2.preset.payload)), 0)
+      : num(container.payload);
+    const overweight = planPayload > 0 && totalWeight > planPayload + 0.5;
+    const overKg = Math.round(totalWeight - planPayload);
+    // Die Zuladungs-Anzeige bleibt bei result.weight: sie misst DIESEN Container, und dafuer
+    // ist sie richtig. Was sie nicht sagen kann, sagt jetzt die Statuszeile - dass die
+    // eingegebene Ladung als Ganzes schwerer ist als der Container tragen darf. Beides
+    // zusammen ist vollstaendig, eines allein war es nicht.
+    // === Landfracht: Akzent + Lademeter-Kennzahlen ===
+    const AC = domain === "road" ? C.teal : C.accent;
+    // Belegte Lademeter = vorderste->hinterste belegte Position (max x+dx), in m. x = Laenge (cm).
+    // Ehrlich-konservativ: blockierte Ladelaenge inkl. Luecken; bei Single-Typ exakt, bei Mischladung Obergrenze.
+    const ldmBelegt = sichtPlaced.length ? Math.max(...sichtPlaced.map((p) => p.x + p.dx)) / 100 : 0;
+    const ldmTotal = num(sichtCont.l) / 100;
+    const ldmPct = ldmTotal > 0 ? ldmBelegt / ldmTotal * 100 : 0;
+    const floorSpots = sichtPlaced.filter((p) => p.y < 1e-6).length;
+    // freeLenM: zusammenhaengende freie Laenge zwischen der vordersten Ladung und der Tuer.
+    //   Bewusst NICHT "freier Platz insgesamt" — Luecken zwischen den Colli zaehlen nicht mit,
+    //   weil man da praktisch nichts mehr reinbekommt. Die Zahl ist damit eher zu klein als zu
+    //   gross, was der Ehrlichkeits-Regel in CLAUDE.md entspricht.
+    // Freies Volumen und freie Zuladung wurden hier frueher ebenfalls ausgerechnet. Sie standen
+    // nur in der schwebenden Karte im 3D-Bild, und die ist entfallen: in der unteren Leiste steht
+    // beides ohnehin als "belegt / gesamt", die Differenz muss niemand doppelt gezeigt bekommen.
+    const loadFrontCm = sichtPlaced.reduce((m, p) => Math.max(m, (+p.x || 0) + (+p.dx || 0)), 0);
+    const freeLenM = Math.max(0, num(sichtCont.l) - loadFrontCm) / 100;
+    // primaryMeter/railColor stehen VOR statCards: die Auslastung ist jetzt eine Karte darin,
+    // und eine const, die erst darunter berechnet wird, gibt es beim Rendern noch nicht.
+    const primaryMeter = domain === "road"
+      ? { label: T.ldmUtil, pct: Math.min(ldmPct, 100), color: AC, text: `${ldmPct.toFixed(0)}%` }
+      : { label: T.volUtil, pct: sichtUtil, color: utilColor, text: `${sichtUtil.toFixed(0)}%` };
+    const railHot = Math.max(primaryMeter.pct || 0, payPct || 0) >= 90;
+    const railColor = payPct > 100 ? C.bad : railHot ? C.warn : primaryMeter.color;
+    // Die Auslastung stand frueher als 26px-Zahl mit eigenem Trennstrich vor der Leiste – ein
+    // Sonderfall, der nur deshalb groesser war, weil er der erste war. Sie ist eine Kennzahl
+    // wie die anderen und steht jetzt auch so da.
+    // Zeigt das 3D-Bild mehr als einen Container, dann zaehlt die Leiste den ERSTEN —
+    // sie sagt das jetzt auch, mit derselben Marke, die im Bild an den Huellen steht (C1/F1).
+    // Ohne diesen Zusatz las man "62 / 92 verladen" neben einem Bild, in dem alle 92 stehen.
+    // Die Marke "C1" sagt, dass die Leiste nur den ERSTEN Container zaehlt. Mit Fokus steht
+    // oben im Bild, worueber geredet wird -- dann ist die Marke ueberfluessig, und die Zahl
+    // bekommt statt eines Nenners aus dem ganzen Plan gar keinen: "24 Stueck" in diesem
+    // Container, nicht "24 / 31".
+    const slot1 = !fokusSlot && result.chain && result.chain.length > 1 ? " \xB7 " + (domain === "road" ? "F1" : "C1") : "";
+    const kpiFull = { label: T.railFull, value: `${Math.round(primaryMeter.pct)}`, sub: "%", accent: railColor };
+    // Bei leerer Ladung neutral: "0 / 0" in Orange behauptet ein Problem, wo noch gar
+    // nichts eingegeben wurde.
+    const kpiLoaded = { label: T.loaded + slot1, value: `${sichtBoxes}`, sub: fokusSlot ? "" : `/ ${result.totalBoxes}`, accent: fokusSlot ? C.text : leer ? C.text : allFit ? C.good : C.warn };
+    const kpiWeight = { label: T.weight, value: fmtDE(sichtKg), sub: num(sichtCont.payload) > 0 ? `/ ${fmtDE(sichtCont.payload)} kg` : "kg", accent: payColor };
+    const kpiVol = domain === "road"
+      ? { label: T.volume, value: nf(sichtVol, 2), sub: "cbm" }
+      : { label: T.volume, value: nf(sichtVol, 1), sub: `/ ${nf(sichtContVol, 1)} m\xB3` };
+    const kpiLdm = { label: T.ldm, value: nf(ldmBelegt, 2), sub: `/ ${nf(ldmTotal, 2)} ldm` };
+    // Freie Laenge bis zur Tuer stand vorher in der schwebenden Karte im 3D-Bild. Sie ist die
+    // einzige Zahl von dort, die sich nicht aus der Leiste ergibt (freies Volumen und freie
+    // Zuladung stehen als "belegt / gesamt" schon daneben) – deshalb ist sie mit umgezogen,
+    // und die Karte konnte ganz verschwinden.
+    const kpiFreeLen = { label: T.freeLen, value: nf(freeLenM, 2), sub: "m" };
+    // Lagen zaehlen: ohne Fokus wie bisher aus dem Ergebnis, mit Fokus aus den tatsaechlich
+    // belegten Hoehen dieses Containers -- dieselbe Zaehlweise, die packCargo intern benutzt.
+    const sichtLagen = fokusSlot ? (sichtPlaced.length ? new Set(sichtPlaced.map((p) => Math.round(p.y))).size : 0) : (result.boxes === 0 ? 0 : result.single ? result.layers : Math.max(1, result.layers));
+    const kpiLayers = { label: T.layers, value: `${sichtLagen}`, sub: !fokusSlot && result.single ? T.stacked : T.mixed };
+    const kpiSpots = { label: T.spots, value: `${floorSpots}`, sub: T.spotsSub };
+    // Vier in der Leiste, der Rest eine Klick tiefer. Sechs Karten plus Statusblock brauchen
+    // etwa 850 px; im Dreispalten-Layout stehen der Gruppe 490 zur Verfuegung. Die Leiste ist
+    // deshalb zwischen 1440 und 1800 px immer zweizeilig umgebrochen — auf genau den Breiten,
+    // auf denen die meisten arbeiten.
+    const statCards = domain === "road"
+      ? [kpiFull, kpiLoaded, kpiLdm, kpiWeight]
+      : [kpiFull, kpiLoaded, kpiVol, kpiWeight];
+    const detailCards = domain === "road" ? [kpiVol, kpiSpots] : [kpiFreeLen, kpiLayers];
+    // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
+    // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
+    const cog = computeLongCog(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), num(sichtCont.l));
+    const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
+    const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
     //    (statCards/primaryMeter). cogOpen steuert die Details-Schublade (Balken + Gewichtsverteilung). ──
     // Gruen hiess bisher nur "Gewicht und Auslastung sind in Ordnung" — auch dann, wenn
@@ -6457,10 +6549,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel
       && (sugKosten.n < ketteKosten.n || (sugKosten.n === ketteKosten.n && sugKosten.vol < ketteKosten.vol - 1e-6)));
     const zeigeBanner = offenGesamt > 0 || empfBesser || !!result.rotHintAll;
-    const doorOpening = container.door && preset !== "Custom" ? container.door : { w: num(container.w), h: num(container.h) };
+    // Die Tueroeffnung des Containers, ueber den gerade geredet wird. Ein Folgecontainer
+    // kann eine andere haben als der gewaehlte.
+    const doorOpening = sichtCont.door && (fokusSlot || preset !== "Custom") ? sichtCont.door : { w: num(sichtCont.w), h: num(sichtCont.h) };
     // Special Equipment wird von oben/seitlich beladen – die Tuerpruefung ist hier nicht aussagekraeftig.
-    const doorPlaced = manualMode ? manualPlaced || [] : (result.chain && result.chain[0] && result.chain[0].placed) || result.placed || [];
-    const doorCheck = container.kind && container.kind !== "dry" ? { idx: /* @__PURE__ */ new Set(), critical: null } : doorFailCheck(cargo, doorOpening, doorPlaced);
+    const doorPlaced = manualMode ? manualPlaced || [] : sichtPlaced;
+    const doorCheck = sichtCont.kind && sichtCont.kind !== "dry" ? { idx: /* @__PURE__ */ new Set(), critical: null } : doorFailCheck(cargo, doorOpening, doorPlaced);
     const doorFails = cargo.filter((_, i) => doorCheck.idx.has(i));
     const oogRows = result.oog ? [["overHeight", T.oogH], ["overWidthL", T.oogWL], ["overWidthR", T.oogWR], ["overLengthFront", T.oogLF], ["overLengthBack", T.oogLB]].filter(([k]) => (result.oog[k] || 0) > 0).map(([k, lbl]) => ({ lbl, v: Math.round(result.oog[k]) })) : [];
     const buildLadevorschlag = () => {
@@ -6597,7 +6691,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.dim } }, T.cargoEmpty),
           /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.xs, lineHeight: 1.45 } }, T.cargoEmptyHint)) : null,
         cargo.map((c, i) => {
-      const pt = (result.perTypeAll || result.perType)[i];
+      // Mit Fokus zaehlt die Zeile, was in DIESEM Container liegt -- sonst stuende neben
+      // einem Container mit zwei Stueck eine "9 / 9"-Pille.
+      const pt = sichtPerType[i];
       const done = pt && pt.total > 0 && pt.loaded >= pt.total;
       const col = colorOf(c, i);
       const open = openCargo === c.id;
@@ -6644,7 +6740,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi } }, e.label),
               e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 4 } }, e.sub) : null))
-        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
+        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(result && result.chain && result.chain[0] && result.chain[0].placed && result.chain[0].placed.length), T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
           /* @__PURE__ */ React.createElement("span", null, T.footR),
           // Der Weg zurueck. Er stand hier als unterstrichene Textstelle in derselben Farbe wie
           // die Fusszeile drumherum -- gemeldet als "zu unscheinbar", und das war er auch:

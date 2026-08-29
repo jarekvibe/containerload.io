@@ -506,6 +506,37 @@ Drei Stellen zählen deshalb jetzt den ganzen Plan:
 
 `kettenBilanz` steht bewusst **hinter `var MAXCHAIN` und vor `chainContainers`** — die Test-Slices schneiden genau diesen Bereich heraus.
 
+### Der Fokus: worüber die Oberfläche gerade spricht
+Gemeldet: *„Ich finde, dass das Tool aktuell mehr darauf ausgelegt ist, die Darstellung für einen Container zu machen, wir sollten uns aber auch darum kümmern, wie es ist wenn mehrere Container zustande kommen."*
+
+Nachgesehen, Zeile für Zeile: **neun Stellen** kannten nur den ersten Container — manueller Modus, Ladevorschlag, CSV, Schwerpunkt, Türprüfung, Übermaß, Ergebnisleiste, Ansicht, und die Zuweisung gab es gar nicht. Acht davon haben **dieselbe Ursache**: Es gab keinen Begriff dafür, welcher Container gemeint ist, also nahm sich jede Stelle den erstbesten.
+
+**Der Fokus ist dieser Begriff** — eine einzige Zustandsvariable: `"alle"` oder der Index eines Containers.
+
+| | |
+|---|---|
+| Er gehört zum **Hinsehen**, nicht zur Sendung | Deshalb steht er weder im `?c=`-Link noch im Entwurf. Ein geteilter Plan öffnet auf „alle" |
+| Bedient wird er **im Bild** | Die Pille „2 Container · mit dieser Wahl" ist der Weg zurück zu „alle"; die Marke `C1`/`C2` in der Slot-Zeile setzt den Fokus. Das Auswahlfeld daneben bleibt, was es war — es wählt den **Typ**. Zwei Handlungen, zwei Ziele, eine Zeile |
+| Ein **Wächter** hält ihn gültig | Wird die Ladung kleiner, ein Plan geladen, die Domäne gewechselt oder der manuelle Modus eingeschaltet (der die Kette auf einen Container zusammenklappt), fällt er auf „alle" zurück. Sonst stünden in der Leiste die Zahlen eines Slots, den es nicht mehr gibt |
+
+**Die Naht heißt `sicht*`.** Alles, was die Leiste, die Ladungsliste, die Türprüfung und der Schwerpunkt lesen, läuft über `sichtCont` / `sichtPlaced` / `sichtVol` / `sichtKg` / `sichtBoxes` / `sichtPerType` statt über `result.*` und `container.*`. **Ohne Fokus ist das Wort für Wort das alte Verhalten** (der erste Container); mit Fokus derselbe Satz Zahlen für einen anderen. Wer eine neue Kennzahl einbaut, liest die Sicht — sonst fällt genau sie beim Umschalten aus der Reihe.
+
+Zwei Dinge ändern sich dabei sichtbar, und beide mit Absicht:
+- **Die Marke „C1" verschwindet mit Fokus.** Sie sagt, dass die Leiste nur den ersten Container zählt — steht oben im Bild, worüber geredet wird, ist sie überflüssig.
+- **„Verladen" bekommt keinen Nenner mehr.** „24 Stück" in diesem Container, nicht „24 / 31" — die 31 gehören dem Plan, nicht dem Container.
+
+**Im Bild verschwindet die Ladung der anderen, nicht ihre Hülle.** Ganz ausblenden wäre verwirrend (wo ist der zweite Container?), unverändert stehenlassen auch (was ist gemeint?). Ausgeblendet werden nur Objekte, die zu **einem** Container gehören: seine Instanzsätze (`cg.userData.boxMeshes`) und die Kantenlinien (`userData.ladung`).
+
+> **Finger weg von den Hüllen-Materialien.** Sie kommen aus `shellCache` und sind zwischen **gleich großen** Containern geteilt. Wer dort die Deckkraft senkt, blasst den fokussierten mit ab. `test/fokus-je-container.test.mjs` prüft ausdrücklich, dass `fokusAnwenden` keine Materialien anfasst.
+
+**Der Fokuswechsel baut die Szene nicht neu.** `fokusAnwenden` hängt an einem eigenen Effekt (`[fokus, result]`); der große Aufbau-Effekt ruft es am Ende zusätzlich auf, weil er auch ohne Fokuswechsel läuft. Andernfalls liefe die Aufbau-Animation bei jedem Klick von vorn und der Wechsel kostete bei 1.900 Kisten eine halbe Sekunde. Die Kamera passt über `camFit` auf `t.frame.slots[i]` ein — dieselbe Einpassung, die der Bildexport je Container längst benutzt.
+
+**Die wichtigste Zusage ist eine negative: der Fokus ändert keine einzige Zahl**, nur welche gezeigt wird. `test/fokus-je-container.test.mjs` prüft beides — die Arithmetik (die Sichten summieren sich über 40 Zufallsketten auf die Kettenbilanz, kein Stück zählt zweimal) **und** den Vertrag im Quelltext. Eine nachgebaute Rechnung allein sagt nichts darüber, was die Oberfläche liest.
+
+> **Noch offen aus demselben Entwurf:** Ladevorschlag und CSV je Container (Schritt 03), das Weiterpacken auf einer Vorbelegung (04), die Zuweisung je Position (05) und der manuelle Modus je Container (06). Entschieden ist: die Zuweisung heißt **„dort zuerst"**, nicht „nur dort" — gemessen an der gemeldeten Sendung landen unter „nur dort" **2 von 9** gepinnten Stücken im Container, unter „dort zuerst" **8 von 9** (mehr passen auch allein nicht hinein). Geht eine Zuweisung nicht auf, bleibt das Stück **offen** und sagt es; es rutscht nicht heimlich weiter.
+
+> **Nebenbefund, nicht von dieser Änderung:** Die Ergebnisleiste ist bei **1440 und 1500 px zweizeilig**, obwohl oben steht, sie bleibe bis 1800 px einzeilig. Gegen `origin/main` gemessen — identisch, also älter als der Fokus. Eigene Baustelle.
+
 ### Die Kamera darf ihren Mittelpunkt verlassen
 Die 3D-Ansicht kreiste um `t.target`, und das war die **Mitte der Reihe**. Zoomen hieß damit immer „in die Mitte hinein" — bei drei Containern also in die Lücke zwischen dem ersten und dem zweiten. An den ersten oder letzten Container kam man gar nicht heran. Drei Wege heraus, alle drei Standard in 3D-Betrachtern:
 
