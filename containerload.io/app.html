@@ -1580,7 +1580,48 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // ── Special Equipment: Ueberstand-Platzierung, OOG-Vermessung, deck-faehiger Packer ──
   // Reine Geometrie. Das Tool entscheidet KEINE Physik (Gewichtsverteilung/Sicherung) –
   // es optimiert nur innerhalb der Nutzervorgabe (forceCentered = "mittig stauen erzwingen").
-  // Indikative Laengs-Gewichtsverteilung. KEINE Physik-Garantie, KEINE Achslast.
+  // ── Achslast-Richtwert fuer die Landfracht ────────────────────────────────────────
+  //
+  // Bis August 2026 stand in jeder Fusszeile "keine Achslast-Garantie", und das war die
+  // ganze Antwort. Dabei liegt alles Noetige laengst vor: die Laengsposition jedes
+  // Packstuecks (x) und sein Gewicht. Was fehlte, war die Geometrie des Fahrzeugs.
+  //
+  // Die steht hier -- als TYPISCHE Geometrie, offen als Richtwert ausgewiesen, nur fuer
+  // den Sattelzug (das Arbeitspferd; fuer die uebrigen Fahrzeuge waere jede Zahl geraten,
+  // also gibt es dort keine). Masse in cm ab der STIRNWAND der Ladeflaeche, Gewichte in kg:
+  //   * zapfen 160: Koenigszapfen ~1,6 m hinter der Front (Vormass 2.040 mm Drehradius
+  //     ergibt ~1,6 m Ueberhang; Zapfen-zu-Heck max. 12,0 m nach 96/53/EG, und
+  //     160 + 1200 = 13,60 m passt zur 13,62-m-Ladeflaeche).
+  //   * aggregat 1030: Mitte des Dreiachs-Aggregats (Radstand im Aggregat typ. 1,31 m,
+  //     Heckueberhang hinter der letzten Achse ~2,3 m).
+  //   * tara 7000 / taraSp 845: Curtainsider leer ~7 t; der Schwerpunkt so gelegt, dass
+  //     leer ~1,5 t Stuetzlast herauskommen -- das ist die Groessenordnung realer Auflieger.
+  //   * zapfenMax 11000: EU-typisch eingetragene Sattellast einer 4x2-Maschine.
+  //   * aggregatMax 24000: Dreifachachse nach Par. 34 StVZO (Achsabstand > 1,3 m).
+  // Reale Fahrzeuge weichen ab; genau deshalb heisst die Anzeige Richtwert und die
+  // Annahmen stehen SICHTBAR daneben (T.axleAssume), nicht nur hier im Kommentar.
+  var ACHSEN = {
+    "Planensattel": { zapfen: 160, aggregat: 1030, tara: 7000, taraSp: 845, zapfenMax: 11000, aggregatMax: 24000 }
+  };
+  // Balkenstatik mit zwei Stuetzen (Koenigszapfen, Aggregat-Mitte): Momentengleichgewicht
+  // um den Zapfen. Exakt fuer die angenommene Geometrie -- die Naeherung steckt in den
+  // Konstanten oben, nicht in dieser Rechnung.
+  function achslasten(placed, weightOf, A) {
+    let m = A.tara, mom = A.tara * (A.taraSp - A.zapfen), ladung = 0;
+    for (const p of placed) {
+      const w = Math.max(0, +weightOf(p.ti) || 0);
+      if (w === 0) continue;
+      const cx = (+p.x || 0) + (+p.dx || 0) / 2;
+      m += w; ladung += w;
+      mom += w * (cx - A.zapfen);
+    }
+    const aggregat = mom / (A.aggregat - A.zapfen);
+    // Zapfen = Rest. Er KANN negativ werden -- die Ladung liegt dann so weit hinten, dass
+    // der Auflieger vorne abheben wuerde. Das ist keine Rechenpanne, sondern die Warnung.
+    return { zapfen: m - aggregat, aggregat, gesamt: m, ladung };
+  }
+  // Indikative Laengs-Gewichtsverteilung. KEINE Physik-Garantie, KEINE Achslast im Detail --
+  // fuer den Sattelzug gibt es daneben den Achslast-Richtwert (ACHSEN/achslasten).
   // Rein aus Geometrie + Stueckgewichten. Ergebnis ist ein Richtwert ohne Gewaehr.
   // placed: [{x,dx,ti,...}], weightOf: (ti)=>Stueckgewicht in kg, contLenCm: Innenlaenge (cm)
   function computeLongCog(placed, weightOf, contLenCm) {
@@ -2629,6 +2670,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       volUtil: "Volumenauslastung",
       payloadUtil: "Zuladung",
       cogTitle: "Gewichtsverteilung (l\xE4ngs)",
+      axleTitle: "Achslasten \xB7 Sattelzug",
+      axleKing: "St\xFCtzlast (Sattelzugmaschine)",
+      axleGroup: "Achsaggregat (3 Achsen)",
+      axleNeg: "Die Ladung liegt so weit hinten, dass die St\xFCtzlast negativ w\xFCrde. So darf der Auflieger nicht fahren.",
+      axleAssume: "Typische Geometrie: K\xF6nigszapfen 1,6 m hinter der Stirnwand, Aggregat-Mitte bei 10,3 m, Leergewicht 7 t. Grenzen: 11 t Sattellast (EU-typisch), 24 t Dreifachachse (\xA7 34 StVZO). Reale Fahrzeuge weichen ab.",
       cogNoGuarantee: "Richtwert \xB7 ohne Gew\xE4hr",
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
@@ -2935,6 +2981,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       volUtil: "Volume usage",
       payloadUtil: "Payload",
       cogTitle: "Weight distribution (lengthwise)",
+      axleTitle: "Axle loads \xB7 semi-trailer",
+      axleKing: "Kingpin load (tractor unit)",
+      axleGroup: "Axle group (3 axles)",
+      axleNeg: "The load sits so far back that the kingpin load would go negative. The trailer must not run like this.",
+      axleAssume: "Typical geometry: kingpin 1.6 m behind the front wall, axle-group centre at 10.3 m, tare 7 t. Limits: 11 t fifth-wheel load (EU-typical), 24 t tri-axle group (per German StVZO). Real vehicles differ.",
       cogNoGuarantee: "Estimate \xB7 no guarantee",
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
@@ -3940,6 +3991,54 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // einer Containerseite die Stauplan-Zeichnung steht -- ein Platz, zwei Inhalte, und die
   // Seite bleibt dieselbe Vorlage. Die Zahlen kommen aus slotRows, also aus derselben
   // Quelle wie die Tabelle in der Details-Schublade und die Kacheln im Bildexport.
+  // Die Belade-Reihenfolge: die nummerierte Liste, nach der an der Rampe tatsaechlich
+  // geladen wird. Der Stauplan sagt, WO alles steht; diese Liste sagt, in welcher
+  // REIHENFOLGE es hineinkommt -- Stirnwand zuerst, Tuer zuletzt, unten vor oben.
+  //
+  // Gruppiert wird nach LAEUFEN: aufeinanderfolgende Stuecke derselben Sorte sind EIN
+  // Schritt ("8x Palette, 0 bis 3,2 m ab Stirnwand"). Seit "ordentlich stauen" liegt
+  // gleiche Ware ohnehin im Block, die Liste bleibt also kurz. Wird sie trotzdem lang
+  // (wilde Mischladung), zeigt sie die ersten 16 Schritte und sagt, dass mehr folgen --
+  // eine 40-Schritte-Liste liest an der Rampe niemand.
+  var LV_SEQUENZ = (placed, cargo, lang, tiColor) => {
+    if (!placed || placed.length < 2) return "";
+    const en = lang === "en";
+    const loc = en ? "en-US" : "de-DE";
+    const K = en
+      ? { titel: "LOADING SEQUENCE", h2: "Load in this order", sub: "Front wall first, door last. Bottom before top.",
+          ab: "from front wall", mehr: (n) => `+ ${n} more steps — full detail in the 3D plan (QR)` }
+      : { titel: "BELADE-REIHENFOLGE", h2: "In dieser Reihenfolge laden", sub: "Stirnwand zuerst, Tür zuletzt. Unten vor oben.",
+          ab: "ab Stirnwand", mehr: (n) => `+ ${n} weitere Schritte — vollständig im 3D-Plan (QR)` };
+    // Ladereihenfolge: von der Stirnwand (x klein) zur Tuer, im selben Stellplatz von
+    // unten nach oben -- dieselbe Ordnung wie loadingOrder fuer den Rang je Position.
+    const folge = [...placed].sort((a2, b2) => a2.x - b2.x || a2.y - b2.y || a2.z - b2.z || a2.ti - b2.ti);
+    const schritte = [];
+    for (const p2 of folge) {
+      const letzt = schritte[schritte.length - 1];
+      if (letzt && letzt.ti === p2.ti) { letzt.n++; letzt.bis = Math.max(letzt.bis, p2.x + p2.dx); }
+      else schritte.push({ ti: p2.ti, n: 1, von: p2.x, bis: p2.x + p2.dx });
+    }
+    const m = (cm) => (Math.round(cm / 10) / 10).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const MAX = 16;
+    const zeilen = schritte.slice(0, MAX).map((sc, i) => {
+      const it = cargo[sc.ti] || {};
+      const nm = escHTML(it.name || (en ? "Item " : "Position ") + (sc.ti + 1));
+      return `<div style="display:flex; align-items:baseline; gap:10px; padding:5px 0; border-bottom:1px solid #f0f1f4;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0c1320; min-width:22px;">${String(i + 1).padStart(2, "0")}</span>
+        <span style="width:9px; height:9px; border-radius:2px; background:${tiColor[sc.ti] || "#94a3b8"}; flex:none; align-self:center;"></span>
+        <span style="font-size:11px; font-weight:600; color:#0c1320;">${sc.n}× ${nm}</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#8b96a6; margin-left:auto;">${m(sc.von)}–${m(sc.bis)} m ${K.ab}</span>
+      </div>`;
+    }).join("");
+    const rest = schritte.length > MAX
+      ? `<div style="font-size:9.5px; color:#8b96a6; padding-top:6px;">${K.mehr(schritte.length - MAX)}</div>` : "";
+    return `<div style="margin-top:18px;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; color:#8b96a6; margin-bottom:2px;">${K.titel}</div>
+      <div style="font-size:13px; font-weight:700; color:#0c1320;">${K.h2}</div>
+      <div style="font-size:9.5px; color:#8b96a6; margin-bottom:6px;">${K.sub}</div>
+      ${zeilen}${rest}
+    </div>`;
+  };
   var LV_UEBERSICHT = (reihen, lang) => {
     const en = lang === "en";
     const K = en
@@ -6959,6 +7058,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
     // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
     const cog = computeLongCog(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), num(sichtCont.l));
+    // Achslast-Richtwert: nur Landfracht, nur Fahrzeuge mit hinterlegter Geometrie (heute
+    // der Sattelzug). Liest dieselbe Sicht wie der Schwerpunkt -- mit Fokus also den
+    // fokussierten Auflieger, ohne Fokus den ersten.
+    const achsGeo = domain === "road" ? ACHSEN[fokusSlot ? fokusSlot.name : preset] : null;
+    const achs = achsGeo && sichtPlaced.length ? achslasten(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), achsGeo) : null;
     const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
@@ -7054,6 +7158,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               /* @__PURE__ */ React.createElement("span", null, T.cogRearShare, ": ", Math.round(cog.rearPct), "%")
             ),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.cogDisclaimer)
+          ),
+          achs && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: SP.s } },
+            /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" },
+              /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.axleTitle),
+              /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, padding: `2px ${SP.s}px`, background: hexA(C.warn, 0.16), color: C.warn } }, T.cogNoGuarantee)
+            ),
+            achs.zapfen < 0
+              ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: C.bad, fontWeight: FW.semi } }, T.axleNeg)
+              : /* @__PURE__ */ React.createElement(React.Fragment, null,
+                  /* @__PURE__ */ React.createElement(Meter, { label: T.axleKing, pct: Math.min(100, achs.zapfen / achsGeo.zapfenMax * 100), color: AC, text: `${fmtDE(Math.round(achs.zapfen))} / ${fmtDE(achsGeo.zapfenMax)} kg`, over: achs.zapfen > achsGeo.zapfenMax }),
+                  /* @__PURE__ */ React.createElement(Meter, { label: T.axleGroup, pct: Math.min(100, achs.aggregat / achsGeo.aggregatMax * 100), color: AC, text: `${fmtDE(Math.round(achs.aggregat))} / ${fmtDE(achsGeo.aggregatMax)} kg`, over: achs.aggregat > achsGeo.aggregatMax })
+                ),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
           )
         )
       )
@@ -7228,7 +7345,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
           // An der Stelle der Zeichnung steht auf dem Deckblatt die Uebersicht je Container.
-          STOWAGE: mehrere ? LV_UEBERSICHT(slotRows, LANG) : STOWAGE,
+          STOWAGE: mehrere ? LV_UEBERSICHT(slotRows, LANG) : STOWAGE + LV_SEQUENZ(placed, cargo, LANG, tiColor),
           SEITE: seitenText(1)
         });
         const blaetter = [deck];
@@ -7277,7 +7394,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 // qty der Legende ist die Menge IN DIESEM Container. Sonst stuende unter der
               // Zeichnung eines Containers mit zwei Stueck "9x".
               legend: Object.keys(tiC).map((ti) => ({ ti: +ti, pos: tiP[ti], color: tiC[ti], it: { ...cargo[+ti], qty: jeSorte[+ti] } })).sort((a, b) => a.pos - b.pos),
-                LANG, chainLen: 1 }),
+                LANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, LANG, tiC),
               SEITE: seitenText(ci + 2)
             }));
           });
