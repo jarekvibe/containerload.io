@@ -136,6 +136,34 @@ b{color:var(--text);font-weight:700}
   padding:14px 16px;margin:14px 0;overflow-x:auto;
 }
 
+/* ── CBM-Rechner ───────────────────────────────────────── */
+/* Kleines interaktives Widget auf den beiden CBM-Seiten (DE/EN), direkt unter der
+   Einleitung. Dieselbe Fläche wie .answer/.formula — ein Markenton, kein Verlauf,
+   die zwei erlaubten Radien (r-s an den Feldern, r-m an der Karte). */
+.cbm-calc{
+  background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-m);
+  padding:18px 20px;margin:20px 0;
+}
+.cbm-calc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.cbm-calc .field{display:flex;flex-direction:column;gap:6px}
+.cbm-calc label{
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--faint);
+}
+.cbm-calc input{
+  font-family:var(--mono);font-size:14px;color:var(--text);background:var(--deep);
+  border:1px solid var(--line-2);border-radius:var(--r-s);padding:9px 10px;width:100%;
+}
+.cbm-calc input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cbm-calc-result{
+  margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
+  font-size:15px;color:var(--dim);
+}
+.cbm-calc-result b{color:var(--text);font-family:var(--mono);font-weight:700}
+@media(max-width:560px){
+  .cbm-calc-grid{grid-template-columns:1fr 1fr}
+}
+
 .cta{display:flex;flex-wrap:wrap;gap:10px;margin:26px 0 8px}
 
 /* ── Tabellen: Zahlen stehen untereinander ─────────────── */

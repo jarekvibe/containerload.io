@@ -11,6 +11,12 @@
 //     Zahl darf nicht umbrechen). Die Tabelle wurde dadurch breiter als das Fenster.
 //   Rechner: Marke, Sprachwahl, Planname, Speichern, Teilen und "…" brauchen zusammen
 //     479 px in einer Zeile.
+//   Startseite, Kopfzeile "Tool öffnen": bei 390 px reichte die rechte Kante des Knopfs
+//     bis 410 px — die Nav-Elemente (Aussenabstand, Nav-Innenabstand, der Abstand vor dem
+//     Burger und das Knopf-Polster) waren fuer ein schmales Telefon zu breit gerechnet.
+//     Unter dem vorhandenen sm-Umbruch (640 px, dort schaltet ohnehin die Sprachwahl frei)
+//     bekommen sie kleinere, aus der Abstandsreihe 4/8/12/16 stammende Werte; ab 640 px
+//     bleiben es exakt die alten Werte (sm:-Variante).
 //
 // node --test test/mobil.test.mjs
 import fs from "node:fs";
@@ -69,4 +75,28 @@ test("die Kopfzeile des Rechners darf auf dem Telefon umbrechen", () => {
   assert.match(davor, /className: "hidden sm:flex"/, "die Sprachwahl im Kopf laesst sich nicht mehr ausblenden");
   assert.ok(!/className: "hidden sm:flex", style: \{ display: "flex"/.test(davor),
     "display:flex steht wieder fest im style-Attribut und schlaegt die Klasse");
+});
+
+test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', () => {
+  // Gemessen: rechte Kante bei 390 px reichte bis 410 px. Die Elemente vor dem Burger
+  // (Aussenabstand der Nav-Leiste, Nav-Innenabstand rechts, Abstand vor dem Burger,
+  // Knopf-Polster) bekommen deshalb unter dem vorhandenen sm-Umbruch (640 px) kleinere
+  // Werte aus der Abstandsreihe 4/8/12/16 — ab 640 px exakt die alten Werte.
+  const s = lies("index.html");
+
+  const aussen = s.match(/<div class="fixed top-3 inset-x-0 z-50 ([^"]+)">\s*<nav id="nav"/);
+  assert.ok(aussen, "der Nav-Aussenrahmen wurde nicht gefunden");
+  assert.match(aussen[1], /\bpx-2 sm:px-3\b/, "der Aussenabstand der Nav-Leiste ist auf dem Telefon nicht verkleinert");
+
+  const nav = s.match(/<nav id="nav" class="([^"]+)">/);
+  assert.ok(nav, "die Nav-Leiste wurde nicht gefunden");
+  assert.match(nav[1], /\bpr-1 sm:pr-2\b/, "der rechte Nav-Innenabstand ist auf dem Telefon nicht verkleinert");
+
+  const i = s.indexOf('data-i18n="nav_open"');
+  assert.ok(i > -1, 'der Knopf "Tool öffnen" wurde nicht gefunden');
+  const zeile = s.slice(Math.max(0, i - 700), i + 200);
+  assert.match(zeile, /class="flex items-center gap-1 sm:gap-2"/,
+    "der Abstand vor dem Burger ist auf dem Telefon nicht verkleinert");
+  assert.match(zeile, /class="btn btn-primary text-\[13px\] px-2 sm:px-4 py-2"/,
+    "das Knopf-Polster ist auf dem Telefon nicht verkleinert");
 });

@@ -47,6 +47,46 @@
     <div class="eyebrow">Container-Wissen · Frachtberechnung</div>
     <h1>CBM berechnen: Kubikmeter der Ladung</h1>
     <div class="answer"><p class="lead" style="margin:0"><b>CBM</b> (Kubikmeter) = <b>Länge × Breite × Höhe</b> in Metern, mal <b>Stückzahl</b>. Das ist das Ladevolumen deiner Sendung — die Basis für Seefracht-Angebote (LCL) und die Container-Auslastung.</p></div>
+
+    <div class="cbm-calc" data-cbm-widget>
+      <div class="cbm-calc-grid">
+        <div class="field"><label for="cbmL">Länge (cm)</label><input type="number" id="cbmL" inputmode="decimal" min="0" step="any" placeholder="120" /></div>
+        <div class="field"><label for="cbmW">Breite (cm)</label><input type="number" id="cbmW" inputmode="decimal" min="0" step="any" placeholder="80" /></div>
+        <div class="field"><label for="cbmH">Höhe (cm)</label><input type="number" id="cbmH" inputmode="decimal" min="0" step="any" placeholder="110" /></div>
+        <div class="field"><label for="cbmQty">Stückzahl</label><input type="number" id="cbmQty" inputmode="numeric" min="1" step="1" value="1" /></div>
+      </div>
+      <div class="cbm-calc-result" id="cbmResult">Länge, Breite und Höhe eingeben, um das Volumen zu berechnen.</div>
+    </div>
+    <script>
+    (function(){
+    // CBM_CALC_START
+    function cbmBerechnen(l, w, h, qty) {
+      var L = Number(l), W = Number(w), H = Number(h), Q = Number(qty);
+      if (!(L > 0) || !(W > 0) || !(H > 0) || !(Q > 0)) return null;
+      var stueck = (L * W * H) / 1000000;
+      return { stueck: stueck, gesamt: stueck * Q, menge: Q };
+    }
+    // CBM_CALC_END
+      var elL = document.getElementById('cbmL');
+      var elW = document.getElementById('cbmW');
+      var elH = document.getElementById('cbmH');
+      var elQ = document.getElementById('cbmQty');
+      var out = document.getElementById('cbmResult');
+      function aktualisieren() {
+        var r = cbmBerechnen(elL.value, elW.value, elH.value, elQ.value);
+        if (!r) { out.textContent = 'Länge, Breite und Höhe eingeben, um das Volumen zu berechnen.'; return; }
+        var fmt = function(n) { return n.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
+        if (r.menge > 1) {
+          out.innerHTML = '<b>' + fmt(r.stueck) + ' m³</b> je Stück · <b>' + fmt(r.gesamt) + ' m³</b> gesamt';
+        } else {
+          out.innerHTML = '<b>' + fmt(r.stueck) + ' m³</b>';
+        }
+      }
+      [elL, elW, elH, elQ].forEach(function(el){ el.addEventListener('input', aktualisieren); });
+      aktualisieren();
+    })();
+    </script>
+
     <h2>Die Formel</h2>
     <div class="formula">CBM = L (m) × B (m) × H (m) × Stückzahl</div>
     <p>Wichtig: alle Maße in <b>Metern</b>. Zentimeter zuerst durch 100 teilen (60&nbsp;cm = 0,6&nbsp;m).</p>
