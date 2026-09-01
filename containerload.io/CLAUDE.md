@@ -818,10 +818,18 @@ Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Häl
 
 `test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
 
-### Der CBM-Rechner auf den CBM-Seiten
-Der Wettbewerb führt einen freien CBM-Rechner als eigene Seite. Wir werten stattdessen die zwei **bestehenden, indexierten** Seiten auf (`/ratgeber/cbm-berechnen`, `/en/guide/how-to-calculate-cbm`): ein kleines Widget direkt unter der Einleitung — L/B/H in cm plus Stückzahl, live m³ je Stück und gesamt. Eine dritte Seite wäre eine konkurrierende Seite im eigenen Suchindex.
+### Der CBM-Rechner — auf den CBM-Seiten und auf der Startseite
+Der Wettbewerb führt einen freien CBM-Rechner als eigene Seite. Wir werten stattdessen die zwei **bestehenden, indexierten** Seiten auf (`/ratgeber/cbm-berechnen`, `/en/guide/how-to-calculate-cbm`) — und die Startseite trägt denselben Rechner als eigenen Abschnitt (`#cbm`). Eine vierte, eigene Rechner-Seite wäre eine konkurrierende Seite im eigenen Suchindex.
 
-Der Rechenkern ist eine reine Funktion zwischen den Markern `// CBM_CALC_START` / `// CBM_CALC_END`, **identisch auf beiden Seiten** — `test/cbm-widget.test.mjs` schneidet sie aus beiden heraus und rechnet sie nach (120×80×110 = 1,056 m³; ×26 = 27,456). Zahlformat je Sprache (`de-DE`/`en-US`, drei Nachkommastellen), jedes Feld mit sichtbarem `<label>`, Stil aus `wissen.css` (`.cbm-calc*`, dieselben Flächen wie `.answer`/`.formula`).
+Was er kann, und warum genau das:
+
+- **Mehrere Positionen** (Zeile hinzufügen/entfernen) — eine Sendung besteht selten aus einer Ware.
+- **Gewicht je Position und das frachtpflichtige Gewicht (W/M)** nach der Faustregel 1 cbm = 1.000 kg. Die CBM-Seite erklärt genau diese Regel im Text; ein Rechner daneben, der sie nicht rechnet, wäre halb. **Fehlt auch nur ein Gewicht, gibt es KEIN W/M** — ein halb gewogenes Maximum wäre eine falsche Zahl mit amtlichem Klang.
+- **„Im 3D-Rechner ansehen"** baut aus den Zeilen einen `?q=`-Import (`26x 120x80x110 300kg`, je Zeile eine Position). Der Wunsch dahinter war eine „Mini-3D-Ansicht" auf der Wissensseite — die wird **nicht nachgebaut**: die 3D-Ansicht mit Stellplätzen und Auslastung existiert, sie ist das Produkt, und sie ist einen Klick entfernt, mit der Ladung vorbefüllt. Die englische Seite hängt `&lang=en` an — auch am **statischen** Platzhalter-`href`, `test/container-guide-en.test.mjs` prüft statische Links.
+
+Zwei Bausteine, **wörtlich identisch auf allen drei Seiten** und von `test/cbm-widget.test.mjs` auf Gleichheit geprüft: der Rechenkern (`// CBM_CALC_START/END`) und die Oberfläche (`// CBM_UI_START/END`). Drei Kopien, die auseinanderlaufen dürfen, wären drei Rechner mit drei Meinungen. Seitenspezifisch ist nur `cbmCfg` (Texte, Zahlformat, `?q=`-Ziel).
+
+**Die Startseite wechselt die Sprache ohne Neuladen**, und die Widget-Zeilen entstehen per JS — `data-i18n` kennt sie nicht. Deshalb ruft `setLang` am Ende `window.__cbmNeu()`, und `zeichnen()` zieht die Beschriftungen der stehenden Zeilen nach. Ohne den Haken stünde das Widget nach dem Umschalten halb deutsch da.
 
 ### Die Startseite verkauft, der Rechner bedient
 Ausgelöst durch einen Wettbewerber, der zwei Monate nach uns gestartet ist und dessen Seite „erschreckend clean" wirkte. Beim Nachsehen war der Unterschied **nicht die Gestaltung**: Ihre Startseite ist eine **Verkaufsseite**, unsere war ein **Werkzeug mit Seite drumherum**. Ihre Maschine ist übrigens unsere — „an extreme-point algorithm … mixed box sizes, stacks and orientations" und „a mixed fleet when the last container would ship nearly empty" beschreiben `emsSearch` und die Volumenregel in `ketteBesser`. Rechnerisch lagen wir nicht zurück, im Schaufenster schon.
