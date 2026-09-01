@@ -831,6 +831,8 @@ Zwei Bausteine, **wörtlich identisch auf allen drei Seiten** und von `test/cbm-
 
 Auf der Startseite steht `#cbm` **zwischen der Demo und dem Excel-Import**, volle Breite, Überschrift links — dieselbe Grammatik wie „Funktionen". Begründung: Der CBM-Rechner ist das einzige Element der Startseite, das man benutzen kann, ohne die Seite zu verlassen; die Seite eskaliert damit ansehen → ausprobieren → eigene Packliste → Funktionen. Die erste Fassung war zentriert und schmal (`max-w-3xl`) und stand unter dem rechtsbündigen Import — Jarek hat den Bruch sofort gesehen. Ein Abschnitt, der aus der Seitengrammatik fällt, wirkt angeklebt.
 
+Das Einfügefeld der Import-Box (`#impPaste`) zeigte früher eine vierzeilige Beispiel-Packliste als Platzhalter — in Feldfarbe gerendert sah das aus wie vorgeschriebener Inhalt, den man erst löschen muss. Jarek: „überhaupt nicht clean". Jetzt: einzeiliger Platzhalter in `--faint` (`::placeholder` explizit gesetzt, sonst rendert Chrome ihn in Textfarbe), und das Beispiel liegt hinter „Beispiel einfügen" (`#impDemo`) — das schreibt **echten** Inhalt ins Feld, der Knopf darunter wird aktiv, ein Klick weiter steht die Liste im 3D-Rechner. Ein Platzhalter, der wie Inhalt aussieht, ist kein Beispiel, sondern eine Hürde.
+
 **Die Startseite wechselt die Sprache ohne Neuladen**, und die Widget-Zeilen entstehen per JS — `data-i18n` kennt sie nicht. Deshalb ruft `setLang` am Ende `window.__cbmNeu()`, und `zeichnen()` zieht die Beschriftungen der stehenden Zeilen nach. Ohne den Haken stünde das Widget nach dem Umschalten halb deutsch da.
 
 ### Die Startseite verkauft, der Rechner bedient
