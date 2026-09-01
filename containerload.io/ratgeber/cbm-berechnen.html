@@ -47,6 +47,120 @@
     <div class="eyebrow">Container-Wissen · Frachtberechnung</div>
     <h1>CBM berechnen: Kubikmeter der Ladung</h1>
     <div class="answer"><p class="lead" style="margin:0"><b>CBM</b> (Kubikmeter) = <b>Länge × Breite × Höhe</b> in Metern, mal <b>Stückzahl</b>. Das ist das Ladevolumen deiner Sendung — die Basis für Seefracht-Angebote (LCL) und die Container-Auslastung.</p></div>
+
+        <div class="cbm-calc" data-cbm-widget>
+      <div id="cbmRows"></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="cbmAdd" class="cbm-add">+</button>
+        <a id="cbmZur3d" class="cbm-open" hidden href="/app"></a>
+      </div>
+      <div class="cbm-calc-result" id="cbmResult"></div>
+    </div>
+    <script>
+    (function(){
+    // CBM_CALC_START
+    function cbmBerechnen(l, w, h, qty) {
+      var L = Number(l), W = Number(w), H = Number(h), Q = Number(qty);
+      if (!(L > 0) || !(W > 0) || !(H > 0) || !(Q > 0)) return null;
+      var stueck = (L * W * H) / 1000000;
+      return { stueck: stueck, gesamt: stueck * Q, menge: Q };
+    }
+    function cbmSumme(zeilen) {
+      var vol = 0, stk = 0, kg = 0, alleKg = true, gueltig = 0;
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = cbmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].h, zeilen[i].qty);
+        if (!r) continue;
+        gueltig++;
+        vol += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig nach der Faustregel 1 cbm = 1.000 kg (W/M) -- aber nur, wenn JEDE
+      // gueltige Zeile ein Gewicht traegt. Ein halb gewogenes Maximum waere eine falsche Zahl.
+      return { vol: vol, stk: stk, kg: kg, frachtKg: alleKg ? Math.max(vol * 1000, kg) : null, zeilen: gueltig };
+    }
+    // CBM_CALC_END
+    var cbmCfg = {
+      t: function () { return { l: 'L\u00e4nge (cm)', w: 'Breite (cm)', h: 'H\u00f6he (cm)', q: 'St\u00fcck', g: 'kg/St\u00fcck \u00b7 optional', weg: 'Position entfernen', plus: '+ Position', stk: 'Packst\u00fccke', wm: 'frachtpflichtig (W/M)', leer: 'L\u00e4nge, Breite und H\u00f6he eingeben. Das Volumen erscheint sofort.', zur3d: 'Im 3D-Rechner ansehen \u2192' }; },
+      loc: function () { return 'de-DE'; },
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q); }
+    };
+    // CBM_UI_START
+    var rows = document.getElementById('cbmRows'), out = document.getElementById('cbmResult'),
+        add = document.getElementById('cbmAdd'), zur3d = document.getElementById('cbmZur3d'), nId = 0;
+    function feld(id, key, opts) {
+      var t = cbmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'cbm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '110' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '300' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + cbmCfg.t().weg + '">\u00d7</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = cbmCfg.t(), loc = cbmCfg.loc();
+      // Beschriftungen der stehenden Zeilen mitziehen -- die Startseite wechselt die
+      // Sprache ohne Neuladen, und dynamische Zeilen kennt ihr Woerterbuch nicht.
+      [].forEach.call(rows.querySelectorAll('label'), function (lb) {
+        var inp = document.getElementById(lb.getAttribute('for'));
+        if (inp) lb.textContent = t[inp.getAttribute('data-k')];
+      });
+      add.textContent = t.plus;
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.setAttribute('aria-label', t.weg); b.title = t.weg;
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = cbmSumme(daten);
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f3 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f3(s.vol) + ' m\u00b3</b>', s.stk + ' ' + t.stk];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      out.innerHTML = teile.join(' \u00b7 ');
+      // Der Sprung in den echten Rechner: dieselben Zeilen als ?q=-Import. Dort gibt es
+      // die 3D-Ansicht, die Stellplaetze und die Container-Auslastung -- nichts davon
+      // wird hier nachgebaut.
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = cbmBerechnen(z.l, z.w, z.h, z.qty);
+        if (!r) return;
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : ''));
+      });
+      zur3d.href = cbmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    zeileNeu();
+    zeichnen();
+    window.__cbmNeu = zeichnen;
+    // CBM_UI_END
+    })();
+    </script>
+
     <h2>Die Formel</h2>
     <div class="formula">CBM = L (m) × B (m) × H (m) × Stückzahl</div>
     <p>Wichtig: alle Maße in <b>Metern</b>. Zentimeter zuerst durch 100 teilen (60&nbsp;cm = 0,6&nbsp;m).</p>

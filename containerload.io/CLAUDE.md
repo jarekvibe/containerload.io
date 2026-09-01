@@ -793,6 +793,48 @@ Das ist der teuerste Einzelposten in diesem Rechner, und er ist trotzdem richtig
 
 > **Offen geblieben:** die Ladung wird weiterhin **verstreut** gestaut statt in Blöcken — im gemeldeten Fall liegen die flachen Stücke einzeln zwischen den Paletten, und über ihnen sind 240 cm Luft, die jetzt niemand mehr nutzen kann. Das ist kein Regelverstoß, sondern die Extrempunkt-Heuristik: sie maximiert Stückzahl und Volumen, nicht Ordnung. „Nach Logik stauen" (gleiche Sorte im Block, nicht stapelbares an einem Ende, Ladung nach vorn geschoben) wäre ein eigener Durchgang **nach** dem Packen, der an Anzahl und Volumen nichts ändern darf.
 
+### Achslasten für den Sattelzug: ein Richtwert statt eines Disclaimers
+In jeder Fußzeile stand „keine Achslast-Garantie", und das war die ganze Antwort — dabei liegt alles Nötige längst vor: die Längsposition jedes Packstücks und sein Gewicht. Was fehlte, war die Geometrie des Fahrzeugs. Die steht jetzt in **`ACHSEN`**, und **`achslasten()`** rechnet daraus Stützlast und Aggregat-Last als Balkenstatik mit zwei Stützen.
+
+Drei Entscheidungen, die nicht kippen dürfen:
+
+- **Nur der Sattelzug.** Für die übrigen Fahrzeuge wäre jede Geometrie geraten, also gibt es dort keine Zahl. Eine geratene Achslast ist schlimmer als keine.
+- **Die Näherung steckt in den Konstanten, nicht in der Rechnung.** Die Statik ist exakt für die angenommene Geometrie; `test/achslast.test.mjs` prüft Kräfte- und Momentengleichgewicht über 50 Zufallsladungen, mit unabhängiger Bilanz um das Aggregat (die Funktion selbst bilanziert um den Zapfen — stimmen beide, stimmt die Statik). Die Konstanten sind belegt: Zapfen ~1,6 m hinter der Front (Vormaß 2.040 mm), Zapfen-zu-Heck ≤ 12,0 m (96/53/EG), Tridem 24 t (§ 34 StVZO), Sattellast 11 t (EU-typisch eingetragen). Herleitung im Kommentar über `ACHSEN`.
+- **Die Annahmen stehen SICHTBAR daneben** (`T.axleAssume`), nicht nur im Quelltext — und die Anzeige heißt Richtwert, mit derselben Plakette wie die Gewichtsverteilung.
+
+**Negative Stützlast ist eine Warnung, keine Rechenpanne**: die Ladung liegt dann so weit hinten, dass der Auflieger vorne abheben würde (`T.axleNeg`, rot, statt der Balken).
+
+Die Anzeige sitzt in der Details-Schublade unter der Gewichtsverteilung und **liest die Sicht** (`sichtPlaced`, Geometrie vom fokussierten Fahrzeug) — mit Fokus also den fokussierten Auflieger, nicht den ersten.
+
+> **Was die Anzeige sofort sichtbar macht:** der Packer staut von der Stirnwand her. 20 Paletten à 900 kg auf 4,8 Lademetern ergeben ~18,6 t auf dem Zapfen — die Warnung ist **korrekt**, der Plan wäre so nicht fahrbar. Ein Stauen, das die Achslast ausbalanciert (Ladung Richtung Aggregat schieben), ist die logische nächste Stufe und eine **eigene Entscheidung**: es verändert Packläufe.
+
+### Die Belade-Reihenfolge im Ladevorschlag
+Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Hälfte: in welcher REIHENFOLGE es hineinkommt. **`LV_SEQUENZ`** macht daraus eine nummerierte Liste — Stirnwand zuerst, Tür zuletzt, unten vor oben — und hängt sie unter den Stauplan: auf dem einzelnen Blatt und auf jedem Container-Blatt (das Deckblatt trägt die Übersicht, keine Zeichnung, also auch keine Reihenfolge).
+
+- **Gruppiert wird nach Läufen**: aufeinanderfolgende Stücke derselben Sorte sind EIN Schritt („22× Palette · 0,0–7,2 m ab Stirnwand"). Seit „ordentlich stauen" liegt gleiche Ware ohnehin im Block, die Liste bleibt kurz.
+- **Ab 16 Schritten wird gekappt** und gesagt, dass mehr folgen — eine 40-Schritte-Liste liest an der Rampe niemand.
+- **Die Sortierung ist dieselbe wie in `loadingOrder`** (Rang je Position in der Tabelle): x, dann y, dann z. Zwei Ordnungen für dieselbe Frage wären ein Widerspruch im selben Dokument.
+- Positionsnamen laufen durch `escHTML` — sie sind Nutzereingabe und landen in einem `document.write`-Dokument.
+
+`test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
+
+### Der CBM-Rechner — auf den CBM-Seiten und auf der Startseite
+Der Wettbewerb führt einen freien CBM-Rechner als eigene Seite. Wir werten stattdessen die zwei **bestehenden, indexierten** Seiten auf (`/ratgeber/cbm-berechnen`, `/en/guide/how-to-calculate-cbm`) — und die Startseite trägt denselben Rechner als eigenen Abschnitt (`#cbm`). Eine vierte, eigene Rechner-Seite wäre eine konkurrierende Seite im eigenen Suchindex.
+
+Was er kann, und warum genau das:
+
+- **Mehrere Positionen** (Zeile hinzufügen/entfernen) — eine Sendung besteht selten aus einer Ware.
+- **Gewicht je Position und das frachtpflichtige Gewicht (W/M)** nach der Faustregel 1 cbm = 1.000 kg. Die CBM-Seite erklärt genau diese Regel im Text; ein Rechner daneben, der sie nicht rechnet, wäre halb. **Fehlt auch nur ein Gewicht, gibt es KEIN W/M** — ein halb gewogenes Maximum wäre eine falsche Zahl mit amtlichem Klang.
+- **„Im 3D-Rechner ansehen"** baut aus den Zeilen einen `?q=`-Import (`26x 120x80x110 300kg`, je Zeile eine Position). Der Wunsch dahinter war eine „Mini-3D-Ansicht" auf der Wissensseite — die wird **nicht nachgebaut**: die 3D-Ansicht mit Stellplätzen und Auslastung existiert, sie ist das Produkt, und sie ist einen Klick entfernt, mit der Ladung vorbefüllt. Die englische Seite hängt `&lang=en` an — auch am **statischen** Platzhalter-`href`, `test/container-guide-en.test.mjs` prüft statische Links.
+
+Zwei Bausteine, **wörtlich identisch auf allen drei Seiten** und von `test/cbm-widget.test.mjs` auf Gleichheit geprüft: der Rechenkern (`// CBM_CALC_START/END`) und die Oberfläche (`// CBM_UI_START/END`). Drei Kopien, die auseinanderlaufen dürfen, wären drei Rechner mit drei Meinungen. Seitenspezifisch ist nur `cbmCfg` (Texte, Zahlformat, `?q=`-Ziel).
+
+Auf der Startseite steht `#cbm` **zwischen der Demo und dem Excel-Import**, volle Breite, Überschrift links — dieselbe Grammatik wie „Funktionen". Begründung: Der CBM-Rechner ist das einzige Element der Startseite, das man benutzen kann, ohne die Seite zu verlassen; die Seite eskaliert damit ansehen → ausprobieren → eigene Packliste → Funktionen. Die erste Fassung war zentriert und schmal (`max-w-3xl`) und stand unter dem rechtsbündigen Import — Jarek hat den Bruch sofort gesehen. Ein Abschnitt, der aus der Seitengrammatik fällt, wirkt angeklebt.
+
+Das Einfügefeld der Import-Box (`#impPaste`) zeigte früher eine vierzeilige Beispiel-Packliste als Platzhalter — in Feldfarbe gerendert sah das aus wie vorgeschriebener Inhalt, den man erst löschen muss. Jarek: „überhaupt nicht clean". Jetzt: einzeiliger Platzhalter in `--faint` (`::placeholder` explizit gesetzt, sonst rendert Chrome ihn in Textfarbe), und das Beispiel liegt hinter „Beispiel einfügen" (`#impDemo`) — das schreibt **echten** Inhalt ins Feld, der Knopf darunter wird aktiv, ein Klick weiter steht die Liste im 3D-Rechner. Ein Platzhalter, der wie Inhalt aussieht, ist kein Beispiel, sondern eine Hürde.
+
+**Die Startseite wechselt die Sprache ohne Neuladen**, und die Widget-Zeilen entstehen per JS — `data-i18n` kennt sie nicht. Deshalb ruft `setLang` am Ende `window.__cbmNeu()`, und `zeichnen()` zieht die Beschriftungen der stehenden Zeilen nach. Ohne den Haken stünde das Widget nach dem Umschalten halb deutsch da.
+
 ### Die Startseite verkauft, der Rechner bedient
 Ausgelöst durch einen Wettbewerber, der zwei Monate nach uns gestartet ist und dessen Seite „erschreckend clean" wirkte. Beim Nachsehen war der Unterschied **nicht die Gestaltung**: Ihre Startseite ist eine **Verkaufsseite**, unsere war ein **Werkzeug mit Seite drumherum**. Ihre Maschine ist übrigens unsere — „an extreme-point algorithm … mixed box sizes, stacks and orientations" und „a mixed fleet when the last container would ship nearly empty" beschreiben `emsSearch` und die Volumenregel in `ketteBesser`. Rechnerisch lagen wir nicht zurück, im Schaufenster schon.
 
@@ -813,7 +855,7 @@ Auch der Dreh-Gewinn wird nachgerechnet, an **beiden** Stellen (Überschrift = 2
 
 **Was ausdrücklich nicht geändert wurde:** das dunkle Design (der Rechner ist dunkel und wird per iframe eingebunden — eine helle Startseite darüber wäre ein Bruch, kein Feinschliff, und eine eigene Entscheidung), die Drei-Akt-Animation, und der ehrliche FAQ-Satz „Schwerpunkt und Achslast sind noch nicht enthalten". Der bleibt, bis wir es können; auf einer Seite, die von Genauigkeit lebt, wird nicht geschwindelt.
 
-> **Beim Messen aufgefallen und NICHT von dieser Änderung:** Bei 390 px ragt der Knopf „Tool öffnen" in der Kopfzeile über den rechten Rand (gemessen bis 410 px). Gegen `origin/main` verglichen — identisch, also älter. Seitlich schieben lässt sich die Seite nicht (`scrollWidth` = 390), deshalb schlägt `test/mobil.test.mjs` nicht an. Eigene Baustelle.
+> Der Nebenbefund von hier (Knopf „Tool öffnen" ragte bei 390 px bis 410 px über den Rand) ist inzwischen behoben: vier Nav-Abstände tragen unter `sm` die nächstkleinere Stufe aus der Abstandsreihe, gemessen 410 → 380 px, ab 640 px unverändert. `test/mobil.test.mjs` hält die vier Klassenpaare fest.
 
 > **Für Browserprüfungen an der Startseite:** `tw.out.css` im Scratchpad ist ein **vorher erzeugtes** Tailwind-Bauergebnis. Wer eine neue Utility-Klasse benutzt (`gap-x-5`, `sm:grid-cols-3`), muss es neu bauen — sonst fehlt die Regel, das Bild zeigt ein kaputtes Layout, und man sucht den Fehler im Markup. Genau das ist hier zweimal passiert.
 
