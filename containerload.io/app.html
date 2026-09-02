@@ -4083,6 +4083,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // hierher (?q=). Ob dieser Weg ueberhaupt benutzt wird, ist die Frage, an der haengt,
   // ob sich die Arbeit an den Seiten in Nutzung uebersetzt -- und nicht nur in Impressionen.
   if (QIMPORT && QIMPORT.length) zaehl("beispiel-geoeffnet");
+  // ?q=...&d=road: der Lademeter-Rechner auf der LKW-Wissensseite springt in die
+  // Landfracht, nicht in den Seecontainer. Nur zusammen mit ?q= wirksam, und nur
+  // "road" -- ein Deeplink soll den Modus setzen koennen, aber sonst nichts.
+  var QROAD = !!(QIMPORT && new URLSearchParams(window.location.search).get("d") === "road");
   function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain, fokus, onFokus }) {
     const road = domain === "road";
     const TBL = road ? VEHICLES : PRESETS;
@@ -5769,10 +5773,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Absender gerechnet hat – die duerfen sich beim Empfaenger nicht still veraendern.
     const INIT_CARRIER = SHARED ? "" : loadCarrier();
     const INIT_CONTAINER = SHARED ? SHARED.container
+      : QROAD ? { ...VEHICLES["Planensattel"] }
       : DRAFT && DRAFT.container ? DRAFT.container
       : { ...applyCarrier(PRESETS["20' GP"], INIT_CARRIER, "20' GP") };
-    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : DRAFT && DRAFT.domain || "sea");
-    const [preset, setPreset] = useState(SHARED ? SHARED.preset : DRAFT && DRAFT.preset || "20' GP");
+    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : QROAD ? "road" : DRAFT && DRAFT.domain || "sea");
+    const [preset, setPreset] = useState(SHARED ? SHARED.preset : QROAD ? "Planensattel" : DRAFT && DRAFT.preset || "20' GP");
     const [carrier, setCarrier] = useState(INIT_CARRIER);
     const [container, setContainer] = useState(INIT_CONTAINER);
     const [cargo, setCargo] = useState(INIT_CARGO);
