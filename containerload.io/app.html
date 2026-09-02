@@ -1620,6 +1620,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // der Auflieger vorne abheben wuerde. Das ist keine Rechenpanne, sondern die Warnung.
     return { zapfen: m - aggregat, aggregat, gesamt: m, ladung };
   }
+  // Achslast-bewusstes Stauen: liegt zu viel Gewicht auf dem Zapfen, wird die Ladung als
+  // GANZER Block nach hinten gesetzt -- die Stauung selbst (Stapel, Reihen, Formschluss
+  // untereinander) bleibt exakt erhalten, nur der Abstand zur Stirnwand waechst. Der Packer
+  // staut von der Stirnwand her, und bei schwerer Ladung auf kurzer Strecke ist das genau
+  // die Lage, die den Zapfen ueberlastet.
+  // Die Statik ist linear in der Verschiebung dx, das Ziel darum exakt loesbar:
+  //   aggregat(dx) = (mom0 + W*dx) / D,  zapfen(dx) = m - aggregat(dx)
+  //   zapfen(dx) = zapfenMax  ->  dx = ((m - zapfenMax) * D - mom0) / W
+  // Aufgerundet auf ganze cm (lieber 1 cm mehr als knapp drueber bleiben), gedeckelt durch
+  // den freien Platz hinter der Ladung und die Aggregat-Grenze. Reicht die Deckelung nicht,
+  // wird so weit geschoben wie moeglich -- und die Anzeige bleibt ehrlich rot.
+  // Minimal geschoben, nicht "optimal verteilt": jede weitere Verschiebung waere Abstand
+  // zur Stirnwand ohne Not, und der Formschluss nach vorn ist beim Sichern bares Geld.
+  function achsShift(placed, weightOf, A, contLen) {
+    const a = achslasten(placed, weightOf, A);
+    if (!(a.ladung > 0) || a.zapfen <= A.zapfenMax) return 0;
+    const D = A.aggregat - A.zapfen;
+    const mom0 = a.aggregat * D;
+    let maxX = 0;
+    for (const p of placed) maxX = Math.max(maxX, (+p.x || 0) + (+p.dx || 0));
+    const frei = (+contLen || 0) - maxX;
+    if (frei < 1) return 0;
+    const dxZiel = Math.ceil(((a.gesamt - A.zapfenMax) * D - mom0) / a.ladung);
+    const dxAgg = Math.floor((A.aggregatMax * D - mom0) / a.ladung);
+    const dx = Math.min(dxZiel, dxAgg, Math.floor(frei));
+    return dx > 0 ? dx : 0;
+  }
   // Indikative Laengs-Gewichtsverteilung. KEINE Physik-Garantie, KEINE Achslast im Detail --
   // fuer den Sattelzug gibt es daneben den Achslast-Richtwert (ACHSEN/achslasten).
   // Rein aus Geometrie + Stueckgewichten. Ergebnis ist ein Richtwert ohne Gewaehr.
@@ -2675,6 +2702,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleGroup: "Achsaggregat (3 Achsen)",
       axleNeg: "Die Ladung liegt so weit hinten, dass die St\xFCtzlast negativ w\xFCrde. So darf der Auflieger nicht fahren.",
       axleAssume: "Typische Geometrie: K\xF6nigszapfen 1,6 m hinter der Stirnwand, Aggregat-Mitte bei 10,3 m, Leergewicht 7 t. Grenzen: 11 t Sattellast (EU-typisch), 24 t Dreifachachse (\xA7 34 StVZO). Reale Fahrzeuge weichen ab.",
+      axleShift: (m) => `Ladung um ${m.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m nach hinten gesetzt, sonst l\xE4ge zu viel Gewicht auf der Sattelkupplung. Den Abstand zur Stirnwand beim Sichern ausgleichen.`,
       cogNoGuarantee: "Richtwert \xB7 ohne Gew\xE4hr",
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
@@ -2988,6 +3016,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleGroup: "Axle group (3 axles)",
       axleNeg: "The load sits so far back that the kingpin load would go negative. The trailer must not run like this.",
       axleAssume: "Typical geometry: kingpin 1.6 m behind the front wall, axle-group centre at 10.3 m, tare 7 t. Limits: 11 t fifth-wheel load (EU-typical), 24 t tri-axle group (per German StVZO). Real vehicles differ.",
+      axleShift: (m) => `Load moved ${m.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m towards the rear, otherwise too much weight would sit on the fifth wheel. Make up for the gap to the front wall when securing.`,
       cogNoGuarantee: "Estimate \xB7 no guarantee",
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
@@ -6177,6 +6206,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           r.pinOffen = 0;
           r.perTypeAll = r.perType;
         }
+        // Achslast-bewusstes Stauen: nur Landfracht, nur Fahrzeuge mit hinterlegter
+        // Geometrie, nur das Auto-Ergebnis (manuelles Stauen gibt es auf der Strasse nicht).
+        // Verschoben werden die Packstueck-OBJEKTE -- r.placed und die Ketten-Slots teilen
+        // sie sich, das WeakSet verhindert, dass ein geteiltes Objekt doppelt wandert.
+        if (domain === "road" && r.chain) {
+          const wOf = (ti) => num(cargo[ti] && cargo[ti].weight);
+          const schon = /* @__PURE__ */ new WeakSet();
+          r.chain.forEach((slot) => {
+            const A = ACHSEN[slot.name];
+            if (!A || !slot.placed || !slot.placed.length) return;
+            const L = num(slot.preset && slot.preset.l) || num(container.l);
+            const dx = achsShift(slot.placed, wOf, A, L);
+            if (dx <= 0) return;
+            slot.achsShift = dx;
+            for (const p of slot.placed) { if (!schon.has(p)) { schon.add(p); p.x = (+p.x || 0) + dx; } }
+          });
+          // r.placed zeigt denselben Container wie chain[0]; sind es andere Huellen um
+          // dieselben Objekte, hat das WeakSet oben schon geschoben -- sind es (wider
+          // Erwarten) eigene Objekte, wandern sie hier mit derselben Weite nach.
+          if (r.chain[0] && r.chain[0].achsShift && r.placed && r.placed !== r.chain[0].placed) {
+            for (const p of r.placed) { if (!schon.has(p)) { schon.add(p); p.x = (+p.x || 0) + r.chain[0].achsShift; } }
+          }
+        }
         // Gezaehlt wird das ERGEBNIS, nicht der Effektlauf: eine Ladung, die tatsaechlich
         // im Container steht. Sonst zaehlt jeder Tastendruck einen "Plan".
         if (r.totalBoxes > 0 && r.boxes > 0) {
@@ -7081,6 +7133,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // fokussierten Auflieger, ohne Fokus den ersten.
     const achsGeo = domain === "road" ? ACHSEN[fokusSlot ? fokusSlot.name : preset] : null;
     const achs = achsGeo && sichtPlaced.length ? achslasten(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), achsGeo) : null;
+    // Hat das achslast-bewusste Stauen den gezeigten Auflieger nach hinten gesetzt, steht
+    // das ausdruecklich in der Anzeige -- eine still verschobene Ladung saehe wie ein
+    // Packfehler aus ("warum klebt die nicht an der Stirnwand?").
+    const achsRuecke = achs && (fokusSlot ? fokusSlot.achsShift : result.chain && result.chain[0] && result.chain[0].achsShift) || 0;
     const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
@@ -7188,6 +7244,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleKing, pct: Math.min(100, achs.zapfen / achsGeo.zapfenMax * 100), color: AC, text: `${fmtDE(Math.round(achs.zapfen))} / ${fmtDE(achsGeo.zapfenMax)} kg`, over: achs.zapfen > achsGeo.zapfenMax }),
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleGroup, pct: Math.min(100, achs.aggregat / achsGeo.aggregatMax * 100), color: AC, text: `${fmtDE(Math.round(achs.aggregat))} / ${fmtDE(achsGeo.aggregatMax)} kg`, over: achs.aggregat > achsGeo.aggregatMax })
                 ),
+            achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
           )
         )
