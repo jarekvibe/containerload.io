@@ -1620,6 +1620,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // der Auflieger vorne abheben wuerde. Das ist keine Rechenpanne, sondern die Warnung.
     return { zapfen: m - aggregat, aggregat, gesamt: m, ladung };
   }
+  // Achslast-bewusstes Stauen: liegt zu viel Gewicht auf dem Zapfen, wird die Ladung als
+  // GANZER Block nach hinten gesetzt -- die Stauung selbst (Stapel, Reihen, Formschluss
+  // untereinander) bleibt exakt erhalten, nur der Abstand zur Stirnwand waechst. Der Packer
+  // staut von der Stirnwand her, und bei schwerer Ladung auf kurzer Strecke ist das genau
+  // die Lage, die den Zapfen ueberlastet.
+  // Die Statik ist linear in der Verschiebung dx, das Ziel darum exakt loesbar:
+  //   aggregat(dx) = (mom0 + W*dx) / D,  zapfen(dx) = m - aggregat(dx)
+  //   zapfen(dx) = zapfenMax  ->  dx = ((m - zapfenMax) * D - mom0) / W
+  // Aufgerundet auf ganze cm (lieber 1 cm mehr als knapp drueber bleiben), gedeckelt durch
+  // den freien Platz hinter der Ladung und die Aggregat-Grenze. Reicht die Deckelung nicht,
+  // wird so weit geschoben wie moeglich -- und die Anzeige bleibt ehrlich rot.
+  // Minimal geschoben, nicht "optimal verteilt": jede weitere Verschiebung waere Abstand
+  // zur Stirnwand ohne Not, und der Formschluss nach vorn ist beim Sichern bares Geld.
+  function achsShift(placed, weightOf, A, contLen) {
+    const a = achslasten(placed, weightOf, A);
+    if (!(a.ladung > 0) || a.zapfen <= A.zapfenMax) return 0;
+    const D = A.aggregat - A.zapfen;
+    const mom0 = a.aggregat * D;
+    let maxX = 0;
+    for (const p of placed) maxX = Math.max(maxX, (+p.x || 0) + (+p.dx || 0));
+    const frei = (+contLen || 0) - maxX;
+    if (frei < 1) return 0;
+    const dxZiel = Math.ceil(((a.gesamt - A.zapfenMax) * D - mom0) / a.ladung);
+    const dxAgg = Math.floor((A.aggregatMax * D - mom0) / a.ladung);
+    const dx = Math.min(dxZiel, dxAgg, Math.floor(frei));
+    return dx > 0 ? dx : 0;
+  }
   // Indikative Laengs-Gewichtsverteilung. KEINE Physik-Garantie, KEINE Achslast im Detail --
   // fuer den Sattelzug gibt es daneben den Achslast-Richtwert (ACHSEN/achslasten).
   // Rein aus Geometrie + Stueckgewichten. Ergebnis ist ein Richtwert ohne Gewaehr.
@@ -2675,6 +2702,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleGroup: "Achsaggregat (3 Achsen)",
       axleNeg: "Die Ladung liegt so weit hinten, dass die St\xFCtzlast negativ w\xFCrde. So darf der Auflieger nicht fahren.",
       axleAssume: "Typische Geometrie: K\xF6nigszapfen 1,6 m hinter der Stirnwand, Aggregat-Mitte bei 10,3 m, Leergewicht 7 t. Grenzen: 11 t Sattellast (EU-typisch), 24 t Dreifachachse (\xA7 34 StVZO). Reale Fahrzeuge weichen ab.",
+      axleShift: (m) => `Ladung um ${m.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m nach hinten gesetzt, sonst l\xE4ge zu viel Gewicht auf der Sattelkupplung. Den Abstand zur Stirnwand beim Sichern ausgleichen.`,
       cogNoGuarantee: "Richtwert \xB7 ohne Gew\xE4hr",
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
@@ -2684,6 +2712,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogDisclaimer: "Richtwert aus Geometrie & eingegebenen Gewichten. Keine Achslast-/Schwerpunkt-Pr\xFCfung, keine Ladungssicherung. Vor Transport eigenverantwortlich pr\xFCfen.",
       footL: "ISO 668 \xB7 EUR / ISO-Paletten \xB7 cm \xB7 kg",
       footR: "geometrische Sch\xE4tzung \xB7 keine Achslast-Garantie",
+      shareBar: "Dieser Ladeplan wurde mit ContainerLoad erstellt. Kostenlos, ohne Anmeldung.",
+      shareBarBtn: "Eigenen Plan bauen →",
       feedback: "Feedback",
       cancel: "Abbrechen",
       fbTitle: "Feedback",
@@ -2986,6 +3016,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleGroup: "Axle group (3 axles)",
       axleNeg: "The load sits so far back that the kingpin load would go negative. The trailer must not run like this.",
       axleAssume: "Typical geometry: kingpin 1.6 m behind the front wall, axle-group centre at 10.3 m, tare 7 t. Limits: 11 t fifth-wheel load (EU-typical), 24 t tri-axle group (per German StVZO). Real vehicles differ.",
+      axleShift: (m) => `Load moved ${m.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m towards the rear, otherwise too much weight would sit on the fifth wheel. Make up for the gap to the front wall when securing.`,
       cogNoGuarantee: "Estimate \xB7 no guarantee",
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
@@ -2995,6 +3026,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       cogDisclaimer: "Estimate based on geometry & entered weights. No axle-load / center-of-gravity check, no load securing. Verify independently before transport.",
       footL: "ISO 668 \xB7 EUR / ISO pallets \xB7 cm \xB7 kg",
       footR: "geometric estimate \xB7 no axle-load guarantee",
+      shareBar: "This load plan was made with ContainerLoad. Free, no sign-up.",
+      shareBarBtn: "Build your own plan →",
       feedback: "Feedback",
       cancel: "Cancel",
       fbTitle: "Feedback",
@@ -4079,6 +4112,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // hierher (?q=). Ob dieser Weg ueberhaupt benutzt wird, ist die Frage, an der haengt,
   // ob sich die Arbeit an den Seiten in Nutzung uebersetzt -- und nicht nur in Impressionen.
   if (QIMPORT && QIMPORT.length) zaehl("beispiel-geoeffnet");
+  // ?q=...&d=road: der Lademeter-Rechner auf der LKW-Wissensseite springt in die
+  // Landfracht, nicht in den Seecontainer. Nur zusammen mit ?q= wirksam, und nur
+  // "road" -- ein Deeplink soll den Modus setzen koennen, aber sonst nichts.
+  var QROAD = !!(QIMPORT && new URLSearchParams(window.location.search).get("d") === "road");
   function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain, fokus, onFokus }) {
     const road = domain === "road";
     const TBL = road ? VEHICLES : PRESETS;
@@ -5765,10 +5802,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Absender gerechnet hat – die duerfen sich beim Empfaenger nicht still veraendern.
     const INIT_CARRIER = SHARED ? "" : loadCarrier();
     const INIT_CONTAINER = SHARED ? SHARED.container
+      : QROAD ? { ...VEHICLES["Planensattel"] }
       : DRAFT && DRAFT.container ? DRAFT.container
       : { ...applyCarrier(PRESETS["20' GP"], INIT_CARRIER, "20' GP") };
-    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : DRAFT && DRAFT.domain || "sea");
-    const [preset, setPreset] = useState(SHARED ? SHARED.preset : DRAFT && DRAFT.preset || "20' GP");
+    const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : QROAD ? "road" : DRAFT && DRAFT.domain || "sea");
+    const [preset, setPreset] = useState(SHARED ? SHARED.preset : QROAD ? "Planensattel" : DRAFT && DRAFT.preset || "20' GP");
     const [carrier, setCarrier] = useState(INIT_CARRIER);
     const [container, setContainer] = useState(INIT_CONTAINER);
     const [cargo, setCargo] = useState(INIT_CARGO);
@@ -6002,6 +6040,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     );
     const result = manuellRes || rohResult;
     const [toast, setToast] = useState("");
+    // Empfaenger-Hinweis auf geteilten Plaenen: jeder verschickte Link landet bei jemandem,
+    // der das Tool womoeglich nicht kennt — der einzige Kanal, der mit der Nutzung waechst.
+    // Einmal weggeklickt heisst dauerhaft weg (localStorage), damit Absender, die eigene
+    // Links oeffnen, nicht bei jedem Plan neu wegklicken muessen.
+    const [shareBar, setShareBar] = useState(() => {
+      if (!SHARED) return false;
+      try { return localStorage.getItem("cl-sharebar-weg") !== "1"; } catch (e) { return true; }
+    });
+    const shareBarWeg = () => { setShareBar(false); try { localStorage.setItem("cl-sharebar-weg", "1"); } catch (e) {} };
     const [plansOpen, setPlansOpen] = useState(false);
     const [plans, setPlans] = useState(() => loadPlans());
     const [colorPickFor, setColorPickFor] = useState(null); // cargo.id | null: offene Farb-Palette
@@ -6158,6 +6205,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           r.gekappt = false;
           r.pinOffen = 0;
           r.perTypeAll = r.perType;
+        }
+        // Achslast-bewusstes Stauen: nur Landfracht, nur Fahrzeuge mit hinterlegter
+        // Geometrie, nur das Auto-Ergebnis (manuelles Stauen gibt es auf der Strasse nicht).
+        // Verschoben werden die Packstueck-OBJEKTE -- r.placed und die Ketten-Slots teilen
+        // sie sich, das WeakSet verhindert, dass ein geteiltes Objekt doppelt wandert.
+        if (domain === "road" && r.chain) {
+          const wOf = (ti) => num(cargo[ti] && cargo[ti].weight);
+          const schon = /* @__PURE__ */ new WeakSet();
+          r.chain.forEach((slot) => {
+            const A = ACHSEN[slot.name];
+            if (!A || !slot.placed || !slot.placed.length) return;
+            const L = num(slot.preset && slot.preset.l) || num(container.l);
+            const dx = achsShift(slot.placed, wOf, A, L);
+            if (dx <= 0) return;
+            slot.achsShift = dx;
+            for (const p of slot.placed) { if (!schon.has(p)) { schon.add(p); p.x = (+p.x || 0) + dx; } }
+          });
+          // r.placed zeigt denselben Container wie chain[0]; sind es andere Huellen um
+          // dieselben Objekte, hat das WeakSet oben schon geschoben -- sind es (wider
+          // Erwarten) eigene Objekte, wandern sie hier mit derselben Weite nach.
+          if (r.chain[0] && r.chain[0].achsShift && r.placed && r.placed !== r.chain[0].placed) {
+            for (const p of r.placed) { if (!schon.has(p)) { schon.add(p); p.x = (+p.x || 0) + r.chain[0].achsShift; } }
+          }
         }
         // Gezaehlt wird das ERGEBNIS, nicht der Effektlauf: eine Ladung, die tatsaechlich
         // im Container steht. Sonst zaehlt jeder Tastendruck einen "Plan".
@@ -7063,6 +7133,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // fokussierten Auflieger, ohne Fokus den ersten.
     const achsGeo = domain === "road" ? ACHSEN[fokusSlot ? fokusSlot.name : preset] : null;
     const achs = achsGeo && sichtPlaced.length ? achslasten(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), achsGeo) : null;
+    // Hat das achslast-bewusste Stauen den gezeigten Auflieger nach hinten gesetzt, steht
+    // das ausdruecklich in der Anzeige -- eine still verschobene Ladung saehe wie ein
+    // Packfehler aus ("warum klebt die nicht an der Stirnwand?").
+    const achsRuecke = achs && (fokusSlot ? fokusSlot.achsShift : result.chain && result.chain[0] && result.chain[0].achsShift) || 0;
     const cogAccent = cog && cog.balance === "balanced" ? AC : C.warn;
     const cogClassKey = cog ? { balanced: "cogBalanced", front: "cogFrontHeavy", rear: "cogRearHeavy" }[cog.balance] : null;
     // ── Telemetry Rail: ersetzt die untere Statuskarten-/Balken-Leiste. Datenlogik unveraendert
@@ -7170,6 +7244,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleKing, pct: Math.min(100, achs.zapfen / achsGeo.zapfenMax * 100), color: AC, text: `${fmtDE(Math.round(achs.zapfen))} / ${fmtDE(achsGeo.zapfenMax)} kg`, over: achs.zapfen > achsGeo.zapfenMax }),
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleGroup, pct: Math.min(100, achs.aggregat / achsGeo.aggregatMax * 100), color: AC, text: `${fmtDE(Math.round(achs.aggregat))} / ${fmtDE(achsGeo.aggregatMax)} kg`, over: achs.aggregat > achsGeo.aggregatMax })
                 ),
+            achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
           )
         )
@@ -7496,7 +7571,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = "#1C2531"; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi } }, e.label),
               e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 4 } }, e.sub) : null))
-        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
+        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* @__PURE__ */ React.createElement("aside", { className: "w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1, padding: "4px 8px" } }, "×")), /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
           /* @__PURE__ */ React.createElement("span", null, T.footR),
           // Der Weg zurueck. Er stand hier als unterstrichene Textstelle in derselben Farbe wie
           // die Fusszeile drumherum -- gemeldet als "zu unscheinbar", und das war er auch:

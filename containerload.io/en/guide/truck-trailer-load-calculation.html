@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Truck & curtainsider load calculation: loading metres & pallets — ContainerLoad</title>
-<meta name="description" content="A curtainsider semi-trailer offers around 13.6 loading metres (approx. 34 euro pallets floor-loaded). How to calculate loading metres and utilisation live in 3D." />
+<title>Loading metre calculator: truck & curtainsider — ContainerLoad</title>
+<meta name="description" content="Calculate loading metres and chargeable weight right here. A curtainsider offers 13.6 ldm (approx. 34 euro pallets). With a jump into the 3D view." />
 <link rel="canonical" href="https://containerload.io/en/guide/truck-trailer-load-calculation" />
 <!-- Zwei Fassungen derselben Frage. x-default zeigt auf die deutsche, wie ueberall
      sonst auf der Seite: Deutsch ist die Ausgangssprache. -->
@@ -14,14 +14,14 @@
 <meta name="robots" content="index,follow" />
 <meta property="og:type" content="article" />
 <meta property="og:locale" content="en_GB" />
-<meta property="og:title" content="Truck & curtainsider load calculation: loading metres & pallets — ContainerLoad" />
-<meta property="og:description" content="A curtainsider semi-trailer offers around 13.6 loading metres (approx. 34 euro pallets floor-loaded). How to calculate loading metres and utilisation live in 3D." />
+<meta property="og:title" content="Loading metre calculator: truck & curtainsider — ContainerLoad" />
+<meta property="og:description" content="Calculate loading metres and chargeable weight right here. A curtainsider offers 13.6 ldm (approx. 34 euro pallets). With a jump into the 3D view." />
 <meta property="og:url" content="https://containerload.io/en/guide/truck-trailer-load-calculation" />
 <meta property="og:site_name" content="ContainerLoad" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Truck & curtainsider load calculation: loading metres & pallets — ContainerLoad" />
-<meta name="twitter:description" content="A curtainsider semi-trailer offers around 13.6 loading metres (approx. 34 euro pallets floor-loaded). How to calculate loading metres and utilisation live in 3D." />
+<meta name="twitter:title" content="Loading metre calculator: truck & curtainsider — ContainerLoad" />
+<meta name="twitter:description" content="Calculate loading metres and chargeable weight right here. A curtainsider offers 13.6 ldm (approx. 34 euro pallets). With a jump into the 3D view." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#0E1116" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -51,6 +51,119 @@
     <div class="eyebrow">Container Guide · Load calculation</div>
     <h1>Truck &amp; curtainsider load calculation: loading metres and pallets</h1>
     <div class="answer"><p class="lead" style="margin:0">A <b>curtainsider semi-trailer</b> offers around <b>13.6 loading metres</b> of load area (internal length approx. 1360&nbsp;cm, width approx. 245&nbsp;cm). Floor-loaded that is roughly <b>34 euro pallets</b> or <b>26 industrial pallets</b> in one tier.</p></div>
+
+    <div class="cbm-calc" data-ldm-widget>
+      <div id="ldmRows"></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="ldmAdd" class="cbm-add">+</button>
+        <a id="ldmZur3d" class="cbm-open" hidden href="/app?lang=en"></a>
+      </div>
+      <div class="cbm-calc-result" id="ldmResult"></div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Loading metres = (length × width) / 2.4, calculated non-stackable. The chargeable weight uses the customary rate of 1&nbsp;ldm = 1,750&nbsp;kg.</p>
+    <script>
+    (function(){
+    // LDM_CALC_START
+    function ldmBerechnen(l, w, qty) {
+      var L = Number(l), W = Number(w), Q = Number(qty);
+      if (!(L > 0) || !(W > 0) || !(Q > 0)) return null;
+      var stueck = (L / 100) * (W / 100) / 2.4;
+      return { stueck: stueck, gesamt: stueck * Q, menge: Q };
+    }
+    function ldmSumme(zeilen) {
+      var ldm = 0, stk = 0, kg = 0, alleKg = true, alleH = true, gueltig = 0;
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = ldmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].qty);
+        if (!r) continue;
+        gueltig++;
+        ldm += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+        if (!(Number(zeilen[i].h) > 0)) alleH = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig nach dem ueblichen Satz 1 ldm = 1.750 kg -- aber nur, wenn JEDE
+      // gueltige Zeile ein Gewicht traegt. Ein halb gewogenes Maximum waere eine falsche Zahl.
+      return { ldm: ldm, stk: stk, kg: kg, frachtKg: alleKg ? Math.max(ldm * 1750, kg) : null, alleH: alleH, zeilen: gueltig };
+    }
+    // LDM_CALC_END
+    var ldmCfg = {
+      t: function () { return { l: 'Length (cm)', w: 'Width (cm)', h: 'Height (cm) · for 3D', q: 'Pieces', g: 'kg/piece · optional', weg: 'Remove item', plus: '+ item', stk: 'packages', anteil: 'of one curtainsider', wm: 'chargeable', leer: 'Enter length and width. Loading metres show up right away.', zur3d: 'View in the 3D calculator →', ohneH: 'Add heights to see it in 3D.' }; },
+      loc: function () { return 'en-GB'; },
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q) + '&d=road&lang=en'; }
+    };
+    // LDM_UI_START
+    var rows = document.getElementById('ldmRows'), out = document.getElementById('ldmResult'),
+        add = document.getElementById('ldmAdd'), zur3d = document.getElementById('ldmZur3d'), nId = 0;
+    function feld(id, key, opts) {
+      var t = ldmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'ldm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '100' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '250' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + ldmCfg.t().weg + '">×</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = ldmCfg.t(), loc = ldmCfg.loc();
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = ldmSumme(daten);
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f2 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f2(s.ldm) + ' ldm</b>', f0(s.ldm / 13.6 * 100) + ' % ' + t.anteil, s.stk + ' ' + t.stk];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      out.innerHTML = teile.join(' · ');
+      // Der Sprung in den echten Rechner (Landfracht-Modus, Planensattel): dieselben Zeilen
+      // als ?q=-Import. Die Hoehe braucht nur die 3D-Ansicht -- ohne sie rechnet das Widget
+      // trotzdem, aber der Sprung waere eine erfundene Zahl, also gibt es ihn dann nicht.
+      if (!s.alleH) {
+        out.innerHTML += ' · <span style="color:var(--faint)">' + t.ohneH + '</span>';
+        zur3d.hidden = true;
+        return;
+      }
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = ldmBerechnen(z.l, z.w, z.qty);
+        if (!r) return;
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : ''));
+      });
+      zur3d.href = ldmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    add.textContent = ldmCfg.t().plus;
+    zeileNeu();
+    zeichnen();
+    // LDM_UI_END
+    })();
+    </script>
+
     <h2>What is a loading metre?</h2><p>A <b>loading metre (ldm)</b> is one running metre of load area across the full width and height of the loading space. A curtainsider has around <b>13.6&nbsp;ldm</b>. The calculator shows the occupied loading metres live once you switch to <b>road freight</b> mode.</p>
     <div class="tabelle"><table><thead><tr><th>Vehicle</th><th>Internal length</th><th>Loading metres</th><th>Euro pallets (1 tier)</th></tr></thead><tbody><tr><td>Curtainsider</td><td class="num">≈ 1360 cm</td><td class="num">13.6 ldm</td><td class="num">≈ 34</td></tr></tbody></table></div>
     <div class="cta">
