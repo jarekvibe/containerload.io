@@ -415,14 +415,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Excel-Copy-Paste (TSV): Kopfzeilen-Erkennung DE/EN, Einheiten aus dem Header
   // (mm/10, m*100, t*1000 – pro Spalte), positionaler Fallback ohne Header.
   // Ehrlichkeit: OHNE Einheit im Header wird cm angenommen – keine Magnitude-Heuristik.
-  function parseTSV(text) {
+  function parseTSV(text, opts) {
+    opts = opts || {};
     const lines = text.split(/\r?\n/).map((l) => l.replace(/\t+$/, "")).filter((l) => l.trim());
     const grid = lines.map((l) => l.split("\t").map((c) => c.trim()));
+    // Dreierkette "120x80x95" -- auch als ZELLE einer kombinierten Masse-Spalte. Ohne
+    // diese Lesart verwarf der Parser jede Zeile solcher Listen, und die sind in
+    // Speditionslisten Standard ("Masse (LxBxH)").
+    const KETTE = /(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i;
     const KEYS = [
       ["qty", /anzahl|menge|stk|stück|qty|quantity|pcs|colli|kartons/i],
       ["l", /länge|laenge|length|^l$|^l\s*\(/i],
       ["w", /breite|width|^b$|^w$|^b\s*\(|^w\s*\(/i],
       ["h", /höhe|hoehe|height|^h$|^h\s*\(/i],
+      // "Maße"/"Abmessungen"/"LxBxH" VOR dem Gewicht pruefen: "Masse (LxBxH)" ist eine
+      // Massspalte, "Masse (kg)" bleibt Gewicht. Das nackte "Maße" (mit ß) ist eindeutig
+      // eine Massspalte; das nackte "Masse" bleibt beim Gewicht.
+      ["dims", /abmessung|dimensions?\b|^maße$|ma(?:ß|ss)e\s*\(\s*(?:mm|cm|m\b|lxbxh|l\s*[x×])|l\s*[x×]\s*b\s*[x×]\s*h|lxbxh/i],
       ["weight", /gewicht|weight|^kg$|kg\/|masse\b|brutto|netto/i],
       ["stackable", /stapel|stack/i],
       ["name", /bezeichnung|artikel|beschreibung|name|description|item|ware|inhalt|position/i]
@@ -438,7 +447,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         for (const [k, re] of KEYS) {
           if (map[k] === void 0 && re.test(c)) { // erster Treffer gewinnt (z. B. Brutto vor Netto)
             map[k] = i;
-            if (k === "l" || k === "w" || k === "h") {
+            if (k === "l" || k === "w" || k === "h" || k === "dims") {
               if (/mm/i.test(c)) unitF[i] = 0.1;
               else if (/\bm\b|\(m\)/i.test(c)) unitF[i] = 100;
             } else if (k === "weight") {
@@ -450,17 +459,64 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       });
     } else {
       // Positional aus der ersten Datenzeile: erste nicht-numerische Spalte = name;
-      // numerische Spalten in Reihenfolge = qty,l,w,h,weight (nur 4: l,w,h,weight; nur 3: l,w,h).
+      // eine Zelle mit Dreierkette ("120x80x95") = kombinierte Massspalte; numerische
+      // Spalten in Reihenfolge = qty,l,w,h,weight (nur 4: l,w,h,weight; nur 3: l,w,h).
       const first = grid[0] || [];
       const numsIdx = [];
       first.forEach((c, i) => {
-        if (isNumCell(c)) numsIdx.push(i);
+        // Kette VOR der Zahlpruefung: parseFloat("120x80x95") liefert 120, die Zelle
+        // saehe sonst wie eine gewoehnliche Zahl aus.
+        if (map.dims === void 0 && KETTE.test(c)) map.dims = i;
+        else if (isNumCell(c)) numsIdx.push(i);
         else if (map.name === void 0 && c) map.name = i;
       });
-      const roles = numsIdx.length >= 5 ? ["qty", "l", "w", "h", "weight"] : numsIdx.length === 4 ? ["l", "w", "h", "weight"] : ["l", "w", "h"];
+      let roles;
+      if (map.dims !== void 0) roles = numsIdx.length >= 2 ? ["qty", "weight"] : ["qty"];
+      else if (numsIdx.length >= 5) {
+        // Ohne Kopfzeile ist die Reihenfolge geraten. Zwei uebliche Layouts werden
+        // gegeneinander abgewogen: Stueckzahl vorn (Standard) oder Stueckzahl hinter den
+        // Massen. Es gewinnt die Zuordnung, unter der mehr Zeilen plausibel sind --
+        // Kanten zwischen 5 und 1450 cm, Stueckzahl eine ganze Zahl bis 5000. Eine
+        // 4-cm-"Hoehe" neben 120 "Stueck" ist fast immer die vertauschte Lesart.
+        const A = ["qty", "l", "w", "h", "weight"], B = ["l", "w", "h", "qty", "weight"];
+        const punkte = (r) => {
+          let p = 0;
+          for (const cells of grid.slice(0, 10)) {
+            const v = {};
+            r.forEach((k, j) => { v[k] = toNumDE(cells[numsIdx[j]]); });
+            if ([v.l, v.w, v.h].every((d) => d >= 5 && d <= 1450) && Number.isInteger(v.qty) && v.qty >= 1 && v.qty <= 5e3) p++;
+          }
+          return p;
+        };
+        roles = punkte(B) > punkte(A) ? B : A;
+      } else roles = numsIdx.length === 4 ? ["l", "w", "h", "weight"] : ["l", "w", "h"];
       roles.forEach((k, j) => { if (numsIdx[j] !== void 0) map[k] = numsIdx[j]; });
     }
-    const dataRows = hasHeader ? grid.slice(1) : grid;
+    // Zweizeiliger Excel-Kopf: unter den Spaltennamen steht eine eigene Zeile nur mit
+    // Einheiten ("mm  mm  mm  kg"). Sie ist keine Datenzeile -- sie belegt die Einheiten
+    // je Spalte und wird uebersprungen. Ohne diese Lesart wurde die Zeile still verworfen
+    // und eine mm-Liste als cm gelesen: aus dem Motorblock wurde ein 12-Meter-Klotz.
+    let einheitenZeile = false;
+    if (hasHeader && grid[1]) {
+      const belegt = grid[1].filter((c) => c !== "");
+      const istEinheit = (c) => /^\(?\s*(mm|cm|m|kg|to?|stk\.?|stück|pcs)\s*\)?$/i.test(c);
+      if (belegt.length && belegt.every(istEinheit) && belegt.some((c) => /mm|cm|^\(?\s*m\s*\)?$/i.test(c))) {
+        einheitenZeile = true;
+        grid[1].forEach((c, i) => {
+          if (i === map.l || i === map.w || i === map.h || i === map.dims) {
+            if (/mm/i.test(c)) unitF[i] = 0.1;
+            else if (/^\(?\s*m\s*\)?$/i.test(c)) unitF[i] = 100;
+          } else if (i === map.weight && /^\(?\s*(t|to)\s*\)?$/i.test(c)) unitF[i] = 1e3;
+        });
+      }
+    }
+    // "Gesamtgewicht"/"Total" meint die ganze Position, nicht das Stueck -- sonst wiegt
+    // jeder von 20 Kartons die kompletten 240 kg.
+    const gewichtGesamt = hasHeader && map.weight !== void 0 && /gesamt|total/i.test(head[map.weight]);
+    // Angeforderte Grundeinheit (mm-Vorschlag aus dem Import-Dialog): gilt nur fuer
+    // Massspalten OHNE eigene Einheit im Kopf -- beschriftete Spalten wissen es besser.
+    const grundF = opts.einheit === "mm" ? 0.1 : 0;
+    const dataRows = hasHeader ? grid.slice(einheitenZeile ? 2 : 1) : grid;
     const out = [];
     let skipped = 0;
     for (const cells of dataRows) {
@@ -469,16 +525,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const i = map[k];
         if (i === void 0) return NaN;
         let v = toNumDE(cells[i]);
-        if (Number.isFinite(v) && unitF[i]) v *= unitF[i];
+        if (Number.isFinite(v)) {
+          if (unitF[i]) v *= unitF[i];
+          else if (grundF && (k === "l" || k === "w" || k === "h")) v *= grundF;
+        }
         return v;
       };
-      const l = val("l"), w = val("w"), h = val("h");
+      let l = val("l"), w = val("w"), h = val("h");
+      if (!(l > 0 && w > 0 && h > 0) && map.dims !== void 0) {
+        const m = String(cell("dims")).match(KETTE);
+        if (m) {
+          l = toNumDE(m[1]); w = toNumDE(m[3]); h = toNumDE(m[5]);
+          const u = (m[6] || m[4] || m[2] || "").toLowerCase();
+          const f = u === "mm" ? 0.1 : u === "m" ? 100 : u === "cm" ? 1 : unitF[map.dims] || grundF || 1;
+          l *= f; w *= f; h *= f;
+        }
+      }
       // Summenzeilen/Zwischenueberschriften ueberspringen statt abbrechen.
       if (!(l > 0) || !(w > 0) || !(h > 0)) { skipped++; continue; }
       let qty = Math.floor(toNumDE(cell("qty")));
       if (!Number.isFinite(qty) || qty < 1) qty = 1;
       let weight = val("weight");
       if (!Number.isFinite(weight) || weight < 0) weight = 0;
+      if (gewichtGesamt && qty > 1) weight = weight / qty;
       let stackable = true;
       if (map.stackable !== void 0 && /^(nein|no|0|false|✗|x)$/i.test(String(cell("stackable")).trim())) stackable = false;
       let name = String(cell("name") || "").replace(/\s+/g, " ").trim();
@@ -491,12 +560,31 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     LAST_TSV_MAP = { header: hasHeader, cols, skipped };
     return out;
   }
-  function parseCargoText(text) {
+  function parseCargoText(text, opts) {
+    opts = opts || {};
+    // Verdachts-Meldung fuer den Import-Dialog, als Eigenschaft der Funktion statt als
+    // neue Modul-Variable (die Quelltext-Tests schneiden parseCargoText einzeln aus).
+    // mmVerdacht: JEDE Zeile hat eine Kante, die in kein Fahrzeug passt (>320 cm breit/
+    // hoch oder >1400 cm lang), und keine Kante unter 100 -- das Muster einer mm-Liste,
+    // die als cm gelesen wurde. Es wird NICHT still umgerechnet: der Dialog schlaegt es
+    // vor, und erst opts.einheit="mm" rechnet um. Vorschlagen statt raten.
+    parseCargoText.hinweis = null;
+    const fertig = (rows) => {
+      if (!opts.einheit && rows.length && rows.every((r) => (r.w > 320 || r.h > 320 || r.l > 1400) && Math.min(r.l, r.w, r.h) >= 100)) parseCargoText.hinweis = { mmVerdacht: true };
+      return rows;
+    };
     if (!text) return [];
     // TSV-Weiche: mindestens eine Zeile mit >= 2 Tabs => Excel-Copy-Paste.
     // Freitext enthaelt nie Tabs (Tastatureingabe/URL), daher kollisionsfrei.
     const isTSV = text.split(/\n/).some((ln) => (ln.match(/\t/g) || []).length >= 2);
-    if (isTSV) return parseTSV(text);
+    if (isTSV) return fertig(parseTSV(text, opts));
+    // Semikolon-CSV: wer aus einer .csv-Datei statt aus Excel kopiert, hat Semikolons
+    // statt Tabs. Erst ab drei Semikolons in JEDER Zeile -- der Freitext benutzt das
+    // Semikolon als Positions-Trenner ("120x80x100; 60x40x30"), und der hat nie drei.
+    const csvZeilen = text.split(/\r?\n/).filter((ln) => ln.trim());
+    if (csvZeilen.length && csvZeilen.every((ln) => (ln.match(/;/g) || []).length >= 3)) {
+      return fertig(parseTSV(text.replace(/;/g, "\t"), opts));
+    }
     LAST_TSV_MAP = null;
     const out = [];
     const toNum = toNumDE;
@@ -514,7 +602,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         l = toNum(dim4[2]);
         w = toNum(dim4[4]);
         h = toNum(dim4[6]);
-        const u = (dim4[7] || dim4[5] || dim4[3] || "").toLowerCase();
+        const u = (dim4[7] || dim4[5] || dim4[3] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
         if (u === "m") {
           l *= 100;
           w *= 100;
@@ -528,7 +616,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         l = toNum(dim[1]);
         w = toNum(dim[3]);
         h = toNum(dim[5]);
-        const u = (dim[6] || dim[4] || dim[2] || "").toLowerCase();
+        const u = (dim[6] || dim[4] || dim[2] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
         if (u === "m") {
           l *= 100;
           w *= 100;
@@ -546,10 +634,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           break;
         }
       }
-      if (!dim4 && !dim && !pal) continue;
-      if (!dim4 && !dim && pal) {
-        l = pal.l;
-        w = pal.w;
+      // Palette mit ZWEI Massen ("4 Paletten 120x80"): Grundmass aus der Zeile, Hoehe als
+      // Standardwert -- vorher wurde die Zeile komplett verworfen, obwohl die Lesart
+      // offensichtlich ist. Nur mit Paletten-Stichwort: eine nackte Zweierkette waere
+      // sonst ein geratenes Packstueck ohne Hoehe. Das generische "Palette" (ohne Euro/
+      // Industrie) zaehlt NUR mit Massen in der Zeile -- ohne sie waere das Grundmass
+      // geraten, die Presets bringen ihres dagegen selbst mit.
+      let dim2 = null;
+      if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b/i.test(low))) {
+        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?(?!\s*[x×\*\/])/i);
+      }
+      if (!dim4 && !dim && !pal && !dim2) continue;
+      if (!dim4 && !dim) {
+        if (dim2) {
+          l = toNum(dim2[1]);
+          w = toNum(dim2[3]);
+          const u2 = (dim2[4] || dim2[2] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
+          if (u2 === "m") { l *= 100; w *= 100; }
+          else if (u2 === "mm") { l /= 10; w /= 10; }
+        } else {
+          l = pal.l;
+          w = pal.w;
+        }
         h = 110;
       }
       let qty = 1;
@@ -586,11 +692,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       let rotatable = true;
       if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
       let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
-      if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : "Position";
+      if (dim2) name = name.replace(dim2[0], "").trim();
+      // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
+      // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
+      name = name.replace(/(?:^|\s)(?:je|à)(?=\s|,|$)/ig, " ").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/\s+/g, " ").trim();
+      if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : dim2 ? "Palette" : "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
       out.push({ qty, l: Math.max(1, Math.round(l)), w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), weight: Math.max(0, Math.round(weight)), stackable, stackH, rotatable, name });
     }
+    fertig(out); // setzt nur den mm-Verdacht; das Ergebnis bleibt unangeruehrt
     return out;
   }
   var hexA = (hex, a) => {
@@ -2751,6 +2862,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impPh: "z. B.\n18 Paletten 120x80x110, 300 kg, stapelbar bis 180 cm\n6 Kartons 60x40x40, 12 kg\n— oder direkt aus Excel kopieren & einfügen —",
       impTsv: (cols) => `Excel-Tabelle erkannt · Spalten: ${cols}`,
       impTsvNoHead: "keine Kopfzeile — Zuordnung geraten, bitte prüfen",
+      impMm: "Die Maße sehen nach Millimetern aus.",
+      impMmBtn: "Als mm lesen",
       impTsvSkipped: (n) => `${n} Zeile${n === 1 ? "" : "n"} übersprungen (keine Maße)`,
       impDetect: "Erkennen",
       impName: "Name",
@@ -3065,6 +3178,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impPh: "e.g.\n18 pallets 120x80x110, 300 kg, stackable up to 180 cm\n6 cartons 60x40x40, 12 kg\n— or copy & paste straight from Excel —",
       impTsv: (cols) => `Excel table detected · columns: ${cols}`,
       impTsvNoHead: "no header row — mapping guessed, please check",
+      impMm: "These dimensions look like millimetres.",
+      impMmBtn: "Read as mm",
       impTsvSkipped: (n) => `${n} row${n === 1 ? "" : "s"} skipped (no dimensions)`,
       impDetect: "Detect",
       impName: "Name",
@@ -7595,7 +7710,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }, className: "px-4 py-3 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontWeight: FW.bold, fontSize: FS.body, whiteSpace: "nowrap" } }, shareCopied ? T.shareCopied : T.shareCopy)), /* @__PURE__ */ React.createElement("a", { href: shareURL, target: "_blank", rel: "noopener", className: "inline-block mt-3 transition hover:brightness-125", style: { fontFamily: SANS, fontSize: FS.label, color: C.accent } }, T.shareOpen), domain === "sea" && /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setShareOpen(false);
       buildLadevorschlag();
-    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)")))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => setImportRows(parseCargoText(importText)) }, T.impDetect), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel))) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", title: num(r.stackH) > 0 ? T.stackHSum(dimDE(num(r.stackH)) + " cm") : void 0, style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : "#1C2531", border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : "#2E3A49"}`, color: r.stackable ? C.good : C.faint, fontSize: num(r.stackH) > 0 ? FS.label : FS.small, fontWeight: FW.bold } }, r.stackable ? (num(r.stackH) > 0 ? dimDE(num(r.stackH)) : "\u2713") : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: "#1C2531", border: "1px solid #2E3A49", color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), recOpen && (() => {
+    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)")))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: "rgba(4,8,14,0.74)" }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: "#161D27", borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: "0 30px 80px -20px rgba(0,0,0,0.85)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => setImportRows(parseCargoText(importText)) }, T.impDetect), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel))) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, parseCargoText.hinweis && parseCargoText.hinweis.mmVerdacht && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, /* @__PURE__ */ React.createElement("span", { className: "flex-1" }, T.impMm), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(parseCargoText(importText, { einheit: "mm" })), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.impMmBtn)), LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", title: num(r.stackH) > 0 ? T.stackHSum(dimDE(num(r.stackH)) + " cm") : void 0, style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : "#1C2531", border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : "#2E3A49"}`, color: r.stackable ? C.good : C.faint, fontSize: num(r.stackH) > 0 ? FS.label : FS.small, fontWeight: FW.bold } }, r.stackable ? (num(r.stackH) > 0 ? dimDE(num(r.stackH)) : "\u2713") : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: "#1C2531", border: "1px solid #2E3A49", color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), recOpen && (() => {
       // Anzeige-Logik: geometrisch passend UND Zuladung nicht ueberschritten. (packCargo stoppt
       // selbst am Payload-Limit; payPct>100 kann bei editierten Custom-Payloads dennoch auftreten.)
       const rows = recData ? recData.rows.map((r) => ({ ...r, fitsShown: r.fits && r.payPct <= 100 })) : [];
