@@ -837,6 +837,13 @@ Das Einfügefeld der Import-Box (`#impPaste`) zeigte früher eine vierzeilige Be
 
 **Die Startseite wechselt die Sprache ohne Neuladen**, und die Widget-Zeilen entstehen per JS — `data-i18n` kennt sie nicht. Deshalb ruft `setLang` am Ende `window.__cbmNeu()`, und `zeichnen()` zieht die Beschriftungen der stehenden Zeilen nach. Ohne den Haken stünde das Widget nach dem Umschalten halb deutsch da.
 
+### Der Import-Parser rät nicht still
+`parseCargoText`/`parseTSV` lesen das Chaos echter Packlisten; `test/import-parser.test.mjs` ist der Prüfstand dafür — jede Parser-Änderung muss da durch. Die Lesarten, die er beherrscht: Einheitenzeile unter dem Excel-Kopf („mm mm mm kg"), kombinierte Maße-Spalte („120x80x95", mit Kopf und positional), „Gesamtgewicht" geteilt durch die Stückzahl, Semikolon-CSV (ab DREI Semikolons je Zeile — eines ist der Freitext-Positions-Trenner), plausibilitäts-gewogene Spaltenreihenfolge ohne Kopfzeile, Palette mit Zweierkette („4 Paletten 120x80" → Standardhöhe 110).
+
+Die eine Regel über allem: **Wo eine Lesart unsicher ist, meldet der Parser einen Verdacht statt still zu raten.** Eine mm-Liste ohne Einheit (jede Zeile mit einer Kante, die in kein Fahrzeug passt) bleibt als cm stehen, `parseCargoText.hinweis` trägt `{ mmVerdacht: true }`, und der Import-Dialog zeigt „Die Maße sehen nach Millimetern aus. [Als mm lesen]". Erst `opts.einheit = "mm"` rechnet um — und nur Spalten OHNE eigene Einheit im Kopf, beschriftete wissen es besser. Der Hinweis hängt als Eigenschaft an der Funktion, nicht als Modul-Variable: die Quelltext-Tests schneiden `parseCargoText` einzeln aus.
+
+Eine Falle für später: `parseFloat("120x80x95")` liefert 120 — in der positionalen Spaltenerkennung muss die Ketten-Prüfung deshalb VOR der Zahlen-Prüfung laufen, sonst sieht die Maße-Zelle wie eine gewöhnliche Zahl aus.
+
 ### Der Lademeter-Rechner — auf der LKW-Wissensseite
 Dasselbe Muster wie beim CBM-Rechner, und aus demselben Grund: keine neue, konkurrierende Rechner-Seite im eigenen Suchindex, sondern die bestehende, indexierte LKW-Seite (`/ratgeber/ladungsberechnung-lkw-planensattel`, `/en/guide/truck-trailer-load-calculation`) trägt das Widget. Marker `LDM_CALC`/`LDM_UI`, wörtlich gleich auf beiden Sprachfassungen, seitenspezifisch nur `ldmCfg` — `test/ldm-widget.test.mjs` prüft die Gleichheit.
 
