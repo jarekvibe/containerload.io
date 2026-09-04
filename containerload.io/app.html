@@ -396,7 +396,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var _id = 0;
   var uid = () => `c${_id++}`;
   var PALLET_PRESETS = [
-    { re: /euro\s*-?\s*palette|eur\s*-?\s*palette|europalette|epal/i, l: 120, w: 80 },
+    // \bepal\b statt epal: "Industri-EPAL-etten" -- der Substring steckt mitten in
+    // "Industriepaletten" und griff sich dort das falsche Grundmass.
+    { re: /euro\s*-?\s*palette|eur\s*-?\s*palette|europalette|\bepal\b/i, l: 120, w: 80 },
     { re: /industrie\s*-?\s*palette|industrial\s*pallet|industriepalette/i, l: 120, w: 100 }
   ];
   // DE-robuster Zahlen-Parser fuer TSV-Zellen:
@@ -596,8 +598,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Anfrage-Schreibweise "5x 120x80x100"). Muss VOR dem 3er-Match laufen,
       // sonst frisst der sich die ersten drei Zahlen. Erster Trenner bewusst
       // NUR [x×*] ohne "/" – sonst wuerde "120/80/100" als 3er-Kette mit Anzahl gelesen.
-      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i);
-      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i);
+      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
+      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
       if (dim4) {
         l = toNum(dim4[2]);
         w = toNum(dim4[4]);
@@ -611,6 +613,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           l /= 10;
           w /= 10;
           h /= 10;
+        } else if (u && u !== "cm") {
+          l *= 2.54;
+          w *= 2.54;
+          h *= 2.54;
         }
       } else if (dim) {
         l = toNum(dim[1]);
@@ -625,6 +631,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           l /= 10;
           w /= 10;
           h /= 10;
+        } else if (u && u !== "cm") {
+          l *= 2.54;
+          w *= 2.54;
+          h *= 2.54;
         }
       }
       let pal = null;
@@ -642,40 +652,68 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // geraten, die Presets bringen ihres dagegen selbst mit.
       let dim2 = null;
       if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b/i.test(low))) {
-        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?(?!\s*[x×\*\/])/i);
+        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?(?!\s*[x×\*\/])/i);
       }
-      if (!dim4 && !dim && !pal && !dim2) continue;
-      if (!dim4 && !dim) {
+      // Beschriftete Masse ("Länge 320 Breite 145 Höhe 168"): die Prosa-Form ohne
+      // x-Kette. Nur wenn alle drei Angaben da sind -- zwei plus Raten waere erfunden.
+      let lbl = null;
+      if (!dim4 && !dim && !pal && !dim2) {
+        const teil = (re) => {
+          const m = line.match(re);
+          if (!m) return null;
+          const v = toNum(m[1]), u = (m[2] || "").toLowerCase();
+          return u === "m" ? v * 100 : u === "mm" ? v / 10 : v;
+        };
+        const L2 = teil(/l(?:änge|aenge|ength)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
+        const B2 = teil(/(?:breite|width)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
+        const H2 = teil(/h(?:öhe|oehe|eight)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
+        if (L2 > 0 && B2 > 0 && H2 > 0) { lbl = true; l = L2; w = B2; h = H2; }
+      }
+      if (!dim4 && !dim && !pal && !dim2 && !lbl) continue;
+      if (!dim4 && !dim && !lbl) {
         if (dim2) {
           l = toNum(dim2[1]);
           w = toNum(dim2[3]);
           const u2 = (dim2[4] || dim2[2] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
           if (u2 === "m") { l *= 100; w *= 100; }
           else if (u2 === "mm") { l /= 10; w /= 10; }
+          else if (u2 && u2 !== "cm") { l *= 2.54; w *= 2.54; }
         } else {
           l = pal.l;
           w = pal.w;
         }
         h = 110;
+        // Steht die Hoehe in Worten dabei ("Höhe 132cm", "95cm hoch"), schlaegt sie den
+        // Standardwert -- eine genannte Zahl zu ignorieren waere schlechter als raten.
+        const hm = line.match(/h(?:öhe|oehe|eight)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b|(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*hoch\b/i);
+        if (hm) {
+          const v = toNum(hm[1] || hm[3]), u3 = (hm[2] || hm[4] || "").toLowerCase();
+          const cm = u3 === "m" ? v * 100 : u3 === "mm" ? v / 10 : v;
+          if (cm > 0) h = cm;
+        }
       }
       let qty = 1;
       if (dim4) {
         // Anzahl steht durch die Vier-Zahlen-Kette fest – qm/lead ueberspringen.
         qty = parseInt(dim4[1], 10);
       } else {
-        const qm = line.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
+        // Menge NICHT in der Masskette suchen: "2,40 x 1,60" gab sonst die
+        // Nachkommastellen als Stueckzahl her ("40 x" -> 40 Stueck).
+        const rest = dim ? line.replace(dim[0], " ") : dim2 ? line.replace(dim2[0], " ") : line;
+        const qm = rest.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
         if (qm) qty = parseInt(qm[1], 10);
         else {
-          const lead = line.match(/^\s*(\d+)\b/);
-          if (lead && (!dim || line.indexOf(dim[0]) > 0)) qty = parseInt(lead[1], 10);
+          const lead = rest.match(/^\s*(\d+)\b/);
+          if (lead) qty = parseInt(lead[1], 10);
         }
       }
       if (!Number.isFinite(qty) || qty < 1) qty = 1;
       let weight = 0;
-      const wm = line.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i);
+      const wm = line.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i);
       if (wm) {
         weight = toNum(wm[1]);
         if (/^(t|to|tonn)/i.test(wm[2])) weight *= 1e3;
+        else if (/^(lb|pound)/i.test(wm[2])) weight *= 0.453592;
       }
       let stackable = true;
       if (/nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel/i.test(low)) stackable = false;
@@ -691,11 +729,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       let rotatable = true;
       if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|paletten?|pallets?|kartons?|cartons?|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i, "").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?)/i, "").replace(/(\d+)\s*(paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?)/i, "$2").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (dim2) name = name.replace(dim2[0], "").trim();
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
-      name = name.replace(/(?:^|\s)(?:je|à)(?=\s|,|$)/ig, " ").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/\s+/g, " ").trim();
+      name = name.replace(/(?:^|\s)(?:je|à|each)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/\s+/g, " ").trim();
       if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : dim2 ? "Palette" : "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
