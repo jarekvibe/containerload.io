@@ -14,9 +14,9 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
 const von = L.findIndex((l) => l.includes("var SICH = {"));
-const bis = L.findIndex((l, i) => i > von && l.trim() === "}" && L[i - 1].includes("return z;"));
+const bis = L.findIndex((l, i) => i > von && l.includes("// Indikative Laengs-Gewichtsverteilung"));
 assert.ok(von > 0 && bis > von, "SICH-Ausschnitt nicht gefunden");
-const { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen } = new Function(L.slice(von, bis + 1).join("\n") + "\nreturn { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen };")();
+const { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen, sichMoebel } = new Function(L.slice(von, bis).join("\n") + "\nreturn { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen, sichMoebel };")();
 
 // Kleine Helfer: Quader bauen, Gewicht je ti nachschlagen.
 const box = (x, z, dx, dz, ti = 0, y = 0, dy = 100) => ({ x, y, z, dx, dy, dz, ti });
@@ -131,4 +131,31 @@ test("die 3D-Zonen decken genau die Luecken ab", () => {
   const dicht = [box(0, 0, 585, 235)];
   const z2 = sichZonenBauen(sichAnalyse(dicht, () => 500, CONT, "sea"), CONT, dicht);
   assert.deepStrictEqual(z2.filter((q) => !q.tuer), []);
+});
+
+test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
+  // Schmale Luecke (25 cm, quer): Luftkissen. Es muss IN die Luecke passen und
+  // schmaler sein als sie -- ein Kissen, das die Ladung verdraengt, waere Unsinn.
+  const quer = { x: 0, z: 210, dx: 220, dz: 25, dy: 220, richtung: "z" };
+  const kissen = sichMoebel(quer);
+  assert.ok(kissen.length >= 1 && kissen.every((m) => m.typ === "kissen"), "schmale Luecke braucht Kissen");
+  for (const k of kissen) {
+    assert.ok(k.dick < 25, `Kissen dicker als die Luecke (${k.dick})`);
+    assert.ok(k.hoehe <= 220 * 0.85 + 1e-9, "Kissen hoeher als 85 % der Zone");
+    assert.strictEqual(k.achse, "z", "der Bauch muss quer zeigen");
+  }
+  // Zwei Kissen, wenn die Luecke lang genug ist (220 cm entlang der Fahrt).
+  assert.strictEqual(kissen.length, 2);
+  // Breite Luecke (235 cm, laengs zur Stirnwand): Stauholz-Verband, sechs Balken
+  // in zwei Hoehen -- exakt so lang wie die Luecke tief ist (minus Spiel).
+  const stirn = { x: 0, z: 0, dx: 235, dz: 248, dy: 200, richtung: "x" };
+  const holz = sichMoebel(stirn);
+  assert.strictEqual(holz.length, 6);
+  assert.ok(holz.every((m) => m.typ === "balken" && Math.abs(m.laenge - 235 * 0.96) < 1e-9));
+  assert.strictEqual(new Set(holz.map((m) => m.y)).size, 2, "Balken in zwei Hoehen");
+  // Tuer: zwei Sperrstangen quer ueber die volle Breite.
+  const tuer = { x: 578, z: 0, dx: 12, dz: 235, dy: 200, tuer: true, richtung: "x" };
+  const stangen = sichMoebel(tuer);
+  assert.strictEqual(stangen.length, 2);
+  assert.ok(stangen.every((m) => m.typ === "rohr" && Math.abs(m.laenge - 235 * 0.96) < 1e-9));
 });

@@ -1886,10 +1886,40 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const H = Math.max(80, Math.min(hMax || 80, +cont.h || 999));
     const W = +cont.w || 0;
     const z = [];
-    s.laengs.forEach(([a, b]) => z.push({ x: a, z: 0, dx: b - a, dz: W, dy: H }));
-    if (s.quer && s.quer.summe > SICH.SUMME) s.quer.loecher.forEach(([za, zb]) => z.push({ x: s.quer.von, z: za, dx: s.quer.bis - s.quer.von, dz: zb - za, dy: H }));
-    if (s.tuer > SICH.SUMME) z.push({ x: (+cont.l || 0) - s.tuer, z: 0, dx: Math.min(s.tuer, 12), dz: W, dy: H, tuer: true });
+    s.laengs.forEach(([a, b]) => z.push({ x: a, z: 0, dx: b - a, dz: W, dy: H, richtung: "x" }));
+    if (s.quer && s.quer.summe > SICH.SUMME) s.quer.loecher.forEach(([za, zb]) => z.push({ x: s.quer.von, z: za, dx: s.quer.bis - s.quer.von, dz: zb - za, dy: H, richtung: "z" }));
+    if (s.tuer > SICH.SUMME) z.push({ x: (+cont.l || 0) - s.tuer, z: 0, dx: Math.min(s.tuer, 12), dz: W, dy: H, tuer: true, richtung: "x" });
     return z;
+  }
+  // Die "Moebel" der Sicherungsvorschau: je Zone die konkreten Hilfsmittel als
+  // Primitive (cm, zonen-lokal) -- Luftkissen fuer schmale Luecken, Stauholz-Balken
+  // fuer breite, Sperrstangen an der Tuer. Rein geometrisch und damit testbar; der
+  // Viewport setzt sie nur noch in Meshes um. Dieselbe 30-cm-Grenze wie im Text:
+  // was der Dialog "fuellen" nennt, bekommt ein Kissen, was er "abstuetzen" nennt,
+  // bekommt Holz.
+  function sichMoebel(z) {
+    const m = [];
+    if (z.tuer) {
+      for (const fy of [0.35, 0.7]) m.push({ typ: "rohr", x: z.dx / 2, y: z.dy * fy, z: z.dz / 2, laenge: z.dz * 0.96, radius: 4 });
+      return m;
+    }
+    const dick = z.richtung === "z" ? z.dz : z.dx;   // die Luecke selbst
+    const breit = z.richtung === "z" ? z.dx : z.dz;  // quer dazu
+    if (dick <= 30) {
+      const n = Math.max(1, Math.min(3, Math.floor(breit / 110)));
+      const bb = Math.min(breit * 0.9 / n, 110), bh = Math.min(z.dy * 0.85, 180);
+      for (let i = 0; i < n; i++) {
+        const mitte = breit * (i + 0.5) / n;
+        m.push({ typ: "kissen", achse: z.richtung, dick: dick * 0.96, breite: bb, hoehe: bh, y: z.dy / 2,
+          x: z.richtung === "z" ? mitte : z.dx / 2, z: z.richtung === "z" ? z.dz / 2 : mitte });
+      }
+    } else {
+      for (const fy of [0.3, 0.7]) for (const fb of [0.15, 0.5, 0.85]) {
+        m.push({ typ: "balken", achse: z.richtung, laenge: dick * 0.96, kante: 10, y: z.dy * fy,
+          x: z.richtung === "z" ? breit * fb : z.dx / 2, z: z.richtung === "z" ? z.dz / 2 : breit * fb });
+      }
+    }
+    return m;
   }
   // Indikative Laengs-Gewichtsverteilung. KEINE Physik-Garantie, KEINE Achslast im Detail --
   // fuer den Sattelzug gibt es daneben den Achslast-Richtwert (ACHSEN/achslasten).
@@ -5563,20 +5593,57 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const si = fokus !== "alle" && t.frame.slots[fokus] ? fokus : 0;
       const sl = t.frame.slots[si];
       const offX = sl.cx - sl.hx, offY = sl.cy - sl.hy;
+      const dazu = (obj) => { obj.renderOrder = 4; t.scene.add(obj); t.sichMeshes.push(obj); };
+      // Kissen-Geometrie: Einheitsbox, an den grossen Flaechen aufgeblasen und an den
+      // Raendern zusammengezogen -- die Silhouette eines echten Staupolsters.
+      const kissenGeo = () => {
+        const g = new THREE.BoxGeometry(1, 1, 1, 6, 10, 10);
+        const p = g.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          const f = Math.cos(p.getY(i) * Math.PI * 0.96) * Math.cos(p.getZ(i) * Math.PI * 0.96);
+          p.setX(i, p.getX(i) * (0.25 + 0.75 * Math.max(0, f)));
+        }
+        g.computeVertexNormals();
+        return g;
+      };
+      const matKissen = new THREE.MeshStandardMaterial({ color: 0xdde2e8, roughness: 0.82, metalness: 0.02 });
+      const matHolz = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
+      const matStahl = new THREE.MeshStandardMaterial({ color: 0x8f99a6, roughness: 0.4, metalness: 0.65 });
       for (const z of sichZonen) {
-        const mat = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: z.tuer ? 0.5 : 0.28, depthWrite: false, roughness: 0.6 });
+        // Die Zone selbst nur als Umriss mit hauchduenner Fuellung: sie sagt WO, die
+        // Moebel sagen WOMIT.
+        const mat = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.1, depthWrite: false, roughness: 0.6 });
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.position.set(offX + (z.x + z.dx / 2) / 100, offY + (z.dy / 2) / 100, (z.z + z.dz / 2) / 100);
         mesh.scale.set(Math.max(0.02, z.dx / 100), z.dy / 100, Math.max(0.02, z.dz / 100));
-        mesh.renderOrder = 4;
-        t.scene.add(mesh);
-        t.sichMeshes.push(mesh);
-        const kante = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xdda24c, transparent: true, opacity: 0.85 }));
+        dazu(mesh);
+        const kante = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xdda24c, transparent: true, opacity: 0.75 }));
         kante.position.copy(mesh.position);
         kante.scale.copy(mesh.scale);
-        kante.renderOrder = 4;
-        t.scene.add(kante);
-        t.sichMeshes.push(kante);
+        dazu(kante);
+        for (const mo of sichMoebel(z)) {
+          const px = offX + (z.x + mo.x) / 100, py = offY + mo.y / 100, pz = (z.z + mo.z) / 100;
+          if (mo.typ === "kissen") {
+            const k = new THREE.Mesh(kissenGeo(), matKissen);
+            k.position.set(px, py, pz);
+            // Der Bauch der Kissen-Geometrie zeigt lokal nach X; skaliert wird lokal
+            // (Dicke, Hoehe, Breite), die Drehung legt den Bauch bei Bedarf quer.
+            k.scale.set(mo.dick / 100, mo.hoehe / 100, mo.breite / 100);
+            if (mo.achse === "z") k.rotation.y = Math.PI / 2;
+            dazu(k);
+          } else if (mo.typ === "balken") {
+            const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matHolz);
+            b.position.set(px, py, pz);
+            if (mo.achse === "z") b.scale.set(mo.kante / 100, mo.kante / 100, mo.laenge / 100);
+            else b.scale.set(mo.laenge / 100, mo.kante / 100, mo.kante / 100);
+            dazu(b);
+          } else {
+            const r = new THREE.Mesh(new THREE.CylinderGeometry(mo.radius / 100, mo.radius / 100, mo.laenge / 100, 14), matStahl);
+            r.rotation.x = Math.PI / 2;
+            r.position.set(px, py, pz);
+            dazu(r);
+          }
+        }
       }
     }, [sichZonen, result, container, domain, fokus]);
     // Was der Fokus im Bild macht: die Ladung der anderen Container verschwindet, ihre Huelle
