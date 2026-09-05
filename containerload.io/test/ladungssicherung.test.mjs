@@ -192,17 +192,19 @@ test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
   }
   // Zwei Kissen, wenn die Luecke lang genug ist (220 cm entlang der Fahrt).
   assert.strictEqual(kissen.length, 2);
-  // Breite Luecke (235 cm, laengs zur Stirnwand): Stauholz-Verband, sechs Balken
+  // Breite Luecke (235 cm, laengs zur Stirnwand): Stauholz-Verband, vier Balken
   // in zwei Hoehen -- exakt so lang wie die Luecke tief ist (minus Spiel).
+  // (Sechs waren es mal; der schlankere Verband kam mit dem Ghost-Restyle,
+  // weil das dichte Gitter im transluzenten Orange wie Rauschen aussah.)
   const stirn = { x: 0, z: 0, dx: 235, dz: 248, dy: 200, richtung: "x" };
   const holz = sichMoebel(stirn);
   const balken = holz.filter((m) => m.typ === "balken"), pfosten = holz.filter((m) => m.typ === "pfosten");
-  assert.strictEqual(balken.length, 6);
+  assert.strictEqual(balken.length, 4);
   assert.ok(balken.every((m) => Math.abs(m.laenge - 235 * 0.96) < 1e-9));
   assert.strictEqual(new Set(balken.map((m) => m.y)).size, 2, "Balken in zwei Hoehen");
   // Der Verband steht auf Pfosten an BEIDEN Lueckenflaechen -- frei schwebende Balken
   // sahen aus wie ein Rendering-Fehler.
-  assert.strictEqual(pfosten.length, 6);
+  assert.strictEqual(pfosten.length, 4);
   assert.strictEqual(new Set(pfosten.map((m) => m.x)).size, 2, "Pfosten an beiden Flaechen der Luecke");
   // Tuer: zwei Sperrstangen quer ueber die volle Breite.
   const tuer = { x: 578, z: 0, dx: 12, dz: 235, dy: 200, tuer: true, richtung: "x" };

@@ -1934,11 +1934,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     } else {
       // Verband: waagerechte Balken in zwei Hoehen plus senkrechte Pfosten an beiden
       // Lueckenflaechen -- frei schwebende Balken sahen aus wie ein Rendering-Fehler.
-      for (const fy of [0.3, 0.7]) for (const fb of [0.15, 0.5, 0.85]) {
+      for (const fy of [0.3, 0.7]) for (const fb of [0.25, 0.75]) {
         m.push({ typ: "balken", achse: z.richtung, laenge: dick * 0.96, kante: 10, y: z.dy * fy,
           x: z.richtung === "z" ? breit * fb : z.dx / 2, z: z.richtung === "z" ? z.dz / 2 : breit * fb });
       }
-      for (const fd of [0.06, 0.94]) for (const fb of [0.15, 0.5, 0.85]) {
+      for (const fd of [0.06, 0.94]) for (const fb of [0.25, 0.75]) {
         m.push({ typ: "pfosten", kante: 10, hoehe: z.dy * 0.9, y: z.dy * 0.45,
           x: z.richtung === "z" ? breit * fb : dick * fd, z: z.richtung === "z" ? dick * fd : breit * fb });
       }
@@ -5667,9 +5667,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         g.computeVertexNormals();
         return g;
       };
-      const matKissen = new THREE.MeshStandardMaterial({ color: 0xccd3da, roughness: 0.9, metalness: 0.02 });
-      const matHolz = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
-      const matStahl = new THREE.MeshStandardMaterial({ color: 0x8f99a6, roughness: 0.4, metalness: 0.65 });
+      // EIN Ton fuer alle Hilfsmittel, transluzent wie der Platzier-Ghost: die App-Sprache
+      // fuer "Empfehlung, noch nicht real". Realfarben (weiss/Holz/Stahl) wirkten im
+      // stilisierten Bild billig -- Jareks Wort, und er hatte recht.
+      const matKissen = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.55, depthWrite: false, roughness: 0.6 });
+      const matHolz = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.45, depthWrite: false, roughness: 0.6 });
+      const matStahl = matHolz;
       sichZonen.forEach((z, zi) => {
         const nr = plakette(zi + 1);
         nr.position.set(offX + (z.x + z.dx / 2) / 100, offY + z.dy / 100 + 0.22, (z.z + z.dz / 2) / 100);
@@ -5678,7 +5681,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         t.sichMeshes.push(nr);
         // Die Zone selbst nur als Umriss mit hauchduenner Fuellung: sie sagt WO, die
         // Moebel sagen WOMIT.
-        const mat = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.1, depthWrite: false, roughness: 0.6 });
+        const mat = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.06, depthWrite: false, roughness: 0.6 });
         const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), mat);
         mesh.position.set(offX + (z.x + z.dx / 2) / 100, offY + (z.dy / 2) / 100, (z.z + z.dz / 2) / 100);
         mesh.scale.set(Math.max(0.02, z.dx / 100), z.dy / 100, Math.max(0.02, z.dz / 100));
