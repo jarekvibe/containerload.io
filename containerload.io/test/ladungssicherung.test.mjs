@@ -102,7 +102,9 @@ test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", 
 test("die Befunde-Liste ist die eine Quelle und sortiert nach Schwere der Lesart", () => {
   const s = sichAnalyse([box(0, 0, 100, 235), box(140, 0, 100, 80, 7, 0, 190)], (ti) => ti === 7 ? 1600 : 500, CONT, "sea");
   const arten = sichBefunde(s).map((b) => b.art);
-  assert.ok(arten.includes("laengsGross"), "die 40-cm-Luecke muss als grosse Laengsluecke gemeldet werden");
+  // 40 cm liegen unter der Polster-Grenze (45): fuellen, nicht abstuetzen.
+  assert.ok(arten.includes("laengs"), "die 40-cm-Luecke ist ein Fall fuers Staupolster");
+  assert.strictEqual(SICH.POLSTER, 45, "die Polster-Grenze ist der gemeinsame Richtwert von Text und 3D-Vorschau");
   assert.ok(arten.includes("laengsSumme") === (s.laengsSumme > SICH.SUMME), "Summenmeldung passt nicht zur Summe");
   assert.ok(arten.includes("tuer"), "Tuerluecke fehlt");
   assert.ok(arten.includes("kipp"), "Kippgefahr fehlt (190 cm auf 80er-Kante)");
@@ -150,9 +152,14 @@ test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
   // in zwei Hoehen -- exakt so lang wie die Luecke tief ist (minus Spiel).
   const stirn = { x: 0, z: 0, dx: 235, dz: 248, dy: 200, richtung: "x" };
   const holz = sichMoebel(stirn);
-  assert.strictEqual(holz.length, 6);
-  assert.ok(holz.every((m) => m.typ === "balken" && Math.abs(m.laenge - 235 * 0.96) < 1e-9));
-  assert.strictEqual(new Set(holz.map((m) => m.y)).size, 2, "Balken in zwei Hoehen");
+  const balken = holz.filter((m) => m.typ === "balken"), pfosten = holz.filter((m) => m.typ === "pfosten");
+  assert.strictEqual(balken.length, 6);
+  assert.ok(balken.every((m) => Math.abs(m.laenge - 235 * 0.96) < 1e-9));
+  assert.strictEqual(new Set(balken.map((m) => m.y)).size, 2, "Balken in zwei Hoehen");
+  // Der Verband steht auf Pfosten an BEIDEN Lueckenflaechen -- frei schwebende Balken
+  // sahen aus wie ein Rendering-Fehler.
+  assert.strictEqual(pfosten.length, 6);
+  assert.strictEqual(new Set(pfosten.map((m) => m.x)).size, 2, "Pfosten an beiden Flaechen der Luecke");
   // Tuer: zwei Sperrstangen quer ueber die volle Breite.
   const tuer = { x: 578, z: 0, dx: 12, dz: 235, dy: 200, tuer: true, richtung: "x" };
   const stangen = sichMoebel(tuer);

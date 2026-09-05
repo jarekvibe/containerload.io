@@ -1811,7 +1811,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     STF: 350,       // daN Vorspannkraft eines ueblichen Zurrgurts (Ratsche)
     MU_OHNE: 0.3,   // Reibbeiwert Holz/Holz trocken
     MU_MATTE: 0.6,  // mit Antirutschmatte
-    KIPP: 2         // Hoehe > KIPP x schmalste Grundkante = kippgefaehrdet (0,5 g quer)
+    KIPP: 2,        // Hoehe > KIPP x schmalste Grundkante = kippgefaehrdet (0,5 g quer)
+    POLSTER: 45     // cm -- bis hierhin fuellt ein Staupolster, darueber stuetzt Holz
   };
   // Intervalle mergen und Loecher zwischen 0 und "bis" melden.
   function sichLoecher(iv, bis) {
@@ -1867,7 +1868,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // 3D-Zonen -- drei Stellen mit eigener Logik waeren drei Meinungen.
   function sichBefunde(s) {
     const b = [];
-    s.laengs.forEach(([a, c]) => b.push(a < 1e-6 ? { art: "stirn", a, c } : c - a > 30 ? { art: "laengsGross", a, c } : { art: "laengs", a, c }));
+    s.laengs.forEach(([a, c]) => b.push(a < 1e-6 ? { art: "stirn", a, c } : c - a > SICH.POLSTER ? { art: "laengsGross", a, c } : { art: "laengs", a, c }));
     if (s.laengsSumme > SICH.SUMME) b.push({ art: "laengsSumme" });
     if (s.quer && s.quer.summe > SICH.SUMME && s.quer.loecher.length) b.push({ art: "quer" });
     if (s.tuer > SICH.SUMME) b.push({ art: "tuer" });
@@ -1905,7 +1906,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     const dick = z.richtung === "z" ? z.dz : z.dx;   // die Luecke selbst
     const breit = z.richtung === "z" ? z.dx : z.dz;  // quer dazu
-    if (dick <= 30) {
+    if (dick <= SICH.POLSTER) {
       const n = Math.max(1, Math.min(3, Math.floor(breit / 110)));
       const bb = Math.min(breit * 0.9 / n, 110), bh = Math.min(z.dy * 0.85, 180);
       for (let i = 0; i < n; i++) {
@@ -1914,9 +1915,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           x: z.richtung === "z" ? mitte : z.dx / 2, z: z.richtung === "z" ? z.dz / 2 : mitte });
       }
     } else {
+      // Verband: waagerechte Balken in zwei Hoehen plus senkrechte Pfosten an beiden
+      // Lueckenflaechen -- frei schwebende Balken sahen aus wie ein Rendering-Fehler.
       for (const fy of [0.3, 0.7]) for (const fb of [0.15, 0.5, 0.85]) {
         m.push({ typ: "balken", achse: z.richtung, laenge: dick * 0.96, kante: 10, y: z.dy * fy,
           x: z.richtung === "z" ? breit * fb : z.dx / 2, z: z.richtung === "z" ? z.dz / 2 : breit * fb });
+      }
+      for (const fd of [0.06, 0.94]) for (const fb of [0.15, 0.5, 0.85]) {
+        m.push({ typ: "pfosten", kante: 10, hoehe: z.dy * 0.9, y: z.dy * 0.45,
+          x: z.richtung === "z" ? breit * fb : dick * fd, z: z.richtung === "z" ? dick * fd : breit * fb });
       }
     }
     return m;
@@ -5606,7 +5613,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         g.computeVertexNormals();
         return g;
       };
-      const matKissen = new THREE.MeshStandardMaterial({ color: 0xdde2e8, roughness: 0.82, metalness: 0.02 });
+      const matKissen = new THREE.MeshStandardMaterial({ color: 0xccd3da, roughness: 0.9, metalness: 0.02 });
       const matHolz = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
       const matStahl = new THREE.MeshStandardMaterial({ color: 0x8f99a6, roughness: 0.4, metalness: 0.65 });
       for (const z of sichZonen) {
@@ -5631,12 +5638,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             k.scale.set(mo.dick / 100, mo.hoehe / 100, mo.breite / 100);
             if (mo.achse === "z") k.rotation.y = Math.PI / 2;
             dazu(k);
-          } else if (mo.typ === "balken") {
+          } else if (mo.typ === "balken" || mo.typ === "pfosten") {
             const b = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), matHolz);
             b.position.set(px, py, pz);
-            if (mo.achse === "z") b.scale.set(mo.kante / 100, mo.kante / 100, mo.laenge / 100);
+            if (mo.typ === "pfosten") b.scale.set(mo.kante / 100, mo.hoehe / 100, mo.kante / 100);
+            else if (mo.achse === "z") b.scale.set(mo.kante / 100, mo.kante / 100, mo.laenge / 100);
             else b.scale.set(mo.laenge / 100, mo.kante / 100, mo.kante / 100);
             dazu(b);
+            // Dieselben dunklen Kantenlinien wie auf den Ladungskisten: erst sie machen
+            // das Holz zum Teil des Bildes statt zum Fremdkoerper.
+            const bk = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0x05080c, transparent: true, opacity: 0.9 }));
+            bk.position.copy(b.position);
+            bk.scale.copy(b.scale);
+            dazu(bk);
           } else {
             const r = new THREE.Mesh(new THREE.CylinderGeometry(mo.radius / 100, mo.radius / 100, mo.laenge / 100, 14), matStahl);
             r.rotation.x = Math.PI / 2;
