@@ -37,15 +37,27 @@ test("Laengsluecken und Tuerluecke kommen aus den echten Positionen", () => {
   assert.strictEqual(ok.laengsSumme, 0);
 });
 
-test("Querluecken werden je Laengszone gemessen, die schlechteste zaehlt", () => {
+test("Querluecken: jedes meldewuerdige Loch wird eine Zone, deckungsgleiche verschmelzen", () => {
   // Zwei Reihen nebeneinander mit 75 cm Loch in der Mitte.
   const s = sichAnalyse([box(0, 0, 120, 80), box(0, 155, 120, 80)], w0, CONT, "sea");
-  assert.ok(s.quer, "keine Querzone gefunden");
-  assert.ok(Math.abs(s.quer.summe - 75) < 1e-9, `Quersumme ${s.quer.summe}`);
-  assert.strictEqual(s.quer.loecher.length, 1);
-  // Gegenprobe: volle Breite -> nichts zu melden.
-  const voll = sichAnalyse([box(0, 0, 120, 235)], w0, CONT, "sea");
-  assert.ok(!voll.quer || voll.quer.summe < SICH.EINZEL + 1e-9);
+  assert.strictEqual(s.querZonen.length, 1);
+  assert.ok(Math.abs(s.querZonen[0].zb - s.querZonen[0].za - 75) < 1e-9);
+  // DER Fall aus Jareks Screenshot: ein 35-cm-Streifen an der Wand, der sich ueber
+  // MEHRERE Reihen zieht, neben einer dickeren Luecke in einer einzelnen Reihe.
+  // Frueher zaehlte nur das schlechteste Band und der Streifen fiel unter den Tisch.
+  const lang = [
+    box(0, 0, 120, 200, 0), box(120, 0, 120, 200, 0), box(240, 0, 120, 200, 0), // 35er-Streifen bei z=200..235
+    box(360, 0, 120, 100, 1)                                                     // eine Reihe mit 135er-Luecke
+  ];
+  const s2 = sichAnalyse(lang, w0, CONT, "sea");
+  assert.strictEqual(s2.querZonen.length, 2, "Streifen UND dicke Luecke muessen gemeldet werden");
+  const streifen = s2.querZonen.find((q) => Math.abs(q.zb - q.za - 35) < 1e-9);
+  assert.ok(streifen, "der 35er-Streifen fehlt");
+  assert.ok(Math.abs(streifen.von - 0) < 1e-9 && Math.abs(streifen.bis - 360) < 1e-9, "der Streifen muss ueber alle drei Reihen verschmolzen sein");
+  // Gegenproben: volle Breite meldet nichts, und ein 8-cm-Restspalt (Bandsumme unter
+  // der CTU-Grenze) auch nicht -- kleine geometrische Restluecken sind kein Befund.
+  assert.strictEqual(sichAnalyse([box(0, 0, 120, 235)], w0, CONT, "sea").querZonen.length, 0);
+  assert.strictEqual(sichAnalyse([box(0, 0, 120, 227)], w0, CONT, "sea").querZonen.length, 0);
 });
 
 test("kippgefaehrdet ist, was hoeher als das Doppelte der schmalsten Kante steht", () => {

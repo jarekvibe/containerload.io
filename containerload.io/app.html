@@ -1833,17 +1833,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const lg = sichLoecher(laengsIv, 0); // nur innere Loecher; Tuer separat
     const laengs = lg.loecher.filter(([a, b]) => b - a > SICH.EINZEL);
     const tuer = Math.max(0, L - lg.ende);
-    // Quer: je Laengszone (Schnitt zwischen zwei Kanten) die z-Abdeckung pruefen.
-    // Gemeldet wird die SCHLECHTESTE Zone -- wer die fuellt, hat die anderen meist mit.
+    // Quer: je Laengsband (Schnitt zwischen zwei Kanten) die z-Abdeckung pruefen.
+    // Meldewuerdig ist jedes Loch ueber EINZEL in einem Band, dessen Lochsumme ueber
+    // der CTU-Grenze liegt. Nahezu deckungsgleiche Loecher benachbarter Baender werden
+    // zu EINER durchgehenden Zone verschmolzen (Schnittmenge, damit die Zone sicher im
+    // Loch liegt) -- frueher zaehlte nur das schlechteste Band, und ein langer schmaler
+    // Streifen an der Wand fiel neben einer dickeren Luecke unter den Tisch.
     const kanten = [...new Set(placed.flatMap((p) => [+p.x || 0, (+p.x || 0) + (+p.dx || 0)]))].sort((a, b) => a - b);
-    let quer = null;
+    const querZonen = [];
     for (let i = 0; i + 1 < kanten.length; i++) {
       const m = (kanten[i] + kanten[i + 1]) / 2;
       const zIv = placed.filter((p) => (+p.x || 0) < m && m < (+p.x || 0) + (+p.dx || 0)).map((p) => [+p.z || 0, (+p.z || 0) + (+p.dz || 0)]);
       if (!zIv.length) continue; // Laengsloch, oben schon gemeldet
       const zg = sichLoecher(zIv, W);
-      const summe = zg.loecher.reduce((s, [a, b]) => s + (b - a), 0);
-      if (!quer || summe > quer.summe) quer = { summe, von: kanten[i], bis: kanten[i + 1], loecher: zg.loecher.filter(([a, b]) => b - a > SICH.EINZEL) };
+      const summe = zg.loecher.reduce((s2, [a, b]) => s2 + (b - a), 0);
+      if (summe <= SICH.SUMME) continue;
+      for (const [za, zb] of zg.loecher) {
+        if (zb - za <= SICH.EINZEL) continue;
+        const alt = querZonen.find((q) => Math.abs(q.bis - kanten[i]) < 1e-6 && Math.abs(q.za - za) < 10 && Math.abs(q.zb - zb) < 10);
+        if (alt) { alt.bis = kanten[i + 1]; alt.za = Math.max(alt.za, za); alt.zb = Math.min(alt.zb, zb); }
+        else querZonen.push({ von: kanten[i], bis: kanten[i + 1], za, zb });
+      }
     }
     const laengsSumme = laengs.reduce((s, [a, b]) => s + (b - a), 0);
     // Kippgefahr: freistehend, homogene Masse -- Hoehe gegen schmalste Grundkante.
@@ -1854,7 +1864,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const boden = placed.filter((p) => (+p.y || 0) < 1e-6).length;
     let gewicht = 0;
     for (const p of placed) gewicht += Math.max(0, +weightOf(p.ti) || 0);
-    return { laengs, laengsSumme, tuer, quer, kippTi, schwerTi, boden, gewicht, domain };
+    return { laengs, laengsSumme, tuer, querZonen, kippTi, schwerTi, boden, gewicht, domain };
   }
   // Niederzurren nach EN 12195-1 (vereinfacht, Zurrwinkel 90 Grad): Gesamtvorspannkraft
   // F = m x g x (0,8 - mu) / mu, je Gurt wirkt die doppelte STF. Ergebnis in Gurten.
@@ -1870,7 +1880,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const b = [];
     s.laengs.forEach(([a, c]) => b.push(a < 1e-6 ? { art: "stirn", a, c } : c - a > SICH.POLSTER ? { art: "laengsGross", a, c } : { art: "laengs", a, c }));
     if (s.laengsSumme > SICH.SUMME) b.push({ art: "laengsSumme" });
-    if (s.quer && s.quer.summe > SICH.SUMME && s.quer.loecher.length) b.push({ art: "quer" });
+    (s.querZonen || []).forEach(() => b.push({ art: "quer" }));
     if (s.tuer > SICH.SUMME) b.push({ art: "tuer" });
     else if (s.tuer > SICH.EINZEL) b.push({ art: "tuerKlein" });
     s.kippTi.forEach((ti) => b.push({ art: "kipp", ti }));
@@ -1893,8 +1903,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const z = [];
     s.laengs.forEach(([a, b]) => z.push({ x: a, z: 0, dx: b - a, dz: W, dy: H, richtung: "x",
       art: a < 1e-6 ? "stirn" : "laengs", luecke: b - a, nachbarn: anrainerX(a, b), wand: false }));
-    if (s.quer && s.quer.summe > SICH.SUMME) s.quer.loecher.forEach(([za, zb]) => z.push({ x: s.quer.von, z: za, dx: s.quer.bis - s.quer.von, dz: zb - za, dy: H, richtung: "z",
-      art: "quer", luecke: zb - za, nachbarn: anrainerZ(s.quer.von, s.quer.bis, za, zb), wand: za < 2 || zb > W - 2 }));
+    (s.querZonen || []).forEach((q) => z.push({ x: q.von, z: q.za, dx: q.bis - q.von, dz: q.zb - q.za, dy: H, richtung: "z",
+      art: "quer", luecke: q.zb - q.za, nachbarn: anrainerZ(q.von, q.bis, q.za, q.zb), wand: q.za < 2 || q.zb > W - 2 }));
     if (s.tuer > SICH.SUMME) z.push({ x: (+cont.l || 0) - s.tuer, z: 0, dx: Math.min(s.tuer, 12), dz: W, dy: H, tuer: true, richtung: "x",
       art: "tuer", luecke: s.tuer, nachbarn: anrainerX((+cont.l || 0) - s.tuer, Infinity), wand: false });
     return z;
@@ -8108,7 +8118,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           default: return null;
         }
       }).filter(Boolean);
-      const polster = s.laengs.length + (s.quer && s.quer.summe > SICH.SUMME ? s.quer.loecher.length : 0);
+      const polster = sichZonenAlle.filter((z) => !z.tuer).length;
       const liste = [];
       if (polster > 0) liste.push(T.sichListePolster(polster));
       if (s.tuer > SICH.SUMME) liste.push(T.sichListeTuer);
