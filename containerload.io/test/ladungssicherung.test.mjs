@@ -14,9 +14,9 @@ const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
 const von = L.findIndex((l) => l.includes("var SICH = {"));
-const bis = L.findIndex((l, i) => i > von && l.trim() === "}" && L[i - 1].includes("gurte: Math.ceil"));
+const bis = L.findIndex((l, i) => i > von && l.trim() === "}" && L[i - 1].includes("return z;"));
 assert.ok(von > 0 && bis > von, "SICH-Ausschnitt nicht gefunden");
-const { SICH, sichAnalyse, sichGurte } = new Function(L.slice(von, bis + 1).join("\n") + "\nreturn { SICH, sichAnalyse, sichGurte };")();
+const { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen } = new Function(L.slice(von, bis + 1).join("\n") + "\nreturn { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen };")();
 
 // Kleine Helfer: Quader bauen, Gewicht je ti nachschlagen.
 const box = (x, z, dx, dz, ti = 0, y = 0, dy = 100) => ({ x, y, z, dx, dy, dz, ti });
@@ -88,8 +88,47 @@ test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", 
   assert.ok(roh.includes('sichBtn: "Sicherung pr\\xFCfen"'), "deutscher Knopf fehlt");
   assert.ok(roh.includes('sichBtn: "Check securing"'), "englischer Knopf fehlt");
   assert.ok(roh.includes('disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)'), "Knopf haengt nicht an der Sicht");
-  assert.ok(roh.includes("const s = sichAnalyse(sichtPlaced, sw, sichtCont, domain);"), "Dialog liest nicht die Sicht");
+  // EINE Quelle: Dialog, Aufplopp-Hinweis und 3D lesen dieselbe Analyse der Sicht.
+  assert.ok(roh.includes("sichAnalyse(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), sichtCont, domain)"), "Analyse liest nicht die Sicht");
+  assert.ok(roh.includes("const sichB = sichErg ? sichBefunde(sichErg) : [];"), "Befunde kommen nicht aus der einen Quelle");
+  assert.ok(roh.includes("onFokus: setFokus, sichZonen })"), "Viewport bekommt die Zonen nicht");
+  // Der Hinweis ploppt nur bei echten Warnungen auf, nie ueber dem Empfehlungs-Banner.
+  assert.ok(roh.includes("!manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen &&"), "Aufplopp-Bedingung fehlt");
   // Die Annahmen stehen SICHTBAR im Dialog, in beiden Sprachen.
   assert.ok(roh.includes("sichAssume: \"Richtwerte: CTU-Code"), "deutsche Annahmen fehlen");
   assert.ok(roh.includes("sichAssume: \"Guide values: CTU Code"), "englische Annahmen fehlen");
+});
+
+test("die Befunde-Liste ist die eine Quelle und sortiert nach Schwere der Lesart", () => {
+  const s = sichAnalyse([box(0, 0, 100, 235), box(140, 0, 100, 80, 7, 0, 190)], (ti) => ti === 7 ? 1600 : 500, CONT, "sea");
+  const arten = sichBefunde(s).map((b) => b.art);
+  assert.ok(arten.includes("laengsGross"), "die 40-cm-Luecke muss als grosse Laengsluecke gemeldet werden");
+  assert.ok(arten.includes("laengsSumme") === (s.laengsSumme > SICH.SUMME), "Summenmeldung passt nicht zur Summe");
+  assert.ok(arten.includes("tuer"), "Tuerluecke fehlt");
+  assert.ok(arten.includes("kipp"), "Kippgefahr fehlt (190 cm auf 80er-Kante)");
+  assert.ok(arten.includes("schwer"), "Schwergut fehlt");
+  // Gegenprobe: die formschluessige Stauung meldet nichts als hoechstens die Tuer.
+  const ok = sichBefunde(sichAnalyse([box(0, 0, 585, 235)], () => 500, CONT, "sea"));
+  assert.deepStrictEqual(ok.filter((b) => b.art !== "tuerKlein" && b.art !== "tuer"), []);
+});
+
+test("die 3D-Zonen decken genau die Luecken ab", () => {
+  const placed = [box(0, 0, 100, 235, 0, 0, 120), box(130, 0, 100, 80, 1, 0, 120)];
+  const s = sichAnalyse(placed, () => 500, CONT, "sea");
+  const z = sichZonenBauen(s, { ...CONT, h: 239 }, placed);
+  // Laengsluecke 100-130 als Quader voller Breite, so hoch wie die Ladung.
+  const laengs = z.find((q) => !q.tuer && q.x === 100);
+  assert.ok(laengs, "Laengszone fehlt");
+  assert.strictEqual(laengs.dx, 30);
+  assert.strictEqual(laengs.dz, 235);
+  assert.strictEqual(laengs.dy, 120, "Zone so hoch wie die Ladung, nicht bis unters Dach");
+  // Tuerluecke als schmaler Balken am Ladungsende, nicht als Riesenblock.
+  const tuer = z.find((q) => q.tuer);
+  assert.ok(tuer, "Tuerzone fehlt");
+  assert.ok(Math.abs(tuer.x - 230) < 1e-9, "Balken sitzt am Ladungsende");
+  assert.ok(tuer.dx <= 12, "Tuerzone muss ein Balken sein, kein Block bis zur Tuer");
+  // Gegenprobe: formschluessig -> keine Zonen ausser der Tuer.
+  const dicht = [box(0, 0, 585, 235)];
+  const z2 = sichZonenBauen(sichAnalyse(dicht, () => 500, CONT, "sea"), CONT, dicht);
+  assert.deepStrictEqual(z2.filter((q) => !q.tuer), []);
 });
