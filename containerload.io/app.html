@@ -1886,10 +1886,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const p of placed) hMax = Math.max(hMax, (+p.y || 0) + (+p.dy || 0));
     const H = Math.max(80, Math.min(hMax || 80, +cont.h || 999));
     const W = +cont.w || 0;
+    // Angrenzende Packstuecke einer Luecke: wer sie beruehrt, wuerde bei Bewegung in
+    // sie hineinrutschen. Fuer die "Grund"-Zeile der Zonen-Karte.
+    const anrainerX = (a, b) => [...new Set(placed.filter((p) => Math.abs((+p.x || 0) + (+p.dx || 0) - a) < 2 || Math.abs((+p.x || 0) - b) < 2).map((p) => p.ti))];
+    const anrainerZ = (von, bis, za, zb) => [...new Set(placed.filter((p) => (+p.x || 0) < bis && (+p.x || 0) + (+p.dx || 0) > von && (Math.abs((+p.z || 0) + (+p.dz || 0) - za) < 2 || Math.abs((+p.z || 0) - zb) < 2)).map((p) => p.ti))];
     const z = [];
-    s.laengs.forEach(([a, b]) => z.push({ x: a, z: 0, dx: b - a, dz: W, dy: H, richtung: "x" }));
-    if (s.quer && s.quer.summe > SICH.SUMME) s.quer.loecher.forEach(([za, zb]) => z.push({ x: s.quer.von, z: za, dx: s.quer.bis - s.quer.von, dz: zb - za, dy: H, richtung: "z" }));
-    if (s.tuer > SICH.SUMME) z.push({ x: (+cont.l || 0) - s.tuer, z: 0, dx: Math.min(s.tuer, 12), dz: W, dy: H, tuer: true, richtung: "x" });
+    s.laengs.forEach(([a, b]) => z.push({ x: a, z: 0, dx: b - a, dz: W, dy: H, richtung: "x",
+      art: a < 1e-6 ? "stirn" : "laengs", luecke: b - a, nachbarn: anrainerX(a, b), wand: false }));
+    if (s.quer && s.quer.summe > SICH.SUMME) s.quer.loecher.forEach(([za, zb]) => z.push({ x: s.quer.von, z: za, dx: s.quer.bis - s.quer.von, dz: zb - za, dy: H, richtung: "z",
+      art: "quer", luecke: zb - za, nachbarn: anrainerZ(s.quer.von, s.quer.bis, za, zb), wand: za < 2 || zb > W - 2 }));
+    if (s.tuer > SICH.SUMME) z.push({ x: (+cont.l || 0) - s.tuer, z: 0, dx: Math.min(s.tuer, 12), dz: W, dy: H, tuer: true, richtung: "x",
+      art: "tuer", luecke: s.tuer, nachbarn: anrainerX((+cont.l || 0) - s.tuer, Infinity), wand: false });
     return z;
   }
   // Die "Moebel" der Sicherungsvorschau: je Zone die konkreten Hilfsmittel als
@@ -2987,17 +2994,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichBtn: "Sicherung pr\xFCfen",
       sichBanner: (n) => `Ladungssicherung: ${n} ${n === 1 ? "Hinweis" : "Hinweise"} zu dieser Stauung`,
       sichZeige3d: "In 3D zeigen",
+      sichZoneMass: { laengs: (cm) => `L\xE4ngsl\xFCcke: ${cm} cm`, stirn: (cm) => `L\xFCcke zur Stirnwand: ${cm} cm`, quer: (cm) => `Querl\xFCcke: ${cm} cm`, tuer: (cm) => `L\xFCcke zur T\xFCr: ${cm} cm` },
+      sichZoneRichtung: "Bewegung m\xF6glich",
+      sichRichtungL: "l\xE4ngs (Bremsen und Anfahren)",
+      sichRichtungQ: "quer (Kurven und Seegang)",
+      sichZoneGrund: "Grund",
+      sichGrundWand: "Freiraum zwischen Ladung und Containerwand",
+      sichGrundBloecke: (a, b) => `Freiraum zwischen ${a} und ${b}`,
+      sichGrundBlock: (a) => `Freiraum an ${a}`,
+      sichGrundStirn: "Abstand zur Stirnwand, meist vom Achslast-Ausgleich",
+      sichGrundTuer: "Freiraum zwischen Ladung und T\xFCr",
+      sichZoneEmpf: "Empfehlung",
+      sichEmpfKissen: "Dunnage Bag / Luftkissen, alternativ Stauholz",
+      sichEmpfVerband: "Stauholz-Verband. F\xFCr ein Luftkissen ist die L\xFCcke zu breit",
+      sichEmpfTuer: "Sperrbalken oder Netz, alternativ ein Zurrgurt quer",
       sichChip: (n) => `Sicherungszonen: ${n}`,
       sichChipZu: "Ausblenden",
       sichTitle: "Ladungssicherung \xB7 Richtwert-Check",
       sichScope: "gilt f\xFCr den angezeigten Container/Auflieger und die berechnete Stauung",
       sichOk: "Die Ladung steht formschl\xFCssig: keine L\xFCcke \xFCber 5 cm, alle Summen unter 15 cm. Genau so will es der CTU-Code. Auf der Stra\xDFe bleibt nur das Niederzurren unten zu pr\xFCfen.",
-      sichLaengs: (von, bis, cm) => `Zwischen ${von} m und ${bis} m ab Stirnwand ist ${cm} cm Luft in L\xE4ngsrichtung. Die L\xFCcke f\xFCllen, mit Staupolster oder Stauholz.`,
-      sichLaengsGross: (von, bis, cm) => `Zwischen ${von} m und ${bis} m ab Stirnwand ist ${cm} cm Luft in L\xE4ngsrichtung. F\xFCr ein Polster ist das zu breit. Mit einem Stauholz-Verband abst\xFCtzen oder die Ladung umstauen.`,
-      sichStirn: (cm) => `Vor der Stirnwand bleiben ${cm} cm frei. Das kommt meist vom Achslast-Ausgleich und ist so gewollt. Trotzdem sichern: die Ladung mit einem Stauholz-Verband zur Stirnwand abst\xFCtzen.`,
       sichLaengsSumme: (cm) => `Alle L\xE4ngsl\xFCcken zusammen: ${cm} cm. Der CTU-Code erlaubt h\xF6chstens 15 cm. Bleiben sie offen, rutscht die Ladung bei jeder Bremsung ein St\xFCck weiter.`,
-      sichQuer: (von, bis, cm, max) => `Zwischen ${von} m und ${bis} m bleibt seitlich ${cm} cm Luft, die gr\xF6\xDFte einzelne L\xFCcke misst ${max} cm. Die Packst\xFCcke an die W\xE4nde r\xFCcken oder die L\xFCcke f\xFCllen.`,
-      sichTuer: (cm) => `Zur T\xFCr bleiben ${cm} cm frei. Die letzte Reihe gegen die T\xFCr sichern: mit Sperrbalken, Netz oder einem Zurrgurt quer. Sonst kippt sie beim \xD6ffnen heraus.`,
       sichTuerKlein: (cm) => `Zur T\xFCr bleiben ${cm} cm. Das ist wenig. Mit Stauholz ausf\xFCttern reicht.`,
       sichKipp: (name) => `${name} steht mehr als doppelt so hoch, wie die schmalste Kante breit ist. Kippgefahr. B\xFCndeln, gegenstauen oder zurren.`,
       sichSchwer: (name, kg) => `${name} wiegt ${kg} kg je St\xFCck. Schwere Einzelst\xFCcke brauchen Stauholz zur Lastverteilung. Die Zurrpunkte im Standardcontainer tragen daf\xFCr nur begrenzte Kr\xE4fte.`,
@@ -3329,17 +3345,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichBtn: "Check securing",
       sichBanner: (n) => `Cargo securing: ${n} ${n === 1 ? "note" : "notes"} on this stow`,
       sichZeige3d: "Show in 3D",
+      sichZoneMass: { laengs: (cm) => `Longitudinal gap: ${cm} cm`, stirn: (cm) => `Gap to the front wall: ${cm} cm`, quer: (cm) => `Transverse gap: ${cm} cm`, tuer: (cm) => `Gap to the door: ${cm} cm` },
+      sichZoneRichtung: "Movement possible",
+      sichRichtungL: "lengthways (braking and pulling away)",
+      sichRichtungQ: "sideways (curves and swell)",
+      sichZoneGrund: "Reason",
+      sichGrundWand: "free space between load and container wall",
+      sichGrundBloecke: (a, b) => `free space between ${a} and ${b}`,
+      sichGrundBlock: (a) => `free space at ${a}`,
+      sichGrundStirn: "distance to the front wall, usually from the axle-load shift",
+      sichGrundTuer: "free space between load and door",
+      sichZoneEmpf: "Recommendation",
+      sichEmpfKissen: "dunnage bag / air cushion, timber as an alternative",
+      sichEmpfVerband: "timber framework. The gap is too wide for an air cushion",
+      sichEmpfTuer: "blocking bar or net, a cross strap as an alternative",
       sichChip: (n) => `Securing zones: ${n}`,
       sichChipZu: "Hide",
       sichTitle: "Cargo securing \xB7 guide-value check",
       sichScope: "applies to the container/trailer shown and the calculated stow",
       sichOk: "The load sits tight: no gap over 5 cm, all sums under 15 cm. Exactly what the CTU Code asks for. On the road, only the lashing below is left to check.",
-      sichLaengs: (von, bis, cm) => `Between ${von} m and ${bis} m from the front wall there is ${cm} cm of air lengthways. Fill the gap, with a dunnage bag or timber.`,
-      sichLaengsGross: (von, bis, cm) => `Between ${von} m and ${bis} m from the front wall there is ${cm} cm of air lengthways. Too wide for a bag. Brace it with a timber framework or restow the load.`,
-      sichStirn: (cm) => `There are ${cm} cm free in front of the load. That usually comes from the axle-load shift and is intended. Secure it anyway: brace the load towards the front wall with a timber framework.`,
       sichLaengsSumme: (cm) => `All longitudinal gaps together: ${cm} cm. The CTU Code allows 15 cm at most. Left open, the load slides a bit further with every braking.`,
-      sichQuer: (von, bis, cm, max) => `Between ${von} m and ${bis} m there is ${cm} cm of air sideways, the largest single gap measures ${max} cm. Push the pieces against the walls or fill the gap.`,
-      sichTuer: (cm) => `There are ${cm} cm free towards the door. Secure the last row against the door: with a blocking bar, a net or a cross strap. Otherwise it tips out on opening.`,
       sichTuerKlein: (cm) => `There are ${cm} cm towards the door. That is little. Padding it out with timber is enough.`,
       sichKipp: (name) => `${name} stands more than twice as tall as its narrowest edge is wide. Tipping hazard. Bundle, brace or lash it.`,
       sichSchwer: (name, kg) => `${name} weighs ${kg} kg per piece. Heavy single pieces need timber to spread the load. The lashing points in a standard container only take limited forces for that.`,
@@ -5594,13 +5619,32 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     useEffect(() => {
       const t = three.current;
       if (!t) return;
-      (t.sichMeshes || []).forEach((m) => { t.scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) m.material.dispose(); });
+      (t.sichMeshes || []).forEach((m) => { t.scene.remove(m); if (m.geometry) m.geometry.dispose(); if (m.material) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); } });
       t.sichMeshes = [];
       if (!sichZonen || !sichZonen.length || !t.frame || !t.frame.slots || !t.frame.slots.length) return;
       const si = fokus !== "alle" && t.frame.slots[fokus] ? fokus : 0;
       const sl = t.frame.slots[si];
       const offX = sl.cx - sl.hx, offY = sl.cy - sl.hy;
       const dazu = (obj) => { obj.renderOrder = 4; t.scene.add(obj); t.sichMeshes.push(obj); };
+      // Nummern-Plakette ueber jeder Zone: dieselbe Nummer wie auf der Karte im Dialog.
+      // Ohne die Korrelation muesste man raten, welche Karte welche Luecke meint.
+      const plakette = (nr) => {
+        const cv = document.createElement("canvas");
+        cv.width = cv.height = 64;
+        const g = cv.getContext("2d");
+        g.fillStyle = "#DDA24C";
+        g.beginPath();
+        g.arc(32, 32, 30, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "#1a0f08";
+        g.font = "bold 36px Archivo, ui-sans-serif, sans-serif";
+        g.textAlign = "center";
+        g.textBaseline = "middle";
+        g.fillText(String(nr), 32, 35);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+        spr.scale.set(0.26, 0.26, 1);
+        return spr;
+      };
       // Kissen-Geometrie: Einheitsbox, an den grossen Flaechen aufgeblasen und an den
       // Raendern zusammengezogen -- die Silhouette eines echten Staupolsters.
       const kissenGeo = () => {
@@ -5616,7 +5660,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const matKissen = new THREE.MeshStandardMaterial({ color: 0xccd3da, roughness: 0.9, metalness: 0.02 });
       const matHolz = new THREE.MeshStandardMaterial({ color: 9070410, roughness: 0.85, metalness: 0.04 });
       const matStahl = new THREE.MeshStandardMaterial({ color: 0x8f99a6, roughness: 0.4, metalness: 0.65 });
-      for (const z of sichZonen) {
+      sichZonen.forEach((z, zi) => {
+        const nr = plakette(zi + 1);
+        nr.position.set(offX + (z.x + z.dx / 2) / 100, offY + z.dy / 100 + 0.22, (z.z + z.dz / 2) / 100);
+        nr.renderOrder = 6;
+        t.scene.add(nr);
+        t.sichMeshes.push(nr);
         // Die Zone selbst nur als Umriss mit hauchduenner Fuellung: sie sagt WO, die
         // Moebel sagen WOMIT.
         const mat = new THREE.MeshStandardMaterial({ color: 0xdda24c, transparent: true, opacity: 0.1, depthWrite: false, roughness: 0.6 });
@@ -5658,7 +5707,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             dazu(r);
           }
         }
-      }
+      });
     }, [sichZonen, result, container, domain, fokus]);
     // Was der Fokus im Bild macht: die Ladung der anderen Container verschwindet, ihre Huelle
     // bleibt als blasse Silhouette stehen. Ganz ausblenden waere verwirrend -- man wuesste
@@ -7453,7 +7502,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const sichB = sichErg ? sichBefunde(sichErg) : [];
     // tuerKlein ist ein Hinweis, kein Alarm -- er allein rechtfertigt kein Aufploppen.
     const sichWarnzahl = sichB.filter((b) => b.art !== "tuerKlein").length;
-    const sichZonen = sichZeige && sichErg ? sichZonenBauen(sichErg, sichtCont, sichtPlaced) : null;
+    // Die Zonen braucht auch der Dialog (Karten mit Nummer, Grund, Empfehlung) --
+    // der Viewport bekommt sie nur, solange die 3D-Ansicht eingeschaltet ist. Beide
+    // zaehlen dieselbe Liste, deshalb stimmen Karten-Nummern und 3D-Plaketten ueberein.
+    const sichZonenAlle = sichErg ? sichZonenBauen(sichErg, sichtCont, sichtPlaced) : [];
+    const sichZonen = sichZeige && sichZonenAlle.length ? sichZonenAlle : null;
     const sichtReihe = fokusSlot ? slotRows[fokus] : null;
     const sichtVol = sichtReihe ? sichtReihe.vol : result.usedVol;
     const sichtContVol = sichtReihe ? sichtReihe.cVol : result.contVol;
@@ -8032,20 +8085,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const mF = (cm) => (cm / 100).toLocaleString(LANG === "en" ? "en-GB" : "de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const cF = (cm) => Math.round(cm);
       const zOhne = sichGurte(s.gewicht, SICH.MU_OHNE), zMit = sichGurte(s.gewicht, SICH.MU_MATTE);
-      const quermax = s.quer && s.quer.loecher.length ? Math.max(...s.quer.loecher.map(([a, b]) => b - a)) : 0;
+      // Die geometrischen Luecken stehen als nummerierte Karten da (dieselbe Liste
+      // und Reihenfolge wie die 3D-Plaketten); als Textzeilen bleiben nur die
+      // Befunde ohne Ort: Lueckensumme, kleine Tuerluecke, Kippgefahr, Schwergut.
+      const karten = sichZonenAlle.map((z, i) => {
+        const namen = (z.nachbarn || []).map(sName);
+        const grund = z.art === "stirn" ? T.sichGrundStirn
+          : z.art === "tuer" ? T.sichGrundTuer
+          : z.wand ? T.sichGrundWand
+          : namen.length >= 2 ? T.sichGrundBloecke(namen[0], namen[1])
+          : namen.length === 1 ? T.sichGrundBlock(namen[0])
+          : T.sichGrundWand;
+        const empf = z.art === "tuer" ? T.sichEmpfTuer : z.luecke <= SICH.POLSTER ? T.sichEmpfKissen : T.sichEmpfVerband;
+        return { nr: i + 1, mass: T.sichZoneMass[z.art](cF(z.luecke)), richtung: z.richtung === "z" ? T.sichRichtungQ : T.sichRichtungL, grund, empf };
+      });
       const zeilen = sichB.map((b) => {
         switch (b.art) {
-          case "stirn": return [C.warn, T.sichStirn(cF(b.c - b.a))];
-          case "laengsGross": return [C.warn, T.sichLaengsGross(mF(b.a), mF(b.c), cF(b.c - b.a))];
-          case "laengs": return [C.warn, T.sichLaengs(mF(b.a), mF(b.c), cF(b.c - b.a))];
           case "laengsSumme": return [C.bad, T.sichLaengsSumme(cF(s.laengsSumme))];
-          case "quer": return [C.warn, T.sichQuer(mF(s.quer.von), mF(s.quer.bis), cF(s.quer.summe), cF(quermax))];
-          case "tuer": return [C.warn, T.sichTuer(cF(s.tuer))];
           case "tuerKlein": return [C.dim, T.sichTuerKlein(cF(s.tuer))];
           case "kipp": return [C.warn, T.sichKipp(sName(b.ti))];
-          default: return [C.warn, T.sichSchwer(sName(b.ti), fmtDE(Math.round(sw(b.ti))))];
+          case "schwer": return [C.warn, T.sichSchwer(sName(b.ti), fmtDE(Math.round(sw(b.ti))))];
+          default: return null;
         }
-      });
+      }).filter(Boolean);
       const polster = s.laengs.length + (s.quer && s.quer.summe > SICH.SUMME ? s.quer.loecher.length : 0);
       const liste = [];
       if (polster > 0) liste.push(T.sichListePolster(polster));
@@ -8062,8 +8124,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")),
           /* @__PURE__ */ React.createElement("div", { className: "p-6 flex flex-col", style: { gap: SP.m, maxHeight: "72vh", overflowY: "auto" } },
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint } }, T.sichScope),
-            zeilen.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, lineHeight: 1.5, color: C.good, fontWeight: FW.semi } }, T.sichOk),
-            zeilen.map(([farbe, txt], i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex gap-3", style: { fontSize: FS.small, lineHeight: 1.5, color: "#d4dce5" } },
+            zeilen.length === 0 && karten.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, lineHeight: 1.5, color: C.good, fontWeight: FW.semi } }, T.sichOk),
+            karten.map((k) => /* @__PURE__ */ React.createElement("div", { key: k.nr, className: "rounded-lg p-3", style: { background: C.field, border: `1px solid ${hexA(C.warn, 0.35)}` } },
+              /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: SP.xs } },
+                /* @__PURE__ */ React.createElement("span", { className: "flex items-center justify-center rounded-full", style: { width: 20, height: 20, background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, flexShrink: 0 } }, k.nr),
+                /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, fontWeight: FW.bold, color: C.text } }, k.mass)),
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.6, color: C.dim } },
+                T.sichZoneRichtung, ": ", k.richtung, /* @__PURE__ */ React.createElement("br", null),
+                T.sichZoneGrund, ": ", k.grund),
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.5, color: C.text, marginTop: SP.xs } },
+                /* @__PURE__ */ React.createElement("span", { style: { color: C.warn, fontWeight: FW.semi } }, T.sichZoneEmpf, ": "), k.empf))),
+            zeilen.map(([farbe, txt], i) => /* @__PURE__ */ React.createElement("div", { key: "z" + i, className: "flex gap-3", style: { fontSize: FS.small, lineHeight: 1.5, color: "#d4dce5" } },
               /* @__PURE__ */ React.createElement("span", { style: { width: 6, height: 6, borderRadius: "50%", background: farbe, flexShrink: 0, marginTop: SP.xs } }),
               /* @__PURE__ */ React.createElement("span", null, txt))),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.5, color: domain === "road" ? "#d4dce5" : C.dim, borderTop: "1px solid #1C2531", paddingTop: SP.m } },
@@ -8072,7 +8143,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             liste.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { borderTop: "1px solid #1C2531", paddingTop: SP.m } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, fontWeight: FW.semi, color: C.text, marginBottom: SP.s } }, T.sichListe),
               liste.map((t, i) => /* @__PURE__ */ React.createElement("div", { key: i, style: { fontSize: FS.small, lineHeight: 1.6, color: C.dim } }, "• ", t))),
-            zeilen.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { borderTop: "1px solid #1C2531", paddingTop: SP.m } },
+            (karten.length > 0 || zeilen.length > 0) && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { borderTop: "1px solid #1C2531", paddingTop: SP.m } },
               /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => { setSichZeige(true); setSichOpen(false); } }, T.sichZeige3d),
               /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setSichOpen(false) }, T.close)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint, borderTop: "1px solid #1C2531", paddingTop: SP.m } }, T.sichAssume))));

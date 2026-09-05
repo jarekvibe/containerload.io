@@ -135,6 +135,38 @@ test("die 3D-Zonen decken genau die Luecken ab", () => {
   assert.deepStrictEqual(z2.filter((q) => !q.tuer), []);
 });
 
+test("jede Zone weiss, wer an ihr steht und ob eine Wand beteiligt ist", () => {
+  // Laengsluecke zwischen zwei benannten Bloecken: beide Anrainer stehen in der Zone.
+  const placed = [box(0, 0, 100, 235, 3), box(130, 0, 100, 235, 8)];
+  const z = sichZonenBauen(sichAnalyse(placed, () => 500, CONT, "sea"), CONT, placed);
+  const laengs = z.find((q) => q.art === "laengs");
+  assert.ok(laengs, "Laengszone fehlt");
+  assert.deepStrictEqual([...laengs.nachbarn].sort(), [3, 8], "beide Anrainer der Luecke");
+  assert.strictEqual(laengs.luecke, 30);
+  // Querluecke zur Wand traegt das Wand-Kennzeichen ...
+  const wandLast = [box(0, 0, 120, 210, 1)];
+  const zw = sichZonenBauen(sichAnalyse(wandLast, () => 500, CONT, "sea"), CONT, wandLast);
+  const quer = zw.find((q) => q.art === "quer");
+  assert.ok(quer && quer.wand, "Wandluecke muss als Wand erkannt werden");
+  // ... eine Luecke ZWISCHEN zwei Reihen nicht.
+  const mitte = [box(0, 0, 120, 80, 1), box(0, 155, 120, 80, 2)];
+  const zm = sichZonenBauen(sichAnalyse(mitte, () => 500, CONT, "sea"), CONT, mitte);
+  const querM = zm.find((q) => q.art === "quer");
+  assert.ok(querM && !querM.wand, "Luecke zwischen Reihen ist keine Wandluecke");
+  assert.deepStrictEqual([...querM.nachbarn].sort(), [1, 2]);
+});
+
+test("Karten und 3D-Plaketten zaehlen dieselbe Liste", () => {
+  // Der Dialog baut seine Karten aus sichZonenAlle, der Viewport haengt Plakette zi+1
+  // ueber Zone zi -- beide lesen dieselbe Reihenfolge. Ohne diese Kopplung muesste man
+  // raten, welche Karte welche Luecke meint.
+  assert.ok(roh.includes("const karten = sichZonenAlle.map((z, i) => {"), "Karten kommen nicht aus der Zonenliste");
+  assert.ok(roh.includes("const sichZonen = sichZeige && sichZonenAlle.length ? sichZonenAlle : null;"), "Viewport liest eine andere Liste");
+  assert.ok(roh.includes("const nr = plakette(zi + 1);"), "3D-Plakette traegt nicht die Zonen-Nummer");
+  // Die Empfehlung folgt derselben Polster-Grenze wie die Moebel-Vorschau.
+  assert.ok(roh.includes("z.luecke <= SICH.POLSTER ? T.sichEmpfKissen : T.sichEmpfVerband"), "Empfehlung haengt nicht an der gemeinsamen Grenze");
+});
+
 test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
   // Schmale Luecke (25 cm, quer): Luftkissen. Es muss IN die Luecke passen und
   // schmaler sein als sie -- ein Kissen, das die Ladung verdraengt, waere Unsinn.
