@@ -179,6 +179,27 @@ test("Karten und 3D-Plaketten zaehlen dieselbe Liste", () => {
   assert.ok(roh.includes("z.luecke <= SICH.POLSTER ? T.sichEmpfKissen : T.sichEmpfVerband"), "Empfehlung haengt nicht an der gemeinsamen Grenze");
 });
 
+test("auf dem Planensattel sprechen die Texte Fahrzeug, nicht Container", () => {
+  // Der erste Strassen-Testlauf zeigte "Kurven und Seegang", "Containerwand" und
+  // "Luecke zur Tuer" auf einem Auflieger ohne Seegang, Wand und Tuer. Die betroffenen
+  // Texte nehmen deshalb ein road-Flag; die Aufrufstellen muessen es durchreichen.
+  assert.ok(roh.includes('const ROAD = domain === "road";'), "road-Flag fehlt im Dialog");
+  for (const stelle of [
+    "T.sichZoneMass[z.art](cF(z.luecke), ROAD)",
+    "T.sichRichtungQ(ROAD)",
+    "T.sichGrundTuer(ROAD)",
+    "T.sichGrundWand(ROAD)",
+    "T.sichTuerKlein(cF(s.tuer), ROAD)",
+    "T.sichListeTuer(ROAD)",
+    "T.sichOk(ROAD)",
+  ]) assert.ok(roh.includes(stelle), "Aufrufstelle ohne road-Flag: " + stelle);
+  // Und die Woerter selbst, in beiden Sprachen.
+  assert.ok(roh.includes('road ? "quer (Kurven)" : "quer (Kurven und Seegang)"'), "DE Richtung ohne Strassen-Variante");
+  assert.ok(roh.includes('road ? "sideways (curves)" : "sideways (curves and swell)"'), "EN Richtung ohne Strassen-Variante");
+  assert.ok(roh.includes("L\\xFCcke zum Heck"), "DE Heck-Wort fehlt");
+  assert.ok(roh.includes("Gap to the rear"), "EN Heck-Wort fehlt");
+});
+
 test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
   // Schmale Luecke (25 cm, quer): Luftkissen. Es muss IN die Luecke passen und
   // schmaler sein als sie -- ein Kissen, das die Ladung verdraengt, waere Unsinn.

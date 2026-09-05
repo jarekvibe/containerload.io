@@ -3004,16 +3004,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichBtn: "Sicherung pr\xFCfen",
       sichBanner: (n) => `Ladungssicherung: ${n} ${n === 1 ? "Hinweis" : "Hinweise"} zu dieser Stauung`,
       sichZeige3d: "In 3D zeigen",
-      sichZoneMass: { laengs: (cm) => `L\xE4ngsl\xFCcke: ${cm} cm`, stirn: (cm) => `L\xFCcke zur Stirnwand: ${cm} cm`, quer: (cm) => `Querl\xFCcke: ${cm} cm`, tuer: (cm) => `L\xFCcke zur T\xFCr: ${cm} cm` },
+      sichZoneMass: { laengs: (cm) => `L\xE4ngsl\xFCcke: ${cm} cm`, stirn: (cm) => `L\xFCcke zur Stirnwand: ${cm} cm`, quer: (cm) => `Querl\xFCcke: ${cm} cm`, tuer: (cm, road) => road ? `L\xFCcke zum Heck: ${cm} cm` : `L\xFCcke zur T\xFCr: ${cm} cm` },
       sichZoneRichtung: "Bewegung m\xF6glich",
       sichRichtungL: "l\xE4ngs (Bremsen und Anfahren)",
-      sichRichtungQ: "quer (Kurven und Seegang)",
+      sichRichtungQ: (road) => road ? "quer (Kurven)" : "quer (Kurven und Seegang)",
       sichZoneGrund: "Grund",
-      sichGrundWand: "Freiraum zwischen Ladung und Containerwand",
+      sichGrundWand: (road) => road ? "Freiraum zum Rand der Ladefl\xE4che. Eine Plane h\xE4lt keine Ladung" : "Freiraum zwischen Ladung und Containerwand",
       sichGrundBloecke: (a, b) => `Freiraum zwischen ${a} und ${b}`,
       sichGrundBlock: (a) => `Freiraum an ${a}`,
       sichGrundStirn: "Abstand zur Stirnwand, meist vom Achslast-Ausgleich",
-      sichGrundTuer: "Freiraum zwischen Ladung und T\xFCr",
+      sichGrundTuer: (road) => road ? "Freiraum zwischen Ladung und Heck" : "Freiraum zwischen Ladung und T\xFCr",
       sichZoneEmpf: "Empfehlung",
       sichEmpfKissen: "Dunnage Bag / Luftkissen, alternativ Stauholz",
       sichEmpfVerband: "Stauholz-Verband. F\xFCr ein Luftkissen ist die L\xFCcke zu breit",
@@ -3022,17 +3022,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichChipZu: "Ausblenden",
       sichTitle: "Ladungssicherung \xB7 Richtwert-Check",
       sichScope: "gilt f\xFCr den angezeigten Container/Auflieger und die berechnete Stauung",
-      sichOk: "Die Ladung steht formschl\xFCssig: keine L\xFCcke \xFCber 5 cm, alle Summen unter 15 cm. Genau so will es der CTU-Code. Auf der Stra\xDFe bleibt nur das Niederzurren unten zu pr\xFCfen.",
+      sichOk: (road) => road ? "Die Ladung steht formschl\xFCssig: keine L\xFCcke \xFCber 5 cm, alle Summen unter 15 cm. Das Niederzurren unten bleibt zu pr\xFCfen." : "Die Ladung steht formschl\xFCssig: keine L\xFCcke \xFCber 5 cm, alle Summen unter 15 cm. Genau so will es der CTU-Code.",
       sichLaengsSumme: (cm) => `Alle L\xE4ngsl\xFCcken zusammen: ${cm} cm. Der CTU-Code erlaubt h\xF6chstens 15 cm. Bleiben sie offen, rutscht die Ladung bei jeder Bremsung ein St\xFCck weiter.`,
-      sichTuerKlein: (cm) => `Zur T\xFCr bleiben ${cm} cm. Das ist wenig. Mit Stauholz ausf\xFCttern reicht.`,
+      sichTuerKlein: (cm, road) => `${road ? "Zum Heck" : "Zur T\xFCr"} bleiben ${cm} cm. Das ist wenig. Mit Stauholz ausf\xFCttern reicht.`,
       sichKipp: (name) => `${name} steht mehr als doppelt so hoch, wie die schmalste Kante breit ist. Kippgefahr. B\xFCndeln, gegenstauen oder zurren.`,
-      sichSchwer: (name, kg) => `${name} wiegt ${kg} kg je St\xFCck. Schwere Einzelst\xFCcke brauchen Stauholz zur Lastverteilung. Die Zurrpunkte im Standardcontainer tragen daf\xFCr nur begrenzte Kr\xE4fte.`,
+      sichSchwer: (name, kg, road) => `${name} wiegt ${kg} kg je St\xFCck. Schwere Einzelst\xFCcke brauchen Stauholz zur Lastverteilung${road ? " und eigene Zurrgurte direkt am St\xFCck." : ". Die Zurrpunkte im Standardcontainer tragen daf\xFCr nur begrenzte Kr\xE4fte."}`,
       sichSee: "Im Container gilt: L\xFCcken f\xFCllen schl\xE4gt Zurren. Der CTU-Code setzt auf Formschluss.",
       sichZurr: (ohne, mit, daN) => `Niederzurren f\xFCr die Stra\xDFe, gerechnet mit 0,8 g nach vorn: ohne Matten braucht diese Ladung ${ohne} Gurte. Mit Antirutschmatten ${mit === 1 ? "reicht" : "reichen"} ${mit} (${daN} daN Vorspannkraft). Die Matte ist die wirksamste einzelne Ma\xDFnahme.`,
       sichZurrNull: "Rechnerisch h\xE4lt die Reibung mit Matten allein. Die Mindestsicherung mit einem Gurtpaar bleibt trotzdem Pflicht.",
       sichListe: "Materialbedarf (Richtwert)",
       sichListePolster: (n) => `${n}\xD7 Staupolster oder Stauholz-Verstrebung`,
-      sichListeTuer: "1\xD7 T\xFCrsicherung (Sperrbalken oder Netz)",
+      sichListeTuer: (road) => road ? "1\xD7 Hecksicherung (Sperrbalken oder Netz)" : "1\xD7 T\xFCrsicherung (Sperrbalken oder Netz)",
       sichListeMatten: (n) => `≈ ${n}\xD7 Antirutschmatte (unter jedes Bodenst\xFCck)`,
       sichListeGurte: (n) => `${n}\xD7 Zurrgurt (Ratsche, STF 350 daN)`,
       sichAssume: "Richtwerte: CTU-Code (L\xFCckensumme je Richtung unter 15 cm, Einzell\xFCcken bis 5 cm), Niederzurren nach EN 12195-1 mit 0,8 g nach vorn, Zurrwinkel 90\xB0, STF 350 daN je Gurt, Reibbeiwert 0,3 ohne und 0,6 mit Matte, homogene Masse angenommen. Der Rechner kennt die Ware selbst nicht. Dieser Check ersetzt keine Pr\xFCfung nach VDI 2700 oder CTU-Code.",
@@ -3355,16 +3355,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichBtn: "Check securing",
       sichBanner: (n) => `Cargo securing: ${n} ${n === 1 ? "note" : "notes"} on this stow`,
       sichZeige3d: "Show in 3D",
-      sichZoneMass: { laengs: (cm) => `Longitudinal gap: ${cm} cm`, stirn: (cm) => `Gap to the front wall: ${cm} cm`, quer: (cm) => `Transverse gap: ${cm} cm`, tuer: (cm) => `Gap to the door: ${cm} cm` },
+      sichZoneMass: { laengs: (cm) => `Longitudinal gap: ${cm} cm`, stirn: (cm) => `Gap to the front wall: ${cm} cm`, quer: (cm) => `Transverse gap: ${cm} cm`, tuer: (cm, road) => road ? `Gap to the rear: ${cm} cm` : `Gap to the door: ${cm} cm` },
       sichZoneRichtung: "Movement possible",
       sichRichtungL: "lengthways (braking and pulling away)",
-      sichRichtungQ: "sideways (curves and swell)",
+      sichRichtungQ: (road) => road ? "sideways (curves)" : "sideways (curves and swell)",
       sichZoneGrund: "Reason",
-      sichGrundWand: "free space between load and container wall",
+      sichGrundWand: (road) => road ? "free space to the edge of the load bed. A curtain holds no cargo" : "free space between load and container wall",
       sichGrundBloecke: (a, b) => `free space between ${a} and ${b}`,
       sichGrundBlock: (a) => `free space at ${a}`,
       sichGrundStirn: "distance to the front wall, usually from the axle-load shift",
-      sichGrundTuer: "free space between load and door",
+      sichGrundTuer: (road) => road ? "free space between load and rear end" : "free space between load and door",
       sichZoneEmpf: "Recommendation",
       sichEmpfKissen: "dunnage bag / air cushion, timber as an alternative",
       sichEmpfVerband: "timber framework. The gap is too wide for an air cushion",
@@ -3373,17 +3373,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichChipZu: "Hide",
       sichTitle: "Cargo securing \xB7 guide-value check",
       sichScope: "applies to the container/trailer shown and the calculated stow",
-      sichOk: "The load sits tight: no gap over 5 cm, all sums under 15 cm. Exactly what the CTU Code asks for. On the road, only the lashing below is left to check.",
+      sichOk: (road) => road ? "The load sits tight: no gap over 5 cm, all sums under 15 cm. The lashing below is still left to check." : "The load sits tight: no gap over 5 cm, all sums under 15 cm. Exactly what the CTU Code asks for.",
       sichLaengsSumme: (cm) => `All longitudinal gaps together: ${cm} cm. The CTU Code allows 15 cm at most. Left open, the load slides a bit further with every braking.`,
-      sichTuerKlein: (cm) => `There are ${cm} cm towards the door. That is little. Padding it out with timber is enough.`,
+      sichTuerKlein: (cm, road) => `There are ${cm} cm towards the ${road ? "rear" : "door"}. That is little. Padding it out with timber is enough.`,
       sichKipp: (name) => `${name} stands more than twice as tall as its narrowest edge is wide. Tipping hazard. Bundle, brace or lash it.`,
-      sichSchwer: (name, kg) => `${name} weighs ${kg} kg per piece. Heavy single pieces need timber to spread the load. The lashing points in a standard container only take limited forces for that.`,
+      sichSchwer: (name, kg, road) => `${name} weighs ${kg} kg per piece. Heavy single pieces need timber to spread the load${road ? " and their own straps directly on the piece." : ". The lashing points in a standard container only take limited forces for that."}`,
       sichSee: "Inside a container, filling gaps beats lashing. The CTU Code builds on tight stowage.",
       sichZurr: (ohne, mit, daN) => `Top-over lashing for the road, calculated with 0.8 g forward: without mats this load needs ${ohne} straps. With anti-slip mats ${mit} ${mit === 1 ? "is" : "are"} enough (${daN} daN pretension). The mat is the single most effective measure.`,
       sichZurrNull: "By the numbers, friction with mats holds on its own. The minimum securing with one pair of straps still applies.",
       sichListe: "Material needed (guide value)",
       sichListePolster: (n) => `${n}\xD7 dunnage bag or timber bracing`,
-      sichListeTuer: "1\xD7 door securing (blocking bar or net)",
+      sichListeTuer: (road) => road ? "1\xD7 rear securing (blocking bar or net)" : "1\xD7 door securing (blocking bar or net)",
       sichListeMatten: (n) => `≈ ${n}\xD7 anti-slip mat (under every floor piece)`,
       sichListeGurte: (n) => `${n}\xD7 lashing strap (ratchet, STF 350 daN)`,
       sichAssume: "Guide values: CTU Code (gap sum per direction under 15 cm, single gaps up to 5 cm), top-over lashing per EN 12195-1 with 0.8 g forward, 90\xB0 lashing angle, STF 350 daN per strap, friction 0.3 without and 0.6 with mats, homogeneous mass assumed. The calculator does not know the goods themselves. This check replaces no inspection per VDI 2700 or the CTU Code.",
@@ -8098,33 +8098,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const mF = (cm) => (cm / 100).toLocaleString(LANG === "en" ? "en-GB" : "de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
       const cF = (cm) => Math.round(cm);
       const zOhne = sichGurte(s.gewicht, SICH.MU_OHNE), zMit = sichGurte(s.gewicht, SICH.MU_MATTE);
+      // Auf dem Planensattel gibt es weder Seegang noch Containerwand noch Tuer --
+      // dieselben Befunde, aber die Woerter des Fahrzeugs (Heck, Ladeflaeche, Kurven).
+      const ROAD = domain === "road";
       // Die geometrischen Luecken stehen als nummerierte Karten da (dieselbe Liste
       // und Reihenfolge wie die 3D-Plaketten); als Textzeilen bleiben nur die
       // Befunde ohne Ort: Lueckensumme, kleine Tuerluecke, Kippgefahr, Schwergut.
       const karten = sichZonenAlle.map((z, i) => {
         const namen = (z.nachbarn || []).map(sName);
         const grund = z.art === "stirn" ? T.sichGrundStirn
-          : z.art === "tuer" ? T.sichGrundTuer
-          : z.wand ? T.sichGrundWand
+          : z.art === "tuer" ? T.sichGrundTuer(ROAD)
+          : z.wand ? T.sichGrundWand(ROAD)
           : namen.length >= 2 ? T.sichGrundBloecke(namen[0], namen[1])
           : namen.length === 1 ? T.sichGrundBlock(namen[0])
-          : T.sichGrundWand;
+          : T.sichGrundWand(ROAD);
         const empf = z.art === "tuer" ? T.sichEmpfTuer : z.luecke <= SICH.POLSTER ? T.sichEmpfKissen : T.sichEmpfVerband;
-        return { nr: i + 1, mass: T.sichZoneMass[z.art](cF(z.luecke)), richtung: z.richtung === "z" ? T.sichRichtungQ : T.sichRichtungL, grund, empf };
+        return { nr: i + 1, mass: T.sichZoneMass[z.art](cF(z.luecke), ROAD), richtung: z.richtung === "z" ? T.sichRichtungQ(ROAD) : T.sichRichtungL, grund, empf };
       });
       const zeilen = sichB.map((b) => {
         switch (b.art) {
           case "laengsSumme": return [C.bad, T.sichLaengsSumme(cF(s.laengsSumme))];
-          case "tuerKlein": return [C.dim, T.sichTuerKlein(cF(s.tuer))];
+          case "tuerKlein": return [C.dim, T.sichTuerKlein(cF(s.tuer), ROAD)];
           case "kipp": return [C.warn, T.sichKipp(sName(b.ti))];
-          case "schwer": return [C.warn, T.sichSchwer(sName(b.ti), fmtDE(Math.round(sw(b.ti))))];
+          case "schwer": return [C.warn, T.sichSchwer(sName(b.ti), fmtDE(Math.round(sw(b.ti))), ROAD)];
           default: return null;
         }
       }).filter(Boolean);
       const polster = sichZonenAlle.filter((z) => !z.tuer).length;
       const liste = [];
       if (polster > 0) liste.push(T.sichListePolster(polster));
-      if (s.tuer > SICH.SUMME) liste.push(T.sichListeTuer);
+      if (s.tuer > SICH.SUMME) liste.push(T.sichListeTuer(ROAD));
       if (domain === "road") {
         liste.push(T.sichListeMatten(s.boden));
         if (zMit.gurte > 0) liste.push(T.sichListeGurte(zMit.gurte));
@@ -8137,7 +8140,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "#161D27", border: "1px solid #2E3A49", color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")),
           /* @__PURE__ */ React.createElement("div", { className: "p-6 flex flex-col", style: { gap: SP.m, maxHeight: "72vh", overflowY: "auto" } },
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint } }, T.sichScope),
-            zeilen.length === 0 && karten.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, lineHeight: 1.5, color: C.good, fontWeight: FW.semi } }, T.sichOk),
+            zeilen.length === 0 && karten.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, lineHeight: 1.5, color: C.good, fontWeight: FW.semi } }, T.sichOk(ROAD)),
             karten.map((k) => /* @__PURE__ */ React.createElement("div", { key: k.nr, className: "rounded-lg p-3", style: { background: C.field, border: `1px solid ${hexA(C.warn, 0.35)}` } },
               /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2", style: { marginBottom: SP.xs } },
                 /* @__PURE__ */ React.createElement("span", { className: "flex items-center justify-center rounded-full", style: { width: 20, height: 20, background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, flexShrink: 0 } }, k.nr),
