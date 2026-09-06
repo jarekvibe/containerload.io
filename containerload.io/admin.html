@@ -52,7 +52,15 @@
   h2 { font-size: 13px; font-weight: 600; color: var(--dim); margin: 0 0 12px; }
   svg text { font: 11px Archivo, sans-serif; fill: var(--faint); }
   svg .wert { font: 11px "JetBrains Mono", monospace; fill: var(--dim); }
-  .balkenzeile { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 48px; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+  .balkenzeile { display: grid; grid-template-columns: minmax(90px, 210px) 1fr 48px; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+  /* Weltkarte: Laender-Pfade aus /welt-karte.js, Fuellung nach Rechnungszahl.
+     Der Panel-Grund bekommt denselben radialen Schimmer wie der 3D-Viewport --
+     das eine "geil"-Element, der Rest bleibt ruhig. */
+  .panel.karte { background: radial-gradient(90% 120% at 50% 0%, #101a2b 0%, #161D27 60%); }
+  .kartegrid { display: grid; grid-template-columns: 2.2fr 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .kartegrid { grid-template-columns: 1fr; } }
+  #weltChart path { transition: filter .15s; }
+  #weltChart path:hover { filter: brightness(1.6); }
   .balkenzeile .name { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .balkenzeile .spur { display: block; background: var(--field); border-radius: 4px; height: 14px; overflow: hidden; }
   .balkenzeile .fuell { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
@@ -103,7 +111,14 @@
 
   <div id="inhalt" hidden>
     <div class="kpis" id="kpis"></div>
-    <div class="panel">
+    <div class="panel karte">
+      <h2>Rechnungen nach Land</h2>
+      <div class="kartegrid">
+        <div id="weltChart"></div>
+        <div id="laenderChart"></div>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
       <h2>Rechnungen je Tag</h2>
       <div id="tagesChart"></div>
     </div>
@@ -112,8 +127,8 @@
       <div class="panel"><h2>Genutzte Funktionen</h2><div id="funktionenChart"></div></div>
     </div>
     <div class="grid2">
-      <div class="panel"><h2>Grundmaße der Positionen (L × B in cm)</h2><div id="masseChart"></div></div>
-      <div class="panel"><h2>Modus, Sprache &amp; Land</h2><div id="modusChart"></div></div>
+      <div class="panel"><h2>Grundmaße nach Stückzahl</h2><div id="masseChart"></div></div>
+      <div class="panel"><h2>Modus &amp; Sprache</h2><div id="modusChart"></div></div>
     </div>
     <div class="panel" style="margin-top:16px">
       <h2>Letzte Rechnungen</h2>
@@ -125,6 +140,7 @@
   </div>
 </div>
 <div id="tip"></div>
+<script src="/welt-karte.js"></script>
 <script>
 (() => {
   "use strict";
@@ -201,25 +217,50 @@
       '<span class="zahl">' + n + "</span></div>").join("");
   }
 
-  // Streubild der Grundmasse aus der Stichprobe: ein Punkt je Position,
-  // Flaeche = Haeufigkeit sichtbar durch Ueberlagerung (Deckkraft 0.35).
+  // Grundmass-Klassen statt Streubild: das Streubild war mit echten Daten
+  // nutzlos (zwei Punkte auf leerer Flaeche -- Jareks Screenshot). Die Frage
+  // dahinter ist "was fuer Ladungstraeger rechnen die Leute?", und die
+  // beantworten benannte Klassen, gewichtet nach Stueckzahl.
   function masseChart(d) {
-    const el = $("masseChart");
-    const punkte = [];
-    for (const e of d.stichprobe) for (const p of e.positionen) punkte.push(p);
-    if (!punkte.length) { el.innerHTML = '<div class="leer">Noch keine Positionen.</div>'; return; }
-    const W = 460, H = 240, padL = 34, padB = 22;
-    const maxL = Math.max(...punkte.map((p) => p.l), 100), maxB = Math.max(...punkte.map((p) => p.b), 100);
-    const sx = (v) => padL + (W - padL - 8) * v / maxL;
-    const sy = (v) => (H - padB) - (H - padB - 8) * v / maxB;
-    const kreise = punkte.slice(0, 900).map((p) =>
-      '<circle cx="' + sx(p.l).toFixed(1) + '" cy="' + sy(p.b).toFixed(1) + '" r="4" fill="' + FARBE.blau + '" fill-opacity="0.35" data-tip="' +
-      p.l + " × " + p.b + " × " + p.h + " cm · " + p.n + " Stk" + (p.kg ? " · " + p.kg + " kg" : "") + '"></circle>').join("");
-    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">' +
-      '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + W + '" y2="' + (H - padB) + '" stroke="#232C38"></line>' +
-      '<line x1="' + padL + '" y1="0" x2="' + padL + '" y2="' + (H - padB) + '" stroke="#232C38"></line>' + kreise +
-      '<text x="' + (W - 4) + '" y="' + (H - 6) + '" text-anchor="end">Länge ' + Math.round(maxL) + "</text>" +
-      '<text x="' + (padL + 4) + '" y="12">Breite ' + Math.round(maxB) + "</text></svg>";
+    const passt = (p, a, b) => (Math.abs(p.l - a) <= 2 && Math.abs(p.b - b) <= 2) || (Math.abs(p.l - b) <= 2 && Math.abs(p.b - a) <= 2);
+    const k = {};
+    const dazu = (name, n) => { k[name] = (k[name] || 0) + n; };
+    for (const e of d.stichprobe) for (const p of e.positionen) {
+      if (passt(p, 120, 80)) dazu("Europalette 120 × 80", p.n);
+      else if (passt(p, 120, 100)) dazu("Industriepalette 120 × 100", p.n);
+      else if (passt(p, 80, 60)) dazu("Halbpalette 80 × 60", p.n);
+      else {
+        const qm = p.l * p.b / 1e4;
+        dazu(qm < 0.5 ? "Sonstige unter 0,5 m²" : qm <= 1.2 ? "Sonstige 0,5 bis 1,2 m²" : "Sonstige über 1,2 m²", p.n);
+      }
+    }
+    if (!Object.keys(k).length) { $("masseChart").innerHTML = '<div class="leer">Noch keine Positionen.</div>'; return; }
+    balkenListe($("masseChart"), k, FARBE.blau);
+  }
+
+  // Die Weltkarte: Laender-Pfade aus /welt-karte.js, Fuellung als Blau-Rampe
+  // nach Rechnungszahl (sequenziell: EIN Farbton, dunkel -> hell). Laender
+  // ohne Daten bleiben Flaechen-Grau -- die Karte zeigt, WO gerechnet wird,
+  // nicht wie die Welt aussieht.
+  const RAMPE = ["#1B3A5E", "#1F5490", "#2673C8", "#2E8FFF"];
+  function weltKarte(d) {
+    const laender = d.laender || {};
+    if (typeof WELT === "undefined") { $("weltChart").innerHTML = '<div class="leer">Kartendaten nicht geladen.</div>'; }
+    else {
+      const max = Math.max(1, ...Object.values(laender));
+      const stufe = (n) => RAMPE[Math.min(RAMPE.length - 1, Math.floor(n / max * RAMPE.length - 1e-9))];
+      let pf = "";
+      for (const [a2, info] of Object.entries(WELT)) {
+        const n = laender[a2] || 0;
+        pf += '<path d="' + info.p + '" fill="' + (n ? stufe(n) : "#1C2531") + '" stroke="#0E1116" stroke-width="0.6" data-tip="' +
+          info.n + " · " + n + (n === 1 ? " Rechnung" : " Rechnungen") + '"></path>';
+      }
+      $("weltChart").innerHTML = '<svg viewBox="0 0 1000 520" style="width:100%;height:auto">' + pf + "</svg>";
+    }
+    const benannt = {};
+    for (const [a2, n] of Object.entries(laender)) benannt[typeof WELT !== "undefined" && WELT[a2] ? WELT[a2].n : a2] = n;
+    if (Object.keys(benannt).length) balkenListe($("laenderChart"), benannt, FARBE.blau);
+    else $("laenderChart").innerHTML = '<div class="leer">Noch kein Land erfasst.</div>';
   }
 
   function modusChart(d) {
@@ -228,8 +269,6 @@
       '<div style="margin-bottom:12px"><span class="pille sea">See: ' + (d.modus.sea || 0) + '</span> ' +
       '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
       '<div><span class="pille">Deutsch: ' + (d.sprachen.de || 0) + '</span> <span class="pille">Englisch: ' + (d.sprachen.en || 0) + "</span></div>" +
-      '<div style="margin-top:12px">' + (Object.entries(d.laender || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
-        .map(([land, n]) => '<span class="pille">' + land + ": " + n + "</span>").join(" ") || '<span class="pille">Noch kein Land erfasst</span>') + "</div>" +
       '<div style="margin-top:12px" class="hinweis">Geteilte Pläne (Empfänger-Ansicht): ' + d.stichprobe.filter((e) => e.geteilt).length + " in der Stichprobe</div>";
     el.innerHTML = html;
   }
@@ -273,6 +312,7 @@
 
   function zeichnen(d, tage) {
     kpis(d);
+    weltKarte(d);
     tagesChart(d, tage);
     balkenListe($("containerChart"), d.container, FARBE.blau);
     balkenListe($("funktionenChart"), d.funktionen, FARBE.orange);
