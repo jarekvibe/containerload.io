@@ -2999,7 +2999,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fbMailLabel: "Deine E-Mail, falls ich nachfragen darf (freiwillig)",
       fbMailPlaceholder: "name@firma.de",
       fbSendPlan: "Ladung mitschicken",
-      fbSendPlanHint: "Schickt einen Link mit den eingegebenen Ma\xDFen und Gewichten mit \u2013 nur damit sich der Fall nachstellen l\xE4sst. Ohne H\xE4kchen bleibt die Ladung auf deinem Ger\xE4t.",
+      fbSendPlanHint: "Schickt einen Link mit den eingegebenen Ma\xDFen und Gewichten mit \u2013 nur damit sich der Fall nachstellen l\xE4sst. Ohne H\xE4kchen geht die Ladung nicht mit dem Feedback mit.",
       fbSend: "Absenden",
       fbSending: "Wird gesendet \u2026",
       fbFailed: "Das Absenden hat nicht geklappt \u2013 vielleicht bist du offline. Du kannst die Meldung stattdessen per E-Mail schicken.",
@@ -3338,7 +3338,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       fbMailLabel: "Your email, in case I may follow up (optional)",
       fbMailPlaceholder: "name@company.com",
       fbSendPlan: "Include the cargo",
-      fbSendPlanHint: "Sends a link with the dimensions and weights you entered \u2013 only so the case can be reproduced. Unticked, the cargo stays on your device.",
+      fbSendPlanHint: "Sends a link with the dimensions and weights you entered \u2013 only so the case can be reproduced. Unticked, the cargo does not go with your feedback.",
       fbSend: "Send",
       fbSending: "Sending \u2026",
       fbFailed: "Sending did not work \u2013 you may be offline. You can send the report by email instead.",
@@ -3615,6 +3615,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (evAbsenden() || ++versuche > 20) { clearInterval(EV_TIMER); EV_TIMER = null; }
     }, 500);
   }
+  // ── Anonyme Nutzungsstatistik (/api/beacon) ──────────────────────────────
+  // GoatCounter zaehlt, WIE OFT etwas passiert; hier geht zusaetzlich einmal
+  // je Besuch, WAS gerechnet wurde: Masse, Gewichte, Stueckzahlen, Container,
+  // Modus, Sprache und die Namen der genutzten Funktionen (dieselben Namen
+  // wie beim Ereigniszaehler oben). AUSDRUECKLICH NICHT dabei: Positions-
+  // namen und jeder andere Freitext -- Packlisten tragen Kundennamen und
+  // Auftragsnummern, und die gehen uns nichts an. Steht so auf der
+  // Datenschutzseite (Abschnitt "Anonyme Nutzungsstatistik"); wer hier
+  // Felder ergaenzt, ergaenzt sie ZUERST dort.
+  //
+  // Gesendet wird nur: vom echten Host (nicht file://, localhost oder
+  // Deploy-Previews), nicht aus dem eingebetteten Demo der Startseite,
+  // nicht bei Do-Not-Track / Global Privacy Control, hoechstens einmal je
+  // Seitenaufruf, und nur wenn ueberhaupt etwas passiert ist.
+  var NUTZ = { snap: null, start: Date.now(), gesendet: false };
+  function nutzSenden() {
+    if (NUTZ.gesendet || !NUTZ.snap || EMBEDDED) return;
+    if (!/(^|\.)containerload\.io$/.test(window.location.hostname)) return;
+    if (navigator.doNotTrack === "1" || navigator.globalPrivacyControl) return;
+    const funktionen = Object.keys(EV_GEZAEHLT);
+    if (!NUTZ.snap.positionen.length && !funktionen.length) return;
+    NUTZ.gesendet = true;
+    const ev = { v: 1, ...NUTZ.snap, funktionen, dauerS: Math.round((Date.now() - NUTZ.start) / 1000) };
+    try { navigator.sendBeacon("/api/beacon", JSON.stringify(ev)); } catch (e) {}
+  }
+  window.addEventListener("pagehide", nutzSenden);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nutzSenden(); });
   var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
@@ -7397,6 +7424,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const sichB = sichErg ? sichBefunde(sichErg) : [];
     // tuerKlein ist ein Hinweis, kein Alarm -- er allein rechtfertigt kein Aufploppen.
     const sichWarnzahl = sichB.filter((b) => b.art !== "tuerKlein").length;
+    // Der Sicherungs-Check zaehlt wie jede andere Funktion -- ein Effekt statt
+    // dreier onClick-Stellen (Knopf, Aufplopp-Hinweis, Chip fuehren alle hierher).
+    useEffect(() => { if (sichOpen) zaehl("sicherung-geprueft"); }, [sichOpen]);
+    // Schnappschuss fuer die anonyme Nutzungsstatistik (NUTZ oben im Modul):
+    // NUR Zahlen und Preset-Namen, KEINE Positionsnamen -- die Regel steht am
+    // NUTZ-Block und auf der Datenschutzseite. Gesendet wird beim Verlassen.
+    useEffect(() => {
+      NUTZ.snap = {
+        modus: domain === "road" ? "road" : "sea",
+        sprache: LANG === "en" ? "en" : "de",
+        geteilt: !!SHARED,
+        positionen: cargo
+          .filter((c) => num(c.l) > 0 && num(c.w) > 0 && num(c.h) > 0)
+          .slice(0, 40)
+          .map((c) => ({ l: num(c.l), b: num(c.w), h: num(c.h), kg: num(c.weight), n: Math.max(1, num(c.qty) || 1), stapel: c.stackable !== false })),
+        container: (result && result.chain && result.chain[0] && result.chain[0].name) || "",
+        kette: result && result.chain ? result.chain.length : 0,
+      };
+    }, [cargo, domain, result]);
     // Die Zonen braucht auch der Dialog (Karten mit Nummer, Grund, Empfehlung) --
     // der Viewport bekommt sie nur, solange die 3D-Ansicht eingeschaltet ist. Beide
     // zaehlen dieselbe Liste, deshalb stimmen Karten-Nummern und 3D-Plaketten ueberein.

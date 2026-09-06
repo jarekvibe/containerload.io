@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Interne Seite: Nutzungsstatistik des 3D-Rechners. Kein Geheimnis (die
+     Daten sind anonym und der Zugang haengt am Token der Function), aber
+     auch nichts fuer den Suchindex. -->
+<meta name="robots" content="noindex,nofollow" />
+<title>Nutzungsstatistik — ContainerLoad</title>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* Dieselbe Werkstatt wie der Rechner: dunkle Flaechen, Archivo, Mono fuer
+     Zahlen, ein Akzent. Bewusst ohne Tailwind und ohne React -- die Seite
+     ist ein Leseinstrument, kein zweiter Rechner. */
+  :root {
+    --bg: #0E1116; --panel: #161D27; --field: #1C2531; --border: #232C38;
+    --text: #E8EDF4; --dim: #9FB0C3; --faint: #64748B;
+    --accent: #2E8FFF; --orange: #BA8232; --good: #34D399; --bad: #F87171;
+  }
+  * { box-sizing: border-box; }
+  /* display:flex auf #login wuerde das hidden-Attribut sonst ueberstimmen. */
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Archivo, ui-sans-serif, sans-serif; }
+  .wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  h1 { font-size: 18px; font-weight: 700; margin: 0; }
+  .brand { color: var(--dim); text-decoration: none; font-weight: 700; }
+  .brand b { color: var(--accent); }
+  .spacer { flex: 1; }
+  select, input, button { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
+  button { cursor: pointer; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #06121f; font-weight: 600; }
+  button.quiet { color: var(--dim); }
+  .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .kpi .l { font-size: 12px; color: var(--faint); }
+  .kpi .v { font: 700 24px/1.2 "JetBrains Mono", monospace; margin-top: 4px; }
+  .kpi .s { font-size: 12px; color: var(--dim); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  @media (max-width: 760px) { .grid2 { grid-template-columns: 1fr; } }
+  h2 { font-size: 13px; font-weight: 600; color: var(--dim); margin: 0 0 12px; }
+  svg text { font: 11px Archivo, sans-serif; fill: var(--faint); }
+  svg .wert { font: 11px "JetBrains Mono", monospace; fill: var(--dim); }
+  .balkenzeile { display: grid; grid-template-columns: minmax(90px, 150px) 1fr 48px; gap: 8px; align-items: center; margin: 6px 0; font-size: 13px; }
+  .balkenzeile .name { color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .balkenzeile .spur { display: block; background: var(--field); border-radius: 4px; height: 14px; overflow: hidden; }
+  .balkenzeile .fuell { display: block; height: 100%; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
+  .balkenzeile .zahl { font: 12px "JetBrains Mono", monospace; color: var(--dim); text-align: right; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--faint); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 6px 8px; border-bottom: 1px solid var(--field); color: var(--dim); }
+  td.num, th.num { text-align: right; font-family: "JetBrains Mono", monospace; }
+  .pille { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--field); color: var(--dim); }
+  .pille.road { color: #E7C89A; }
+  .pille.sea { color: #BCD9FF; }
+  #tip { position: fixed; pointer-events: none; background: #060a10; border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 12px; color: var(--text); display: none; z-index: 9; }
+  .hinweis { color: var(--faint); font-size: 12px; margin-top: 16px; line-height: 1.5; }
+  .fehler { color: var(--bad); }
+  .leer { color: var(--faint); text-align: center; padding: 32px 0; }
+  #login { max-width: 380px; margin: 12vh auto 0; display: flex; flex-direction: column; gap: 12px; }
+  .tabelle-scroll { overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="/">Container<b>Load</b></a>
+    <h1>Nutzungsstatistik</h1>
+    <span class="spacer"></span>
+    <select id="zeitraum" hidden>
+      <option value="7">7 Tage</option>
+      <option value="30" selected>30 Tage</option>
+      <option value="90">90 Tage</option>
+    </select>
+    <button id="abmelden" class="quiet" hidden>Abmelden</button>
+  </header>
+
+  <div id="login" class="panel" hidden>
+    <div>Zugangs-Token (Umgebungsvariable <code>STATISTIK_TOKEN</code> in Netlify):</div>
+    <input id="token" type="password" autocomplete="off" placeholder="Token" />
+    <button id="anmelden" class="primary">Anzeigen</button>
+    <div id="loginFehler" class="fehler" hidden></div>
+  </div>
+
+  <div id="inhalt" hidden>
+    <div class="kpis" id="kpis"></div>
+    <div class="panel">
+      <h2>Rechnungen je Tag</h2>
+      <div id="tagesChart"></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>Container / Fahrzeuge</h2><div id="containerChart"></div></div>
+      <div class="panel"><h2>Genutzte Funktionen</h2><div id="funktionenChart"></div></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>Grundmaße der Positionen (L × B in cm)</h2><div id="masseChart"></div></div>
+      <div class="panel"><h2>Modus &amp; Sprache</h2><div id="modusChart"></div></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2>Letzte Rechnungen</h2>
+      <div class="tabelle-scroll"><table id="eventTabelle"></table></div>
+    </div>
+    <p class="hinweis">Jede Zeile ist ein anonymes Event: ein Rechner-Besuch mit Ladung, gesendet beim Verlassen der Seite.
+    Enthalten sind nur Maße, Gewichte, Stückzahlen, Container, Modus, Sprache und Funktions-Namen — keine Positionsnamen,
+    kein Freitext, keine IP, keine Kennung. So steht es in der <a href="/datenschutz" style="color:var(--dim)">Datenschutzerklärung</a>.</p>
+  </div>
+</div>
+<div id="tip"></div>
+<script>
+(() => {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const KEY = "cl-statistik-token";
+  const FARBE = { blau: "#2E8FFF", orange: "#BA8232" };
+  const tip = $("tip");
+  const zeigTip = (ev, html) => { tip.innerHTML = html; tip.style.display = "block"; tip.style.left = Math.min(ev.clientX + 12, innerWidth - 180) + "px"; tip.style.top = (ev.clientY + 12) + "px"; };
+  const wegTip = () => { tip.style.display = "none"; };
+
+  async function laden(token, tage) {
+    const r = await fetch("/api/statistik?tage=" + tage, { headers: { authorization: "Bearer " + token } });
+    if (!r.ok) {
+      let meldung = "Fehler " + r.status;
+      try { meldung = (await r.json()).fehler || meldung; } catch (e) {}
+      throw Object.assign(new Error(meldung), { status: r.status });
+    }
+    return r.json();
+  }
+
+  function kpis(d) {
+    const posProEvent = d.events ? (d.positionenGesamt / d.events).toFixed(1) : "0";
+    const topContainer = Object.entries(d.container).sort((a, b) => b[1] - a[1])[0];
+    const road = d.modus.road || 0;
+    const anteilRoad = d.events ? Math.round(road / d.events * 100) : 0;
+    const karten = [
+      ["Rechnungen", d.events, "im Zeitraum"],
+      ["Positionen", d.positionenGesamt, "Ø " + posProEvent + " je Rechnung"],
+      ["Packstücke", d.stueckGesamt, "Summe der Mengen"],
+      ["Häufigster Container", topContainer ? topContainer[0] : "—", topContainer ? topContainer[1] + "× gewählt" : ""],
+      ["Anteil Straße", anteilRoad + " %", (d.modus.sea || 0) + "× See · " + road + "× Straße"],
+    ];
+    $("kpis").innerHTML = karten.map(([l, v, s]) =>
+      '<div class="panel kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + "</div></div>").join("");
+  }
+
+  // Senkrechte Balken, ein Balken je Tag. Duenn, runde Datenenden oben,
+  // 2px Luecke -- und ein breiter unsichtbarer Treffer fuer den Tooltip.
+  function tagesChart(d, tage) {
+    const el = $("tagesChart");
+    const von = new Date(Date.now() - (tage - 1) * 86400000);
+    const reihe = [];
+    for (let i = 0; i < tage; i++) {
+      const t = new Date(von.getTime() + i * 86400000).toISOString().slice(0, 10);
+      const eintrag = d.tage.find((x) => x.tag === t);
+      reihe.push({ tag: t, events: eintrag ? eintrag.events : 0 });
+    }
+    const W = 980, H = 160, pad = 4, max = Math.max(1, ...reihe.map((r) => r.events));
+    const bw = Math.max(2, Math.floor((W - pad * 2) / reihe.length) - 2);
+    const teile = reihe.map((r, i) => {
+      const h = Math.round((H - 24) * r.events / max);
+      const x = pad + i * ((W - pad * 2) / reihe.length);
+      const y = H - 16 - h;
+      const label = r.tag.slice(8) + "." + r.tag.slice(5, 7) + ". · " + r.events + (r.events === 1 ? " Rechnung" : " Rechnungen");
+      return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(h, r.events ? 3 : 0) + '" rx="2" fill="' + FARBE.blau + '"></rect>' +
+        '<rect x="' + x + '" y="0" width="' + (bw + 2) + '" height="' + H + '" fill="transparent" data-tip="' + label + '"></rect>';
+    }).join("");
+    const a1 = reihe[0].tag.slice(8) + "." + reihe[0].tag.slice(5, 7) + ".";
+    const a2 = reihe[reihe.length - 1].tag.slice(8) + "." + reihe[reihe.length - 1].tag.slice(5, 7) + ".";
+    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">' +
+      '<line x1="0" y1="' + (H - 16) + '" x2="' + W + '" y2="' + (H - 16) + '" stroke="#232C38"></line>' + teile +
+      '<text x="2" y="' + (H - 3) + '">' + a1 + '</text><text x="' + (W - 4) + '" y="' + (H - 3) + '" text-anchor="end">' + a2 + "</text>" +
+      '<text class="wert" x="2" y="12">max ' + max + "</text></svg>";
+  }
+
+  // Waagerechte Balkenliste: Name, Spur, Zahl. Direktbeschriftung statt Achse.
+  function balkenListe(el, paare, farbe) {
+    const sortiert = Object.entries(paare).sort((a, b) => b[1] - a[1]).slice(0, 12);
+    if (!sortiert.length) { el.innerHTML = '<div class="leer">Noch nichts gezählt.</div>'; return; }
+    const max = sortiert[0][1];
+    el.innerHTML = sortiert.map(([name, n]) =>
+      '<div class="balkenzeile"><span class="name" title="' + name + '">' + name + '</span>' +
+      '<span class="spur"><span class="fuell" style="width:' + Math.max(2, Math.round(n / max * 100)) + '%;background:' + (farbe || FARBE.blau) + '"></span></span>' +
+      '<span class="zahl">' + n + "</span></div>").join("");
+  }
+
+  // Streubild der Grundmasse aus der Stichprobe: ein Punkt je Position,
+  // Flaeche = Haeufigkeit sichtbar durch Ueberlagerung (Deckkraft 0.35).
+  function masseChart(d) {
+    const el = $("masseChart");
+    const punkte = [];
+    for (const e of d.stichprobe) for (const p of e.positionen) punkte.push(p);
+    if (!punkte.length) { el.innerHTML = '<div class="leer">Noch keine Positionen.</div>'; return; }
+    const W = 460, H = 240, padL = 34, padB = 22;
+    const maxL = Math.max(...punkte.map((p) => p.l), 100), maxB = Math.max(...punkte.map((p) => p.b), 100);
+    const sx = (v) => padL + (W - padL - 8) * v / maxL;
+    const sy = (v) => (H - padB) - (H - padB - 8) * v / maxB;
+    const kreise = punkte.slice(0, 900).map((p) =>
+      '<circle cx="' + sx(p.l).toFixed(1) + '" cy="' + sy(p.b).toFixed(1) + '" r="4" fill="' + FARBE.blau + '" fill-opacity="0.35" data-tip="' +
+      p.l + " × " + p.b + " × " + p.h + " cm · " + p.n + " Stk" + (p.kg ? " · " + p.kg + " kg" : "") + '"></circle>').join("");
+    el.innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto">' +
+      '<line x1="' + padL + '" y1="' + (H - padB) + '" x2="' + W + '" y2="' + (H - padB) + '" stroke="#232C38"></line>' +
+      '<line x1="' + padL + '" y1="0" x2="' + padL + '" y2="' + (H - padB) + '" stroke="#232C38"></line>' + kreise +
+      '<text x="' + (W - 4) + '" y="' + (H - 6) + '" text-anchor="end">Länge ' + Math.round(maxL) + "</text>" +
+      '<text x="' + (padL + 4) + '" y="12">Breite ' + Math.round(maxB) + "</text></svg>";
+  }
+
+  function modusChart(d) {
+    const el = $("modusChart");
+    const html =
+      '<div style="margin-bottom:12px"><span class="pille sea">See: ' + (d.modus.sea || 0) + '</span> ' +
+      '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
+      '<div><span class="pille">Deutsch: ' + (d.sprachen.de || 0) + '</span> <span class="pille">Englisch: ' + (d.sprachen.en || 0) + "</span></div>" +
+      '<div style="margin-top:12px" class="hinweis">Geteilte Pläne (Empfänger-Ansicht): ' + d.stichprobe.filter((e) => e.geteilt).length + " in der Stichprobe</div>";
+    el.innerHTML = html;
+  }
+
+  function eventTabelle(d) {
+    const zeilen = d.stichprobe.slice(-30).reverse().map((e) => {
+      const stk = e.positionen.reduce((s, p) => s + p.n, 0);
+      return "<tr><td>" + e.tag + '</td><td><span class="pille ' + e.modus + '">' + (e.modus === "road" ? "Straße" : "See") + "</span></td>" +
+        '<td class="num">' + e.positionen.length + '</td><td class="num">' + stk + "</td><td>" + (e.container || "—") + "</td>" +
+        "<td>" + e.funktionen.join(", ") + '</td><td class="num">' + e.dauerS + " s</td></tr>";
+    }).join("");
+    $("eventTabelle").innerHTML =
+      '<thead><tr><th>Tag</th><th>Modus</th><th class="num">Pos.</th><th class="num">Stück</th><th>Container</th><th>Funktionen</th><th class="num">Dauer</th></tr></thead>' +
+      "<tbody>" + (zeilen || '<tr><td colspan="7" class="leer">Noch keine Rechnungen im Zeitraum.</td></tr>') + "</tbody>";
+  }
+
+  function zeichnen(d, tage) {
+    kpis(d);
+    tagesChart(d, tage);
+    balkenListe($("containerChart"), d.container, FARBE.blau);
+    balkenListe($("funktionenChart"), d.funktionen, FARBE.orange);
+    masseChart(d);
+    modusChart(d);
+    eventTabelle(d);
+  }
+
+  document.addEventListener("mousemove", (ev) => {
+    const t = ev.target.closest && ev.target.closest("[data-tip]");
+    if (t) zeigTip(ev, t.getAttribute("data-tip")); else wegTip();
+  });
+
+  async function anzeigen() {
+    const token = localStorage.getItem(KEY);
+    if (!token) { $("login").hidden = false; $("inhalt").hidden = true; $("zeitraum").hidden = true; $("abmelden").hidden = true; return; }
+    $("login").hidden = true; $("zeitraum").hidden = false; $("abmelden").hidden = false;
+    const tage = +$("zeitraum").value;
+    try {
+      const d = await laden(token, tage);
+      $("inhalt").hidden = false;
+      zeichnen(d, tage);
+    } catch (e) {
+      if (e.status === 401) { localStorage.removeItem(KEY); $("loginFehler").textContent = "Token stimmt nicht."; $("loginFehler").hidden = false; }
+      else { $("loginFehler").textContent = e.message; $("loginFehler").hidden = false; }
+      anzeigen0();
+    }
+  }
+  function anzeigen0() { $("login").hidden = false; $("inhalt").hidden = true; $("zeitraum").hidden = true; $("abmelden").hidden = true; }
+
+  $("anmelden").addEventListener("click", () => {
+    const t = $("token").value.trim();
+    if (!t) return;
+    try { localStorage.setItem(KEY, t); } catch (e) {}
+    $("loginFehler").hidden = true;
+    anzeigen();
+  });
+  $("token").addEventListener("keydown", (e) => { if (e.key === "Enter") $("anmelden").click(); });
+  $("abmelden").addEventListener("click", () => { try { localStorage.removeItem(KEY); } catch (e) {} anzeigen(); });
+  $("zeitraum").addEventListener("change", anzeigen);
+  anzeigen();
+})();
+</script>
+</body>
+</html>

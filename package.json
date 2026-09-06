@@ -1,0 +1,9 @@
+{
+  "name": "containerload-functions",
+  "private": true,
+  "description": "Abhaengigkeiten der Netlify Functions (die Seite selbst ist build-frei).",
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^11.0.3"
+  }
+}
