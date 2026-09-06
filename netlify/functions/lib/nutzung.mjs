@@ -54,9 +54,9 @@ export function pruefeEvent(roh) {
   return { v: 1, modus: roh.modus, sprache: roh.sprache, geteilt: !!roh.geteilt, dauerS, positionen, funktionen, container, kette };
 }
 
-// Events (je mit .tag "YYYY-MM-DD") -> Kennzahlen fuers Dashboard.
+// Events (je mit .tag "YYYY-MM-DD", optional .land) -> Kennzahlen fuers Dashboard.
 export function aggregiere(events) {
-  const tage = new Map(), container = {}, modus = {}, sprachen = {}, funktionen = {};
+  const tage = new Map(), container = {}, modus = {}, sprachen = {}, funktionen = {}, laender = {};
   let positionenGesamt = 0, stueckGesamt = 0;
   for (const e of events) {
     const t = tage.get(e.tag) || { tag: e.tag, events: 0, positionen: 0 };
@@ -68,6 +68,7 @@ export function aggregiere(events) {
     if (e.container) container[e.container] = (container[e.container] || 0) + 1;
     modus[e.modus] = (modus[e.modus] || 0) + 1;
     sprachen[e.sprache] = (sprachen[e.sprache] || 0) + 1;
+    if (e.land) laender[e.land] = (laender[e.land] || 0) + 1;
     for (const f of e.funktionen) funktionen[f] = (funktionen[f] || 0) + 1;
   }
   return {
@@ -75,6 +76,6 @@ export function aggregiere(events) {
     positionenGesamt,
     stueckGesamt,
     tage: [...tage.values()].sort((a, b) => a.tag < b.tag ? -1 : 1),
-    container, modus, sprachen, funktionen,
+    container, modus, sprachen, funktionen, laender,
   };
 }
