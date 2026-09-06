@@ -1,0 +1,14 @@
+# Netlify-Konfiguration. Bisher lebte alles in den UI-Einstellungen (Publish-
+# Verzeichnis containerload.io/); seit den Functions steht es hier im Repo,
+# damit die Einrichtung versioniert ist und ein neuer Rechner sie mitbringt.
+#
+# Kein Build-Schritt: die Seite ist statisches HTML (bewusst, siehe
+# containerload.io/CLAUDE.md). Der command installiert nur die Function-
+# Abhaengigkeit (@netlify/blobs); ohne package.json braeuchte es ihn nicht.
+
+[build]
+  publish = "containerload.io"
+  command = "npm install"
+
+[functions]
+  directory = "netlify/functions"

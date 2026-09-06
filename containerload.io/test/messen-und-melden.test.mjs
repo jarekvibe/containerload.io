@@ -38,7 +38,8 @@ const schnitt = (von, bis) => {
 const EREIGNISSE = [
   "plan-per-link-geoeffnet", "beispiel-geoeffnet", "ladung-eingegeben", "excel-import",
   "palettierer", "plan-gerechnet", "mehrere-container", "passt-nicht", "empfehlung",
-  "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet"
+  "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet",
+  "sicherung-geprueft"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {
@@ -121,9 +122,13 @@ test("die Datenschutzseite sagt, was gezaehlt wird und was der Rueckkanal tut", 
   assert.match(ds, /Ladung mitschicken/, "das abwaehlbare Kaestchen ist nicht erklaert");
   assert.match(ds, /Netlify/, "der Empfaenger der Formulardaten ist nicht genannt");
   // Der wichtigste Satz der Seite darf nicht mehr pauschal behaupten, es gehe NIE etwas
-  // hinaus -- seit dem Formular gibt es eine Ausnahme, und die muss dort stehen.
-  assert.match(ds, /von selbst nicht an einen Server gesendet/,
-    "das Versprechen in Abschnitt 2 ist nicht auf das automatische Verhalten eingegrenzt");
+  // hinaus -- seit dem Formular und der anonymen Nutzungsstatistik gibt es GENAU ZWEI
+  // Ausnahmen, und beide muessen in Abschnitt 2 benannt sein (den Rest prueft
+  // test/nutzungsstatistik.test.mjs).
+  assert.match(ds, /genau zwei Fälle/,
+    "Abschnitt 2 zaehlt die Ausnahmen nicht mehr ehrlich auf");
+  assert.match(ds, /ohne Namen und ohne jeden Personenbezug/,
+    "die Grenze der Nutzungsstatistik steht nicht in Abschnitt 2");
   assert.match(ds, /containerload\.feedback\.v1|Hat der Plan gepasst/,
     "der neue Speicher-Schluessel ist nicht erwaehnt");
 });

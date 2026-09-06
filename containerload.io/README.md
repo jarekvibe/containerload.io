@@ -61,7 +61,9 @@ Da die Bibliotheken über CDN geladen werden, ist eine Internetverbindung beim T
 
 ## Deployment
 
-Die Seite wird über **Netlify** ausgeliefert. Ziel ist die automatische Veröffentlichung aus diesem Repository (Push auf `main` → Auto-Deploy), sodass das bisherige manuelle Hochladen entfällt.
+Die Seite wird über **Netlify** automatisch aus diesem Repository veröffentlicht (Push auf `main` → Auto-Deploy). Die Einstellungen stehen versioniert in `netlify.toml` (Repo-Wurzel): Publish-Verzeichnis `containerload.io/`, Functions unter `netlify/functions/`.
+
+Seit der anonymen Nutzungsstatistik gibt es zwei **Netlify Functions** (`/api/beacon` nimmt Events entgegen, `/api/statistik` liefert die Auswertung für `/admin`). Die `package.json` an der Repo-Wurzel existiert nur für deren Abhängigkeit `@netlify/blobs` — die Seite selbst bleibt build-frei. Das Dashboard unter `/admin` verlangt die Netlify-Umgebungsvariable `STATISTIK_TOKEN` (Site settings → Environment variables).
 
 ## Sprachen
 
