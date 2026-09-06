@@ -26,7 +26,9 @@
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Archivo, ui-sans-serif, sans-serif; }
   .wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 48px; }
-  header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+  /* Kopfzeile wie im Rechner: volle Breite, Logo links oben -- die zentrierte
+     Fassung sah auf grossen Monitoren verloren aus (Jareks Screenshot). */
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
   h1 { font-size: 18px; font-weight: 700; margin: 0; }
   .brand { color: var(--dim); text-decoration: none; font-weight: 700; }
   .brand b { color: var(--accent); }
@@ -66,19 +68,18 @@
 </style>
 </head>
 <body>
+<header>
+  <a class="brand" href="/">Container<b>Load</b></a>
+  <h1>Nutzungsstatistik</h1>
+  <span class="spacer"></span>
+  <select id="zeitraum" hidden>
+    <option value="7">7 Tage</option>
+    <option value="30" selected>30 Tage</option>
+    <option value="90">90 Tage</option>
+  </select>
+  <button id="abmelden" class="quiet" hidden>Abmelden</button>
+</header>
 <div class="wrap">
-  <header>
-    <a class="brand" href="/">Container<b>Load</b></a>
-    <h1>Nutzungsstatistik</h1>
-    <span class="spacer"></span>
-    <select id="zeitraum" hidden>
-      <option value="7">7 Tage</option>
-      <option value="30" selected>30 Tage</option>
-      <option value="90">90 Tage</option>
-    </select>
-    <button id="abmelden" class="quiet" hidden>Abmelden</button>
-  </header>
-
   <div id="login" class="panel" hidden>
     <div>Zugangs-Token (Umgebungsvariable <code>STATISTIK_TOKEN</code> in Netlify):</div>
     <input id="token" type="password" autocomplete="off" placeholder="Token" />
