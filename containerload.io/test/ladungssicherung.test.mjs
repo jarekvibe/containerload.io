@@ -1,7 +1,7 @@
 // Der Ladungssicherungs-Check: aus der gepackten Geometrie wird abgeleitet, WO
-// gesichert werden muss -- Luecken (CTU-Code), Kippgefahr, Schwergut, Niederzurren
-// (EN 12195-1). Alles Richtwerte mit sichtbaren Annahmen; dieser Test haelt die
-// Geometrie und die Statik fest.
+// gesichert werden muss -- Luecken (CTU-Code), Kippgefahr, Schwergut. Bewusst
+// NICHT womit: welches Material ein Lager nutzt, weiss der Rechner nicht.
+// Alles Richtwerte mit sichtbaren Annahmen; dieser Test haelt die Geometrie fest.
 //
 // node --test test/ladungssicherung.test.mjs
 import fs from "node:fs";
@@ -16,7 +16,7 @@ const L = roh.split("\n");
 const von = L.findIndex((l) => l.includes("var SICH = {"));
 const bis = L.findIndex((l, i) => i > von && l.includes("// Indikative Laengs-Gewichtsverteilung"));
 assert.ok(von > 0 && bis > von, "SICH-Ausschnitt nicht gefunden");
-const { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen, sichMoebel } = new Function(L.slice(von, bis).join("\n") + "\nreturn { SICH, sichAnalyse, sichGurte, sichBefunde, sichZonenBauen, sichMoebel };")();
+const { SICH, sichAnalyse, sichBefunde, sichZonenBauen } = new Function(L.slice(von, bis).join("\n") + "\nreturn { SICH, sichAnalyse, sichBefunde, sichZonenBauen };")();
 
 // Kleine Helfer: Quader bauen, Gewicht je ti nachschlagen.
 const box = (x, z, dx, dz, ti = 0, y = 0, dy = 100) => ({ x, y, z, dx, dy, dz, ti });
@@ -68,32 +68,10 @@ test("kippgefaehrdet ist, was hoeher als das Doppelte der schmalsten Kante steht
   assert.deepStrictEqual(pal.kippTi, []);
 });
 
-test("Schwergut ab 1,5 t je Stueck, Bodenstuecke fuer die Mattenzahl", () => {
+test("Schwergut ab 1,5 t je Stueck", () => {
   const gw = { 0: 1600, 1: 1400 };
-  const s = sichAnalyse([box(0, 0, 100, 100, 0), box(100, 0, 100, 100, 1), box(100, 0, 100, 100, 1, 100)], (ti) => gw[ti], CONT, "road");
+  const s = sichAnalyse([box(0, 0, 100, 100, 0), box(100, 0, 100, 100, 1)], (ti) => gw[ti], CONT, "road");
   assert.deepStrictEqual(s.schwerTi, [0], "1.600 kg gemeldet, 1.400 kg nicht");
-  assert.strictEqual(s.boden, 2, "das gestapelte Stueck (y > 0) zaehlt nicht als Bodenstueck");
-  assert.strictEqual(s.gewicht, 1600 + 1400 + 1400);
-});
-
-test("Niederzurren: die Statik geht exakt auf (unabhaengige Bilanz)", () => {
-  // EN 12195-1: F = m*g*(0,8 - mu)/mu. Die Gegenrechnung ist das Kraeftegleichgewicht:
-  // Reibung aus Gewicht PLUS Vorspannung muss die 0,8 g nach vorn exakt tragen:
-  //   mu * (m*g + F) = 0,8 * m*g  -- fuer jedes mu, jedes Gewicht.
-  for (const kg of [500, 1000, 7500, 24000]) {
-    for (const mu of [0.2, 0.3, 0.45, 0.6]) {
-      const z = sichGurte(kg, mu);
-      const F = kg * 9.81 * (0.8 - mu) / mu;
-      assert.ok(Math.abs(mu * (kg * 9.81 + F) - 0.8 * kg * 9.81) < 1e-6, `Bilanz kg=${kg} mu=${mu}`);
-      assert.strictEqual(z.daN, Math.round(F / 10));
-      assert.strictEqual(z.gurte, Math.ceil(F / 10 / (2 * SICH.STF)), "je Gurt zaehlt die doppelte STF");
-    }
-  }
-  // Bekannter Tabellenfall: 1.000 kg, mu 0,3 -> 1.635 daN -> 3 Gurte; mit Matte 1 Gurt.
-  assert.strictEqual(sichGurte(1e3, 0.3).gurte, 3);
-  assert.strictEqual(sichGurte(1e3, 0.6).gurte, 1);
-  // mu >= 0,8: rechnerisch null -- die Oberflaeche sagt die Mindestsicherung dazu.
-  assert.strictEqual(sichGurte(1e3, 0.8).gurte, 0);
 });
 
 test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", () => {
@@ -114,9 +92,7 @@ test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", 
 test("die Befunde-Liste ist die eine Quelle und sortiert nach Schwere der Lesart", () => {
   const s = sichAnalyse([box(0, 0, 100, 235), box(140, 0, 100, 80, 7, 0, 190)], (ti) => ti === 7 ? 1600 : 500, CONT, "sea");
   const arten = sichBefunde(s).map((b) => b.art);
-  // 40 cm liegen unter der Polster-Grenze (45): fuellen, nicht abstuetzen.
-  assert.ok(arten.includes("laengs"), "die 40-cm-Luecke ist ein Fall fuers Staupolster");
-  assert.strictEqual(SICH.POLSTER, 45, "die Polster-Grenze ist der gemeinsame Richtwert von Text und 3D-Vorschau");
+  assert.ok(arten.includes("laengs"), "die 40-cm-Luecke muss als Laengsluecke gemeldet werden");
   assert.ok(arten.includes("laengsSumme") === (s.laengsSumme > SICH.SUMME), "Summenmeldung passt nicht zur Summe");
   assert.ok(arten.includes("tuer"), "Tuerluecke fehlt");
   assert.ok(arten.includes("kipp"), "Kippgefahr fehlt (190 cm auf 80er-Kante)");
@@ -175,8 +151,20 @@ test("Karten und 3D-Plaketten zaehlen dieselbe Liste", () => {
   assert.ok(roh.includes("const karten = sichZonenAlle.map((z, i) => {"), "Karten kommen nicht aus der Zonenliste");
   assert.ok(roh.includes("const sichZonen = sichZeige && sichZonenAlle.length ? sichZonenAlle : null;"), "Viewport liest eine andere Liste");
   assert.ok(roh.includes("const nr = plakette(zi + 1);"), "3D-Plakette traegt nicht die Zonen-Nummer");
-  // Die Empfehlung folgt derselben Polster-Grenze wie die Moebel-Vorschau.
-  assert.ok(roh.includes("z.luecke <= SICH.POLSTER ? T.sichEmpfKissen : T.sichEmpfVerband"), "Empfehlung haengt nicht an der gemeinsamen Grenze");
+});
+
+test("der Check nennt Orte, keine Mittel -- und das bleibt so", () => {
+  // Jareks Entscheidung: Zonen zeigen, aber keine Sicherungsmittel vorschlagen --
+  // welches Material ein Lager nutzt, wissen wir nicht. Der fruehere Stand (Zurr-
+  // Rechner nach EN 12195-1, Materialliste, 3D-Vorschau von Kissen und Stauholz)
+  // liegt in der Git-Historie. Wer eine dieser Kennungen wieder einbaut, soll hier
+  // bewusst vorbeimuessen.
+  for (const kennung of ["sichGurte", "sichMoebel", "sichEmpf", "sichListe", "sichZurr", "sichSee"]) {
+    assert.ok(!roh.includes(kennung), `Sicherungs-Vorschlag zurueck im Code: ${kennung}`);
+  }
+  // Und die Grenzwerte der Vorschlaege sind mit ihnen gegangen.
+  assert.strictEqual(SICH.POLSTER, undefined);
+  assert.strictEqual(SICH.STF, undefined);
 });
 
 test("auf dem Planensattel sprechen die Texte Fahrzeug, nicht Container", () => {
@@ -190,8 +178,6 @@ test("auf dem Planensattel sprechen die Texte Fahrzeug, nicht Container", () => 
     "T.sichGrundTuer(ROAD)",
     "T.sichGrundWand(ROAD)",
     "T.sichTuerKlein(cF(s.tuer), ROAD)",
-    "T.sichListeTuer(ROAD)",
-    "T.sichOk(ROAD)",
   ]) assert.ok(roh.includes(stelle), "Aufrufstelle ohne road-Flag: " + stelle);
   // Und die Woerter selbst, in beiden Sprachen.
   assert.ok(roh.includes('road ? "quer (Kurven)" : "quer (Kurven und Seegang)"'), "DE Richtung ohne Strassen-Variante");
@@ -200,36 +186,3 @@ test("auf dem Planensattel sprechen die Texte Fahrzeug, nicht Container", () => 
   assert.ok(roh.includes("Gap to the rear"), "EN Heck-Wort fehlt");
 });
 
-test("die Vorschau stellt das passende Hilfsmittel in die Zone", () => {
-  // Schmale Luecke (25 cm, quer): Luftkissen. Es muss IN die Luecke passen und
-  // schmaler sein als sie -- ein Kissen, das die Ladung verdraengt, waere Unsinn.
-  const quer = { x: 0, z: 210, dx: 220, dz: 25, dy: 220, richtung: "z" };
-  const kissen = sichMoebel(quer);
-  assert.ok(kissen.length >= 1 && kissen.every((m) => m.typ === "kissen"), "schmale Luecke braucht Kissen");
-  for (const k of kissen) {
-    assert.ok(k.dick < 25, `Kissen dicker als die Luecke (${k.dick})`);
-    assert.ok(k.hoehe <= 220 * 0.85 + 1e-9, "Kissen hoeher als 85 % der Zone");
-    assert.strictEqual(k.achse, "z", "der Bauch muss quer zeigen");
-  }
-  // Zwei Kissen, wenn die Luecke lang genug ist (220 cm entlang der Fahrt).
-  assert.strictEqual(kissen.length, 2);
-  // Breite Luecke (235 cm, laengs zur Stirnwand): Stauholz-Verband, vier Balken
-  // in zwei Hoehen -- exakt so lang wie die Luecke tief ist (minus Spiel).
-  // (Sechs waren es mal; der schlankere Verband kam mit dem Ghost-Restyle,
-  // weil das dichte Gitter im transluzenten Orange wie Rauschen aussah.)
-  const stirn = { x: 0, z: 0, dx: 235, dz: 248, dy: 200, richtung: "x" };
-  const holz = sichMoebel(stirn);
-  const balken = holz.filter((m) => m.typ === "balken"), pfosten = holz.filter((m) => m.typ === "pfosten");
-  assert.strictEqual(balken.length, 4);
-  assert.ok(balken.every((m) => Math.abs(m.laenge - 235 * 0.96) < 1e-9));
-  assert.strictEqual(new Set(balken.map((m) => m.y)).size, 2, "Balken in zwei Hoehen");
-  // Der Verband steht auf Pfosten an BEIDEN Lueckenflaechen -- frei schwebende Balken
-  // sahen aus wie ein Rendering-Fehler.
-  assert.strictEqual(pfosten.length, 4);
-  assert.strictEqual(new Set(pfosten.map((m) => m.x)).size, 2, "Pfosten an beiden Flaechen der Luecke");
-  // Tuer: zwei Sperrstangen quer ueber die volle Breite.
-  const tuer = { x: 578, z: 0, dx: 12, dz: 235, dy: 200, tuer: true, richtung: "x" };
-  const stangen = sichMoebel(tuer);
-  assert.strictEqual(stangen.length, 2);
-  assert.ok(stangen.every((m) => m.typ === "rohr" && Math.abs(m.laenge - 235 * 0.96) < 1e-9));
-});
