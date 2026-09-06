@@ -91,6 +91,25 @@ test("Herkunft nur auf Landes-Ebene: der Laendercode ja, die IP nie", () => {
   assert.ok(datenschutz.includes("danach wird sie verworfen"), "das IP-Verwerfen steht nicht auf der Seite");
 });
 
+test("die Weltkarte hat ihre Daten, und die Grundmasse tragen Namen", () => {
+  // /welt-karte.js ist generiert (world-atlas + ISO-3166 + deutsche Namen,
+  // Werkzeug: scratchpad/karte-bauen.mjs) und wird als Skript geladen --
+  // faellt es aus, zeigt die Seite den Fallback statt einer leeren Karte.
+  const karte = fs.readFileSync(path.join(dir, "..", "welt-karte.js"), "utf8");
+  assert.ok(karte.startsWith("// Weltkarte"), "Kopfkommentar der generierten Datei fehlt");
+  assert.ok(karte.includes("var WELT = {"), "WELT-Objekt fehlt");
+  for (const land of ['"DE":', '"NL":', '"US":', '"CN":']) assert.ok(karte.includes(land), "Land fehlt in der Karte: " + land);
+  assert.ok(karte.includes('"n":"Deutschland"'), "deutsche Laendernamen fehlen");
+  assert.ok(admin.includes('<script src="/welt-karte.js"></script>'), "admin laedt die Kartendaten nicht");
+  assert.ok(admin.includes('typeof WELT === "undefined"'), "kein Fallback, wenn die Kartendaten fehlen");
+  // Grundmasse als benannte Klassen (das Streubild war mit echten Daten
+  // nutzlos): Europalette und Industriepalette muessen erkannt werden,
+  // orientierungs-unabhaengig (120x80 == 80x120).
+  assert.ok(admin.includes('"Europalette 120 × 80"'), "Europaletten-Klasse fehlt");
+  assert.ok(admin.includes('"Industriepalette 120 × 100"'), "Industriepaletten-Klasse fehlt");
+  assert.ok(admin.includes("(Math.abs(p.l - b) <= 2 && Math.abs(p.b - a) <= 2)"), "gedrehte Grundmasse fallen aus der Klasse");
+});
+
 test("die aufgeklappte Zeile baut die Ladung im Rechner nach -- in Parser-Sprache", () => {
   // Der Link nutzt die ?q=-Freitexteingabe; "nicht stapelbar" ist das Wort,
   // das der Parser versteht (test/import-parser.test.mjs haelt das fest).
