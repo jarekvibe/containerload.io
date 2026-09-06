@@ -26,12 +26,17 @@
   [hidden] { display: none !important; }
   body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.5 Archivo, ui-sans-serif, sans-serif; }
   .wrap { max-width: 1060px; margin: 0 auto; padding: 24px 16px 48px; }
-  /* Kopfzeile wie im Rechner: volle Breite, Logo links oben -- die zentrierte
-     Fassung sah auf grossen Monitoren verloren aus (Jareks Screenshot). */
-  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--border); }
-  h1 { font-size: 18px; font-weight: 700; margin: 0; }
-  .brand { color: var(--dim); text-decoration: none; font-weight: 700; }
-  .brand b { color: var(--accent); }
+  /* Kopfzeile 1:1 wie im Rechner: Wuerfel-Logo im Akzentquadrat links oben,
+     Markenname mit Untertitel, Akzent-Haarlinie unter der Leiste. Die erste
+     Fassung (nur Text, zentriert) sah aus wie eine fremde Seite -- Jareks
+     Screenshots zeigten den Unterschied deutlich. */
+  header { position: relative; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 12px 24px; border-bottom: 1px solid #1C2531; }
+  header .haarlinie { position: absolute; bottom: -1px; left: 0; height: 1px; width: 40%; background: linear-gradient(90deg, var(--accent), transparent); }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+  .brand .mark { width: 32px; height: 32px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .brand .name { display: block; font-size: 18px; font-weight: 700; letter-spacing: -0.02em; line-height: 1; }
+  .brand .name b { color: var(--accent); }
+  .brand .untertitel { display: block; font-size: 12px; color: var(--faint); margin-top: 4px; }
   .spacer { flex: 1; }
   select, input, button { font: inherit; color: var(--text); background: var(--field); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; }
   button { cursor: pointer; }
@@ -56,6 +61,12 @@
   th { text-align: left; color: var(--faint); font-weight: 500; padding: 6px 8px; border-bottom: 1px solid var(--border); }
   td { padding: 6px 8px; border-bottom: 1px solid var(--field); color: var(--dim); }
   td.num, th.num { text-align: right; font-family: "JetBrains Mono", monospace; }
+  tr.ev { cursor: pointer; }
+  tr.ev:hover td { background: rgba(46, 143, 255, 0.05); }
+  td.pfeil { color: var(--faint); width: 18px; }
+  tr.detail td { background: var(--field); }
+  .poszeile { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--dim); padding: 2px 0; }
+  .oeffnen { display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: var(--accent); color: #06121f; font-weight: 600; text-decoration: none; font-size: 13px; }
   .pille { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--field); color: var(--dim); }
   .pille.road { color: #E7C89A; }
   .pille.sea { color: #BCD9FF; }
@@ -69,8 +80,11 @@
 </head>
 <body>
 <header>
-  <a class="brand" href="/">Container<b>Load</b></a>
-  <h1>Nutzungsstatistik</h1>
+  <div class="haarlinie"></div>
+  <a class="brand" href="/">
+    <span class="mark"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"></polygon><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"></polygon><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"></polygon></svg></span>
+    <span><span class="name">Container<b>Load</b></span><span class="untertitel">Nutzungsstatistik</span></span>
+  </a>
   <span class="spacer"></span>
   <select id="zeitraum" hidden>
     <option value="7">7 Tage</option>
@@ -99,7 +113,7 @@
     </div>
     <div class="grid2">
       <div class="panel"><h2>Grundmaße der Positionen (L × B in cm)</h2><div id="masseChart"></div></div>
-      <div class="panel"><h2>Modus &amp; Sprache</h2><div id="modusChart"></div></div>
+      <div class="panel"><h2>Modus, Sprache &amp; Land</h2><div id="modusChart"></div></div>
     </div>
     <div class="panel" style="margin-top:16px">
       <h2>Letzte Rechnungen</h2>
@@ -214,20 +228,47 @@
       '<div style="margin-bottom:12px"><span class="pille sea">See: ' + (d.modus.sea || 0) + '</span> ' +
       '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
       '<div><span class="pille">Deutsch: ' + (d.sprachen.de || 0) + '</span> <span class="pille">Englisch: ' + (d.sprachen.en || 0) + "</span></div>" +
+      '<div style="margin-top:12px">' + (Object.entries(d.laender || {}).sort((a, b) => b[1] - a[1]).slice(0, 10)
+        .map(([land, n]) => '<span class="pille">' + land + ": " + n + "</span>").join(" ") || '<span class="pille">Noch kein Land erfasst</span>') + "</div>" +
       '<div style="margin-top:12px" class="hinweis">Geteilte Pläne (Empfänger-Ansicht): ' + d.stichprobe.filter((e) => e.geteilt).length + " in der Stichprobe</div>";
     el.innerHTML = html;
   }
 
+  // Jede Zeile laesst sich aufklappen: die exakten Positionen, und ein Link,
+  // der die Ladung im Rechner nachbaut. Der Link nutzt die ?q=-Freitexteingabe
+  // ("10x 120x100x110 400kg nicht stapelbar" je Zeile) -- dieselbe Sprache,
+  // die auch die Ratgeber-Buttons sprechen. Namen gibt es keine nachzubauen:
+  // die werden bewusst nie erfasst, im Rechner heisst es dann "Position 1".
+  const appLink = (e) => {
+    const q = e.positionen.map((p) =>
+      p.n + "x " + p.l + "x" + p.b + "x" + p.h + (p.kg ? " " + p.kg + "kg" : "") + (p.stapel ? "" : " nicht stapelbar")).join("\n");
+    return "/app?q=" + encodeURIComponent(q) + (e.modus === "road" ? "&d=road" : "");
+  };
   function eventTabelle(d) {
-    const zeilen = d.stichprobe.slice(-30).reverse().map((e) => {
+    const events = d.stichprobe.slice(-30).reverse();
+    const zeilen = events.map((e, i) => {
       const stk = e.positionen.reduce((s, p) => s + p.n, 0);
-      return "<tr><td>" + e.tag + '</td><td><span class="pille ' + e.modus + '">' + (e.modus === "road" ? "Straße" : "See") + "</span></td>" +
+      const posListe = e.positionen.map((p) =>
+        '<div class="poszeile">' + p.n + " × " + p.l + " × " + p.b + " × " + p.h + " cm" +
+        (p.kg ? " · " + p.kg + " kg/Stk" : "") + (p.stapel ? "" : " · nicht stapelbar") + "</div>").join("");
+      return '<tr class="ev" data-i="' + i + '"><td class="pfeil">▸</td><td>' + e.tag +
+        '</td><td><span class="pille ' + e.modus + '">' + (e.modus === "road" ? "Straße" : "See") + "</span></td>" +
+        "<td>" + (e.land || "—") + "</td>" +
         '<td class="num">' + e.positionen.length + '</td><td class="num">' + stk + "</td><td>" + (e.container || "—") + "</td>" +
-        "<td>" + e.funktionen.join(", ") + '</td><td class="num">' + e.dauerS + " s</td></tr>";
+        "<td>" + e.funktionen.join(", ") + '</td><td class="num">' + e.dauerS + " s</td></tr>" +
+        '<tr class="detail" hidden data-d="' + i + '"><td></td><td colspan="8">' +
+        (posListe || '<div class="poszeile">Keine Positionen (nur Funktions-Nutzung).</div>') +
+        (e.positionen.length ? '<a class="oeffnen" href="' + appLink(e) + '" target="_blank" rel="noopener">Im Rechner öffnen ➜</a>' : "") +
+        "</td></tr>";
     }).join("");
     $("eventTabelle").innerHTML =
-      '<thead><tr><th>Tag</th><th>Modus</th><th class="num">Pos.</th><th class="num">Stück</th><th>Container</th><th>Funktionen</th><th class="num">Dauer</th></tr></thead>' +
-      "<tbody>" + (zeilen || '<tr><td colspan="7" class="leer">Noch keine Rechnungen im Zeitraum.</td></tr>') + "</tbody>";
+      '<thead><tr><th></th><th>Tag</th><th>Modus</th><th>Land</th><th class="num">Pos.</th><th class="num">Stück</th><th>Container</th><th>Funktionen</th><th class="num">Dauer</th></tr></thead>' +
+      "<tbody>" + (zeilen || '<tr><td colspan="9" class="leer">Noch keine Rechnungen im Zeitraum.</td></tr>') + "</tbody>";
+    $("eventTabelle").querySelectorAll("tr.ev").forEach((tr) => tr.addEventListener("click", () => {
+      const det = $("eventTabelle").querySelector('tr.detail[data-d="' + tr.dataset.i + '"]');
+      det.hidden = !det.hidden;
+      tr.querySelector(".pfeil").textContent = det.hidden ? "▸" : "▾";
+    }));
   }
 
   function zeichnen(d, tage) {

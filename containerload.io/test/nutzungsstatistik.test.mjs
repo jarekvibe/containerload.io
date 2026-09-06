@@ -65,6 +65,7 @@ test("aggregiere zaehlt Tage, Container, Modi und Funktionen aus einer Quelle", 
     { ...pruefeEvent(gut()), tag: "2026-09-01" },
     { ...pruefeEvent({ ...gut(), modus: "road", container: "Planensattel 13,6 m", funktionen: ["ladung-eingegeben"] }), tag: "2026-09-02" },
   ];
+  events[0].land = "DE"; events[1].land = "DE"; events[2].land = "AT";
   const a = aggregiere(events);
   assert.strictEqual(a.events, 3);
   assert.deepStrictEqual(a.tage.map((t) => t.events), [2, 1]);
@@ -73,6 +74,30 @@ test("aggregiere zaehlt Tage, Container, Modi und Funktionen aus einer Quelle", 
   assert.strictEqual(a.container["20' GP"], 2);
   assert.strictEqual(a.modus.road, 1);
   assert.strictEqual(a.funktionen["excel-import"], 2);
+  assert.deepStrictEqual(a.laender, { DE: 2, AT: 1 });
+  // Events ohne Land (Bestand von vor der Laender-Erfassung) stoeren nicht.
+  assert.deepStrictEqual(aggregiere([{ ...pruefeEvent(gut()), tag: "2026-09-01" }]).laender, {});
+});
+
+test("Herkunft nur auf Landes-Ebene: der Laendercode ja, die IP nie", () => {
+  const beacon = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "beacon.mjs"), "utf8");
+  // Das Land kommt aus Netlifys Geo-Ableitung, eng geprueft (zwei Grossbuchstaben).
+  assert.ok(beacon.includes("context.geo.country.code"), "Land kommt nicht aus context.geo");
+  assert.ok(beacon.includes('/^[A-Z]{2}$/.test(land)'), "Laendercode wird nicht geprueft");
+  // Die IP-Adresse wird nirgends gelesen -- auch nicht aus den Headern.
+  assert.ok(!/x-forwarded-for|x-nf-client-connection-ip|context\.ip/i.test(beacon),
+    "die Function fasst die IP-Adresse an -- das verspricht die Datenschutzseite anders");
+  assert.ok(datenschutz.includes("Herkunftsland"), "das Land steht nicht auf der Datenschutzseite");
+  assert.ok(datenschutz.includes("danach wird sie verworfen"), "das IP-Verwerfen steht nicht auf der Seite");
+});
+
+test("die aufgeklappte Zeile baut die Ladung im Rechner nach -- in Parser-Sprache", () => {
+  // Der Link nutzt die ?q=-Freitexteingabe; "nicht stapelbar" ist das Wort,
+  // das der Parser versteht (test/import-parser.test.mjs haelt das fest).
+  assert.ok(admin.includes('"/app?q=" + encodeURIComponent(q)'), "App-Link fehlt");
+  assert.ok(admin.includes('" nicht stapelbar"'), "Stapel-Kennung fehlt im nachgebauten Text");
+  assert.ok(admin.includes('e.modus === "road" ? "&d=road" : ""'), "Strassen-Events muessen im Landfracht-Modus oeffnen");
+  assert.ok(admin.includes('target="_blank" rel="noopener"'), "Link oeffnet nicht in neuem Tab");
 });
 
 test("der Sender in app.html haelt die Regeln des NUTZ-Blocks", () => {
