@@ -4021,6 +4021,42 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const rk = rank ? String(rank) : "—";
     return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border-radius:20px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2);">${rk}</span></td><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
+  // ── Druckfarben ──────────────────────────────────────────────────────────────
+  // Der Ladevorschlag ist weisses Papier, die App ist dunkel. Die Kennfarbe je
+  // Position waehlt der Nutzer frei (cargo[i].color) — auch Weiss oder Pastell.
+  // Auf hellem Grund waere das unsichtbar: weiss auf weiss. Deshalb wird die
+  // relative Luminanz gemessen (WCAG-Formel) und jede zu helle Farbe fuers
+  // Dokument abgedunkelt, bis sie unter LV_LUM_MAX liegt. Kein Sonderfall
+  // "weiss" — jede helle Farbe faellt gleichermassen darunter. Geklemmt wird an
+  // der Eintrittsstelle der Nutzerfarben (tiColor/tiC in buildLadevorschlag)
+  // UND defensiv in LV_STOWAGE selbst. Zusaetzlich haengt die Kontur der Boxen
+  // im Stauplan NIE an der Nutzerfarbe (fester dunkler Strich) — die Farbe
+  // traegt nur Fuellung und Beschriftung.
+  var LV_LUM_MAX = 0.3;
+  var relLuminanz = (hex) => {
+    let s = String(hex || "").trim().replace(/^#/, "");
+    if (s.length === 3) s = s.replace(/([0-9a-fA-F])/g, "$1$1");
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return 0;
+    const lin = (c) => { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const n = parseInt(s, 16);
+    return 0.2126 * lin(n >> 16 & 255) + 0.7152 * lin(n >> 8 & 255) + 0.0722 * lin(n & 255);
+  };
+  var lvDruckfarbe = (hex) => {
+    let s = String(hex || "").trim().replace(/^#/, "");
+    if (s.length === 3) s = s.replace(/([0-9a-fA-F])/g, "$1$1");
+    if (!/^[0-9a-fA-F]{6}$/.test(s)) return "#41505f"; // keine Hex-Farbe: neutraler dunkler Ton
+    const lum = relLuminanz("#" + s);
+    if (lum <= LV_LUM_MAX) return "#" + s.toLowerCase();
+    const [r, g, b] = [0, 2, 4].map((i) => parseInt(s.slice(i, i + 2), 16));
+    // Luminanz skaliert grob mit f^2.4 — analytischer Startwert, dann fein nachziehen.
+    let f = Math.pow(LV_LUM_MAX / lum, 1 / 2.4);
+    for (let schutz = 0; schutz < 40; schutz++) {
+      const hx = "#" + [r, g, b].map((c) => Math.round(c * f).toString(16).padStart(2, "0")).join("");
+      if (relLuminanz(hx) <= LV_LUM_MAX) return hx;
+      f *= 0.96;
+    }
+    return "#000000";
+  };
   var LV_STOWAGE = (S) => {
     const { CL, CW, CH, placed, tiColor, tiPos, legend } = S;
     if (!placed.length || CL <= 0 || CW <= 0 || CH <= 0) return "";
@@ -4064,10 +4100,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (let gx = 100; gx < CL; gx += 100)
       top += `<line x1="${oxT + gx}" y1="${oyT}" x2="${oxT + gx}" y2="${oyT + CW}" stroke="#f0f2f5" stroke-width="1"/>`;
     colList.forEach((c) => {
-      const col = tiColor[c.ti] || "#8492a6";
+      // Defensiv geklemmt (siehe Druckfarben oben); die Kontur ist bewusst FEST
+      // dunkel und haengt nicht an der Nutzerfarbe — sonst verschwindet eine
+      // weisse Box auf dem weissen Blatt.
+      const col = lvDruckfarbe(tiColor[c.ti] || "#8492a6");
       const x = oxT + c.x, y = oyT + c.z;
       if (c.n > 1) top += `<rect x="${x + 5}" y="${y - 5}" width="${c.dx}" height="${c.dz}" rx="4" fill="none" stroke="${col}" stroke-width="1" stroke-opacity=".35"/>`;
-      top += `<rect x="${x}" y="${y}" width="${c.dx}" height="${c.dz}" rx="4" fill="${tint(col)}" stroke="${col}" stroke-width="2"/>`;
+      top += `<rect x="${x}" y="${y}" width="${c.dx}" height="${c.dz}" rx="4" fill="${tint(col)}" stroke="#0c1320" stroke-width="2"/>`;
       if (drawNums) top += `<text x="${x + c.dx / 2}" y="${y + c.dz / 2 + 6}" text-anchor="middle" style="${MONO}font-weight:600;fill:${col}" font-size="20">${String(tiPos[c.ti]).padStart(2, "0")}</text>`;
       if (c.n > 1) top += `<text x="${x + c.dx - 6}" y="${y + 15}" text-anchor="end" style="${MONO}fill:${col}" font-size="13">\xD7${c.n}</text>`;
     });
@@ -4089,8 +4128,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     side += `<line x1="${oxS}" y1="${oyS}" x2="${oxS}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
     side += `<line x1="${oxS + CL}" y1="${oyS}" x2="${oxS + CL}" y2="${floorY}" stroke="#0c1320" stroke-width="2"/>`;
     sorted.forEach((p) => {
-      const col = tiColor[p.ti] || "#8492a6";
-      side += `<rect x="${oxS + p.x}" y="${floorY - (p.y + p.dy)}" width="${p.dx}" height="${p.dy}" rx="3" fill="${tint(col)}" stroke="${col}" stroke-width="2"/>`;
+      const col = lvDruckfarbe(tiColor[p.ti] || "#8492a6");
+      side += `<rect x="${oxS + p.x}" y="${floorY - (p.y + p.dy)}" width="${p.dx}" height="${p.dy}" rx="3" fill="${tint(col)}" stroke="#0c1320" stroke-width="2"/>`;
     });
     side += `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${L.door.replace("◂ ", "")}</text>`;
     side += `</svg>`;
@@ -4099,9 +4138,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const leg = legend.map((g) => {
       const nm = escHTML(g.it.name || ("Position " + g.pos));
       const st = g.it.stackable !== false;
+      const gc = lvDruckfarbe(g.color || "#8492a6");
       return `<div style="display:flex;align-items:center;gap:8px;">
-        <span style="width:15px;height:15px;border-radius:4px;background:${tint(g.color)};border:2px solid ${g.color};flex:none;"></span>
-        <span style="${MONO}font-weight:600;font-size:11px;color:${g.color};">${String(g.pos).padStart(2, "0")}</span>
+        <span style="width:15px;height:15px;border-radius:4px;background:${tint(gc)};border:2px solid ${gc};flex:none;"></span>
+        <span style="${MONO}font-weight:600;font-size:11px;color:${gc};">${String(g.pos).padStart(2, "0")}</span>
         <span style="font-size:11px;color:#0c1320;">${nm}</span>
         <span style="${MONO}font-size:10px;color:#8492a6;">${num(g.it.qty)}\xD7 \xB7 ${dimDE(g.it.l, _loc)}\xD7${dimDE(g.it.w, _loc)}\xD7${dimDE(g.it.h, _loc)} cm \xB7 ${st ? L.stack : L.nostack}</span>
       </div>`;
@@ -4361,6 +4401,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // gleiche Ware ohnehin im Block, die Liste bleibt also kurz. Wird sie trotzdem lang
   // (wilde Mischladung), zeigt sie die ersten 16 Schritte und sagt, dass mehr folgen --
   // eine 40-Schritte-Liste liest an der Rampe niemand.
+  // tiColor kommt hier bereits GEKLEMMT an (lvDruckfarbe an der Eintrittsstelle in
+  // buildLadevorschlag) — LV_SEQUENZ selbst bleibt absichtlich abhaengigkeitsfrei,
+  // weil test/belade-reihenfolge.test.mjs die Funktion einzeln ausschneidet. Der
+  // feste Rand am Farb-Chip unten ist die farbunabhaengige Kontur.
   var LV_SEQUENZ = (placed, cargo, lang, tiColor) => {
     if (!placed || placed.length < 2) return "";
     const en = lang === "en";
@@ -4386,7 +4430,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const nm = escHTML(it.name || (en ? "Item " : "Position ") + (sc.ti + 1));
       return `<div style="display:flex; align-items:baseline; gap:10px; padding:5px 0; border-bottom:1px solid #f0f1f4;">
         <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0c1320; min-width:22px;">${String(i + 1).padStart(2, "0")}</span>
-        <span style="width:9px; height:9px; border-radius:2px; background:${tiColor[sc.ti] || "#94a3b8"}; flex:none; align-self:center;"></span>
+        <span style="width:9px; height:9px; border-radius:2px; background:${tiColor[sc.ti] || "#94a3b8"}; border:1px solid rgba(12,19,32,.35); flex:none; align-self:center;"></span>
         <span style="font-size:11px; font-weight:600; color:#0c1320;">${sc.n}× ${nm}</span>
         <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#8b96a6; margin-left:auto;">${m(sc.von)}–${m(sc.bis)} m ${K.ab}</span>
       </div>`;
@@ -7723,7 +7767,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         placed.forEach((p) => {
           if (tiColor[p.ti] === undefined) {
             const it = cargo[p.ti];
-            tiColor[p.ti] = colorOf(it, p.ti);
+            // Druckdokument = weisses Papier: die Nutzerfarbe wird hier, an ihrer
+            // Eintrittsstelle, unter LV_LUM_MAX geklemmt (siehe lvDruckfarbe).
+            tiColor[p.ti] = lvDruckfarbe(colorOf(it, p.ti));
             tiPos[p.ti] = items.indexOf(it) + 1;
           }
         });
@@ -7861,7 +7907,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             const marke = (domain === "road" ? "F" : "C") + (ci + 1);
             const tiC = {}, tiP = {};
             sp.forEach((b) => {
-              if (tiC[b.ti] === void 0) { tiC[b.ti] = colorOf(cargo[b.ti], b.ti); tiP[b.ti] = items.indexOf(cargo[b.ti]) + 1; }
+              if (tiC[b.ti] === void 0) { tiC[b.ti] = lvDruckfarbe(colorOf(cargo[b.ti], b.ti)); tiP[b.ti] = items.indexOf(cargo[b.ti]) + 1; }
             });
             blaetter.push(LV_PAGE({
               ...grund,
