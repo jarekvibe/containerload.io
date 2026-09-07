@@ -100,3 +100,44 @@ test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', 
   assert.match(zeile, /class="btn btn-primary text-\[13px\] px-2 sm:px-4 py-2"/,
     "das Knopf-Polster ist auf dem Telefon nicht verkleinert");
 });
+
+test("im Rechner steht auf dem Telefon die 3D-Ansicht vor der Seitenleiste", () => {
+  // Gemessen bei 390x844: die 3D-Ansicht begann erst bei ~1070 px Dokumenttiefe — wer
+  // einen geteilten Plan an der Rampe oeffnete, sah zuerst Container-Wahl und die ganze
+  // Ladungsliste und musste anderthalb Bildschirme scrollen, um den Plan zu SEHEN.
+  // Die order-Klassen drehen die Reihenfolge nur unter lg; ab lg (Spalten) gilt wieder
+  // die Dokument-Reihenfolge. Wer sie entfernt, holt das alte Problem zurueck.
+  const s = lies("app.html");
+  assert.match(s, /"aside", \{ className: "order-2 lg:order-none w-full lg:w-\[360px\]/,
+    "die Seitenleiste rueckt auf dem Telefon nicht mehr hinter die 3D-Ansicht");
+  assert.match(s, /"main", \{ className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col"/,
+    "die 3D-Spalte steht auf dem Telefon nicht mehr zuerst");
+  // Und die 3D-Ansicht behaelt ihre Mindesthoehe — ohne sie faellt der Viewport im
+  // gestapelten Layout in sich zusammen.
+  assert.match(s, /min-h-\[380px\] lg:min-h-0/,
+    "die 3D-Ansicht hat auf dem Telefon keine Mindesthoehe mehr");
+});
+
+test("Anfassflaechen wachsen auf dem Telefon auf mindestens 40 px", () => {
+  // Die Btn-Varianten polstern 4-12 px um 11,5-13,5 px Schrift — am Schreibtisch genug,
+  // mit dem Finger nicht. Die Regel haengt an min-height (steht nirgends inline) und
+  // greift nur unter lg, deshalb bleibt der Desktop pixelgleich.
+  const s = lies("app.html");
+  assert.match(s, /@media \(max-width: 1023px\)\{button\.transition\{min-height:40px\}\}/,
+    "die Mindesthoehe fuer Knoepfe auf dem Telefon fehlt");
+});
+
+test("zwei Finger zoomen die 3D-Ansicht auf dem Telefon", () => {
+  // Auf dem Telefon gibt es kein Mausrad; ohne Pinch kommt der Empfaenger eines
+  // geteilten Plans nicht an die Positionen heran. Der Pinch nutzt dieselben
+  // Radius-Grenzen wie das Rad (2.5 / 95) und darf im manuellen Modus keine Kiste
+  // setzen (nach dem Pinch kein handleManualClick).
+  const s = lies("app.html");
+  assert.ok(s.includes("pinchR0 * pinchD0 / d"), "der Pinch skaliert den Kameraradius nicht mehr");
+  assert.match(s, /sph\.r = Math\.max\(2\.5, Math\.min\(95, pinchR0 \* pinchD0 \/ d\)\);/,
+    "der Pinch haelt die Radius-Grenzen des Rads nicht ein");
+  assert.ok(/if \(pinchte\) \{[\s\S]{0,300}?return;[\s\S]{0,50}?\}\s*\n\s*const warSchieben = schiebt;/.test(s),
+    "nach einem Pinch wuerde der letzte Finger im manuellen Modus eine Kiste setzen");
+  assert.ok(s.includes('window.addEventListener("pointercancel", up);'),
+    "ohne pointercancel bleibt nach einer Systemgeste ein Finger in der Zeiger-Karte haengen");
+});
