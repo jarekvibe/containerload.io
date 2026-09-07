@@ -386,6 +386,11 @@
     const tage = +$("zeitraum").value;
     try {
       const d = await laden(token, tage);
+      // Wer sich hier erfolgreich anmeldet, ist der Betreiber. Die Markierung
+      // (gleiche Domain wie der Rechner) schaltet die Nutzungsstatistik fuer
+      // DIESEN Browser ab -- Jarek will nur die User sehen, nicht sich selbst.
+      // Zum Testen der Statistik: privates Fenster, dort fehlt die Markierung.
+      try { localStorage.setItem("cl-eigene-nutzung", "1"); } catch (e) {}
       $("inhalt").hidden = false;
       zeichnen(d, tage);
     } catch (e) {

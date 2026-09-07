@@ -202,3 +202,15 @@ test("Feedback im Dashboard: gekappt, gefiltert, escapet", async () => {
   assert.ok(statistik.includes("process.env.SITE_ID ||"), "SITE_ID-Fallback fehlt");
   assert.ok(admin.includes("FEEDBACK_TOKEN"), "die Einrichtungs-Anleitung fehlt im Dashboard");
 });
+
+test("der Betreiber zaehlt nicht mit: die Admin-Markierung sperrt den Sender", () => {
+  // /admin setzt nach erfolgreichem Login cl-eigene-nutzung (gleiche Domain
+  // wie der Rechner); nutzSenden bricht bei gesetzter Markierung ab.
+  assert.ok(admin.includes('localStorage.setItem("cl-eigene-nutzung", "1")'), "die Markierung wird nicht gesetzt");
+  assert.ok(app.includes('localStorage.getItem("cl-eigene-nutzung") === "1") return;'), "der Sender ignoriert die Markierung");
+  // Die Markierung haengt am erfolgreichen Laden, nicht am blossen Seitenaufruf
+  // -- sonst wuerde jeder, der /admin nur oeffnet, aus der Statistik fallen.
+  const setzStelle = admin.indexOf('localStorage.setItem("cl-eigene-nutzung"');
+  const ladeStelle = admin.indexOf("const d = await laden(token, tage);");
+  assert.ok(ladeStelle > 0 && setzStelle > ladeStelle, "Markierung muss NACH dem erfolgreichen Laden gesetzt werden");
+});
