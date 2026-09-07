@@ -3634,6 +3634,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (NUTZ.gesendet || !NUTZ.snap || EMBEDDED) return;
     if (!/(^|\.)containerload\.io$/.test(window.location.hostname)) return;
     if (navigator.doNotTrack === "1" || navigator.globalPrivacyControl) return;
+    // Der Betreiber zaehlt nicht mit: /admin setzt nach erfolgreichem Login
+    // diese Markierung (gleiche Domain), und dieser Browser sendet dann nichts
+    // mehr -- die Statistik soll die User zeigen, nicht Jareks eigene Tests.
+    try { if (localStorage.getItem("cl-eigene-nutzung") === "1") return; } catch (e) {}
     const funktionen = Object.keys(EV_GEZAEHLT);
     if (!NUTZ.snap.positionen.length && !funktionen.length) return;
     NUTZ.gesendet = true;
