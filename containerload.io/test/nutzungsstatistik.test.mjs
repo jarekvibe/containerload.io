@@ -196,6 +196,9 @@ test("Feedback im Dashboard: gekappt, gefiltert, escapet", async () => {
   // Function: nur mit FEEDBACK_TOKEN, sonst bleibt feedback null (Dashboard zeigt Anleitung).
   const statistik = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "statistik.mjs"), "utf8");
   assert.ok(statistik.includes('const ftok = process.env.FEEDBACK_TOKEN || "";'), "Token-Schalter fehlt");
-  assert.ok(statistik.includes('https://api.netlify.com/api/v1/forms'), "Forms-API wird nicht abgefragt");
+  // Site-gebundener Endpunkt: /api/v1/forms ohne Site existiert nicht (404,
+  // beim ersten Live-Versuch gefunden).
+  assert.ok(statistik.includes('"https://api.netlify.com/api/v1/sites/" + siteId + "/forms"'), "Forms muessen ueber die Site abgefragt werden");
+  assert.ok(statistik.includes("process.env.SITE_ID ||"), "SITE_ID-Fallback fehlt");
   assert.ok(admin.includes("FEEDBACK_TOKEN"), "die Einrichtungs-Anleitung fehlt im Dashboard");
 });
