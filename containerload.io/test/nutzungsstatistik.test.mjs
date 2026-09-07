@@ -173,3 +173,29 @@ test("die Uhrzeit kommt aus dem Blob-Schluessel, nicht aus neuen Daten", () => {
   assert.ok(admin.includes('toLocaleTimeString("de-DE"'), "das Dashboard zeigt keine Ortszeit");
   assert.ok(admin.includes("if (!e.ts) return e.tag;"), "Alt-Events ohne ts muessen auf den Tag zurueckfallen");
 });
+
+test("Feedback im Dashboard: gekappt, gefiltert, escapet", async () => {
+  const { feedbackAufbereiten } = await import("../../netlify/functions/lib/nutzung.mjs");
+  const roh = [
+    { created_at: "2026-09-06T10:00:00Z", data: { zusammenfassung: "Passt · 40' HC", bewertung: "gut", nachricht: "<script>alert(1)</script> Tolles Tool!", antwort: "kunde@firma.de", plan: "https://containerload.io/share?c=abc", "bot-field": "spam" } },
+    { created_at: "2026-09-07T09:00:00Z", data: { zusammenfassung: "x".repeat(500), nachricht: "n".repeat(9000), plan: "https://boese-seite.example/phish" } },
+  ];
+  const fb = feedbackAufbereiten(roh);
+  // Neueste zuerst, Laengen gekappt, fremde Plan-Links raus, bot-field verschwindet.
+  assert.strictEqual(fb[0].wann, "2026-09-07T09:00:00Z");
+  assert.strictEqual(fb[0].zusammenfassung.length, 120);
+  assert.strictEqual(fb[0].nachricht.length, 2000);
+  assert.strictEqual(fb[0].plan, "", "fremde Links duerfen nie als Plan-Link durchgehen");
+  assert.strictEqual(fb[1].plan, "https://containerload.io/share?c=abc");
+  assert.ok(!JSON.stringify(fb).includes("spam"), "bot-field darf nicht durchkommen");
+  // Der Server kappt nur -- die ANZEIGE muss escapen (Freitext von Fremden!).
+  assert.ok(fb[1].nachricht.includes("<script>"), "der Server soll nicht escapen, das tut die Anzeige");
+  assert.ok(admin.includes('const esc = (s) =>'), "Escape-Helfer fehlt im Dashboard");
+  assert.ok(admin.includes("esc(f.nachricht)"), "die Nachricht wird nicht escapet gerendert");
+  assert.ok(admin.includes("esc(f.zusammenfassung"), "die Zusammenfassung wird nicht escapet gerendert");
+  // Function: nur mit FEEDBACK_TOKEN, sonst bleibt feedback null (Dashboard zeigt Anleitung).
+  const statistik = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "statistik.mjs"), "utf8");
+  assert.ok(statistik.includes('const ftok = process.env.FEEDBACK_TOKEN || "";'), "Token-Schalter fehlt");
+  assert.ok(statistik.includes('https://api.netlify.com/api/v1/forms'), "Forms-API wird nicht abgefragt");
+  assert.ok(admin.includes("FEEDBACK_TOKEN"), "die Einrichtungs-Anleitung fehlt im Dashboard");
+});

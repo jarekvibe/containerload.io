@@ -85,6 +85,13 @@
   .leer { color: var(--faint); text-align: center; padding: 32px 0; }
   #login { max-width: 380px; margin: 12vh auto 0; display: flex; flex-direction: column; gap: 12px; }
   .tabelle-scroll { overflow-x: auto; }
+  .fbeintrag { border-bottom: 1px solid var(--field); padding: 10px 0; }
+  .fbeintrag:last-child { border-bottom: 0; }
+  .fbkopf { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .fbwann { margin-left: auto; color: var(--faint); font: 12px "JetBrains Mono", monospace; }
+  .fbtext { color: var(--dim); margin-top: 4px; white-space: pre-wrap; }
+  .fbmeta { color: var(--faint); font-size: 12px; margin-top: 4px; }
+  .fbmeta a { color: var(--dim); }
 </style>
 </head>
 <body>
@@ -130,6 +137,10 @@
     <div class="grid2">
       <div class="panel"><h2>Grundmaße nach Stückzahl</h2><div id="masseChart"></div></div>
       <div class="panel"><h2>Modus &amp; Sprache</h2><div id="modusChart"></div></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2 id="feedbackTitel">Feedback</h2>
+      <div id="feedbackListe"></div>
     </div>
     <div class="panel" style="margin-top:16px">
       <h2>Letzte Rechnungen</h2>
@@ -319,6 +330,38 @@
     }));
   }
 
+  // Feedback ist Freitext von Fremden: JEDES Feld wird escapet, bevor es in
+  // die Seite darf -- die Server-Funktion kappt nur Laengen und filtert den
+  // Plan-Link, HTML-Sicherheit ist Sache der Anzeige.
+  const esc = (s) => String(s || "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  function feedbackListe(d) {
+    const el = $("feedbackListe"), titel = $("feedbackTitel");
+    const fb = d.feedback;
+    if (fb === null || fb === undefined) {
+      titel.textContent = "Feedback";
+      el.innerHTML = '<div class="hinweis" style="margin-top:0">Feedback-Anzeige ist aus. In Netlify ein Personal Access Token als Umgebungsvariable <code>FEEDBACK_TOKEN</code> setzen und neu deployen (Anleitung im README, Abschnitt Deployment).</div>';
+      return;
+    }
+    if (!Array.isArray(fb)) {
+      titel.textContent = "Feedback";
+      el.innerHTML = '<div class="fehler">' + esc(fb.fehler || "Unbekannter Fehler.") + "</div>";
+      return;
+    }
+    titel.textContent = "Feedback (" + fb.length + ")";
+    if (!fb.length) { el.innerHTML = '<div class="leer">Noch kein Feedback eingegangen.</div>'; return; }
+    el.innerHTML = fb.map((f) => {
+      const wann = f.wann && !isNaN(new Date(f.wann)) ? new Date(f.wann).toLocaleString("de-DE", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "";
+      return '<div class="fbeintrag">' +
+        '<div class="fbkopf"><b>' + esc(f.zusammenfassung || "Feedback") + "</b>" +
+        (f.bewertung ? ' <span class="pille">' + esc(f.bewertung) + "</span>" : "") +
+        '<span class="fbwann">' + esc(wann) + "</span></div>" +
+        (f.nachricht ? '<div class="fbtext">' + esc(f.nachricht) + "</div>" : "") +
+        '<div class="fbmeta">' +
+        (f.antwort ? '<a href="mailto:' + esc(f.antwort) + '">' + esc(f.antwort) + "</a> · " : "") +
+        (f.plan ? '<a href="' + esc(f.plan) + '" target="_blank" rel="noopener">Plan öffnen ➜</a> · ' : "") +
+        esc([f.equipment, f.browser].filter(Boolean).join(" · ")) + "</div></div>";
+    }).join("");
+  }
   function zeichnen(d, tage) {
     kpis(d);
     weltKarte(d);
@@ -327,6 +370,7 @@
     balkenListe($("funktionenChart"), d.funktionen, FARBE.orange);
     masseChart(d);
     modusChart(d);
+    feedbackListe(d);
     eventTabelle(d);
   }
 

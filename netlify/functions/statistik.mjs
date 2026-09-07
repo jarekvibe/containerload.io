@@ -7,7 +7,7 @@
 // die Function 503 mit Klartext -- ein leerer Soll-Wert darf niemals wie
 // ein richtiges Token wirken.
 import { timingSafeEqual } from "node:crypto";
-import { aggregiere, EVENTS_MAX } from "./lib/nutzung.mjs";
+import { aggregiere, feedbackAufbereiten, EVENTS_MAX } from "./lib/nutzung.mjs";
 
 const gleich = (a, b) => {
   const ba = Buffer.from(String(a)), bb = Buffer.from(String(b));
@@ -46,7 +46,30 @@ export default async (req) => {
   const agg = aggregiere(events);
   // Stichprobe fuer Streudiagramm und Event-Tabelle: die juengsten 300.
   const stichprobe = events.slice(-300);
-  return Response.json({ tage, von, ...agg, stichprobe }, {
+
+  // Feedback aus Netlify Forms, damit alles an einem Ort steht. Braucht ein
+  // Personal-Access-Token in FEEDBACK_TOKEN (Anleitung im README); ohne
+  // Token bleibt feedback null und das Dashboard zeigt die Einrichtung.
+  let feedback = null;
+  const ftok = process.env.FEEDBACK_TOKEN || "";
+  if (ftok) {
+    try {
+      const kopf = { headers: { authorization: "Bearer " + ftok } };
+      const fr = await fetch("https://api.netlify.com/api/v1/forms", kopf);
+      const forms = fr.ok ? await fr.json() : null;
+      const form = Array.isArray(forms) ? forms.find((f) => f && f.name === "feedback") : null;
+      if (!fr.ok) feedback = { fehler: "Netlify-API antwortet " + fr.status + " (Token pruefen)." };
+      else if (!form) feedback = { fehler: "Formular \"feedback\" nicht gefunden." };
+      else {
+        const sr = await fetch("https://api.netlify.com/api/v1/forms/" + form.id + "/submissions?per_page=50", kopf);
+        feedback = sr.ok ? feedbackAufbereiten(await sr.json()) : { fehler: "Submissions-Abruf antwortet " + sr.status + "." };
+      }
+    } catch (e) {
+      feedback = { fehler: "Netlify-API nicht erreichbar." };
+    }
+  }
+
+  return Response.json({ tage, von, ...agg, stichprobe, feedback }, {
     headers: { "cache-control": "no-store" },
   });
 };
