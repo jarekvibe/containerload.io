@@ -54,6 +54,32 @@ export function pruefeEvent(roh) {
   return { v: 1, modus: roh.modus, sprache: roh.sprache, geteilt: !!roh.geteilt, dauerS, positionen, funktionen, container, kette };
 }
 
+// Netlify-Forms-Submissions (Formular "feedback") -> schlanke Liste fuers
+// Dashboard. Feedback ist FREITEXT VON FREMDEN: hier wird gekappt und
+// gefiltert, und die Anzeige (admin.html) escapet zusaetzlich jedes Feld --
+// eine Feedback-Nachricht darf nie als HTML im Admin landen. Der Plan-Link
+// kommt nur durch, wenn er auf die eigene Seite zeigt.
+const text = (v, max) => typeof v === "string" ? v.slice(0, max) : "";
+export function feedbackAufbereiten(subs) {
+  return (Array.isArray(subs) ? subs : [])
+    .slice(0, 50)
+    .map((s) => {
+      const d = (s && s.data) || {};
+      const plan = text(d.plan, 4000);
+      return {
+        wann: text(s && s.created_at, 30),
+        zusammenfassung: text(d.zusammenfassung, 120),
+        bewertung: text(d.bewertung, 20),
+        nachricht: text(d.nachricht, 2000),
+        antwort: text(d.antwort, 120),
+        equipment: text(d.equipment, 60),
+        browser: text(d.browser, 120),
+        plan: /^https:\/\/(www\.)?containerload\.io\//.test(plan) ? plan : "",
+      };
+    })
+    .sort((a, b) => a.wann < b.wann ? 1 : -1);
+}
+
 // Events (je mit .tag "YYYY-MM-DD", optional .land) -> Kennzahlen fuers Dashboard.
 export function aggregiere(events) {
   const tage = new Map(), container = {}, modus = {}, sprachen = {}, funktionen = {}, laender = {};
