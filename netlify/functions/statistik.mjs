@@ -55,7 +55,12 @@ export default async (req) => {
   if (ftok) {
     try {
       const kopf = { headers: { authorization: "Bearer " + ftok } };
-      const fr = await fetch("https://api.netlify.com/api/v1/forms", kopf);
+      // Formulare haengen an der Site, nicht am Konto: /api/v1/forms gibt es
+      // nicht (404, Jareks Fund beim ersten Live-Versuch). SITE_ID stellt
+      // Netlify der Function bereit; der Fallback ist die oeffentliche
+      // Site-Kennung dieses Projekts, kein Geheimnis.
+      const siteId = process.env.SITE_ID || "df4929f4-8bd7-43c2-955d-e6b1f0f22558";
+      const fr = await fetch("https://api.netlify.com/api/v1/sites/" + siteId + "/forms", kopf);
       const forms = fr.ok ? await fr.json() : null;
       const form = Array.isArray(forms) ? forms.find((f) => f && f.name === "feedback") : null;
       if (!fr.ok) feedback = { fehler: "Netlify-API antwortet " + fr.status + " (Token pruefen)." };
