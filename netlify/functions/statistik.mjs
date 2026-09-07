@@ -35,9 +35,12 @@ export default async (req) => {
     .filter((k) => k.slice(2, 12) >= von)
     .sort()
     .slice(-EVENTS_MAX);
+  // Tag und Uhrzeit stecken im Schluessel (e/YYYY-MM-DD/HHMMSS-zufall, UTC).
+  // ts als ISO-Zeitstempel mitgeben -- das Dashboard rendert daraus die
+  // Ortszeit des Betrachters, gespeichert wird nichts Neues.
   const events = (await Promise.all(keys.map(async (k) => {
     const e = await store.get(k, { type: "json" }).catch(() => null);
-    return e ? { ...e, tag: k.slice(2, 12) } : null;
+    return e ? { ...e, tag: k.slice(2, 12), ts: k.slice(2, 12) + "T" + k.slice(13, 15) + ":" + k.slice(15, 17) + ":" + k.slice(17, 19) + "Z" } : null;
   }))).filter(Boolean);
 
   const agg = aggregiere(events);
