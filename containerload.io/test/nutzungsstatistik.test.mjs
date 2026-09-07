@@ -163,3 +163,13 @@ test("das Dashboard bleibt draussen: noindex, robots, Token-Pflicht", () => {
   assert.ok(statistik.includes('if (!soll) return Response.json({ fehler:'), "leeres Token darf nie wie ein richtiges wirken");
   assert.ok(statistik.includes("timingSafeEqual"), "Tokenvergleich in konstanter Zeit");
 });
+
+test("die Uhrzeit kommt aus dem Blob-Schluessel, nicht aus neuen Daten", () => {
+  // e/YYYY-MM-DD/HHMMSS-zufall traegt den Zeitpunkt seit dem ersten Event --
+  // die Anzeige reicht ihn nur durch (UTC-ISO), das Dashboard rendert Ortszeit.
+  const statistik = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "statistik.mjs"), "utf8");
+  assert.ok(statistik.includes('ts: k.slice(2, 12) + "T" + k.slice(13, 15) + ":" + k.slice(15, 17) + ":" + k.slice(17, 19) + "Z"'),
+    "der Zeitstempel wird nicht aus dem Schluessel abgeleitet");
+  assert.ok(admin.includes('toLocaleTimeString("de-DE"'), "das Dashboard zeigt keine Ortszeit");
+  assert.ok(admin.includes("if (!e.ts) return e.tag;"), "Alt-Events ohne ts muessen auf den Tag zurueckfallen");
+});

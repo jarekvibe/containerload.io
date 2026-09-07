@@ -72,6 +72,7 @@
   tr.ev { cursor: pointer; }
   tr.ev:hover td { background: rgba(46, 143, 255, 0.05); }
   td.pfeil { color: var(--faint); width: 18px; }
+  td.zeit { white-space: nowrap; font-family: "JetBrains Mono", monospace; font-size: 12px; }
   tr.detail td { background: var(--field); }
   .poszeile { font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--dim); padding: 2px 0; }
   .oeffnen { display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 8px; background: var(--accent); color: #06121f; font-weight: 600; text-decoration: none; font-size: 13px; }
@@ -285,12 +286,20 @@
   };
   function eventTabelle(d) {
     const events = d.stichprobe.slice(-30).reverse();
+    // Der Zeitstempel kommt als UTC-ISO aus dem Blob-Schluessel; angezeigt
+    // wird die Ortszeit des Betrachters.
+    const wann = (e) => {
+      if (!e.ts) return e.tag;
+      const t = new Date(e.ts);
+      return isNaN(t) ? e.tag : t.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) + " " +
+        t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+    };
     const zeilen = events.map((e, i) => {
       const stk = e.positionen.reduce((s, p) => s + p.n, 0);
       const posListe = e.positionen.map((p) =>
         '<div class="poszeile">' + p.n + " × " + p.l + " × " + p.b + " × " + p.h + " cm" +
         (p.kg ? " · " + p.kg + " kg/Stk" : "") + (p.stapel ? "" : " · nicht stapelbar") + "</div>").join("");
-      return '<tr class="ev" data-i="' + i + '"><td class="pfeil">▸</td><td>' + e.tag +
+      return '<tr class="ev" data-i="' + i + '"><td class="pfeil">▸</td><td class="zeit">' + wann(e) +
         '</td><td><span class="pille ' + e.modus + '">' + (e.modus === "road" ? "Straße" : "See") + "</span></td>" +
         "<td>" + (e.land || "—") + "</td>" +
         '<td class="num">' + e.positionen.length + '</td><td class="num">' + stk + "</td><td>" + (e.container || "—") + "</td>" +
@@ -301,7 +310,7 @@
         "</td></tr>";
     }).join("");
     $("eventTabelle").innerHTML =
-      '<thead><tr><th></th><th>Tag</th><th>Modus</th><th>Land</th><th class="num">Pos.</th><th class="num">Stück</th><th>Container</th><th>Funktionen</th><th class="num">Dauer</th></tr></thead>' +
+      '<thead><tr><th></th><th>Zeit</th><th>Modus</th><th>Land</th><th class="num">Pos.</th><th class="num">Stück</th><th>Container</th><th>Funktionen</th><th class="num">Dauer</th></tr></thead>' +
       "<tbody>" + (zeilen || '<tr><td colspan="9" class="leer">Noch keine Rechnungen im Zeitraum.</td></tr>') + "</tbody>";
     $("eventTabelle").querySelectorAll("tr.ev").forEach((tr) => tr.addEventListener("click", () => {
       const det = $("eventTabelle").querySelector('tr.detail[data-d="' + tr.dataset.i + '"]');
