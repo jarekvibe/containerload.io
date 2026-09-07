@@ -113,6 +113,8 @@ var ICO  = { s: 16, m: 20, sw: 1.5 };
 
 **Die Druckvorlage (`LV_ROW` … `LV_DOC`) ist ausgenommen.** Sie ist ein eigenes Dokument: A4, weißes Papier, andere Schrift. Der Test überspringt diesen Bereich; wer dort arbeitet, arbeitet in dessen eigener Ordnung.
 
+**Und dieses Dokument ist hell — das Gegenteil der App.** Die Kennfarbe je Position wählt der Nutzer frei (`cargo[i].color`, auch Weiß), auf dem Papier wäre das unsichtbar; deshalb klemmt `lvDruckfarbe` jede Farbe an ihrer Eintrittsstelle ins Dokument über die relative Luminanz unter `LV_LUM_MAX` — kein Sonderfall „weiß", jede Pastellfarbe fällt genauso darunter. Die Kontur der Stauplan-Boxen hängt **nie** an der Nutzerfarbe (fester dunkler Strich), die Farbe trägt nur Füllung und Beschriftung. `test/ladevorschlag-druckfarben.test.mjs` hält beides fest.
+
 **Zahlen dominieren, Beschriftungen sind klein und ruhig.** Ein Ladungsrechner wird nach Zahlen gelesen. Deshalb steht bei einer Kennzahl die **Beschriftung oben und klein** (`Lbl`, `FS.label`) und die **Zahl darunter groß** in Monospace mit `tabular-nums` — dafür gibt es `Kpi`. Fließtext wird davon nicht größer.
 
 **Getrennt wird über die Fläche, nicht über eine Linie.** Vor dem Durchgang lagen über hundert `1px solid`-Umrisse im Rechner — jeder Umschalter, jede Karte, jeder Knopf in seinem eigenen Kästchen. Das war der Hauptgrund, warum die Oberfläche wie ein Baukasten wirkte. Ein Rahmen bleibt jetzt dem vorbehalten, was **ausgewählt** ist (als `boxShadow: inset 0 0 0 1px`, damit er kein Layout verschiebt) oder was **warnt**. Ein Dialog darf eine Haarlinie behalten: er schwebt über fremdem Inhalt. Gestrichelte Rahmen gibt es nicht mehr.
