@@ -822,6 +822,18 @@ Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Häl
 
 `test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
 
+### Das Rampen-Blatt: der Ladevorschlag als Klemmbrett-Dokument
+An der Rampe wird das PDF nicht angesehen, sondern **abgearbeitet und abgezeichnet**. Vier Teile machen aus dem Bildschirm-Dokument ein Arbeitsdokument (`test/rampen-blatt.test.mjs` hält jeden fest):
+
+- **Editierbare Kopf-Felder** — REF, Absender, Empfänger stehen als `contenteditable`-Spans (`.cl-edit`) im Hero jedes Blatts. Leer zeigen sie „klicken & ausfüllen" (`data-hint` über `::empty::before`); **im Druck wird aus dem leeren Feld eine Handschrift-Linie** und der Hinweis verschwindet. Die Toolbar sagt dazu: „sie verlassen dieses Blatt nicht" — und das ist ein Vertrag: **kein Skript liest die Felder zurück**, sie erreichen weder Teilen-Link noch Statistik (Packlisten-Regel: Kundennamen werden nie erfasst). Wer Absender/Empfänger je speichern oder in den `?c=`-Link heben will, trifft eine eigene Entscheidung und muss durch den Test.
+- **Abhak-Kästchen** vor jedem Schritt der Belade-Reihenfolge, mit dem Satz „Kästchen beim Verladen abhaken."
+- **`LV_GEWICHT`** — Ladungsgewicht, Längs-Schwerpunkt (gewichteter Mittelwert der Stück-Mitten, Marker auf einem STIRNWAND↔TÜR-Balken) und die Hälften-Verteilung, Stücke über der Mitte **anteilig**. Es gilt die W/M-Ehrlichkeitsregel: **fehlt auch nur ein Gewicht auf dem Blatt, fällt der Block wortlos weg** — ein Schwerpunkt aus halben Gewichten wäre eine erfundene Zahl. Überschrift „RICHTWERT", Sub „Kein Wiegeersatz; Achslast und Sicherung separat prüfen."
+- **`LV_QUITTUNG`** — „Geladen von (Name) / Datum / Uhrzeit / Unterschrift". Sie bestätigt **nur die Verladung nach diesem Vorschlag**, ausdrücklich keine Ladungssicherung, Achslast oder Gewichte — und das Wort „geprüft" darf dort nie stehen: die Prüfung bleibt fachliche Sache, ein kostenloses Tool darf sie nicht per Unterschriftsfeld einsammeln.
+
+Verdrahtung: Einzelblatt und **jedes Container-Blatt** tragen Reihenfolge + Gewicht-Block + Quittung; das **Deckblatt nicht** (unterschrieben wird je Container an der Rampe). Beide neuen Funktionen sind **abhängigkeitsfrei** — der Test schneidet sie einzeln aus, wie `LV_SEQUENZ`.
+
+> **Die Falle, im Render gemessen:** `${STOWAGE}` steht auf der obersten Blatt-Ebene, und nur `LV_STOWAGE` selbst trug den 44px-Satzspiegel. Alles, was dahinter konkateniert wird (`LV_SEQUENZ`, die neuen Blöcke), **klebte am Seitenrand** (links 0 statt 44). Die Wurzeln tragen jetzt `margin:… 44px`; der Test misst die Zeichenkette, `rampe.mjs` im Scratchpad misst das Pixel-Ergebnis.
+
 ### Der CBM-Rechner — auf den CBM-Seiten und auf der Startseite
 Der Wettbewerb führt einen freien CBM-Rechner als eigene Seite. Wir werten stattdessen die zwei **bestehenden, indexierten** Seiten auf (`/ratgeber/cbm-berechnen`, `/en/guide/how-to-calculate-cbm`) — und die Startseite trägt denselben Rechner als eigenen Abschnitt (`#cbm`). Eine vierte, eigene Rechner-Seite wäre eine konkurrierende Seite im eigenen Suchindex.
 
