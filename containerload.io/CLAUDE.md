@@ -822,6 +822,16 @@ Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Häl
 
 `test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
 
+### Positionsnummern in 3D („nimm die 04er zuerst")
+Der PDF-Stauplan beschriftet jede Kiste mit ihrer POS-Nummer; im 3D-Bild verband bisher nur die **Farbe** Bild und Liste. Der Knopf „01" oben rechts im Bild (nur sichtbar, wenn Kisten stehen; Standard **aus**) blendet Plaketten ein: heller Chip, dunkle Nummer, Ring in der Kennfarbe der Position — bis 40 sichtbare Kisten **je Kiste** auf der Deckelmitte, darüber **eine Plakette je Sorte und Container** mit Stückzahl („04 ×22"), denn vierzig einzelne Nummern übereinander liest niemand.
+
+Drei Verträge, alle in `test/positionsnummern.test.mjs`:
+- **Eine Nummernquelle.** 3D rechnet wörtlich dieselbe Formel wie `tiPos` in `buildLadevorschlag` (Index unter den Positionen mit Menge > 0, `items.indexOf + 1`). „Im Bild die 03, auf dem Papier die 04" wäre genau der Widerspruch, den das Projekt überall sonst ausgebaut hat — der Test prüft **beide Seiten** und fällt um, sobald eine allein geändert wird.
+- **Sprites werden entsorgt** (Textur + Material) bei jedem Neuaufbau, und der **Fokus gilt auch für Plaketten** — dasselbe Effekt-Muster wie die Sicherungszonen direkt darüber.
+- Das Einschalten zählt `nummern-3d` (Liste in `test/messen-und-melden.test.mjs`).
+
+> Zwei Fallen aus dem Einbau: `colorOf` lebt in der **App-Komponente**, nicht im Viewport — die Plakette liest die Kennfarbe deshalb selbst (`cargo[ti].color || TYPE_COLORS_AUTO[…]`, dieselbe Formel wie `typeMat`). Und ein Tailwind-Arbitrary-Wert (`right-[100px]`) fehlt im vorgebauten `tw.out.css` des Test-Harness — der Knopf sitzt deshalb per Inline-`right`.
+
 ### Das Rampen-Blatt: der Ladevorschlag als Klemmbrett-Dokument
 An der Rampe wird das PDF nicht angesehen, sondern **abgearbeitet und abgezeichnet**. Vier Teile machen aus dem Bildschirm-Dokument ein Arbeitsdokument (`test/rampen-blatt.test.mjs` hält jeden fest):
 
