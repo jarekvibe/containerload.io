@@ -3158,6 +3158,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       orbitHint: "ziehen \xB7 scrollen \xB7 rechts schiebt",
       orbitHintLong: "Ziehen dreht \xB7 rechte Maustaste (oder Shift) schiebt \xB7 das Rad zoomt dorthin, wo der Zeiger steht \xB7 Doppelklick holt einen Container in die Mitte",
       resetView: "Ansicht zur\xFCcksetzen",
+      numAn: "Positionsnummern anzeigen", numAus: "Positionsnummern ausblenden",
       autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       unitToCm: "Auf Zentimeter umschalten", unitToMm: "Auf Millimeter umschalten",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
@@ -3497,6 +3498,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       orbitHint: "drag \xB7 scroll \xB7 right-drag pans",
       orbitHintLong: "Drag to orbit \xB7 right mouse button (or Shift) pans \xB7 the wheel zooms towards the pointer \xB7 double-click centres a container",
       resetView: "Reset view",
+      numAn: "Show position numbers", numAus: "Hide position numbers",
       autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       unitToCm: "Switch to centimetres", unitToMm: "Switch to millimetres",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
@@ -4624,6 +4626,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const lastDims = useRef("");
     const autoRotateRef = useRef(true); // per Ref gelesen: tick() ist ein Mount-Once-Dauerlauf-Closure
     const [autoRotateOn, setAutoRotateOn] = useState(true);
+    // Positionsnummern auf den Kisten: dieselbe Nummer wie die POS-Spalte der
+    // Ladeliste und die Beschriftung im PDF-Stauplan. Standard AUS -- die
+    // Plaketten sind ein Nachschlage-Werkzeug ("nimm die 04er zuerst"), kein
+    // Dauerzustand des Bildes.
+    const [zeigeNummern, setZeigeNummern] = useState(false);
     const reveal = useRef({ start: 0, animate: false, prevN: -1, dur: 0.4, stag: 0.55, firstShare: !!SHARED });
     const isRoad = domain === "road";
     const BASE_Y = 1.2; // Sattelkupplungshoehe in m: Auflieger + Ladung schweben darueber.
@@ -5809,6 +5816,92 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         dazu(kante);
       });
     }, [sichZonen, result, container, domain, fokus]);
+    // Positionsnummern (3D): dieselbe Nummer wie die POS-Spalte der Ladeliste und die
+    // Beschriftung der Kisten im PDF-Stauplan -- Index unter den Positionen mit Menge > 0,
+    // WOERTLICH dieselbe Formel wie tiPos in buildLadevorschlag (items.indexOf + 1). Zwei
+    // Zaehlungen fuer dieselbe Kiste waeren der Widerspruch, den das Projekt ueberall
+    // sonst gerade ausgebaut hat; test/positionsnummern.test.mjs haelt die Kopplung fest.
+    //
+    // Bis ~40 sichtbare Kisten traegt JEDE Kiste ihre Plakette (Deckelmitte). Darueber
+    // wird je Sorte und Container EINE Plakette mit Stueckzahl gesetzt ("04 x22") --
+    // vierzig einzelne Nummern uebereinander liest niemand mehr, und die Sprites kosten
+    // dann auch nichts. Eigener kleiner Effekt nach dem grossen Rebuild (gleiche Deps),
+    // damit t.frame frisch ist -- dasselbe Muster wie die Sicherungszonen darueber.
+    useEffect(() => {
+      const t = three.current;
+      if (!t) return;
+      (t.numMeshes || []).forEach((m) => { t.scene.remove(m); if (m.material) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); } });
+      t.numMeshes = [];
+      if (!zeigeNummern || !result || !result.chain || !t.frame || !t.frame.slots || !t.frame.slots.length) return;
+      const items = (cargo || []).filter((c) => num(c.qty, 0) > 0);
+      const posNr = (ti) => { const i = items.indexOf(cargo[ti]); return i < 0 ? 0 : i + 1; };
+      // Kennfarbe wie im Bild selbst (typeMat): Nutzerfarbe, sonst Auto-Palette.
+      const farbe = (ti) => cargo && cargo[ti] && cargo[ti].color || TYPE_COLORS_AUTO[ti % TYPE_COLORS_AUTO.length];
+      const plakette = (nr, anzahl, ring) => {
+        const breit = anzahl > 1;
+        const cv = document.createElement("canvas");
+        cv.width = breit ? 168 : 72; cv.height = 72;
+        const g = cv.getContext("2d");
+        // Heller Chip wie auf dem Papier: weisser Grund, dunkle Nummer, Ring in der
+        // Kennfarbe der Position -- so verbindet die Plakette Bild und Legende.
+        g.fillStyle = "#f2f6fa";
+        g.strokeStyle = ring; g.lineWidth = 6;
+        if (breit) {
+          const r = 30;
+          g.beginPath();
+          g.moveTo(6 + r, 6); g.lineTo(cv.width - 6 - r, 6); g.arcTo(cv.width - 6, 6, cv.width - 6, 6 + r, r);
+          g.lineTo(cv.width - 6, 66 - r); g.arcTo(cv.width - 6, 66, cv.width - 6 - r, 66, r);
+          g.lineTo(6 + r, 66); g.arcTo(6, 66, 6, 66 - r, r);
+          g.lineTo(6, 6 + r); g.arcTo(6, 6, 6 + r, 6, r);
+          g.closePath();
+        } else { g.beginPath(); g.arc(36, 36, 30, 0, Math.PI * 2); }
+        g.fill(); g.stroke();
+        g.fillStyle = "#0c1320";
+        g.font = "bold 30px 'JetBrains Mono', ui-monospace, monospace";
+        g.textAlign = "center"; g.textBaseline = "middle";
+        g.fillText(breit ? String(nr).padStart(2, "0") + " \xD7" + anzahl : String(nr).padStart(2, "0"), cv.width / 2, 39);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+        // Die Cluster-Plakette steht allein fuer eine ganze Sorte und darf
+        // deshalb etwas groesser sein als die Einzelnummern.
+        const gr = breit ? 0.32 : 0.24;
+        spr.scale.set(gr * (cv.width / 72), gr, 1);
+        spr.renderOrder = 7;
+        return spr;
+      };
+      const dazu = (spr) => { t.scene.add(spr); t.numMeshes.push(spr); };
+      const slots = t.frame.slots;
+      let sichtbar = 0;
+      result.chain.forEach((c, ci) => { if ((fokus === "alle" || fokus === ci) && slots[ci]) sichtbar += (c.placed || []).length; });
+      const clustern = sichtbar > 40;
+      result.chain.forEach((c, ci) => {
+        if (fokus !== "alle" && fokus !== ci) return;
+        const sl = slots[ci];
+        if (!sl || !(c.placed || []).length) return;
+        const offX = sl.cx - sl.hx, offY = sl.cy - sl.hy;
+        if (!clustern) {
+          for (const p of c.placed) {
+            const nr = posNr(p.ti);
+            if (!nr) continue;
+            const spr = plakette(nr, 1, farbe(p.ti));
+            spr.position.set(offX + (p.x + p.dx / 2) / 100, offY + (p.y + p.dy) / 100 + 0.16, (p.z + p.dz / 2) / 100);
+            dazu(spr);
+          }
+        } else {
+          const je = {};
+          for (const p of c.placed) (je[p.ti] = je[p.ti] || []).push(p);
+          for (const [ti, arr] of Object.entries(je)) {
+            const nr = posNr(+ti);
+            if (!nr) continue;
+            const cx = arr.reduce((s, p) => s + p.x + p.dx / 2, 0) / arr.length;
+            const cz = arr.reduce((s, p) => s + p.z + p.dz / 2, 0) / arr.length;
+            const oben = Math.max(...arr.map((p) => p.y + p.dy));
+            const spr = plakette(nr, arr.length, farbe(+ti));
+            spr.position.set(offX + cx / 100, offY + oben / 100 + 0.28, cz / 100);
+            dazu(spr);
+          }
+        }
+      });
+    }, [zeigeNummern, result, cargo, container, domain, fokus]);
     // Was der Fokus im Bild macht: die Ladung der anderen Container verschwindet, ihre Huelle
     // bleibt als blasse Silhouette stehen. Ganz ausblenden waere verwirrend -- man wuesste
     // nicht mehr, wo der zweite Container ist; unveraendert stehenlassen auch, denn dann sieht
@@ -5868,7 +5961,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // Im manuellen Modus sagt der Packer nichts: was noch nicht steht, steht noch
             // nicht -- das ist keine Aussage ueber Container, sondern ueber die Arbeit. Die
             // Zahl steht dort, wo sie hingehoert: im Werkzeugkasten ("31 noch nicht platziert").
-            !manualMode && result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, result.gekappt ? T.openMore(result.remainingBoxes, MAXCHAIN) : T.openStuck(result.remainingBoxes))), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+            !manualMode && result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, result.gekappt ? T.openMore(result.remainingBoxes, MAXCHAIN) : T.openStuck(result.remainingBoxes))), result && result.chain && result.chain.some((c) => c.placed && c.placed.length) && /* @__PURE__ */ React.createElement("button", { onClick: () => setZeigeNummern((v) => { const n = !v; if (n) zaehl("nummern-3d"); return n; }), className: "absolute top-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { right: 100, background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, zeigeNummern ? 0.9 : 0.3)}`, color: zeigeNummern ? C.accent : C.dim, fontFamily: MONO, fontSize: FS.small, fontWeight: FW.semi }, title: zeigeNummern ? T.numAus : T.numAn }, "01"), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"),/* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA("#161D27", 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   // ── Knopf ─────────────────────────────────────────────────────────────────
   // Vier Auspraegungen, mehr braucht der Rechner nicht:
