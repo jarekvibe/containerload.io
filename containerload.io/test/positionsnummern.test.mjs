@@ -68,8 +68,19 @@ test("der Fokus gilt auch fuer die Plaketten", () => {
 });
 
 test("beide Sprachen kennen den Schalter", () => {
-  assert.ok(src.includes('numAn: "Positionsnummern anzeigen"') && src.includes('numAn: "Show position numbers"'),
+  assert.ok(src.includes('numAn: "Positionsnummern & Stopp-Felder anzeigen"') && src.includes('numAn: "Show position numbers & stop fields"'),
     "numAn fehlt in einer Sprache");
-  assert.ok(src.includes('numAus: "Positionsnummern ausblenden"') && src.includes('numAus: "Hide position numbers"'),
+  assert.ok(src.includes('numAus: "Positionsnummern & Stopp-Felder ausblenden"') && src.includes('numAus: "Hide position numbers & stop fields"'),
     "numAus fehlt in einer Sprache");
+});
+
+test("der 01-Modus lebt in der App und schaltet auch die Stopp-Felder", () => {
+  // Der Zustand liegt in der App-Komponente (nicht im Viewport), damit der
+  // Knopf im Bild und der Stopp-Select in der Ladungsliste denselben Schalter
+  // teilen. Ein gesetzter Stopp bleibt IMMER sichtbar -- ein Wert, den man nur
+  // nach einem Umweg wieder loswird, waere eine Falle.
+  assert.ok(src.includes("sichZonen, zeigeNummern, setZeigeNummern }"),
+    "der Viewport bekommt den 01-Zustand nicht als Prop");
+  assert.ok(src.includes("(zeigeNummern || (Number.isInteger(c.stop) && c.stop >= 1)) &&"),
+    "der Stopp-Select haengt nicht am 01-Modus (oder versteckt gesetzte Stopps)");
 });

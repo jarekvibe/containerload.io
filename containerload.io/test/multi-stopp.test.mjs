@@ -180,6 +180,46 @@ test("beide Blattsorten haengen die Entladereihenfolge an, das Deckblatt nicht",
     "die Container-Blaetter tragen keine Entladereihenfolge");
 });
 
+// ── Der gemeldete Fall (mit Bild): alles passt in EINEN Container ──
+// Die Kette lief nur, wenn der erste Container NICHT alles fasst -- bei einer
+// voll passenden Ladung zeigte das Bild deshalb den nackten Packer: S2 stand
+// auf S1, waehrend die Chips so taten, als gaebe es eine Entladereihenfolge.
+// Mit Stopps muss die Kette immer laufen; ihr slot0 traegt die Wellen.
+test("alles passt in einen Container -- die Wellen laufen trotzdem (Jareks 20'-Fall)", () => {
+  const cutW = (von, bis) => {
+    const i = zeile(von);
+    const j = L.findIndex((l, k) => k > i && bis(l, k));
+    assert.ok(j > i, `Ausschnitt nicht gefunden: ${von}`);
+    return L.slice(i, j + 1).join("\n");
+  };
+  const M2 = new Function(`var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;
+     var applyCarrier=(p)=>p;
+     ${cutW("var PRESETS = {", (l) => l.includes("var panelsFor"))}
+     ${cutW("function makeFloorPacker", (l, k) => l.trim() === "}" && L[k - 1].includes("single: false"))}
+     ${cutW("var MAXCHAIN", (l, k) => l.trim() === "}" && L[k - 1].includes("return { chain, remainingBoxes"))}
+     return { chainContainers, packCargo, PRESETS, MAXCHAIN };`)();
+  const C20 = M2.PRESETS["20' HC"];
+  const cargo = [
+    { name: "A", l: 120, w: 80, h: 110, weight: 300, qty: 2, stackable: true, rotatable: true, stop: 1 },
+    { name: "B", l: 120, w: 80, h: 110, weight: 300, qty: 2, stackable: true, rotatable: true, stop: 2 },
+    { name: "C", l: 120, w: 80, h: 110, weight: 300, qty: 2, stackable: true, rotatable: true, stop: 4 }
+  ];
+  const slot0 = M2.packCargo(C20, cargo, { noHint: true });
+  assert.strictEqual(slot0.boxes, 6, "die Ladung muss komplett in den ersten Container passen");
+  const ch = M2.chainContainers(C20, "20' HC", cargo, slot0, null, M2.MAXCHAIN, null);
+  assert.ok(ch.slot0, "die Kette muss mit Stopps ein wellen-gepacktes slot0 liefern");
+  const placed = ch.slot0.placed;
+  const span2 = (ti) => { const l = placed.filter((p) => p.ti === ti); return [Math.min(...l.map((p) => p.x)), Math.max(...l.map((p) => p.x + p.dx))]; };
+  const s1 = span2(0), s2 = span2(1), s4 = span2(2);
+  assert.ok(s4[1] <= s2[0] + 1e-6, `Stopp 4 muss VOR Stopp 2 liegen (${s4} vs ${s2})`);
+  assert.ok(s2[1] <= s1[0] + 1e-6, `Stopp 2 muss VOR Stopp 1 liegen (${s2} vs ${s1})`);
+  // Und der Effekt in app.html nimmt diesen Zweig auch bei voller Ladung:
+  assert.ok(roh.includes('const stoppsAktiv = kind === "dry" && !!stoppWerte(cargo);'),
+    "der Effekt kennt stoppsAktiv nicht");
+  assert.ok(roh.includes("if ((r.boxes < r.totalBoxes || stoppsAktiv) && r.totalBoxes > 0)"),
+    "die Kette laeuft mit Stopps nicht bei voll passender Ladung -- genau der gemeldete Fehler");
+});
+
 test("der Stopp reist auch im ?p=-Format und faellt beim Lesen auf 1..9 zurueck", () => {
   assert.ok(/st: Number\.isInteger\(c\.stop\) && c\.stop >= 1 \? Math\.min\(9, c\.stop\) : void 0/.test(roh),
     "planStateFrom traegt den Stopp nicht");

@@ -81,7 +81,7 @@ test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", 
   // EINE Quelle: Dialog, Aufplopp-Hinweis und 3D lesen dieselbe Analyse der Sicht.
   assert.ok(roh.includes("sichAnalyse(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), sichtCont, domain)"), "Analyse liest nicht die Sicht");
   assert.ok(roh.includes("const sichB = sichErg ? sichBefunde(sichErg) : [];"), "Befunde kommen nicht aus der einen Quelle");
-  assert.ok(roh.includes("onFokus: setFokus, sichZonen })"), "Viewport bekommt die Zonen nicht");
+  assert.ok(roh.includes("onFokus: setFokus, sichZonen"), "Viewport bekommt die Zonen nicht");
   // Der Hinweis ploppt nur bei echten Warnungen auf, nie ueber dem Empfehlungs-Banner.
   assert.ok(roh.includes("!manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen &&"), "Aufplopp-Bedingung fehlt");
   // Die Annahmen stehen SICHTBAR im Dialog, in beiden Sprachen.
