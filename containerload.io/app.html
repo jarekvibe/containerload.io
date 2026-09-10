@@ -1687,7 +1687,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       //
       // Nur wenn Stapeln ueberhaupt erlaubt ist: bei stackable=false ist capLay ohnehin 1,
       // und dann sind beide Reihenfolgen identisch.
-      const spots = fl.rects, colFirst = capLay > 1;
+      // Die Guillotine-Schnitte des Bodenpackers hinterlassen Naehte und -- mit
+      // maxSpots -- unbelegte Plaetze MITTEN im Container (gemeldet: 42 Paletten
+      // 121x85 im 40', Luecke bei x 605-690, waehrend an der Tuer Platz frei war).
+      // Die Stellplatzzahl stimmt, nur ihre Lage ist Schnittkunst. Deshalb wird
+      // jeder Platz so weit zur Stirnwand geschoben, wie seine Nachbarn im selben
+      // z-Band es zulassen (aendert nie die Zahl, nur die Luecken wandern zur
+      // Tuer), und gefuellt wird von der Stirnwand her -- dieselbe Richtung wie
+      // loadingOrder und die Belade-Reihenfolge im Ladevorschlag.
+      const spots = fl.rects.map((r) => ({ ...r })).sort((a, b) => a.x - b.x || a.z - b.z);
+      for (let i = 0; i < spots.length; i++) {
+        const s = spots[i];
+        let sx = 0;
+        for (let j = 0; j < i; j++) {
+          const o = spots[j];
+          if (o.z < s.z + s.dz - 1e-6 && o.z + o.dz > s.z + 1e-6) sx = Math.max(sx, o.x + o.dx);
+        }
+        s.x = sx;
+      }
+      spots.sort((a, b) => a.x - b.x || a.z - b.z);
+      const colFirst = capLay > 1;
       outer: for (let a = 0; a < (colFirst ? spots.length : capLay); a++) {
         for (let b = 0; b < (colFirst ? capLay : spots.length); b++) {
           const ly = colFirst ? b : a, r = spots[colFirst ? a : b];

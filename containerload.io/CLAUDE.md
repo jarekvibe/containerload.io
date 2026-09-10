@@ -950,6 +950,8 @@ Der vierte Parameter ist optional und sagt, wie viele Stellplätze der Aufrufer 
 
 Grund: das Bodenraster wurde immer vollständig aufgebaut, unabhängig von der Menge. Ein Packstück mit 3 mm Kante — beim Umschalten der Eingabe auf Millimeter schnell getippt — ergab auf einem 45′ HC 3,5 Millionen Rechtecke und ließ den Browser fünf bis zwölf Sekunden stehen. **`palletize` ruft weiterhin ohne `maxSpots` auf**, dort wird die echte Zahl gebraucht.
 
+**Die Lage der Stellplätze ist Schnittkunst, nicht Stauplan** — die Guillotine-Schnitte hinterlassen Nähte, und mit `maxSpots` bleiben unbelegte Plätze mitten im Container stehen (gemeldet mit Link: 42 Paletten 121 × 85 im 40′, Lücke bei x 605–690, während an der Tür Platz frei war). Der Einzeltyp-Pfad in `packCargo` **schiebt deshalb jeden Stellplatz zur Stirnwand**, so weit die Nachbarn im selben z-Band es zulassen, und füllt von der Stirnwand her — die Lücken wandern zur Tür, die Zahl ändert sich nie (400 Zufallsfälle alt gegen neu, Stück für Stück gleich; `test/boden-kompakt.test.mjs` hält Kompaktheit und die bekannten Stellzahlen fest).
+
 ### Zwischen den Sprachen darf nichts liegenbleiben
 Die Fahrzeug**schlüssel** in `VEHICLES` sind deutsch und bleiben es — sie stehen als `preset` im Teilen-Link. Angezeigt wird, was `VEHICLE_LABEL(T)` und `VEHICLE_META(T)` liefern, analog zu `KIND_LABEL(T)` bei den Containern. Vorher stand der ganze Landfracht-Modus auch bei `?lang=en` auf Deutsch da.
 
