@@ -96,8 +96,8 @@ test("Namen werden escaped -- eine Position heisst, was jemand eintippt", () => 
 
 // ── Der Vertrag im Quelltext ────────────────────────────────────────────────────────
 test("beide Blattsorten haengen die Reihenfolge an den Stauplan", () => {
-  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, LANG, tiColor\),/.test(roh),
+  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, LANG, tiColor\)/.test(roh),
     "das einzelne Blatt traegt keine Reihenfolge");
-  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, LANG, tiC\),/.test(roh),
+  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, LANG, tiC\)/.test(roh),
     "die Container-Blaetter tragen keine Reihenfolge");
 });
