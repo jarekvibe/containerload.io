@@ -2438,9 +2438,81 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const p = cargo.map((t) => (Number.isInteger(t.slot) && t.slot >= 0 ? t.slot : null));
     return p.some((v) => v != null) ? p : null;
   }
+  // ── Multi-Stopp: die Entladereihenfolge bestimmt die Stauung (LIFO) ──
+  //
+  // Jede Position kann einen Stopp tragen (1, 2, 3 ...). Der Plan wird dann so
+  // gestaut, dass Stopp 1 an der Tuer steht und die hoechste Nummer an der
+  // Stirnwand -- was zuerst raus muss, kommt zuletzt rein. Ware verschiedener
+  // Stopps wird NICHT vermischt: weder gestapelt noch in Luecken der anderen
+  // eingesickert. Das kann Stellplaetze kosten, und das ist der ausgewiesene
+  // Preis der Anweisung (dasselbe Muster wie bei der Container-Zuweisung) --
+  // ein Plan, der beim zweiten Stopp das halbe Ausraeumen verlangt, ist an der
+  // Rampe wertlos, egal wie voll er ist.
+  //
+  // Umgesetzt als WELLEN ueber packCargo: ohne Stopp zuerst (bleibt bis zuletzt
+  // geladen, Stirnwand), dann Stopps absteigend, Stopp 1 zuletzt. Jede Welle
+  // packt auf einer Vorbelegung (opts.vorbelegt, Schritt 04) aus den vorigen
+  // Wellen PLUS einer virtuellen Trennwand von der Stirnwand bis zur hintersten
+  // Kante des schon Gestauten, volle Breite und Hoehe. Die Wand haelt die
+  // naechste Welle aus den Luecken UND von den Deckeln der vorigen; sie traegt
+  // kein Gewicht (ti -1 -> num(undefined) = 0), das echte Gewicht der vorigen
+  // Wellen zaehlt ueber die mitgegebenen Kisten gegen die Zuladung.
+  function stoppWerte(cargo) {
+    const s = cargo.map((t) => (Number.isInteger(t.stop) && t.stop >= 1 ? Math.min(9, t.stop) : null));
+    return s.some((v) => v != null) ? s : null;
+  }
+  function stoppPacken(preset, rest, opts, pins, slotIdx) {
+    const stopps = stoppWerte(rest) || rest.map(() => null);
+    const CL = num(preset.l), CW = num(preset.w), CH = num(preset.h);
+    const folge = [null, ...[...new Set(stopps.filter((v) => v != null))].sort((a, b) => b - a)];
+    let placed = [], usedVol = 0, weight = 0;
+    const loaded = rest.map(() => 0);
+    const lauf = (teil) => {
+      if (!teil.some((t) => num(t.qty, 0) > 0)) return;
+      const grenzX = placed.reduce((m, b) => Math.max(m, b.x + b.dx), 0);
+      const vor = placed.length
+        ? [{ x: 0, y: 0, z: 0, dx: Math.max(grenzX, 0.01), dy: CH, dz: CW, ti: -1 }, ...placed]
+        : null;
+      const r = packCargo(preset, teil, vor ? { ...opts, vorbelegt: vor } : opts);
+      placed = placed.concat(r.placed);
+      r.perType.forEach((pt, i) => loaded[i] += pt.loaded || 0);
+      usedVol += r.usedVol;
+      weight += r.weight;
+    };
+    for (const st of folge) {
+      const welle = rest.map((t, i) => (stopps[i] === st ? t : { ...t, qty: 0 }));
+      if (pins) {
+        // Zuweisung + Stopp zusammen: die Stopp-Reihenfolge dominiert, innerhalb
+        // der Welle gilt weiter "dort zuerst" -- erst die gepinnte Ware der
+        // Welle, dann ihre freie.
+        lauf(welle.map((t, i) => (pins[i] === slotIdx ? t : { ...t, qty: 0 })));
+        lauf(welle.map((t, i) => (pins[i] == null ? t : { ...t, qty: 0 })));
+      } else lauf(welle);
+    }
+    const contVol = CL * CW * CH / 1e6;
+    return {
+      placed,
+      perType: rest.map((t, i) => ({ loaded: loaded[i], total: Math.max(0, Math.floor(num(t.qty))) })),
+      contVol,
+      usedVol,
+      util: contVol > 0 ? usedVol / contVol * 100 : 0,
+      weight,
+      boxes: placed.length,
+      totalBoxes: rest.reduce((a2, t) => a2 + Math.max(0, Math.floor(num(t.qty))), 0),
+      layers: placed.length ? new Set(placed.map((b) => Math.round(b.y))).size : 0,
+      single: false, rotHint: false, rotHintAll: false
+    };
+  }
   function slotPacken(preset, rest, slotIdx, pins, opts, sortenrein) {
+    // Mit Stopps packt IMMER die Wellen-Fassung -- sie ist der einzige Weg, der
+    // die Entladereihenfolge haelt. Sortenrein widerspraeche ihr nur.
+    const stopps = stoppWerte(rest);
     const frei = pins ? rest.map((t, i) => (pins[i] == null ? t : { ...t, qty: 0 })) : rest;
     const hatPin = !!pins && rest.some((t, i) => t.qty > 0 && pins[i] === slotIdx);
+    if (stopps) {
+      const angebot = pins ? rest.map((t, i) => (pins[i] == null || pins[i] === slotIdx ? t : { ...t, qty: 0 })) : rest;
+      return stoppPacken(preset, angebot, opts, hatPin ? pins : null, slotIdx);
+    }
     if (!hatPin) {
       // Ohne Zuweisung an diesem Slot: der alte Weg. Angeboten wird alles Freie; was einem
       // anderen Container gehoert, bleibt aussen vor.
@@ -2606,6 +2678,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // slot0, sortenrein packt ihn neu (und gibt ihn als slot0 zurueck, damit die Leiste
     // dieselben Zahlen zeigt wie die Tabelle darunter).
     const pins = slotPins(cargo);
+    // Stopps greifen nur beim gewoehnlichen Trockencontainer bzw. Fahrzeug:
+    // Special Equipment packt packKind, und ein Wellen-Lauf ueber packCargo
+    // liesse Uebermass-Stuecke stillschweigend fallen (Grenze wie beim Ausgleich).
+    const stopps = (container0.kind || "dry") === "dry" ? stoppWerte(cargo) : null;
     const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
       const OPT = { noHint: true, ordentlich };
@@ -2615,9 +2691,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
       // andere Zahlen als die Tabelle darunter.
       // Eine Zuweisung zwingt auch den ersten Container zu einem eigenen Lauf: slot0 ist ohne
-      // sie entstanden und wuesste nichts davon.
-      if (sortenrein || ordentlich || pins) {
-        erst = pins
+      // sie entstanden und wuesste nichts davon. Stopps genauso: slot0 kennt keine Wellen.
+      if (sortenrein || ordentlich || pins || stopps) {
+        erst = pins || stopps
           ? slotPacken(container0, start, 0, pins, OPT, sortenrein)
           : sortenrein
             ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
@@ -2663,7 +2739,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Und nicht bei sehr langen Ketten: ab acht Containern zeichnet die Ansicht ohnehin
     // nicht mehr alle (MAXDRAW), die Sortenfrage wiegt dort weniger als die Antwortzeit --
     // und genau diese Ketten sind die teuren, weil jeder weitere Slot einen Packlauf kostet.
-    if (gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW
+    if (!stopps && gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW
         && (container0.kind || "dry") === "dry") {
       const rein = bauen(true);
       if (ketteBesser(rein, erg)) erg = rein;
@@ -2712,7 +2788,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
     //     Ketten sind die teuren.
     const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
-    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+    // Stufe 3 entfaellt mit Stopps: die Wellen ordnen bereits nach der Entlade-
+    // reihenfolge, ein "Entmischen" nach Sorte wuerde dagegen arbeiten.
+    if (!stopps && chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
       const ord = bauen(erg.sortenrein, true);
       if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
         let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
@@ -2752,6 +2830,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // wertvoll wie im Hafen, und wer die Seefracht anders behandelt als die Landfracht,
     // baut sich zwei Algorithmen, die auseinanderlaufen.
     const pins = slotPins(cargo);
+    // Stopps greifen nur beim gewoehnlichen Trockencontainer bzw. Fahrzeug:
+    // Special Equipment packt packKind, und ein Wellen-Lauf ueber packCargo
+    // liesse Uebermass-Stuecke stillschweigend fallen (Grenze wie beim Ausgleich).
+    const stopps = (container0.kind || "dry") === "dry" ? stoppWerte(cargo) : null;
     const bauen = (sortenrein, ordentlich) => {
       let erst = null, chain, remaining;
       const OPT = { noHint: true, ordentlich };
@@ -2761,9 +2843,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Betriebsart legt ihn neu und gibt ihn als slot0 zurueck, sonst zeigt die Leiste
       // andere Zahlen als die Tabelle darunter.
       // Eine Zuweisung zwingt auch den ersten Container zu einem eigenen Lauf: slot0 ist ohne
-      // sie entstanden und wuesste nichts davon.
-      if (sortenrein || ordentlich || pins) {
-        erst = pins
+      // sie entstanden und wuesste nichts davon. Stopps genauso: slot0 kennt keine Wellen.
+      if (sortenrein || ordentlich || pins || stopps) {
+        erst = pins || stopps
           ? slotPacken(container0, start, 0, pins, OPT, sortenrein)
           : sortenrein
             ? packSortenrein(container0, start, sortenReihenfolge(start), ordentlich ? null : slot0, OPT)
@@ -2800,7 +2882,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     let erg = bauen(false);
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
     const gemischt = erg.chain.slice(0, -1).some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
-    if (gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW) {
+    if (!stopps && gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW) {
       const rein = bauen(true);
       if (ketteBesser(rein, erg)) erg = rein;
     }
@@ -2845,7 +2927,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     //   * Ab MAXDRAW Containern zeichnet die Ansicht ohnehin nicht mehr alle, und genau diese
     //     Ketten sind die teuren.
     const mehrsortig = chain.some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
-    if (chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
+    // Stufe 3 entfaellt mit Stopps: die Wellen ordnen bereits nach der Entlade-
+    // reihenfolge, ein "Entmischen" nach Sorte wuerde dagegen arbeiten.
+    if (!stopps && chain.length > 1 && chain.length <= MAXDRAW && mehrsortig) {
       const ord = bauen(erg.sortenrein, true);
       if (ord && ord.totRem <= totRem && ord.chain.length <= chain.length) {
         let oChain = ord.chain, oSlot0 = ord.slot0, oAus = false;
@@ -3134,6 +3218,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       slotLabel: "Container",
       slotAuto: "Auto \u00B7 der Rechner entscheidet",
       slotTitel: "In welchen Container diese Position kommt. Zugewiesene Ware bekommt dort den ersten Zugriff; was nicht hineingeht, bleibt offen.",
+      stopLabel: "Stopp",
+      stopKein: "\u2014",
+      stopN: (n) => `Stopp ${n}`,
+      stopTitel: "Entladereihenfolge: Stopp 1 wird zuerst entladen und deshalb zuletzt geladen \u2014 er steht an der T\xFCr. Ware verschiedener Stopps wird nicht vermischt; das kann Stellplatz kosten.",
+      stopPill: "Stauung nach Stopps \u00B7 Stopp 1 an der T\xFCr",
+      stopPillRoad: "Stauung nach Stopps \u00B7 Stopp 1 am Heck",
       slotOffen: (n) => n === 1 ? "1 St\u00FCck passt nicht in den zugewiesenen Container" : `${n} St\u00FCcke passen nicht in den zugewiesenen Container`,
       fokusAlleTitel: "Den ganzen Plan zeigen",
       fokusEinTitel: (m) => `Nur ${m} zeigen \u2013 Ansicht, Kennzahlen und Ladungsliste`,
@@ -3474,6 +3564,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       slotLabel: "Container",
       slotAuto: "Auto \u00B7 let the calculator decide",
       slotTitel: "Which container this item goes into. Assigned goods get first claim there; whatever does not fit stays open.",
+      stopLabel: "Stop",
+      stopKein: "\u2014",
+      stopN: (n) => `Stop ${n}`,
+      stopTitel: "Unloading order: stop 1 is unloaded first and therefore loaded last \u2014 it sits at the door. Goods of different stops are never mixed; this can cost floor spots.",
+      stopPill: "Stowed by stops \u00B7 stop 1 at the door",
+      stopPillRoad: "Stowed by stops \u00B7 stop 1 at the rear",
       slotOffen: (n) => n === 1 ? "1 piece does not fit into the assigned container" : `${n} pieces do not fit into the assigned container`,
       fokusAlleTitel: "Show the whole plan",
       fokusEinTitel: (m) => `Show ${m} only \u2013 view, figures and cargo list`,
@@ -3670,10 +3766,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var homeHref = "/" + (LANG === "en" ? "?lang=en" : "");
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
-  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0, sl: Number.isInteger(c.slot) && c.slot >= 0 ? c.slot + 1 : void 0 })) });
+  var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0, sl: Number.isInteger(c.slot) && c.slot >= 0 ? c.slot + 1 : void 0, st: Number.isInteger(c.stop) && c.stop >= 1 ? Math.min(9, c.stop) : void 0 })) });
   var decodePlanState = (st) => {
     if (!st || !Array.isArray(st.it) || !st.it.length) return null;
-    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0, slot: +r.sl >= 1 ? Math.round(+r.sl) - 1 : null }));
+    const cargo = st.it.map((r) => ({ id: uid(), name: (r.n || "Position").slice(0, 40), l: Math.max(1, +r.l || 1), w: Math.max(1, +r.w || 1), h: Math.max(1, +r.h || 1), weight: Math.max(0, +r.wt || 0), qty: Math.max(1, +r.q || 1), stackable: r.s !== 0, stackMax: +r.s >= 2 ? +r.s : Infinity, stackH: +r.sh > 0 ? +r.sh : null, rotatable: r.r !== 0, color: typeof r.cl === "string" && /^#/.test(r.cl) ? r.cl : void 0, slot: +r.sl >= 1 ? Math.round(+r.sl) - 1 : null, stop: +r.st >= 1 ? Math.min(9, Math.round(+r.st)) : null }));
     // Domain zuerst lesen: alter Link ohne dm => "sea" (Rueckwaerts-Kompatibilitaet).
     const domain = st.dm === "road" ? "road" : "sea";
     const table = domain === "road" ? VEHICLES : PRESETS;
@@ -3743,6 +3839,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // verliesse die Zuweisung den Link stillschweigend, und der Empfaenger saehe eine
       // andere Aufteilung als der Absender.
       if (+r.sl >= 1) t += "S" + v2num(r.sl);
+      // Entlade-Stopp. Grossbuchstabe T (Codetabelle darf nur ergaenzt werden);
+      // ohne den Tag verloere der Link die Entladereihenfolge, und der Empfaenger
+      // saehe eine andere Stauung als der Absender.
+      if (+r.st >= 1) t += "T" + v2num(r.st);
       if (typeof r.cl === "string" && /^#[0-9a-fA-F]{6}$/.test(r.cl)) t += "k" + r.cl.slice(1).toLowerCase();
       if (typeof r.n === "string" && r.n !== V2_DEFAULT_NAME && r.n !== "") t += "n" + encodeURIComponent(r.n.slice(0, 40)).replace(/~/g, "%7E");
       return t;
@@ -3805,6 +3905,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           else if (tg === "H") { var vh = rn(); if (vh == null) return null; it.sh = vh; }
           else if (tg === "r") it.r = 0;
           else if (tg === "S") { var vs = rn(); if (vs == null) return null; it.sl = vs; }
+          else if (tg === "T") { var vt = rn(); if (vt == null) return null; it.st = vt; }
           else if (tg === "k") { var hx = raw.slice(j, j + 6); if (!/^[0-9a-fA-F]{6}$/.test(hx)) return null; it.cl = "#" + hx.toLowerCase(); j += 6; }
           else if (tg === "n") { it.n = decodeURIComponent(raw.slice(j)).slice(0, 40); j = raw.length; }
           else return null;
@@ -4470,6 +4571,56 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="font-size:13px; font-weight:700; color:#0c1320;">${K.h2}</div>
       <div style="font-size:9.5px; color:#8b96a6; margin-bottom:6px;">${K.sub}</div>
       ${zeilen}${rest}
+    </div>`;
+  };
+  // Entladereihenfolge je Blatt -- nur wenn Positionen Entlade-Stopps tragen.
+  // Die Zeilen kommen aus der STAUUNG, nicht aus der Eingabe: je Stopp der
+  // x-Bereich, die Positionen und die Stueckzahl in DIESEM Container. Stopp 1
+  // steht an der Tuer und wird zuerst entladen; Ware ohne Stopp liegt an der
+  // Stirnwand und bleibt bis zuletzt geladen. Abhaengigkeitsfrei gehalten --
+  // test/multi-stopp.test.mjs schneidet die Funktion einzeln aus.
+  var LV_STOPPS = (placed, cargo, tiPos, lang) => {
+    if (!placed || !placed.length) return "";
+    const stopVon = (ti) => { const s = (cargo[ti] || {}).stop; return Number.isInteger(s) && s >= 1 ? s : null; };
+    if (!placed.some((p) => stopVon(p.ti) != null)) return "";
+    const en = lang === "en";
+    const loc = en ? "en-US" : "de-DE";
+    const K = en
+      ? { titel: "UNLOADING ORDER", h2: "Unload in this order", sub: "From the stow: stop 1 sits at the door and comes off first. Goods without a stop sit at the front wall and stay loaded until the end.",
+          stopp: (n) => `Stop ${n}`, ohne: "No stop", ohneSub: "stays loaded", pos: "Pos", stk: (n) => `${n} pcs`, ab: "from front wall" }
+      : { titel: "ENTLADEREIHENFOLGE", h2: "In dieser Reihenfolge entladen", sub: "Aus der Stauung: Stopp 1 liegt an der T\xFCr und kommt zuerst herunter. Ware ohne Stopp liegt an der Stirnwand und bleibt bis zuletzt geladen.",
+          stopp: (n) => `Stopp ${n}`, ohne: "Ohne Stopp", ohneSub: "bleibt geladen", pos: "Pos", stk: (n) => `${n} Stk`, ab: "ab Stirnwand" };
+    const zonen = new Map();
+    for (const p of placed) {
+      const st = stopVon(p.ti);
+      const key = st == null ? "ohne" : st;
+      const z = zonen.get(key) || { x0: Infinity, x1: -Infinity, tis: new Set(), n: 0 };
+      z.x0 = Math.min(z.x0, p.x); z.x1 = Math.max(z.x1, p.x + p.dx); z.tis.add(p.ti); z.n++;
+      zonen.set(key, z);
+    }
+    // Entladefolge: Stopp 1 zuerst, dann aufsteigend; "ohne Stopp" zuletzt.
+    const folge = [...zonen.keys()].sort((a2, b2) => (a2 === "ohne" ? 1e9 : a2) - (b2 === "ohne" ? 1e9 : b2));
+    const m = (cm) => (Math.round(cm / 10) / 10).toLocaleString(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const zeilen = folge.map((key, i) => {
+      const z = zonen.get(key);
+      const posTxt = [...z.tis].map((ti) => String(tiPos[ti] || 0).padStart(2, "0")).sort().join(", ");
+      const name = key === "ohne" ? K.ohne : K.stopp(key);
+      const chip = key === "ohne"
+        ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:#f1f3f5; color:#8492a6;">–</span>`
+        : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; font-weight:700; padding:2px 8px; border-radius:20px; background:var(--ac-solid,#2E8FFF); color:#fff;">S${key}</span>`;
+      return `<div style="display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid #f0f1f4;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0c1320; min-width:22px;">${String(i + 1).padStart(2, "0")}</span>
+        ${chip}
+        <span style="font-size:11px; font-weight:600; color:#0c1320;">${name}${key === "ohne" ? ` <span style="font-weight:500; color:#8b96a6;">\xB7 ${K.ohneSub}</span>` : ""}</span>
+        <span style="font-size:10px; color:#5b6b80;">${K.pos} ${posTxt} \xB7 ${K.stk(z.n)}</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; color:#8b96a6; margin-left:auto;">${m(z.x0)}–${m(z.x1)} m ${K.ab}</span>
+      </div>`;
+    }).join("");
+    return `<div style="margin:18px 44px 0; page-break-inside:avoid; break-inside:avoid;">
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; color:#8b96a6; margin-bottom:2px;">${K.titel}</div>
+      <div style="font-size:13px; font-weight:700; color:#0c1320;">${K.h2}</div>
+      <div style="font-size:9.5px; color:#8b96a6; margin-bottom:6px;">${K.sub}</div>
+      ${zeilen}
     </div>`;
   };
   // Gewicht & Schwerpunkt je Container -- gedruckt wird nur, wenn JEDE Position
@@ -5902,6 +6053,60 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         }
       });
     }, [zeigeNummern, result, cargo, container, domain, fokus]);
+    // Stopp-Zonen (3D): tragen Positionen Entlade-Stopps, steht ueber jeder
+    // Stopp-Zone ein Chip ("S1", "S2" ...). Immer an, sobald Stopps vergeben
+    // sind -- die Zuordnung ist eine ausdrueckliche Nutzer-Angabe, und ohne die
+    // Chips waere nicht zu sehen, WO die Wellen liegen. Ware ohne Stopp traegt
+    // keinen Chip. Dasselbe Effekt- und Aufraeummuster wie die Plaketten oben.
+    useEffect(() => {
+      const t = three.current;
+      if (!t) return;
+      (t.stopMeshes || []).forEach((m) => { t.scene.remove(m); if (m.material) { if (m.material.map) m.material.map.dispose(); m.material.dispose(); } });
+      t.stopMeshes = [];
+      const stopps = stoppWerte(cargo || []);
+      if (!stopps || !result || !result.chain || !t.frame || !t.frame.slots || !t.frame.slots.length) return;
+      const chip = (txt) => {
+        const cv = document.createElement("canvas");
+        cv.width = 108; cv.height = 60;
+        const g = cv.getContext("2d");
+        const r = 24;
+        g.fillStyle = "#2E8FFF";
+        g.beginPath();
+        g.moveTo(6 + r, 6); g.lineTo(102 - r, 6); g.arcTo(102, 6, 102, 6 + r, r);
+        g.lineTo(102, 54 - r); g.arcTo(102, 54, 102 - r, 54, r);
+        g.lineTo(6 + r, 54); g.arcTo(6, 54, 6, 54 - r, r);
+        g.lineTo(6, 6 + r); g.arcTo(6, 6, 6 + r, 6, r);
+        g.closePath(); g.fill();
+        g.fillStyle = "#04121A";
+        g.font = "bold 30px Archivo, ui-sans-serif, sans-serif";
+        g.textAlign = "center"; g.textBaseline = "middle";
+        g.fillText(txt, 54, 32);
+        const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), depthTest: false, transparent: true }));
+        spr.scale.set(0.34 * (108 / 60), 0.34, 1);
+        spr.renderOrder = 8;
+        return spr;
+      };
+      result.chain.forEach((c, ci) => {
+        if (fokus !== "alle" && fokus !== ci) return;
+        const sl = t.frame.slots[ci];
+        if (!sl || !(c.placed || []).length) return;
+        const offX = sl.cx - sl.hx, offY = sl.cy - sl.hy;
+        const cw = num((c.preset || container).w);
+        const zonen = {};
+        for (const p of c.placed) {
+          const st = stopps[p.ti];
+          if (st == null) continue;
+          const z = zonen[st] = zonen[st] || { x0: Infinity, x1: -Infinity, top: 0 };
+          z.x0 = Math.min(z.x0, p.x); z.x1 = Math.max(z.x1, p.x + p.dx); z.top = Math.max(z.top, p.y + p.dy);
+        }
+        for (const [st, z] of Object.entries(zonen)) {
+          const spr = chip("S" + st);
+          spr.position.set(offX + (z.x0 + z.x1) / 2 / 100, offY + z.top / 100 + 0.44, cw / 2 / 100);
+          t.scene.add(spr);
+          t.stopMeshes.push(spr);
+        }
+      });
+    }, [result, cargo, container, domain, fokus]);
     // Was der Fokus im Bild macht: die Ladung der anderen Container verschwindet, ihre Huelle
     // bleibt als blasse Silhouette stehen. Ganz ausblenden waere verwirrend -- man wuesste
     // nicht mehr, wo der zweite Container ist; unveraendert stehenlassen auch, denn dann sieht
@@ -5947,7 +6152,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
-    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
+    return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), stoppWerte(cargo || []) && result && result.chain && result.chain.some((c2) => c2.placed && c2.placed.length) && /* @__PURE__ */ React.createElement("div", { className: "absolute top-3 left-3 pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.dim, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.accent, 0.3)}`, borderRadius: R.s, padding: "4px 8px", zIndex: 6 } }, domain === "road" ? T.stopPillRoad : T.stopPill), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
             // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
             // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
             // Die Pille nennt die Zahl, mit der jemand hier hinschaut -- und ist zugleich der
@@ -7963,7 +8168,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       ? { n: sug.combo.reduce((a, x) => a + x.count, 0), vol: sug.combo.reduce((a, x) => a + x.count * equipVol(x.name), 0) }
       : sug && sug.type === "single" ? { n: 1, vol: equipVol(sug.name) } : null;
     const sugLabel = sug && sug.type === "multi" && sug.combo ? sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ") : sug && sug.type === "single" ? `1\xD7 ${sug.name}` : "";
-    const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel
+    // Mit Stopps schweigt der Guenstiger-Vorschlag: die freie Empfehlung rechnet
+    // OHNE Wellen und verspricht damit einen Fuellgrad, den die Entlade-
+    // reihenfolge womoeglich gar nicht halten kann. "Es ginge auch mit 1x 40'"
+    // waere dann eine Zahl aus einer anderen Welt.
+    const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel && !stoppWerte(cargo)
       && (sugKosten.n < ketteKosten.n || (sugKosten.n === ketteKosten.n && sugKosten.vol < ketteKosten.vol - 1e-6)));
     // Was wegen einer ZUWEISUNG liegenbleibt, zaehlt hier nicht: der Vorschlag "du brauchst
     // ca. 1x 40' HC + 1x 40' GP" stand sonst unter einem Plan, der genau diese zwei bucht --
@@ -8114,7 +8323,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           SUMKG: fmtDE(totWt),
           SUMVOL: fmt1DE(totVol),
           // An der Stelle der Zeichnung steht auf dem Deckblatt die Uebersicht je Container.
-          STOWAGE: mehrere ? LV_UEBERSICHT(slotRows, LANG) : STOWAGE + LV_SEQUENZ(placed, cargo, LANG, tiColor) + LV_GEWICHT(placed, cargo, num(container.l), LANG) + LV_QUITTUNG(LANG),
+          STOWAGE: mehrere ? LV_UEBERSICHT(slotRows, LANG) : STOWAGE + LV_SEQUENZ(placed, cargo, LANG, tiColor) + LV_STOPPS(placed, cargo, tiPos, LANG) + LV_GEWICHT(placed, cargo, num(container.l), LANG) + LV_QUITTUNG(LANG),
           SEITE: seitenText(1)
         });
         const blaetter = [deck];
@@ -8163,7 +8372,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 // qty der Legende ist die Menge IN DIESEM Container. Sonst stuende unter der
               // Zeichnung eines Containers mit zwei Stueck "9x".
               legend: Object.keys(tiC).map((ti) => ({ ti: +ti, pos: tiP[ti], color: tiC[ti], it: { ...cargo[+ti], qty: jeSorte[+ti] } })).sort((a, b) => a.pos - b.pos),
-                LANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, LANG, tiC) + LV_GEWICHT(sp, cargo, num(cp.l), LANG) + LV_QUITTUNG(LANG),
+                LANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, LANG, tiC) + LV_STOPPS(sp, cargo, tiP, LANG) + LV_GEWICHT(sp, cargo, num(cp.l), LANG) + LV_QUITTUNG(LANG),
               SEITE: seitenText(ci + 2)
             }));
           });
@@ -8224,7 +8433,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Zeile. Die orange Pille "8 / 9" daneben nennt die Zahl, nicht den Grund; ohne diesen
       // Satz sucht man den Fehler in den Massen.
       Number.isInteger(c.slot) && c.slot >= 0 && pt && pt.loaded < pt.total && /* @__PURE__ */ React.createElement("div", { style: { marginTop: SP.s, fontSize: FS.label, lineHeight: 1.4, color: C.warn } }, T.slotOffen(pt.total - pt.loaded)),
-      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1" }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ slotWahl && /* @__PURE__ */ React.createElement("div", { style: { width: 96, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.slotLabel), /* @__PURE__ */ React.createElement("select", { value: Number.isInteger(c.slot) && c.slot >= 0 ? String(c.slot) : "__auto", onChange: (e) => upd(c.id, "slot", e.target.value === "__auto" ? null : +e.target.value), title: T.slotTitel, "aria-label": T.slotLabel, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "__auto", style: { background: "#161D27", color: C.text } }, T.slotAuto), slotWahl.map((m, k) => /* @__PURE__ */ React.createElement("option", { key: k, value: String(k), style: { background: "#161D27", color: C.text } }, m)))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
+      open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 gap-3 mb-3" }, /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.qty), /* @__PURE__ */ React.createElement("div", { className: "flex items-stretch rounded-lg overflow-hidden", style: { background: C.field, border: `1px solid ${C.fieldBorder}` } }, /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) - 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "\u2212"), /* @__PURE__ */ React.createElement("input", { type: "number", value: c.qty, onChange: (e) => upd(c.id, "qty", e.target.value === "" ? "" : Number(e.target.value)), className: "w-full min-w-0 text-center bg-transparent focus:outline-none", style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: C.text, borderLeft: `1px solid ${C.fieldBorder}`, borderRight: `1px solid ${C.fieldBorder}`, padding: `${SP.s}px 0` } }), /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "qty", Math.max(0, Math.floor(num(c.qty)) + 1)), style: { width: SP.xxl, color: C.dim, fontSize: FS.h3 } }, "+"))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.weightPer), /* @__PURE__ */ React.createElement(Num, { value: c.weight, onChange: (v) => upd(c.id, "weight", v) }))), open && /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-3 gap-2 mb-1" }, [["l", T.len], ["w", T.wid], ["h", T.hei]].map(([k, lbl]) => /* @__PURE__ */ React.createElement("div", { key: k }, /* @__PURE__ */ React.createElement(Label, null, lbl), /* @__PURE__ */ React.createElement(Num, { value: c[k], onChange: (v) => upd(c.id, k, v), factor: unit === "mm" ? 10 : 1 })))), open && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, T.dimHint(unit)), open && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-end gap-2 mt-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { minWidth: 148 } }, /* @__PURE__ */ React.createElement(Label, null, T.stack), /* @__PURE__ */ React.createElement("select", { value: stackModeOf(c), onChange: (e) => setStackMode(c.id, e.target.value), title: T.stack, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "no" }, T.stackNo), /* @__PURE__ */ React.createElement("option", { value: "x1" }, T.stackX(1)), /* @__PURE__ */ React.createElement("option", { value: "x2" }, T.stackX(2)), /* @__PURE__ */ React.createElement("option", { value: "x3" }, T.stackX(3)), /* @__PURE__ */ React.createElement("option", { value: "h" }, T.stackToH), /* @__PURE__ */ React.createElement("option", { value: "free" }, T.stackFree))), stackModeOf(c) === "h" && /* @__PURE__ */ React.createElement("div", { style: { width: 84, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stackHLabel), /* @__PURE__ */ React.createElement(Num, { value: c.stackH == null ? "" : c.stackH, onChange: (v) => upd(c.id, "stackH", v), factor: unit === "mm" ? 10 : 1 })), /* @__PURE__ */ slotWahl && /* @__PURE__ */ React.createElement("div", { style: { width: 96, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.slotLabel), /* @__PURE__ */ React.createElement("select", { value: Number.isInteger(c.slot) && c.slot >= 0 ? String(c.slot) : "__auto", onChange: (e) => upd(c.id, "slot", e.target.value === "__auto" ? null : +e.target.value), title: T.slotTitel, "aria-label": T.slotLabel, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "__auto", style: { background: "#161D27", color: C.text } }, T.slotAuto), slotWahl.map((m, k) => /* @__PURE__ */ React.createElement("option", { key: k, value: String(k), style: { background: "#161D27", color: C.text } }, m)))),
+      // Entladereihenfolge je Position: Stopp 1 wird zuerst entladen und steht
+      // deshalb an der Tuer (LIFO). Immer sichtbar -- die Reihenfolge zaehlt
+      // schon bei EINEM Container.
+      /* @__PURE__ */ React.createElement("div", { style: { width: 88, flexShrink: 0 } }, /* @__PURE__ */ React.createElement(Label, null, T.stopLabel), /* @__PURE__ */ React.createElement("select", { value: Number.isInteger(c.stop) && c.stop >= 1 ? String(c.stop) : "__kein", onChange: (e) => upd(c.id, "stop", e.target.value === "__kein" ? null : +e.target.value), title: T.stopTitel, "aria-label": T.stopLabel, className: "w-full rounded-lg", style: { height: SP.xxl, padding: `0 ${SP.s}px`, fontSize: FS.small, fontWeight: FW.semi, background: C.field, border: 0, borderRadius: R.s, color: C.text, outline: "none", cursor: "pointer" } }, /* @__PURE__ */ React.createElement("option", { value: "__kein", style: { background: "#161D27", color: C.text } }, T.stopKein), [1, 2, 3, 4, 5, 6].map((n) => /* @__PURE__ */ React.createElement("option", { key: n, value: String(n), style: { background: "#161D27", color: C.text } }, T.stopN(n))))), /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement(Label, null, T.rotate), (() => {
         const on = c.rotatable !== false;
         return /* @__PURE__ */ React.createElement("button", { onClick: () => upd(c.id, "rotatable", !on), className: "transition flex items-center gap-1", style: { height: SP.xxl, padding: `0 ${SP.m}px`, borderRadius: R.s, border: 0, cursor: "pointer", fontSize: FS.small, fontWeight: on ? FW.semi : FW.label, background: on ? hexA(C.accent, 0.16) : C.field, color: on ? "#BCD9FF" : C.dim } }, "\u21BB 90\xB0");
       })())),

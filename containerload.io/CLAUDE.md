@@ -822,6 +822,19 @@ Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Häl
 
 `test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
 
+### Multi-Stopp: die Entladereihenfolge bestimmt die Stauung (LIFO)
+Jede Position kann einen **Stopp** tragen (Select in der aufgeklappten Zeile, 1–6, Standard „—"). Der Plan wird dann so gestaut, dass **Stopp 1 an der Tür** steht (wird zuerst entladen, also zuletzt geladen) und die höchste Nummer an der Stirnwand; **Ware ohne Stopp liegt ganz vorn** und bleibt bis zuletzt geladen. Ware verschiedener Stopps wird **nicht vermischt** — weder gestapelt noch in Lücken der anderen eingesickert. Das kann Stellplätze kosten, und dieser Preis wird ausgewiesen (offene Stücke + die Pille „Stauung nach Stopps · Stopp 1 an der Tür" oben links im Bild), nie versteckt. `test/multi-stopp.test.mjs` hält alles fest.
+
+**Umgesetzt als Wellen über `packCargo`** (`stoppPacken`, direkt neben `slotPacken`): ohne Stopp zuerst, dann Stopps absteigend. Jede Welle packt auf einer Vorbelegung aus den vorigen Wellen **plus einer virtuellen Trennwand** — ein Quader von der Stirnwand bis zur hintersten Kante des Gestauten, volle Breite und Höhe. Die Wand hält die nächste Welle aus den Lücken und von den Deckeln der vorigen; sie trägt kein Gewicht (`ti: -1` → `num(undefined) = 0`), das echte Gewicht der vorigen Wellen zählt über die mitgegebenen Kisten gegen die Zuladung (`payFrei`).
+
+Regeln, die nicht kippen dürfen:
+- **Der Einstieg ist `slotPacken`** — mit Stopps packt IMMER die Wellen-Fassung, in beiden Ketten, im Ausgleich und für den ersten Container (`bauen` erzwingt bei Stopps einen eigenen Lauf, slot0 kennt keine Wellen). Zuweisung + Stopp zusammen: die Stopp-Reihenfolge dominiert, innerhalb der Welle gilt weiter „dort zuerst".
+- **Sortenrein und Stufe 3 setzen mit Stopps aus** (in beiden Ketten, je ein `!stopps &&`-Wächter): beide würden gegen die Wellen arbeiten. Der Gewichtsausgleich bleibt an — er läuft durch `slotPacken` und erhält die Wellen. **Der Günstiger-Vorschlag (`empfBesser`) schweigt** mit Stopps: die freie Empfehlung rechnet ohne Wellen und verspräche einen Füllgrad aus einer anderen Welt.
+- **Nur dry** (Container wie Fahrzeuge): Special Equipment packt `packKind`, ein Wellen-Lauf über `packCargo` ließe Übermaß stillschweigend fallen.
+- **Link-Format:** Tag **`T`** im `?c=` (Codetabelle nur ergänzt), Feld `st` im `?p=`, geklemmt auf 1–9. Alt-Links ohne Tag erfinden keinen Stopp. Der Entwurf (`containerload.draft.v1`) trägt `stop` von selbst (Pass-through).
+- **Sichtbar:** 3D-Chips „S1"/„S2" über jeder Stopp-Zone (immer an, sobald Stopps vergeben sind — Sprite-Muster wie die Plaketten), und im PDF je Blatt der Block **ENTLADEREIHENFOLGE** (`LV_STOPPS`, abhängigkeitsfrei): Stopp 1 zuerst, je Zeile Positionen, Stückzahl und x-Bereich **aus der Stauung**, „ohne Stopp · bleibt geladen" zuletzt. Deckblatt ohne.
+- Ohne Stopps ändert sich **nichts** — `stoppWerte` liefert `null`, jeder Pfad läuft wörtlich den alten Weg (testfest, Suite unverändert grün).
+
 ### Positionsnummern in 3D („nimm die 04er zuerst")
 Der PDF-Stauplan beschriftet jede Kiste mit ihrer POS-Nummer; im 3D-Bild verband bisher nur die **Farbe** Bild und Liste. Der Knopf „01" oben rechts im Bild (nur sichtbar, wenn Kisten stehen; Standard **aus**) blendet Plaketten ein: heller Chip, dunkle Nummer, Ring in der Kennfarbe der Position — bis 40 sichtbare Kisten **je Kiste** auf der Deckelmitte, darüber **eine Plakette je Sorte und Container** mit Stückzahl („04 ×22"), denn vierzig einzelne Nummern übereinander liest niemand.
 
