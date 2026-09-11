@@ -126,9 +126,12 @@ test("die Kopf-Felder sind editierbar -- und bleiben auf dem Blatt", () => {
 });
 
 test("Einzelblatt und Container-Blaetter tragen Gewicht-Block und Quittung, das Deckblatt nicht", () => {
-  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, LANG, tiColor\)( \+ LV_STOPPS\(placed, cargo, tiPos, LANG\))? \+ LV_GEWICHT\(placed, cargo, num\(container\.l\), LANG\) \+ LV_QUITTUNG\(LANG\),/.test(roh),
+  // Zwischen Reihenfolge und Quittung duerfen weitere Rampen-Bloecke stehen
+  // (Entladereihenfolge, VGM) -- der Vertrag hier ist: Reihenfolge, dann
+  // Gewicht-Block, am Ende die Quittung, auf BEIDEN Blattsorten.
+  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, LANG, tiColor\)[^\n]*\+ LV_GEWICHT\(placed, cargo, num\(container\.l\), LANG\)[^\n]*\+ LV_QUITTUNG\(LANG\),/.test(roh),
     "das einzelne Blatt traegt Gewicht-Block und Quittung nicht");
-  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, LANG, tiC\)( \+ LV_STOPPS\(sp, cargo, tiP, LANG\))? \+ LV_GEWICHT\(sp, cargo, num\(cp\.l\), LANG\) \+ LV_QUITTUNG\(LANG\),/.test(roh),
+  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, LANG, tiC\)[^\n]*\+ LV_GEWICHT\(sp, cargo, num\(cp\.l\), LANG\)[^\n]*\+ LV_QUITTUNG\(LANG\),/.test(roh),
     "die Container-Blaetter tragen Gewicht-Block und Quittung nicht");
   // Das Deckblatt zeigt die Uebersicht je Container -- unterschrieben wird an
   // der Rampe je Container, nicht auf dem Deckblatt.
