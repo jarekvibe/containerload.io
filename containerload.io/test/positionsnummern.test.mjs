@@ -79,7 +79,8 @@ test("der 01-Modus lebt in der App und schaltet auch die Stopp-Felder", () => {
   // Knopf im Bild und der Stopp-Select in der Ladungsliste denselben Schalter
   // teilen. Ein gesetzter Stopp bleibt IMMER sichtbar -- ein Wert, den man nur
   // nach einem Umweg wieder loswird, waere eine Falle.
-  assert.ok(src.includes("sichZonen, zeigeNummern, setZeigeNummern }"),
+  // Seit der Tuer-Animation folgt hinter setZeigeNummern noch tuerKino.
+  assert.ok(src.includes("sichZonen, zeigeNummern, setZeigeNummern, tuerKino }"),
     "der Viewport bekommt den 01-Zustand nicht als Prop");
   assert.ok(src.includes("(zeigeNummern || (Number.isInteger(c.stop) && c.stop >= 1)) &&"),
     "der Stopp-Select haengt nicht am 01-Modus (oder versteckt gesetzte Stopps)");

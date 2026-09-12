@@ -706,6 +706,17 @@ Jetzt zwei Stufen: **erst auf die Kisten selbst schießen** (nur `isInstancedMes
 
 `imRahmen` und `zielKlemmen` benutzen **denselben Auslauf** (`m = 2`). Zwei verschiedene Maße wären genau die Art Abweichung, die später niemand mehr erklären kann: das Ziel dürfte an eine Stelle springen, an der es nicht bleiben darf. `test/kamera-schieben.test.mjs` hält beides fest — den Vertrag im Quelltext **und** die Rechnung, die den Fehler erklärt (sie liest Bildwinkel, Ruhelage und Zoomschritt aus `app.html`, damit sie nicht stillschweigend veraltet).
 
+### Die „Warum?"-Animation der Türprüfung
+Jareks Richtung: „mit dem 3D-Rechner legen wir viel Wert auf Visualität — kleine Animationen, die zeigen, WIE etwas funktioniert." Erster Fall ist die Türprüfung: neben der Warnung „passt nicht durch die Tür" sitzt ein **„Warum?"-Knopf**; er lässt die kritische Kante als Kasten von außen auf die Türöffnung zufahren, anstoßen und davor stehen bleiben, während der Öffnungsrahmen pulsiert. Danach räumt sich alles weg, der statische Ghost bleibt.
+
+Regeln, die nicht kippen dürfen (`test/tuer-warum.test.mjs`):
+- **Auf Abruf, nie von selbst.** `tuerKino` ist ein Zähler, kein Schalter — jeder Klick spielt erneut, nichts läuft automatisch los. Wer den Fall zum zehnten Mal sieht, will die Antwort, nicht das Kino.
+- **Gezeigt wird eine Rechnung, die wirklich stattfindet.** Maße und Ausrichtung kommen aus `doorFailCheck` (das `critical` trägt seit dem Umbau auch die Tiefe `d` der gepackten Kante); der Kasten geht **nie** durch die Türebene (Anschlag `xEnde` vor der Ebene, Rückstoß über `Math.abs` nur nach außen). Keine Deko-Sequenzen, die Vorgänge behaupten, die das Tool nicht rechnet — deshalb auch **kein Stapler-Modell**: der Realismus kommt aus den richtigen Maßen, nicht aus Figuren.
+- Der Aufbau-Effekt stiftet `t.tuer` am Tür-Konflikt-Block und **nullt es je Neuaufbau**; der Animations-Effekt räumt vollständig auf (Geometrien/Materialien, Rahmen-Deckkraft zurück). `prefers-reduced-motion`: Kasten steht ohne Fahrt am Anschlag, nichts pulsiert.
+- Das Öffnen zählt `tuer-warum` (Liste in `test/messen-und-melden.test.mjs`).
+
+Als Nächstes nach demselben Muster geplant (besprochen, nicht gebaut): Überhöhe/Open-Top (Kran-Sequenz wie Akt 2 der Hero-Animation) und die Achslast-Verschiebung (`achsShift` sichtbar machen).
+
 ### Die 3D-Ansicht zeigt kein Türblatt mehr
 Am Türende des letzten Containers standen zwei aufgeschwungene Türblätter (rund 80°). Gemeldet: *„anfangs wollte ich die Containertür in der 3D View drinne haben, jetzt nerven die mich irgendwie."*
 
