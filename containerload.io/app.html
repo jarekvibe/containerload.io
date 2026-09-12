@@ -3088,6 +3088,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleNeg: "Die Ladung liegt so weit hinten, dass die St\xFCtzlast negativ w\xFCrde. So darf der Auflieger nicht fahren.",
       axleAssume: "Typische Geometrie: K\xF6nigszapfen 1,6 m hinter der Stirnwand, Aggregat-Mitte bei 10,3 m, Leergewicht 7 t. Grenzen: 11 t Sattellast (EU-typisch), 24 t Dreifachachse (\xA7 34 StVZO). Reale Fahrzeuge weichen ab.",
       axleShift: (m) => `Ladung um ${m.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m nach hinten gesetzt, sonst l\xE4ge zu viel Gewicht auf der Sattelkupplung. Den Abstand zur Stirnwand beim Sichern ausgleichen.`,
+      axleKino: "Ansehen",
       sichBtn: "Sicherung pr\xFCfen",
       sichBanner: (n) => `Ladungssicherung: ${n} ${n === 1 ? "Hinweis" : "Hinweise"} zu dieser Stauung`,
       sichZeige3d: "In 3D zeigen",
@@ -3286,6 +3287,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "\xDCberl\xE4nge h.",
       oogSlots: (n) => `Blockierte Slots: ${n}`,
       oogDisc: "Sch\xE4tzung zur Buchungsvorbereitung – keine verbindliche Stauplanung.",
+      oogKran: "Beladung ansehen",
       plansBtn: "Meine Pl\xE4ne", plansTitle: "Meine Pl\xE4ne", plansSaveTitle: "Aktuellen Plan speichern", planRename: "Umbenennen", plansSave: "Speichern", plansSaved: "Gespeichert", plansLoaded: "Plan geladen",
       plansLinkCopied: "Link kopiert", plansOpen: "\xD6ffnen", plansShare: "Teilen", plansDelete: "L\xF6schen",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "Position" : "Positionen"} \xB7 ${pcs} Stk`,
@@ -3449,6 +3451,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       axleNeg: "The load sits so far back that the kingpin load would go negative. The trailer must not run like this.",
       axleAssume: "Typical geometry: kingpin 1.6 m behind the front wall, axle-group centre at 10.3 m, tare 7 t. Limits: 11 t fifth-wheel load (EU-typical), 24 t tri-axle group (per German StVZO). Real vehicles differ.",
       axleShift: (m) => `Load moved ${m.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m towards the rear, otherwise too much weight would sit on the fifth wheel. Make up for the gap to the front wall when securing.`,
+      axleKino: "Show",
       sichBtn: "Check securing",
       sichBanner: (n) => `Cargo securing: ${n} ${n === 1 ? "note" : "notes"} on this stow`,
       sichZeige3d: "Show in 3D",
@@ -3647,6 +3650,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       oogLB: "Over length b.",
       oogSlots: (n) => `Blocked slots: ${n}`,
       oogDisc: "Estimate for booking prep – not a binding stowage plan.",
+      oogKran: "Show loading",
       plansBtn: "My plans", plansTitle: "My plans", plansSaveTitle: "Save current plan", planRename: "Rename", plansSave: "Save", plansSaved: "Saved", plansLoaded: "Plan loaded",
       plansLinkCopied: "Link copied", plansOpen: "Open", plansShare: "Share", plansDelete: "Delete",
       plansMeta: (pr, pos, pcs) => `${pr} \xB7 ${pos} ${pos === 1 ? "item" : "items"} \xB7 ${pcs} pcs`,
@@ -4908,7 +4912,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return need;
   }
-  function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef, fokus, onFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino }) {
+  function Viewport({ container, result, preset, overrides, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi, manualRot, manualSel, onManualPlace, onManualSelect, shotRef, fokus, onFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino }) {
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
@@ -6166,6 +6170,140 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       raf = requestAnimationFrame(schritt);
       return () => { cancelAnimationFrame(raf); weg(); };
     }, [tuerKino]);
+    // ── Die "Ansehen"-Animation der Ueberhoehe (Open Top / Flat Rack) ───────
+    // Dieselben Regeln wie die Tuer-Animation: auf Abruf, und gezeigt wird nur,
+    // was wirklich gilt -- Special Equipment wird von OBEN beladen. Das hoechste
+    // Stueck (genau das, um das es bei Ueberhoehe geht) senkt sich am Kran-
+    // geschirr von oben auf seinen Platz; solange fliegt ein Klon, das Original
+    // ist auf Punktgroesse geschrumpft und seine schwarzen Trennkanten bleiben
+    // stehen -- sie markieren den Zielplatz. Kein Kran-Modell: vier Seile und
+    // ein Haken sagen "von oben", der Realismus kommt aus den Massen.
+    useEffect(() => {
+      if (!oogKino) return;
+      const t = three.current;
+      if (!t) return;
+      const cg = t.group.children.find((g) => g.userData && g.userData.slot === 0 && g.userData.boxMeshes && g.userData.boxMeshes.length);
+      if (!cg) return;
+      let ziel = null;
+      cg.userData.boxMeshes.forEach((bm) => bm.boxes.forEach((b, i) => {
+        const top = b.cy + b.sy / 2;
+        if (!ziel || top > ziel.top) ziel = { bm, i, b, top };
+      }));
+      if (!ziel) return;
+      const ruhig = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      const { bm, b } = ziel;
+      const dm = bm.dummy;
+      const instanz = (sichtbar) => {
+        dm.position.set(b.cx, b.cy, b.cz);
+        const s = sichtbar ? 1 : 1e-4;
+        dm.scale.set(b.sx * s, b.sy * s, b.sz * s);
+        dm.updateMatrix();
+        bm.inst.setMatrixAt(ziel.i, dm.matrix);
+        bm.inst.instanceMatrix.needsUpdate = true;
+      };
+      const klon = new THREE.Mesh(new THREE.BoxGeometry(b.sx, b.sy, b.sz), bm.inst.material);
+      klon.castShadow = true;
+      const seilMat = new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.9 });
+      const seilGeo = new THREE.BufferGeometry();
+      seilGeo.setAttribute("position", new THREE.Float32BufferAttribute(new Array(30).fill(0), 3));
+      const seile = new THREE.LineSegments(seilGeo, seilMat);
+      seile.frustumCulled = false;
+      const haken = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 10), new THREE.MeshBasicMaterial({ color: 0xffb454 }));
+      // Seile je Lage nachziehen: vier von den Deckelecken zum Haken, eines vom
+      // Haken senkrecht nach oben aus dem Bild ("zum Kran").
+      const lage = (yOff) => {
+        klon.position.set(b.cx, b.cy + yOff, b.cz);
+        const oy = b.cy + yOff + b.sy / 2, hy = oy + 1.1;
+        haken.position.set(b.cx, hy, b.cz);
+        const p = seilGeo.attributes.position.array;
+        const ecken = [[b.cx - b.sx / 2, b.cz - b.sz / 2], [b.cx + b.sx / 2, b.cz - b.sz / 2], [b.cx + b.sx / 2, b.cz + b.sz / 2], [b.cx - b.sx / 2, b.cz + b.sz / 2]];
+        ecken.forEach(([ex, ez], i2) => { const o = i2 * 6; p[o] = ex; p[o + 1] = oy; p[o + 2] = ez; p[o + 3] = b.cx; p[o + 4] = hy; p[o + 5] = b.cz; });
+        p[24] = b.cx; p[25] = hy; p[26] = b.cz; p[27] = b.cx; p[28] = hy + 2.6; p[29] = b.cz;
+        seilGeo.attributes.position.needsUpdate = true;
+      };
+      const HOCH = 2.2, FAHRT2 = 1600, HALT2 = 700, LOS = 450;
+      instanz(false);
+      lage(ruhig ? 0 : HOCH);
+      [klon, seile, haken].forEach((o) => cg.add(o));
+      const t0 = performance.now();
+      let raf = 0, aufgeraeumt = false;
+      const weg = () => {
+        if (aufgeraeumt) return;
+        aufgeraeumt = true;
+        [klon, seile, haken].forEach((o) => cg.remove(o));
+        klon.geometry.dispose(); seilGeo.dispose(); seilMat.dispose();
+        haken.geometry.dispose(); haken.material.dispose();
+        instanz(true);
+      };
+      const schritt = (now) => {
+        const ms = now - t0;
+        let fertig = false;
+        if (!ruhig && ms < FAHRT2) {
+          // Zuegig herab, sanft aufgesetzt -- so faehrt ein Kran.
+          const p = ms / FAHRT2;
+          lage(HOCH * Math.pow(1 - p, 3));
+        } else if (ms < FAHRT2 + HALT2) {
+          lage(0);
+        } else if (ms < FAHRT2 + HALT2 + LOS) {
+          // Abgeschlagen: die Seile heben ab und verblassen, das Stueck bleibt.
+          const p = (ms - FAHRT2 - HALT2) / LOS;
+          lage(0);
+          seilMat.opacity = 0.9 * (1 - p);
+          haken.material.opacity = 1 - p;
+          haken.material.transparent = true;
+          haken.position.y += p * 0.5;
+        } else fertig = true;
+        if (fertig) weg(); else raf = requestAnimationFrame(schritt);
+      };
+      raf = requestAnimationFrame(schritt);
+      return () => { cancelAnimationFrame(raf); weg(); };
+    }, [oogKino]);
+    // ── Die "Ansehen"-Animation der Achslast-Ruecksetzung ───────────────────
+    // achsShift hat die Ladung als ganzen Block nach hinten gesetzt; die Anzeige
+    // sagt es als Satz. Auf Abruf zeigt der Block es selbst: er faehrt kurz an
+    // die Stirnwand (dort laege er ohne die Ruecksetzung) und kehrt an seinen
+    // wirklichen Platz zurueck. Bewegt wird NUR das Bild -- die Kisten samt
+    // ihrer Trennkanten-Geometrie -- und am Ende steht alles exakt wie berechnet.
+    useEffect(() => {
+      if (!achsKino || !achsKino.n) return;
+      const t = three.current;
+      if (!t) return;
+      const cg = t.group.children.find((g) => g.userData && g.userData.slot === achsKino.slot && g.userData.boxMeshes && g.userData.boxMeshes.length);
+      const dxM = Math.max(0, num(achsKino.cm)) / 100;
+      if (!cg || !dxM) return;
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      const bms = cg.userData.boxMeshes;
+      const linien = cg.children.filter((o) => o.userData && o.userData.ladung);
+      const setOff = (off) => {
+        bms.forEach((bm) => {
+          const dm = bm.dummy;
+          bm.boxes.forEach((b, i) => {
+            dm.position.set(b.cx + off, b.cy, b.cz);
+            dm.scale.set(b.sx, b.sy, b.sz);
+            dm.updateMatrix();
+            bm.inst.setMatrixAt(i, dm.matrix);
+          });
+          bm.inst.instanceMatrix.needsUpdate = true;
+        });
+        linien.forEach((l) => { l.position.x = off; });
+      };
+      const HIN = 700, HALT3 = 650, ZURUECK = 700;
+      const ease = (p) => p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+      const t0 = performance.now();
+      let raf = 0, aufgeraeumt = false;
+      const weg = () => { if (aufgeraeumt) return; aufgeraeumt = true; setOff(0); };
+      const schritt = (now) => {
+        const ms = now - t0;
+        let fertig = false;
+        if (ms < HIN) setOff(-dxM * ease(ms / HIN));
+        else if (ms < HIN + HALT3) setOff(-dxM);
+        else if (ms < HIN + HALT3 + ZURUECK) setOff(-dxM * (1 - ease((ms - HIN - HALT3) / ZURUECK)));
+        else fertig = true;
+        if (fertig) weg(); else raf = requestAnimationFrame(schritt);
+      };
+      raf = requestAnimationFrame(schritt);
+      return () => { cancelAnimationFrame(raf); weg(); };
+    }, [achsKino]);
     // Positionsnummern (3D): dieselbe Nummer wie die POS-Spalte der Ladeliste und die
     // Beschriftung der Kisten im PDF-Stauplan -- Index unter den Positionen mit Menge > 0,
     // WOERTLICH dieselbe Formel wie tiPos in buildLadevorschlag (items.indexOf + 1). Zwei
@@ -7227,6 +7365,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Auf Abruf, nie von selbst: wer den Fall zum zehnten Mal sieht, will die
     // Antwort, nicht das Kino.
     const [tuerKino, setTuerKino] = useState(0);
+    // Dieselbe Familie: die Kran-Sequenz der Ueberhoehe (Zaehler) und die
+    // Achslast-Ruecksetzung (Zaehler + welcher Slot um wie viel zurueckkam).
+    const [oogKino, setOogKino] = useState(0);
+    const [achsKino, setAchsKino] = useState(null);
     // ── Rampen-Modus ────────────────────────────────────────────────────────
     // Die Belade-Reihenfolge als Abhak-Liste fuers Handy an der Rampe. Die
     // Haken liegen NUR in localStorage (cl-rampe-v1:<Plan-Hash>) -- je Plan
@@ -8416,7 +8558,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleKing, pct: Math.min(100, achs.zapfen / achsGeo.zapfenMax * 100), color: AC, text: `${fmtDE(Math.round(achs.zapfen))} / ${fmtDE(achsGeo.zapfenMax)} kg`, over: achs.zapfen > achsGeo.zapfenMax }),
                   /* @__PURE__ */ React.createElement(Meter, { label: T.axleGroup, pct: Math.min(100, achs.aggregat / achsGeo.aggregatMax * 100), color: AC, text: `${fmtDE(Math.round(achs.aggregat))} / ${fmtDE(achsGeo.aggregatMax)} kg`, over: achs.aggregat > achsGeo.aggregatMax })
                 ),
-            achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)),
+            achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("achslast-ansehen"); setAchsKino((v) => ({ n: (v ? v.n : 0) + 1, slot: fokusSlot ? fokus : 0, cm: achsRuecke })); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, T.axleKino)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
           )
         )
@@ -8835,7 +8977,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* Auf dem Telefon steht die 3D-Ansicht ZUERST (order-Klassen): wer einen geteilten
        Plan an der Rampe oeffnet, will den Plan sehen, nicht erst durch Container-Wahl und
        Ladungsliste scrollen. Ab lg gilt wieder die Dokument-Reihenfolge (Spalten). */
-    /* @__PURE__ */ React.createElement("aside", { className: "order-2 lg:order-none w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", wide: true, disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("tuer-warum"); setTuerKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.doorWhy))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply))), !manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, T.sichBanner(sichWarnzahl)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.sichBtn), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichBannerWeg(true), "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×"))), !manualMode && sichZeige && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 10, height: 10, borderRadius: R.s, background: hexA(C.warn, 0.55), border: `1px solid ${C.warn}`, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: "#d4dce5", fontWeight: FW.semi, whiteSpace: "nowrap" } }, T.sichChip((sichZonen || []).length)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.small, fontWeight: FW.semi, cursor: "pointer" } }, T.railDetails), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichZeige(false), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "none", border: 0, color: C.faint, fontSize: FS.small, cursor: "pointer" } }, T.sichChipZu)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), className: "px-2 py-2 lg:px-0 lg:py-0", style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×")), rampeEl, /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
+    /* @__PURE__ */ React.createElement("aside", { className: "order-2 lg:order-none w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", wide: true, disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("oog-ansehen"); setOogKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg transition hover:brightness-110", style: { pointerEvents: "auto", marginTop: 8, background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.oogKran))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("tuer-warum"); setTuerKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.doorWhy))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply))), !manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, T.sichBanner(sichWarnzahl)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.sichBtn), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichBannerWeg(true), "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×"))), !manualMode && sichZeige && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 10, height: 10, borderRadius: R.s, background: hexA(C.warn, 0.55), border: `1px solid ${C.warn}`, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: "#d4dce5", fontWeight: FW.semi, whiteSpace: "nowrap" } }, T.sichChip((sichZonen || []).length)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.small, fontWeight: FW.semi, cursor: "pointer" } }, T.railDetails), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichZeige(false), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "none", border: 0, color: C.faint, fontSize: FS.small, cursor: "pointer" } }, T.sichChipZu)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), className: "px-2 py-2 lg:px-0 lg:py-0", style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×")), rampeEl, /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
           /* @__PURE__ */ React.createElement("span", null, T.footR),
           // Der Weg zurueck. Er stand hier als unterstrichene Textstelle in derselben Farbe wie
           // die Fusszeile drumherum -- gemeldet als "zu unscheinbar", und das war er auch:

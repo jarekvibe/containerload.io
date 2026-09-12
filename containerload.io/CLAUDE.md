@@ -715,7 +715,9 @@ Regeln, die nicht kippen dürfen (`test/tuer-warum.test.mjs`):
 - Der Aufbau-Effekt stiftet `t.tuer` am Tür-Konflikt-Block und **nullt es je Neuaufbau**; der Animations-Effekt räumt vollständig auf (Geometrien/Materialien, Rahmen-Deckkraft zurück). `prefers-reduced-motion`: Kasten steht ohne Fahrt am Anschlag, nichts pulsiert.
 - Das Öffnen zählt `tuer-warum` (Liste in `test/messen-und-melden.test.mjs`).
 
-Als Nächstes nach demselben Muster geplant (besprochen, nicht gebaut): Überhöhe/Open-Top (Kran-Sequenz wie Akt 2 der Hero-Animation) und die Achslast-Verschiebung (`achsShift` sichtbar machen).
+**Die beiden weiteren Sequenzen derselben Familie** (`test/erklaer-animationen.test.mjs`, gleiche Regeln):
+- **Kran-Sequenz der Überhöhe** („Beladung ansehen" an der OOG-Karte, zählt `oog-ansehen`): das **höchste** Stück senkt sich am Vier-Seil-Geschirr von oben auf seinen Platz — Special Equipment wird von oben beladen, und genau das zeigt sie. Solange fliegt ein **Klon** (das Original ist auf Punktgröße geschrumpft, seine schwarzen Trennkanten bleiben als Zielplatz-Markierung stehen); am Ende wird das Original exakt wiederhergestellt.
+- **Achslast-Rücksetzung** („Ansehen" am `axleShift`-Satz in der Schublade, zählt `achslast-ansehen`): der Block fährt kurz an die Stirnwand (dort läge er ohne `achsShift`) und kehrt an den berechneten Platz zurück. Bewegt werden Kisten **und** die Trennkanten-Geometrie (`userData.ladung` fährt als `position.x` mit — sonst blieben die Kanten stehen); `setOff(0)` im Aufräumen stellt die exakte Lage wieder her. `achsKino` trägt Slot und Zentimeter vom Klick-Zeitpunkt (`fokusSlot`-bewusst).
 
 ### Die 3D-Ansicht zeigt kein Türblatt mehr
 Am Türende des letzten Containers standen zwei aufgeschwungene Türblätter (rund 80°). Gemeldet: *„anfangs wollte ich die Containertür in der 3D View drinne haben, jetzt nerven die mich irgendwie."*
