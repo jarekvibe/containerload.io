@@ -2102,15 +2102,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     cargo.forEach((t, ti) => {
       const l = num(t.l), w = num(t.w), h = num(t.h), q = Math.max(0, Math.floor(num(t.qty)));
       if (q <= 0 || l <= 0 || w <= 0 || h <= 0) return;
-      const fitsDeck = (l <= CL && w <= CW || w <= CL && l <= CW) && h <= CH;
+      // Drehen ist eine ERLAUBNIS: die Deck-Pruefung darf die gedrehte Lage nur
+      // ansetzen, wenn die Ware sie erlaubt. Gemeldet (20' Flat Rack, 245 cm breit,
+      // Drehen aus): fitsDeck hielt das Stueck fuer deckkonform, der normale Packer
+      // darf aber nicht drehen -- es blieb unverladen, das Deck stand leer, und die
+      // Empfehlung schlug einen Flat Rack vor, waehrend genau einer gewaehlt war.
+      // Dasselbe gilt fuer die Uebermass-Einstufung darunter: ohne Drehen zaehlt die
+      // Lage wie eingegeben (l laengs, w quer).
+      const rot = t.rotatable !== false;
+      const fitsDeck = (l <= CL && w <= CW || rot && w <= CL && l <= CW) && h <= CH;
       if (fitsDeck) return;
-      const overL = l > CL && (w > CW || l > CW), overW = Math.min(l, w) > CW, overH = h > CH;
+      const overL = rot ? l > CL && (w > CW || l > CW) : l > CL;
+      const overW = rot ? Math.min(l, w) > CW : w > CW;
+      const overH = h > CH;
       const placeable = (!overL || !panels.ends) && (!overW || !panels.sides) && (!overH || !panels.roof);
       // rot wandert mit: nicht drehbare Ware darf auch beim Uebermass nicht quer gelegt werden.
       if (placeable) {
         overTi.add(ti);
         const stapel = t.stackable === false ? 0 : isFinite(t.stackMax) && +t.stackMax >= 2 ? +t.stackMax : Infinity;
-        for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot: t.rotatable !== false, stapel });
+        for (let n = 0; n < q; n++) overUnits.push({ ti, l, w, h, rot, stapel });
       }
     });
     const masked = cargo.map((t, ti) => overTi.has(ti) ? { ...t, qty: 0 } : t);
@@ -7446,8 +7456,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         if (kind !== "dry") {
           const panels = panelsFor(kind);
           const gauge = container.gauge || { l: num(container.l), w: num(container.w), h: num(container.h) };
+          // Vermessen wird die STAUUNG, nicht die Rohmasse: ein drehbares Stueck,
+          // das gedreht innen liegt, ist nicht ueberbreit -- die Karte behauptete
+          // sonst "Ueberbreite + blockierte Slots" neben einem Plan ohne jeden
+          // Ueberstand. Nur wenn etwas unverladen bleibt, zaehlen die Rohmasse
+          // weiter (die offenen Stuecke haben keine gestaute Lage). y+dy statt h:
+          // auch ein gestapelter Turm zaehlt gegen das Huellmass, nicht nur das
+          // Einzelstueck.
           const md = { l: 0, w: 0, h: 0 };
-          cargo.forEach((c) => { if (num(c.qty) > 0) { md.l = Math.max(md.l, num(c.l)); md.w = Math.max(md.w, num(c.w)); md.h = Math.max(md.h, num(c.h)); } });
+          if (r.boxes >= r.totalBoxes) {
+            (r.placed || []).forEach((b) => { md.l = Math.max(md.l, num(b.dx)); md.w = Math.max(md.w, num(b.dz)); md.h = Math.max(md.h, num(b.y) + num(b.dy)); });
+          } else {
+            cargo.forEach((c) => { if (num(c.qty) > 0) { md.l = Math.max(md.l, num(c.l)); md.w = Math.max(md.w, num(c.w)); md.h = Math.max(md.h, num(c.h)); } });
+          }
           const oog = computeOOG(md, gauge, panels, forceCentered);
           const any = (oog.overHeight || 0) + (oog.overWidthL || 0) + (oog.overWidthR || 0) + (oog.overLengthFront || 0) + (oog.overLengthBack || 0) > 0;
           if (any) {
