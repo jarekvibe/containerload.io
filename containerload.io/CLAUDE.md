@@ -822,6 +822,16 @@ Der Stauplan sagt, WO alles steht. An der Rampe braucht die Crew die andere Häl
 
 `test/belade-reihenfolge.test.mjs` prüft Gruppierung, Richtung, Kappung, beide Sprachen (Dezimaltrenner!), das Escaping und den Vertrag, dass **beide** Blattsorten die Liste anhängen — mit Gegenproben.
 
+### Der Rampen-Modus: die Belade-Reihenfolge als Abhak-Liste
+Vollbild-Overlay fürs Handy an der Rampe: große Zeilen, ein Tipper hakt ab, der erste offene Schritt trägt den Auswahl-Ring; bei einer Kette schaltet eine Marken-Reihe (C1/C2) zwischen den Containern um — jeder hat seine eigene Liste, wie im PDF je ein Blatt. Einstieg über das „…"-Menü (nur wenn Kisten stehen), per **`?rampe=1`** (reiner Anzeige-Zustand, nicht im Teilen-Format; `share.html` reicht den Query durch) und über „Rampen-Link kopieren" im Modus selbst. Öffnen zählt `rampen-modus`.
+
+Drei Zusagen, alle in `test/rampen-modus.test.mjs`:
+- **Eine Schrittquelle.** `rampenSchritte` rechnet wörtlich dieselbe Ordnung und Läufe-Gruppierung wie `LV_SEQUENZ` im PDF (Stirnwand zuerst, unten vor oben, gleiche Sorte in Folge = ein Schritt) — der Test rechnet beide Quellen über Zufallsstauungen gegeneinander. Bewusst **nicht** aus `LV_SEQUENZ` herausgezogen (Test-Slices schneiden die Druckvorlage wörtlich); dafür **ohne Kappung** — das Papier kappt bei 16, eine scrollende Liste muss vollständig sein.
+- **Haken bleiben lokal, je Plan.** `cl-rampe-v1:<hash>` — der Hash kommt aus `encodePlanURL`, dieselbe Ladung heißt also derselbe Schlüssel, auch auf dem Empfänger-Gerät. Höchstens 20 Abhaklisten, die ältesten fliegen. Die Datenschutzseite nennt den Speicher (Ehrlichkeitsregel für jeden localStorage-Schlüssel).
+- Zeilen tragen Stopp- (`S2`) und Gefahrgut-Badges (`UN 1090`) aus denselben Feldern wie PDF und 3D.
+
+> Falle aus dem Einbau: `borderRadius: i === rAktuell ? R.s : 0` fiel durch die Radien-Wache des Design-Tests (der Capture greift das erste Token der Ternary). Zeilen tragen den Radius jetzt immer — sichtbar ist er ohnehin nur mit dem Ring.
+
 ### VGM-Vorbereitung und Gefahrgut-Kennzeichnung (`LV_VGM`, `gefahr`/`un`)
 **VGM:** Jedes Blatt mit vollständigen Gewichten trägt den Block „Bruttomasse (VGM-Vorbereitung) · Richtwert": `Ladung + Container-Tara = Brutto`. Das **Tara-Feld ist editierbar** (`.cl-feld`; das echte Leergewicht steht am CSC-Schild des konkreten Containers), vorgefüllt mit dem typischen Wert aus **`TARA`** — denselben Zahlen wie die Tabelle der Zuladungs-Wissensseite (`test/vgm-und-gefahrgut.test.mjs` rechnet beide Quellen gegeneinander: Brutto − Tara = Zuladung aus `PRESETS`). Ein kleines Skript in `LV_DOC` rechnet das Brutto beim Tippen nach (Eingabe auf Ziffern gefiltert). Es heißt **nie „VGM: X kg"** — die Verified Gross Mass verlangt Verwiegung oder ein zertifiziertes Verfahren nach SOLAS VI/2, und ein Feld, das wie eine VGM aussieht, wäre Schein-Amtlichkeit. Custom/unbekannter Typ: Feld leer, Brutto „—", Hinweis „vom CSC-Schild ablesen".
 
