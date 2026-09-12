@@ -5617,7 +5617,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         shellCache[k] = S;
         return S;
       };
-      const addShell = (parent, S, kind, gridParent, openDoors = true) => {
+      const addShell = (parent, S, kind, gridParent, openDoors = true, ohneSpriegel = false) => {
         const CL = S.CL, CH = S.CH, CW = S.CW, cx = CL / 2, cy = CH / 2, cz = CW / 2;
         const pan = panelsFor(kind);
         const hasDeck = kind === "flatrack" || kind === "platform";
@@ -5729,12 +5729,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           });
         }
         // ── Open-Top-Dachspriegel (die Signatur) ──
-        if (kind === "opentop") {
+        // ohneSpriegel: ragt Ladung ueber die Oberkante, sind die Spriegel in
+        // Wirklichkeit ABGENOMMEN -- unter einem ueberstehenden Stueck koennen
+        // sie nicht montiert sein. Gemeldet: das Stueck stak mitten in ihnen.
+        if (kind === "opentop" && !ohneSpriegel) {
           const nBows = Math.max(3, Math.round(CL / 1.3));
           for (let i = 1; i <= nBows; i++) {
             const x = CL * i / (nBows + 1);
             const bow = new THREE.Mesh(S.geoBow, S.fmat);
             bow.position.set(x, CH, cz);
+            bow.userData.spriegel = true;   // die Kran-Sequenz nimmt sie zuerst ab
             parent.add(bow);
           }
         }
@@ -5771,7 +5775,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         cgSlots[ci] = cg;
         cg.position.x = xpos[ci];
         if (isRoad) cg.position.y = BASE_Y; // Auflieger + Ladung anheben; placed-Koordinaten unberuehrt.
-        addShell(cg, S, ckind, isRoad ? group : cg, ci === chain.length - 1);
+        const spriegelAb = ckind === "opentop" && (c.placed || []).some((b) => (+b.y || 0) + (+b.dy || 0) > d.CH * 100 - 0.5);
+        addShell(cg, S, ckind, isRoad ? group : cg, ci === chain.length - 1, spriegelAb);
         // Die Buchungsgrenze (gauge.h) stand hier als orange Linie ueber dem Equipment. Sie
         // war ein Bezug fuer die amberfarbenen Uebermass-Flaechen – und die gibt es nicht mehr.
         // Uebrig blieb ein Rechteck, das ueber dem Container schwebt und nichts erklaert.
@@ -6221,6 +6226,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         p[24] = b.cx; p[25] = hy; p[26] = b.cz; p[27] = b.cx; p[28] = hy + 2.6; p[29] = b.cz;
         seilGeo.attributes.position.needsUpdate = true;
       };
+      // Stehen noch Dachspriegel (Open Top ohne Ueberhoehe -- mit Ueberhoehe sind
+      // sie schon statisch abgenommen), kommen sie als ERSTE Phase ab: sie heben
+      // sich und verschwinden, erst dann senkt sich das Stueck. Sonst fuehre die
+      // Fahrt mitten durch die Spriegel -- gemeldet, und real kommen sie auch ab.
+      const spriegel = cg.children.filter((o) => o.userData && o.userData.spriegel).map((o) => [o, o.position.y]);
+      const AB = !ruhig && spriegel.length ? 450 : 0;
       const HOCH = 2.2, FAHRT2 = 1600, HALT2 = 700, LOS = 450;
       instanz(false);
       lage(ruhig ? 0 : HOCH);
@@ -6233,20 +6244,25 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         [klon, seile, haken].forEach((o) => cg.remove(o));
         klon.geometry.dispose(); seilGeo.dispose(); seilMat.dispose();
         haken.geometry.dispose(); haken.material.dispose();
+        spriegel.forEach(([o, y0]) => { o.position.y = y0; o.visible = true; });
         instanz(true);
       };
       const schritt = (now) => {
         const ms = now - t0;
         let fertig = false;
-        if (!ruhig && ms < FAHRT2) {
+        if (ms < AB) {
+          const p = ms / AB;
+          spriegel.forEach(([o, y0]) => { o.position.y = y0 + 0.7 * p; });
+        } else if (!ruhig && ms < AB + FAHRT2) {
+          spriegel.forEach(([o]) => { o.visible = false; });
           // Zuegig herab, sanft aufgesetzt -- so faehrt ein Kran.
-          const p = ms / FAHRT2;
+          const p = (ms - AB) / FAHRT2;
           lage(HOCH * Math.pow(1 - p, 3));
-        } else if (ms < FAHRT2 + HALT2) {
+        } else if (ms < AB + FAHRT2 + HALT2) {
           lage(0);
-        } else if (ms < FAHRT2 + HALT2 + LOS) {
+        } else if (ms < AB + FAHRT2 + HALT2 + LOS) {
           // Abgeschlagen: die Seile heben ab und verblassen, das Stueck bleibt.
-          const p = (ms - FAHRT2 - HALT2) / LOS;
+          const p = (ms - AB - FAHRT2 - HALT2) / LOS;
           lage(0);
           seilMat.opacity = 0.9 * (1 - p);
           haken.material.opacity = 1 - p;

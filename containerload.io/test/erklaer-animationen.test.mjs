@@ -57,6 +57,23 @@ test("Achslast-Ruecksetzung: Block faehrt an die Stirnwand und exakt zurueck", (
     "das Aufraeumen fehlt oder der Effekt haengt nicht am Zaehler");
 });
 
+test("die Dachspriegel stehen der Ladung und der Sequenz nicht im Weg", () => {
+  // Statisch: ragt Ladung ueber die Oberkante des Open Top, sind die Spriegel
+  // abgenommen -- unter einem ueberstehenden Stueck koennen sie nicht montiert
+  // sein (gemeldet: das Stueck stak mitten in ihnen, 20' wie 40').
+  assert.ok(roh.includes('const spriegelAb = ckind === "opentop" && (c.placed || []).some((b) => (+b.y || 0) + (+b.dy || 0) > d.CH * 100 - 0.5);'),
+    "die Ueberhoehe nimmt die Spriegel nicht ab");
+  assert.ok(roh.includes('if (kind === "opentop" && !ohneSpriegel) {'),
+    "addShell kennt den Spriegel-Verzicht nicht");
+  assert.ok(roh.includes("bow.userData.spriegel = true;"), "die Spriegel sind nicht markiert");
+  // In der Kran-Sequenz: stehen noch Spriegel (kein Ueberhoehe-Fall), kommen sie
+  // als ERSTE Phase ab und stehen am Ende exakt wieder da.
+  const eff = schnitt("if (!oogKino) return;", "}, [oogKino]);");
+  assert.ok(eff.includes("o.userData && o.userData.spriegel"), "die Sequenz kennt die Spriegel nicht");
+  assert.ok(eff.includes("spriegel.forEach(([o, y0]) => { o.position.y = y0; o.visible = true; });"),
+    "die Spriegel kehren nach der Sequenz nicht zurueck");
+});
+
 test("beide Sprachen kennen die Knoepfe, die Ereignisse sind feste Namen", () => {
   assert.ok(roh.includes('oogKran: "Beladung ansehen"') && roh.includes('oogKran: "Show loading"'),
     "oogKran fehlt in einer Sprache");
