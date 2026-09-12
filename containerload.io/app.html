@@ -805,23 +805,31 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     function solve(FL, FW) {
       const m = Math.min(l, w);
-      if (FL < m - 1e-6 || FW < m - 1e-6) return { count: 0, rects: [] };
+      if (FL < m - 1e-6 || FW < m - 1e-6) return { count: 0, rects: [], cuts: 0 };
       const key = FL.toFixed(1) + "x" + FW.toFixed(1);
       if (memo.has(key)) return memo.get(key);
-      let best = { count: 0, rects: [] };
+      let best = { count: 0, rects: [], cuts: 0 };
       const grids = rotatable ? [grid(FL, FW, l, w), grid(FL, FW, w, l)] : [grid(FL, FW, l, w)];
-      for (const g of grids) if (g.length > best.count) best = { count: g.length, rects: g };
+      for (const g of grids) if (g.length > best.count) best = { count: g.length, rects: g, cuts: 0 };
       // Genug fuer den Aufrufer: das Zerteilen kann die Zahl nur noch weiter erhoehen,
       // und mehr als LIMIT wird nicht gebraucht.
       if (best.count >= LIMIT) { memo.set(key, best); return best; }
       if (best.count < 500) {
+        // Ordnungs-Tiebreaker: bei GLEICHER Stueckzahl gewinnt die Loesung mit den
+        // wenigsten Schnitten (ein reines Raster hat 0, jede Teilung zaehlt 1 dazu).
+        // Wenige Schnitte heisst wenige geschlossene Baender statt Flickwerk --
+        // gemeldet: 11 Stueck 120x80 im 20' standen quer und laengs verschachtelt,
+        // obwohl dieselben 11 als "7 quer + 4 laengs" in zwei Reihen stehen koennen.
+        // Die Stueckzahl entscheidet weiterhin ZUERST und bleibt unangetastet.
         for (const s of cands(FL)) {
           const A = solve(s, FW), B = solve(FL - s, FW);
-          if (A.count + B.count > best.count) best = { count: A.count + B.count, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, x: r.x + s }))] };
+          const n = A.count + B.count, c = A.cuts + B.cuts + 1;
+          if (n > best.count || (n === best.count && n > 0 && c < best.cuts)) best = { count: n, cuts: c, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, x: r.x + s }))] };
         }
         for (const t of cands(FW)) {
           const A = solve(FL, t), B = solve(FL, FW - t);
-          if (A.count + B.count > best.count) best = { count: A.count + B.count, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, z: r.z + t }))] };
+          const n = A.count + B.count, c = A.cuts + B.cuts + 1;
+          if (n > best.count || (n === best.count && n > 0 && c < best.cuts)) best = { count: n, cuts: c, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, z: r.z + t }))] };
         }
       }
       memo.set(key, best);
@@ -1667,12 +1675,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // unveraendert weiter und muss von der Vorbelegung nichts wissen.
     const payFrei = pay === Infinity ? Infinity : Math.max(0, pay - vorKg);
     let placed = [], weight = 0, layers = 0, single = false;
+    // Massgleiche Einzelpositionen sind EINE Sorte. 11 Packstuecke einzeln erfasst
+    // (jede Zeile Menge 1) liefen sonst durch den gemischten Pfad und wurden anders
+    // gestaut als dieselben 11 in einer Zeile mit Menge 11 -- zwei Bilder fuer
+    // dieselbe Ladung. Gebuendelt wird nur, was in ALLEM uebereinstimmt, das die
+    // Rechnung beruehrt; die Stellplaetze gehen in Listenreihenfolge an die Positionen.
+    const einErster = valid[0];
+    const massgleich = valid.length > 1 && !vorbelegt && valid.every((t) =>
+      t.l === einErster.l && t.w === einErster.w && t.h === einErster.h
+      && t.weight === einErster.weight && t.rotatable === einErster.rotatable
+      && t.stackable === einErster.stackable && t.stackMax === einErster.stackMax
+      && t.stackH === einErster.stackH);
     // Der Einzeltyp-Pfad legt ein Bodenraster und kennt keine Hindernisse. Mit einer
     // Vorbelegung fuehrt deshalb auch bei einer Sorte der gemischte Pfad -- er ist der
     // einzige, der um schon stehende Kisten herum packen kann.
-    if (valid.length === 1 && !vorbelegt) {
+    if ((valid.length === 1 || massgleich) && !vorbelegt) {
       single = true;
-      const t = valid[0];
+      const tiFolge = massgleich ? valid.flatMap((v) => Array(v.qty).fill(v.ti)) : null;
+      const t = massgleich ? { ...einErster, qty: tiFolge.length } : valid[0];
       const maxLay = Math.floor((CH + 1e-6) / t.h);
       // capLay = wie viele Lagen theoretisch uebereinander PASSEN. Nur die Schleifengrenze.
       // Die spaeter ausgewiesene Lagenzahl wird nach dem Packen aus den tatsaechlich
@@ -1717,10 +1737,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       outer: for (let a = 0; a < (colFirst ? spots.length : capLay); a++) {
         for (let b = 0; b < (colFirst ? capLay : spots.length); b++) {
           const ly = colFirst ? b : a, r = spots[colFirst ? a : b];
-          if (loaded[t.ti] >= t.qty) break outer;
+          // placed.length zaehlt hier dasselbe wie loaded -- der Pfad beginnt leer.
+          if (placed.length >= t.qty) break outer;
           if (weight + t.weight > pay + 1e-6) break outer;
-          placed.push({ x: r.x, y: ly * t.h, z: r.z, dx: r.dx, dy: t.h, dz: r.dz, ti: t.ti });
-          loaded[t.ti]++;
+          const zielTi = tiFolge ? tiFolge[placed.length] : t.ti;
+          placed.push({ x: r.x, y: ly * t.h, z: r.z, dx: r.dx, dy: t.h, dz: r.dz, ti: zielTi });
+          loaded[zielTi]++;
           weight += t.weight;
         }
       }

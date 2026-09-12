@@ -110,8 +110,13 @@ test("eine einzige Sorte geht mit Vorbelegung durch den gemischten Pfad", () => 
     assert.ok(!schneidet(b, vor[0]), `Kiste steckt in der Vorbelegung: ${JSON.stringify(b)}`);
     assert.ok(b.y >= 110 - 1e-6, `Kiste steht unter der gesperrten Lage: y=${b.y}`);
   });
-  assert.ok(/if \(valid\.length === 1 && !vorbelegt\) \{/.test(roh),
+  // Seit der Massgleich-Buendelung heisst die Weiche "(eine Sorte ODER alles
+  // massgleich) UND keine Vorbelegung" -- massgleich selbst verlangt !vorbelegt
+  // ebenfalls, die Zusage dieses Tests bleibt also doppelt gehalten.
+  assert.ok(/if \(\(valid\.length === 1 \|\| massgleich\) && !vorbelegt\) \{/.test(roh),
     "der Einzeltyp-Pfad prueft nicht mehr auf die Vorbelegung");
+  assert.ok(/massgleich = valid\.length > 1 && !vorbelegt && valid\.every/.test(roh),
+    "die Massgleich-Buendelung prueft nicht mehr auf die Vorbelegung");
 });
 
 test("ueber 60 Zufallsfaelle bleibt die Vorbelegung unberuehrt", () => {
