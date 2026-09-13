@@ -214,3 +214,19 @@ test("beim Einschalten stehen so viele Container da, wie der Automat vorschlaegt
   assert.ok(/setManualSlots\(Math\.max\(1, ch\.length\)\)/.test(m[0]),
     "die Zahl der Container waechst nicht mit der uebernommenen Kette mit");
 });
+
+test("die Mengengrenze gilt auch am Klick -- 'Position 4/1' gibt es nicht mehr", () => {
+  // Gemeldet mit Bild: vier gesetzte Stuecke bei Menge 1. mengenGrenze lief nur
+  // beim Abgleich nach Ladungsaenderungen; der einzelne Klick kannte keine Grenze.
+  const m = roh.match(/const manualPlace = \(box\) => \{[\s\S]{0,500}?\n    \};/);
+  assert.ok(m, "manualPlace fehlt");
+  assert.ok(/if \(schon >= total\) return;/.test(m[0]),
+    "manualPlace setzt wieder ueber die eingegebene Menge hinaus");
+  // Eine volle Position entwaffnet sich (Klick wie "Rest automatisch fuellen")
+  // und ihr Chip laesst sich nicht mehr scharfschalten.
+  assert.ok(/if \(!item \|\| done >= total\) setManualArmed\(null\);/.test(roh),
+    "eine volle Position bleibt scharfgeschaltet");
+  assert.ok(/const voll = total > 0 && done >= total;/.test(roh)
+    && /onClick: total > 0 && !voll \? \(\) => manualArm\(i\) : void 0/.test(roh),
+    "der Chip einer vollen Position laesst sich weiter scharfschalten");
+});
