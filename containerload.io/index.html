@@ -29,7 +29,14 @@
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" />
+<!-- cdnjs liefert Three.js fuer die Hero-Animation (lazy, nur Desktop) --
+     der fruehe Handshake spart den Verbindungsaufbau, wenn sie startet. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<!-- Die Font-CSS laedt asynchron (media-Swap): display=swap zeichnet den Text
+     sofort in der Systemschrift, Archivo kommt nach. Ohne das war die CSS ein
+     Render-Blocker -- der groesste vermeidbare Posten im mobilen PageSpeed. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
