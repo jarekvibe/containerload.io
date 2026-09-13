@@ -107,6 +107,12 @@
     <option value="30" selected>30 Tage</option>
     <option value="90">90 Tage</option>
   </select>
+  <!-- Beide Downloads liefern NUR, was auch das Dashboard zeigt: geprüfte
+       Felder, kein Freitext. "Rechnungen" kommt vom Server (alle Events des
+       Zeitraums, eine Zeile je Rechnung), "Tage" ist die Tagesreihe aus der
+       geladenen Auswertung. -->
+  <button id="dlCsv" class="quiet" hidden title="Alle Rechnungen des Zeitraums als CSV">CSV: Rechnungen</button>
+  <button id="dlTage" class="quiet" hidden title="Tagesreihe des Zeitraums als CSV">CSV: Tage</button>
   <button id="abmelden" class="quiet" hidden>Abmelden</button>
 </header>
 <div class="wrap">
@@ -129,6 +135,10 @@
     <div class="panel" style="margin-top:16px">
       <h2>Rechnungen je Tag</h2>
       <div id="tagesChart"></div>
+    </div>
+    <div class="grid2">
+      <div class="panel"><h2>Vom Rechnen zum Weitergeben</h2><div id="funnelChart"></div></div>
+      <div class="panel"><h2>Wann gerechnet wird</h2><div id="wannChart"></div></div>
     </div>
     <div class="grid2">
       <div class="panel"><h2>Container / Fahrzeuge</h2><div id="containerChart"></div></div>
@@ -173,20 +183,82 @@
     return r.json();
   }
 
-  function kpis(d) {
+  function kpis(d, tage) {
     const posProEvent = d.events ? (d.positionenGesamt / d.events).toFixed(1) : "0";
     const topContainer = Object.entries(d.container).sort((a, b) => b[1] - a[1])[0];
     const road = d.modus.road || 0;
     const anteilRoad = d.events ? Math.round(road / d.events * 100) : 0;
+    // Trend: zweite Haelfte des Zeitraums gegen die erste. Kein Hexenwerk,
+    // aber die eine Zahl, die sagt, ob die Reichweiten-Arbeit ankommt.
+    const von = new Date(Date.now() - (tage - 1) * 86400000);
+    const mitte = new Date(von.getTime() + tage / 2 * 86400000).toISOString().slice(0, 10);
+    let h1 = 0, h2 = 0;
+    for (const t of d.tage) { if (t.tag < mitte) h1 += t.events; else h2 += t.events; }
+    const trend = h1 > 0 ? Math.round((h2 - h1) / h1 * 100) : null;
+    // Verweildauer als Mittelwert -- die Verteilung steht daneben im Panel.
+    const oeSek = d.events ? Math.round((d.dauerSumme || 0) / d.events) : 0;
+    const oeDauer = Math.floor(oeSek / 60) + ":" + String(oeSek % 60).padStart(2, "0");
+    const geteilt = d.geteiltGesamt || 0;
+    const tonnen = ((d.kgGesamt || 0) / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 });
     const karten = [
       ["Rechnungen", d.events, "im Zeitraum"],
+      ["Trend", trend === null ? "—" : (trend >= 0 ? "+" : "") + trend + " %", "2. Hälfte vs 1. Hälfte"],
       ["Positionen", d.positionenGesamt, "Ø " + posProEvent + " je Rechnung"],
-      ["Packstücke", d.stueckGesamt, "Summe der Mengen"],
+      ["Packstücke", d.stueckGesamt, tonnen + " t verplant"],
+      ["Ø Verweildauer", oeDauer, "min:s je Rechnung"],
+      ["Empfänger-Ansichten", geteilt, d.events ? Math.round(geteilt / d.events * 100) + " % über geteilte Links" : ""],
       ["Häufigster Container", topContainer ? topContainer[0] : "—", topContainer ? topContainer[1] + "× gewählt" : ""],
       ["Anteil Straße", anteilRoad + " %", (d.modus.sea || 0) + "× See · " + road + "× Straße"],
     ];
     $("kpis").innerHTML = karten.map(([l, v, s]) =>
       '<div class="panel kpi"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="s">' + s + "</div></div>").join("");
+  }
+
+  // Der Funnel: vom fertigen Plan zum weitergegebenen. Die Stufen kommen aus
+  // den Funktions-Zaehlern (feste Ereignisnamen, nichts aus der Ladung); die
+  // letzte Zeile ist die Reichweite -- jeder vom Empfaenger geoeffnete Plan
+  // ist ein Besucher, den kein Marketing gekostet hat.
+  function funnelChart(d) {
+    const f = d.funktionen || {};
+    const stufen = [
+      ["Rechnung fertig", d.events],
+      ["Ladevorschlag (PDF)", f["ladevorschlag"] || 0],
+      ["Export (CSV / Bild)", (f["csv-export"] || 0) + (f["bild-export"] || 0)],
+      ["Geteilt (Link kopiert)", f["geteilt"] || 0],
+      ["Vom Empfänger geöffnet", f["plan-per-link-geoeffnet"] || 0],
+    ];
+    const basis = Math.max(1, d.events);
+    $("funnelChart").innerHTML = stufen.map(([name, n], i) =>
+      '<div class="balkenzeile"><span class="name" title="' + name + '">' + name + '</span>' +
+      '<span class="spur"><span class="fuell" style="width:' + Math.max(2, Math.round(n / basis * 100)) + '%;background:' + (i === stufen.length - 1 ? FARBE.orange : FARBE.blau) + '"></span></span>' +
+      '<span class="zahl">' + (i === 0 ? n : Math.round(n / basis * 100) + " %") + "</span></div>").join("") +
+      '<div class="hinweis" style="margin-top:8px">Prozente relativ zu den Rechnungen des Zeitraums. Die letzte Zeile ist der Wachstumskanal.</div>';
+  }
+
+  // Wann gerechnet wird: Wochentage und Tagesstunden als kleine Balkenreihen.
+  // Die Stunden kommen als UTC aus der Auswertung und werden hier in die
+  // Ortszeit des Betrachters verschoben; die Wochentage bleiben UTC-Tage.
+  function wannChart(d) {
+    const wt = d.wochentage || [], st = d.stunden || [];
+    if (!wt.length && !st.length) { $("wannChart").innerHTML = '<div class="leer">Noch keine Zeitdaten (Auswertung neu deployen).</div>'; return; }
+    const off = Math.round(-new Date().getTimezoneOffset() / 60);
+    const lokal = new Array(24).fill(0);
+    st.forEach((n, u) => { lokal[(u + off + 24) % 24] += n; });
+    const namen = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+    const reihe = (werte, labels, breit) => {
+      const W = 440, H = 92, max = Math.max(1, ...werte);
+      const schritt = W / werte.length, bw = Math.max(2, Math.floor(schritt) - (breit ? 8 : 2));
+      const teile = werte.map((n, i) => {
+        const h = Math.round((H - 26) * n / max), x = i * schritt + (schritt - bw) / 2, y = H - 16 - h;
+        return '<rect x="' + x + '" y="' + y + '" width="' + bw + '" height="' + Math.max(h, n ? 3 : 0) + '" rx="2" fill="' + FARBE.blau + '"></rect>' +
+          '<rect x="' + (i * schritt) + '" y="0" width="' + schritt + '" height="' + H + '" fill="transparent" data-tip="' + labels[i] + " · " + n + (n === 1 ? " Rechnung" : " Rechnungen") + '"></rect>' +
+          (breit || i % 6 === 0 ? '<text x="' + Math.max(16, Math.min(W - 16, x + bw / 2)) + '" y="' + (H - 3) + '" text-anchor="middle">' + labels[i] + "</text>" : "");
+      }).join("");
+      return '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto"><line x1="0" y1="' + (H - 16) + '" x2="' + W + '" y2="' + (H - 16) + '" stroke="#232C38"></line>' + teile + "</svg>";
+    };
+    $("wannChart").innerHTML =
+      '<div class="hinweis" style="margin:0 0 4px">Wochentag (UTC)</div>' + reihe(wt, namen, true) +
+      '<div class="hinweis" style="margin:8px 0 4px">Uhrzeit (deine Ortszeit)</div>' + reihe(lokal, lokal.map((_, i) => i + " Uhr"), false);
   }
 
   // Senkrechte Balken, ein Balken je Tag. Duenn, runde Datenenden oben,
@@ -277,11 +349,21 @@
 
   function modusChart(d) {
     const el = $("modusChart");
+    // Die Verweildauer als Verteilung -- der Mittelwert oben in den KPIs
+    // luegt bei einer schiefen Verteilung (viele kurze Blicke, wenige lange
+    // Sitzungen), die vier Stufen nicht.
+    const s = d.dauerStufen || {};
+    const stufen = [["unter 1 min", s.unter1 || 0], ["1 bis 3 min", s.m1bis3 || 0], ["3 bis 10 min", s.m3bis10 || 0], ["über 10 min", s.ueber10 || 0]];
+    const maxS = Math.max(1, ...stufen.map(([, n]) => n));
+    const dauerHtml = stufen.map(([name, n]) =>
+      '<div class="balkenzeile"><span class="name">' + name + '</span>' +
+      '<span class="spur"><span class="fuell" style="width:' + Math.max(2, Math.round(n / maxS * 100)) + '%"></span></span>' +
+      '<span class="zahl">' + n + "</span></div>").join("");
     const html =
       '<div style="margin-bottom:12px"><span class="pille sea">See: ' + (d.modus.sea || 0) + '</span> ' +
       '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
       '<div><span class="pille">Deutsch: ' + (d.sprachen.de || 0) + '</span> <span class="pille">Englisch: ' + (d.sprachen.en || 0) + "</span></div>" +
-      '<div style="margin-top:12px" class="hinweis">Geteilte Pläne (Empfänger-Ansicht): ' + d.stichprobe.filter((e) => e.geteilt).length + " in der Stichprobe</div>";
+      '<div class="hinweis" style="margin:12px 0 4px">Verweildauer je Rechnung</div>' + dauerHtml;
     el.innerHTML = html;
   }
 
@@ -363,9 +445,11 @@
     }).join("");
   }
   function zeichnen(d, tage) {
-    kpis(d);
+    kpis(d, tage);
     weltKarte(d);
     tagesChart(d, tage);
+    funnelChart(d);
+    wannChart(d);
     balkenListe($("containerChart"), d.container, FARBE.blau);
     balkenListe($("funktionenChart"), d.funktionen, FARBE.orange);
     masseChart(d);
@@ -374,6 +458,35 @@
     eventTabelle(d);
   }
 
+  // ── CSV-Downloads ────────────────────────────────────────────────────────
+  // "Rechnungen" kommt vom Server (alle Events des Zeitraums, dieselbe
+  // Pruefung wie die Anzeige); "Tage" ist die geladene Tagesreihe. Beides
+  // enthaelt exakt das, was das Dashboard zeigt -- kein Freitext, keine Namen.
+  let daten = null;
+  const herunterladen = (blob, name) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  };
+  $("dlCsv").addEventListener("click", async () => {
+    const token = localStorage.getItem(KEY);
+    if (!token) return;
+    const tage = $("zeitraum").value;
+    try {
+      const r = await fetch("/api/statistik?tage=" + tage + "&format=csv", { headers: { authorization: "Bearer " + token } });
+      if (!r.ok) return;
+      herunterladen(await r.blob(), "containerload-rechnungen-" + tage + "-tage.csv");
+    } catch (e) {}
+  });
+  $("dlTage").addEventListener("click", () => {
+    if (!daten) return;
+    const zeilen = daten.tage.map((t) => [t.tag, t.events, t.positionen, t.stueck == null ? "" : t.stueck].join(";"));
+    const csv = "﻿Tag;Rechnungen;Positionen;Stueck\n" + zeilen.join("\n") + (zeilen.length ? "\n" : "");
+    herunterladen(new Blob([csv], { type: "text/csv;charset=utf-8" }), "containerload-tage-" + $("zeitraum").value + "-tage.csv");
+  });
+
   document.addEventListener("mousemove", (ev) => {
     const t = ev.target.closest && ev.target.closest("[data-tip]");
     if (t) zeigTip(ev, t.getAttribute("data-tip")); else wegTip();
@@ -381,11 +494,13 @@
 
   async function anzeigen() {
     const token = localStorage.getItem(KEY);
-    if (!token) { $("login").hidden = false; $("inhalt").hidden = true; $("zeitraum").hidden = true; $("abmelden").hidden = true; return; }
+    if (!token) { anzeigen0(); return; }
     $("login").hidden = true; $("zeitraum").hidden = false; $("abmelden").hidden = false;
+    $("dlCsv").hidden = false; $("dlTage").hidden = false;
     const tage = +$("zeitraum").value;
     try {
       const d = await laden(token, tage);
+      daten = d;
       // Wer sich hier erfolgreich anmeldet, ist der Betreiber. Die Markierung
       // (gleiche Domain wie der Rechner) schaltet die Nutzungsstatistik fuer
       // DIESEN Browser ab -- Jarek will nur die User sehen, nicht sich selbst.
@@ -399,7 +514,7 @@
       anzeigen0();
     }
   }
-  function anzeigen0() { $("login").hidden = false; $("inhalt").hidden = true; $("zeitraum").hidden = true; $("abmelden").hidden = true; }
+  function anzeigen0() { $("login").hidden = false; $("inhalt").hidden = true; $("zeitraum").hidden = true; $("abmelden").hidden = true; $("dlCsv").hidden = true; $("dlTage").hidden = true; }
 
   $("anmelden").addEventListener("click", () => {
     const t = $("token").value.trim();

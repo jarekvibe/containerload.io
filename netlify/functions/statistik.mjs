@@ -7,7 +7,7 @@
 // die Function 503 mit Klartext -- ein leerer Soll-Wert darf niemals wie
 // ein richtiges Token wirken.
 import { timingSafeEqual } from "node:crypto";
-import { aggregiere, feedbackAufbereiten, EVENTS_MAX } from "./lib/nutzung.mjs";
+import { aggregiere, feedbackAufbereiten, eventsAlsCSV, EVENTS_MAX } from "./lib/nutzung.mjs";
 
 const gleich = (a, b) => {
   const ba = Buffer.from(String(a)), bb = Buffer.from(String(b));
@@ -42,6 +42,19 @@ export default async (req) => {
     const e = await store.get(k, { type: "json" }).catch(() => null);
     return e ? { ...e, tag: k.slice(2, 12), ts: k.slice(2, 12) + "T" + k.slice(13, 15) + ":" + k.slice(15, 17) + ":" + k.slice(17, 19) + "Z" } : null;
   }))).filter(Boolean);
+
+  // CSV-Export: dieselben Events, dieselbe Pruefung, nur als Datei. Die
+  // Spalten kommen aus eventsAlsCSV (kein Freitext, keine Namen) -- was das
+  // Dashboard nicht zeigen darf, darf auch der Download nicht enthalten.
+  if (url.searchParams.get("format") === "csv") {
+    return new Response(eventsAlsCSV(events), {
+      headers: {
+        "content-type": "text/csv; charset=utf-8",
+        "content-disposition": 'attachment; filename="containerload-rechnungen-ab-' + von + '.csv"',
+        "cache-control": "no-store",
+      },
+    });
+  }
 
   const agg = aggregiere(events);
   // Stichprobe fuer Streudiagramm und Event-Tabelle: die juengsten 300.
