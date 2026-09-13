@@ -214,3 +214,62 @@ test("der Betreiber zaehlt nicht mit: die Admin-Markierung sperrt den Sender", (
   const ladeStelle = admin.indexOf("const d = await laden(token, tage);");
   assert.ok(ladeStelle > 0 && setzStelle > ladeStelle, "Markierung muss NACH dem erfolgreichen Laden gesetzt werden");
 });
+
+// ── Dashboard-Ausbau: Zeitmuster, Verweildauer, Funnel und CSV-Download ────
+test("aggregiere kennt Zeitmuster, Verweildauer, Gewicht und Empfaenger-Ansichten", async () => {
+  const { eventsAlsCSV } = await import("../../netlify/functions/lib/nutzung.mjs");
+  const e1 = { ...pruefeEvent(gut()), tag: "2026-09-01", ts: "2026-09-01T08:30:00Z" };            // Di, 8 Uhr UTC
+  const e2 = { ...pruefeEvent({ ...gut(), dauerS: 400, geteilt: true }), tag: "2026-09-02", ts: "2026-09-02T14:05:00Z" }; // Mi, 14 Uhr
+  const a = aggregiere([e1, e2]);
+  assert.strictEqual(a.stunden[8], 1);
+  assert.strictEqual(a.stunden[14], 1);
+  assert.strictEqual(a.wochentage[1], 1, "der 1.9.2026 ist ein Dienstag (Index 1, Montag = 0)");
+  assert.strictEqual(a.wochentage[2], 1);
+  assert.deepStrictEqual(a.dauerStufen, { unter1: 1, m1bis3: 0, m3bis10: 1, ueber10: 0 });
+  assert.strictEqual(a.geteiltGesamt, 1);
+  assert.strictEqual(a.dauerSumme, 442);
+  assert.strictEqual(a.kgGesamt, 8000, "10 Stueck x 400 kg je Event");
+  assert.strictEqual(a.tage[0].stueck, 10, "die Tagesreihe traegt jetzt auch die Stueckzahl");
+  // Ohne ts (aeltere Events) bleibt die Zeitauswertung leer statt zu werfen.
+  const a2 = aggregiere([{ ...pruefeEvent(gut()), tag: "2026-09-01" }]);
+  assert.strictEqual(a2.stunden.reduce((s, n) => s + n, 0), 0);
+});
+
+test("eventsAlsCSV: exakt die geprueften Felder, kein Freitext, Excel-tauglich", async () => {
+  const { eventsAlsCSV } = await import("../../netlify/functions/lib/nutzung.mjs");
+  const e = { ...pruefeEvent(gut()), tag: "2026-09-01", ts: "2026-09-01T08:30:00Z", land: "DE" };
+  const csv = eventsAlsCSV([e]);
+  assert.ok(csv.startsWith("﻿"), "ohne BOM liest deutsches Excel UTF-8 falsch");
+  const [kopf, zeile] = csv.slice(1).trim().split("\n");
+  assert.strictEqual(kopf, "Tag;Zeit_UTC;Land;Modus;Sprache;Container;Positionen;Stueck;Gewicht_kg;Dauer_s;Geteilt;Funktionen;Ladung");
+  assert.strictEqual(zeile, "2026-09-01;08:30:00;DE;sea;de;20' GP;1;10;4000;42;0;plan-gerechnet excel-import;10x 120x80x110 400kg");
+  // Kein Spaltenname, hinter dem je Freitext stehen koennte -- die Zusage der
+  // Datenschutzseite gilt fuer den Download genauso wie fuers Dashboard.
+  assert.ok(!/name|notiz|text/i.test(kopf));
+  // Ein Anfuehrungszeichen im Containernamen (das Alphabet laesst es zu) wird
+  // CSV-korrekt maskiert statt die Spalten zu verschieben.
+  const e2 = { ...pruefeEvent({ ...gut(), container: '20" Sonderfall' }), tag: "2026-09-01", ts: null };
+  const z2 = eventsAlsCSV([e2]).slice(1).trim().split("\n")[1];
+  assert.ok(z2.includes('"20"" Sonderfall"'), "Anfuehrungszeichen nicht maskiert: " + z2);
+});
+
+test("die Function liefert den CSV-Export, das Dashboard bietet beide Downloads an", () => {
+  const statistik = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "statistik.mjs"), "utf8");
+  assert.ok(statistik.includes('url.searchParams.get("format") === "csv"'), "der format=csv-Zweig fehlt");
+  assert.ok(statistik.includes("eventsAlsCSV(events)") && statistik.includes("content-disposition"),
+    "der CSV-Zweig liefert keine Datei");
+  assert.ok(admin.includes('$("dlCsv").addEventListener') && admin.includes('"&format=csv"'),
+    "der Rechnungen-Download ist nicht verdrahtet");
+  assert.ok(admin.includes('$("dlTage").addEventListener'), "der Tage-Download ist nicht verdrahtet");
+  // Abgemeldet verschwinden die Knoepfe mit.
+  assert.ok(admin.includes('$("dlCsv").hidden = true; $("dlTage").hidden = true;'),
+    "die Download-Knoepfe bleiben nach dem Abmelden stehen");
+});
+
+test("der Funnel liest nur feste Ereignisnamen, das Wann-Panel nur die Auswertung", () => {
+  const funnel = admin.slice(admin.indexOf("function funnelChart"), admin.indexOf("function wannChart"));
+  assert.ok(funnel.includes('f["ladevorschlag"]') && funnel.includes('f["geteilt"]')
+    && funnel.includes('f["plan-per-link-geoeffnet"]'), "die Funnel-Stufen fehlen");
+  // Stunden werden vom UTC-Speicher in die Ortszeit des Betrachters gedreht.
+  assert.ok(admin.includes("(u + off + 24) % 24"), "die Stunden bleiben in UTC stehen");
+});

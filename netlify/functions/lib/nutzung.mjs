@@ -80,28 +80,68 @@ export function feedbackAufbereiten(subs) {
     .sort((a, b) => a.wann < b.wann ? 1 : -1);
 }
 
-// Events (je mit .tag "YYYY-MM-DD", optional .land) -> Kennzahlen fuers Dashboard.
+// Events (je mit .tag "YYYY-MM-DD", optional .land/.ts) -> Kennzahlen fuers Dashboard.
 export function aggregiere(events) {
   const tage = new Map(), container = {}, modus = {}, sprachen = {}, funktionen = {}, laender = {};
-  let positionenGesamt = 0, stueckGesamt = 0;
+  // Wann gerechnet wird: Stunden (UTC, das Dashboard verschiebt in die Ortszeit
+  // des Betrachters) und Wochentage (0 = Montag). Beides aus dem ts, das die
+  // Function aus dem Blob-Schluessel ableitet -- gespeichert wird nichts Neues.
+  const stunden = new Array(24).fill(0), wochentage = new Array(7).fill(0);
+  // Verweildauer in vier Stufen -- ein Mittelwert allein luegt bei einer
+  // schiefen Verteilung (viele kurze Blicke, wenige lange Sitzungen).
+  const dauerStufen = { unter1: 0, m1bis3: 0, m3bis10: 0, ueber10: 0 };
+  let positionenGesamt = 0, stueckGesamt = 0, kgGesamt = 0, geteiltGesamt = 0, dauerSumme = 0;
   for (const e of events) {
-    const t = tage.get(e.tag) || { tag: e.tag, events: 0, positionen: 0 };
+    const t = tage.get(e.tag) || { tag: e.tag, events: 0, positionen: 0, stueck: 0 };
     t.events += 1;
     t.positionen += e.positionen.length;
     tage.set(e.tag, t);
     positionenGesamt += e.positionen.length;
-    for (const p of e.positionen) stueckGesamt += p.n;
+    for (const p of e.positionen) { stueckGesamt += p.n; t.stueck += p.n; kgGesamt += (p.kg || 0) * p.n; }
     if (e.container) container[e.container] = (container[e.container] || 0) + 1;
     modus[e.modus] = (modus[e.modus] || 0) + 1;
     sprachen[e.sprache] = (sprachen[e.sprache] || 0) + 1;
     if (e.land) laender[e.land] = (laender[e.land] || 0) + 1;
     for (const f of e.funktionen) funktionen[f] = (funktionen[f] || 0) + 1;
+    if (e.geteilt) geteiltGesamt += 1;
+    dauerSumme += e.dauerS || 0;
+    const min = (e.dauerS || 0) / 60;
+    dauerStufen[min < 1 ? "unter1" : min < 3 ? "m1bis3" : min < 10 ? "m3bis10" : "ueber10"] += 1;
+    const d = e.ts ? new Date(e.ts) : null;
+    if (d && !isNaN(d)) { stunden[d.getUTCHours()] += 1; wochentage[(d.getUTCDay() + 6) % 7] += 1; }
   }
   return {
     events: events.length,
     positionenGesamt,
     stueckGesamt,
+    kgGesamt: Math.round(kgGesamt),
+    geteiltGesamt,
+    dauerSumme,
+    dauerStufen,
+    stunden,
+    wochentage,
     tage: [...tage.values()].sort((a, b) => a.tag < b.tag ? -1 : 1),
     container, modus, sprachen, funktionen, laender,
   };
+}
+
+// Alle Events eines Zeitraums als CSV (Semikolon, wie der CSV-Export des
+// Rechners -- deutsches Excel oeffnet beides direkt). Die Spalten sind EXAKT
+// die geprueften Felder: kein Freitext, keine Namen, keine Kennung. Die
+// Ladung steht als reine Mass-Kurzschrift in einer Spalte ("10x 120x80x110
+// 400kg | ..."), damit sich eine Zeile je Rechnung in Excel filtern laesst.
+export function eventsAlsCSV(events) {
+  const z = (s) => { const v = String(s == null ? "" : s); return /[";\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; };
+  const kopf = ["Tag", "Zeit_UTC", "Land", "Modus", "Sprache", "Container", "Positionen", "Stueck", "Gewicht_kg", "Dauer_s", "Geteilt", "Funktionen", "Ladung"];
+  const zeilen = events.map((e) => {
+    const stueck = e.positionen.reduce((s, p) => s + p.n, 0);
+    const kg = Math.round(e.positionen.reduce((s, p) => s + (p.kg || 0) * p.n, 0));
+    const ladung = e.positionen.map((p) =>
+      p.n + "x " + p.l + "x" + p.b + "x" + p.h + (p.kg ? " " + p.kg + "kg" : "") + (p.stapel ? "" : " ns")).join(" | ");
+    return [e.tag, e.ts ? e.ts.slice(11, 19) : "", e.land || "", e.modus, e.sprache, e.container || "",
+      e.positionen.length, stueck, kg, e.dauerS || 0, e.geteilt ? 1 : 0, e.funktionen.join(" "), ladung]
+      .map(z).join(";");
+  });
+  // BOM, damit deutsches Excel UTF-8 (′ und · in Containernamen) korrekt liest.
+  return "﻿" + kopf.join(";") + "\n" + zeilen.join("\n") + (zeilen.length ? "\n" : "");
 }
