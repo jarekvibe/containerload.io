@@ -6816,7 +6816,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             const total = Math.max(0, Math.floor(num(c.qty)));
             const done = counts[i] || 0;
             const on = manualArmed === i;
-            return /* @__PURE__ */ React.createElement("button", { key: c.id || i, onClick: total > 0 ? () => manualArm(i) : void 0, style: chip(on, total <= 0), disabled: total <= 0 },
+            // Eine volle Position laesst sich nicht mehr scharfschalten -- es gibt
+            // nichts mehr zu setzen. Wer eine Kiste entfernt, bekommt den Chip zurueck.
+            const voll = total > 0 && done >= total;
+            return /* @__PURE__ */ React.createElement("button", { key: c.id || i, onClick: total > 0 && !voll ? () => manualArm(i) : void 0, style: chip(on, total <= 0 || voll), disabled: total <= 0 || voll },
               /* @__PURE__ */ React.createElement("span", { style: { width: 8, height: 8, borderRadius: R.s, background: c.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length], flexShrink: 0 } }),
               /* @__PURE__ */ React.createElement("span", null, c.name || "Position " + (i + 1)),
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, color: done >= total && total > 0 ? C.good : C.faint } }, done, "/", total)
@@ -7127,7 +7130,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setManualRot(false);
       setManualArmed((cur) => cur === i ? null : i);
     };
-    const manualPlace = (box) => manualPush([...manualPlaced, box]);
+    // Die Mengengrenze gilt auch am Klick: mehr Stuecke als eingegeben lassen
+    // sich nicht setzen (gemeldet: "Position 4/1" -- vier Klicks, Menge 1; die
+    // Grenze lief bis dahin nur beim Abgleich nach Ladungsaenderungen mit,
+    // mengenGrenze sah den einzelnen Klick nie).
+    const manualPlace = (box) => {
+      const item = cargo[box.ti];
+      const total = Math.max(0, Math.floor(num(item && item.qty)));
+      const schon = manualPlaced.reduce((n, b) => n + (b.ti === box.ti ? 1 : 0), 0);
+      if (schon >= total) return;
+      manualPush([...manualPlaced, box]);
+    };
+    // Eine volle Position entwaffnet sich -- egal auf welchem Weg sie voll wurde
+    // (letzter Klick, "Rest automatisch fuellen") oder ob ihre Menge unter das
+    // Gesetzte sank: der Hinweis "Klicke im Bild ..." und der Ghost gehoeren nur
+    // zu einer Position, von der noch etwas zu setzen ist.
+    useEffect(() => {
+      if (!manualMode || manualArmed == null) return;
+      const item = cargo[manualArmed];
+      const total = Math.max(0, Math.floor(num(item && item.qty)));
+      const done = manualPlaced.reduce((n, b) => n + (b.ti === manualArmed ? 1 : 0), 0);
+      if (!item || done >= total) setManualArmed(null);
+    }, [manualMode, manualArmed, manualPlaced, cargo]);
     const manualSelect = (idx) => {
       setManualArmed(null);
       setManualSel((cur) => cur === idx ? null : idx);
