@@ -111,6 +111,35 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Massgeblich ist immer das CSC-Schild des KONKRETEN Containers; deshalb
   // ist das Tara-Feld im Dokument editierbar und der Wert nur "typisch".
   var TARA = { "20' GP": 2280, "20' HC": 2330, "40' GP": 3880, "40' HC": 3900, "45' HC": 4900 };
+  // ── Strassenlimit je Land (Richtwert) ────────────────────────────────────
+  // Ein Container darf laut CSC-Schild oft weit mehr tragen, als im Vor-/
+  // Nachlauf auf der Strasse legal faehrt: massgeblich ist das zulaessige
+  // Gesamtgewicht der ZUGKOMBINATION, und davon gehen Zugmaschine und
+  // Containerchassis ab. Verglichen wird deshalb Ladung + Container-Tara
+  // (TARA) gegen brutto = zgg - fahrzeug. TYPISCHE Werte, offen als
+  // Richtwert ausgewiesen -- reale Fahrzeuge, Bundesstaaten und
+  // Sondergenehmigungen weichen ab. Die Wissensseite
+  // ratgeber/container-gewicht-strasse rechnet DIESELBE Tabelle vor;
+  // test/strassenlimit.test.mjs koppelt beide Quellen und die Invariante
+  // brutto = zgg - fahrzeug.
+  //   zgg      zulaessiges Gesamtgewicht der Kombination (kg)
+  //            (DE/CH 40 t nach StVZO/VRV; EU kombinierter Verkehr 44 t nach
+  //            RL 96/53/EG; UK 44 t fuer 6-Achser; USA 80.000 lbs Bundesrecht,
+  //            gerundet 36.300 kg)
+  //   fahrzeug typische Zugmaschine + Containerchassis (kg). 12.000 kg ist
+  //            DIESELBE Beispielannahme wie die Strassen-Tabelle der
+  //            Zuladungs-Wissensseite -- zwei Seiten mit zwei verschiedenen
+  //            "typischen" Fahrzeugen waeren genau die Drift, die dieses
+  //            Projekt ueberall sonst ausgebaut hat. USA hoeher, weil dort
+  //            schwerere Zugmaschinen ueblich sind.
+  //   brutto   Richtwert fuer Container SAMT Ladung (kg)
+  var STRASSE = {
+    de40: { zgg: 40000, fahrzeug: 12000, brutto: 28000 },
+    kv44: { zgg: 44000, fahrzeug: 12000, brutto: 32000 },
+    uk44: { zgg: 44000, fahrzeug: 12000, brutto: 32000 },
+    ch40: { zgg: 40000, fahrzeug: 12000, brutto: 28000 },
+    us80: { zgg: 36300, fahrzeug: 15400, brutto: 20900 }
+  };
   var PRESETS = {
     "20' GP": { l: 590, w: 235, h: 239, payload: 28200, door: { w: 234, h: 228 } },
     "20' HC": { l: 590, w: 235, h: 270, payload: 28150, door: { w: 234, h: 258 } },
@@ -3124,6 +3153,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichSchwer: (name, kg) => `${name} wiegt ${kg} kg je St\xFCck. Ein schweres Einzelst\xFCck. Braucht beim Sichern besondere Aufmerksamkeit.`,
       sichAssume: "Richtwerte: CTU-Code (L\xFCckensumme je Richtung unter 15 cm, Einzell\xFCcken bis 5 cm), homogene Masse angenommen. Der Rechner kennt die Ware selbst nicht und schl\xE4gt bewusst keine Sicherungsmittel vor. Womit gesichert wird, entscheidet die Verladestelle. Dieser Check ersetzt keine Pr\xFCfung nach VDI 2700 oder CTU-Code.",
       cogNoGuarantee: "Richtwert \xB7 ohne Gew\xE4hr",
+      strasseTitle: "Stra\xDFenlimit Vor-/Nachlauf",
+      strasseKeine: "Land w\xE4hlen …",
+      strasseLand: { de40: "Deutschland / EU \xB7 40 t", kv44: "EU kombinierter Verkehr \xB7 44 t", uk44: "Gro\xDFbritannien \xB7 44 t", ch40: "Schweiz \xB7 40 t", us80: "USA \xB7 80.000 lbs" },
+      strasseMeter: "Container + Ladung",
+      strasseTara: (kg) => `Ladung plus typische Tara von ${kg.toLocaleString("de-DE")} kg — ma\xDFgeblich ist das CSC-Schild des Containers.`,
+      strasseOhneTara: "Leergewicht dieses Typs unbekannt — Vergleich ohne Tara, die echte Summe liegt h\xF6her.",
+      strasseUeber: (kg) => `${kg.toLocaleString("de-DE")} kg \xFCber dem Stra\xDFen-Richtwert — auf der Stra\xDFe z\xE4hlt das Gesamtgewicht der Zugkombination, nicht die Container-Zuladung.`,
+      strassePasst: "Unter dem Stra\xDFen-Richtwert.",
+      strasseAssume: "Richtwert: zul. Gesamtgewicht minus typischer Zugmaschine samt Containerchassis. Reale Fahrzeuge, Bundesstaaten und Sondergenehmigungen weichen ab — keine Rechtsberatung.",
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
       cogBalanced: "ausbalanciert", cogFrontHeavy: "Tendenz kopflastig", cogRearHeavy: "Tendenz hecklastig",
@@ -3487,6 +3525,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichSchwer: (name, kg) => `${name} weighs ${kg} kg per piece. A heavy single piece. Needs special attention when securing.`,
       sichAssume: "Guide values: CTU Code (gap sum per direction under 15 cm, single gaps up to 5 cm), homogeneous mass assumed. The calculator does not know the goods themselves and deliberately suggests no securing equipment. What to secure with is up to the loading site. This check replaces no inspection per VDI 2700 or the CTU Code.",
       cogNoGuarantee: "Estimate \xB7 no guarantee",
+      strasseTitle: "Road limit pre-/on-carriage",
+      strasseKeine: "Choose a country …",
+      strasseLand: { de40: "Germany / EU \xB7 40 t", kv44: "EU intermodal \xB7 44 t", uk44: "United Kingdom \xB7 44 t", ch40: "Switzerland \xB7 40 t", us80: "USA \xB7 80,000 lbs" },
+      strasseMeter: "Container + cargo",
+      strasseTara: (kg) => `Cargo plus a typical tare of ${kg.toLocaleString("en-GB")} kg — the container's CSC plate governs.`,
+      strasseOhneTara: "Tare of this type unknown — compared without it, the true total is higher.",
+      strasseUeber: (kg) => `${kg.toLocaleString("en-GB")} kg over the road guide value — on the road the gross weight of the truck combination governs, not the container payload.`,
+      strassePasst: "Below the road guide value.",
+      strasseAssume: "Guide value: permitted gross combination weight minus a typical tractor and container chassis. Real vehicles, states and permits differ — not legal advice.",
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
       cogBalanced: "balanced", cogFrontHeavy: "front-heavy", cogRearHeavy: "rear-heavy",
@@ -7395,6 +7442,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const colorOf = (item, i) => item.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length];
     // Gewichtsverteilungs-Indikator: aufklappbar, standardmaessig zu.
     const [cogOpen, setCogOpen] = useState(false);
+    // Strassenlimit-Land fuer den Vor-/Nachlauf. Bewusst NUR Sitzungszustand
+    // (kein localStorage): eine Bequemlichkeit, kein neuer Speicher-Schluessel.
+    const [strasse, setStrasse] = useState("");
     const [sichOpen, setSichOpen] = useState(false);
     const [sichZeige, setSichZeige] = useState(false);   // 3D-Zonen eingeblendet
     const [sichBannerWeg, setSichBannerWeg] = useState(false); // Aufplopp-Hinweis weggeklickt
@@ -8409,6 +8459,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const sichtVol = sichtReihe ? sichtReihe.vol : result.usedVol;
     const sichtContVol = sichtReihe ? sichtReihe.cVol : result.contVol;
     const sichtKg = sichtReihe ? sichtReihe.kg : result.weight;
+    // Strassenlimit-Richtwert (nur Seefracht -- in der Landfracht IST das
+    // Fahrzeug die Grenze): Ladung des gezeigten Containers plus typischer
+    // Tara gegen das Landes-Brutto aus STRASSE. Ohne bekannten Tara-Wert
+    // (Custom, Special Equipment) vergleicht die Zeile nur die Ladung und
+    // sagt es dazu -- notwendige, keine hinreichende Bedingung.
+    const strasseInfo = (() => {
+      if (domain !== "sea" || !strasse || !STRASSE[strasse]) return null;
+      const grenze = STRASSE[strasse];
+      const slotName = (fokusSlot ? fokusSlot.name : result.chain && result.chain[0] && result.chain[0].name) || preset;
+      const tara = TARA[slotName] || null;
+      const kg = sichtKg + (tara || 0);
+      return { grenze, tara, kg, ueber: kg > grenze.brutto + 0.5 };
+    })();
     const sichtBoxes = sichtReihe ? sichtReihe.stueck : result.boxes;
     // Bilanz je Position fuer die Ladungsliste. Ohne Fokus bleibt es bei der Kettenbilanz.
     const sichtUtil = sichtContVol > 0 ? sichtVol / sichtContVol * 100 : 0;
@@ -8622,6 +8685,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 ),
             achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("achslast-ansehen"); setAchsKino((v) => ({ n: (v ? v.n : 0) + 1, slot: fokusSlot ? fokus : 0, cm: achsRuecke })); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, T.axleKino)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
+          ),
+          // ── Strassenlimit Vor-/Nachlauf (nur Seefracht) ──────────────────
+          // Die Container-Zuladung ist NICHT die Strassengrenze: massgeblich
+          // ist das Gesamtgewicht der Zugkombination im gewaehlten Land.
+          // Dieselbe Ehrlichkeitslinie wie Achslast und Schwerpunkt --
+          // Richtwert-Pille, Annahmen sichtbar, Vergleich je gezeigtem
+          // Container (sichtKg + typische Tara).
+          domain === "sea" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: SP.s } },
+            /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap" },
+              /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.strasseTitle),
+              /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, padding: `2px ${SP.s}px`, background: hexA(C.warn, 0.16), color: C.warn } }, T.cogNoGuarantee),
+              /* @__PURE__ */ React.createElement("select", { value: strasse, onChange: (e) => { const v = e.target.value; if (v) zaehl("strassenlimit"); setStrasse(v); }, "aria-label": T.strasseTitle, className: "rounded-lg", style: { marginLeft: "auto", background: C.field, border: `1px solid ${C.fieldBorder}`, color: strasse ? C.text : C.dim, fontFamily: SANS, fontSize: FS.small, padding: `${SP.xs}px ${SP.m}px`, outline: "none" } },
+                /* @__PURE__ */ React.createElement("option", { value: "" }, T.strasseKeine),
+                Object.keys(STRASSE).map((k) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, T.strasseLand[k])))
+            ),
+            strasseInfo && /* @__PURE__ */ React.createElement(React.Fragment, null,
+              /* @__PURE__ */ React.createElement(Meter, { label: T.strasseMeter, pct: Math.min(100, strasseInfo.kg / strasseInfo.grenze.brutto * 100), color: AC, text: `${fmtDE(Math.round(strasseInfo.kg))} / ${fmtDE(strasseInfo.grenze.brutto)} kg`, over: strasseInfo.ueber }),
+              /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: strasseInfo.ueber ? C.bad : C.good, fontWeight: FW.semi } }, strasseInfo.ueber ? "⚠ " + T.strasseUeber(Math.round(strasseInfo.kg - strasseInfo.grenze.brutto)) : "✓ " + T.strassePasst),
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.dim } }, strasseInfo.tara ? T.strasseTara(strasseInfo.tara) : T.strasseOhneTara)
+            ),
+            strasse && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.strasseAssume)
           )
         )
       )
