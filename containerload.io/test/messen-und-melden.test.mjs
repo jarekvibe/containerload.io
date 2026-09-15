@@ -39,7 +39,8 @@ const EREIGNISSE = [
   "plan-per-link-geoeffnet", "beispiel-geoeffnet", "ladung-eingegeben", "excel-import",
   "palettierer", "plan-gerechnet", "mehrere-container", "passt-nicht", "empfehlung",
   "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet",
-  "sicherung-geprueft", "nummern-3d", "rampen-modus", "tuer-warum", "oog-ansehen", "achslast-ansehen"
+  "sicherung-geprueft", "nummern-3d", "rampen-modus", "tuer-warum", "oog-ansehen", "achslast-ansehen",
+  "strassenlimit"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {

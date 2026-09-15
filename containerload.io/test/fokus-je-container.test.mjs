@@ -127,9 +127,11 @@ test("die Leiste liest die Sicht und nicht mehr das Ergebnis des ersten Containe
   assert.ok(/const utilColor = sichtUtil > 80/.test(roh), "die Auslastungsfarbe haengt wieder am ersten Container");
   assert.ok(/const payPct = num\(sichtCont\.payload\) > 0 \? sichtKg/.test(roh), "die Zuladungsampel haengt wieder am ersten Container");
   assert.ok(/const cog = computeLongCog\(sichtPlaced,[\s\S]{0,120}?num\(sichtCont\.l\)\);/.test(roh), "der Schwerpunkt rechnet wieder gegen den ersten Container");
-  // Seit Schritt 06 ohne Sonderweg fuer den manuellen Modus: dort ist result die von Hand
-  // gestaute Kette, und sichtPlaced damit ohnehin der Container, um den es geht.
-  assert.ok(/const doorPlaced = sichtPlaced;/.test(roh), "die Tuerpruefung prueft wieder den ersten Container");
+  // Seit der Kette-weiten Tuerpruefung (tuerKonflikte) prueft der Fokus GENAU den
+  // gezeigten Container -- ohne Bestfall-Rueckfall, der von unplatzierten Typen
+  // des Gesamtplans erzaehlte. Dieselbe Zusage wie vorher, nur schaerfer.
+  assert.ok(/tuerKonflikte\(cargo, \[fokusSlot\], doorOpening, false\)/.test(roh),
+    "die Tuerpruefung prueft mit Fokus wieder den ersten Container");
 });
 
 test("ohne Fokus bleibt alles, wie es war", () => {

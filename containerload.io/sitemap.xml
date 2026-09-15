@@ -227,4 +227,20 @@
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/container-gewicht-strasse</loc>
+    <lastmod>2026-09-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-gewicht-strasse"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-road-weight-limits"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-gewicht-strasse"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-road-weight-limits</loc>
+    <lastmod>2026-09-14</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/container-gewicht-strasse"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-road-weight-limits"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/container-gewicht-strasse"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
 </urlset>
