@@ -216,7 +216,9 @@ test("alles passt in einen Container -- die Wellen laufen trotzdem (Jareks 20'-F
   // Und der Effekt in app.html nimmt diesen Zweig auch bei voller Ladung:
   assert.ok(roh.includes('const stoppsAktiv = kind === "dry" && !!stoppWerte(cargo);'),
     "der Effekt kennt stoppsAktiv nicht");
-  assert.ok(roh.includes("if ((r.boxes < r.totalBoxes || stoppsAktiv) && r.totalBoxes > 0)"),
+  // Seit "leere Wahl ohne Kette" verlangt der Zweig zusaetzlich r.boxes > 0 --
+  // bei voll passender Ladung (dieser Fall) ist das immer wahr, die Wellen laufen.
+  assert.ok(roh.includes("if ((r.boxes < r.totalBoxes || stoppsAktiv) && r.totalBoxes > 0 && r.boxes > 0)"),
     "die Kette laeuft mit Stopps nicht bei voll passender Ladung -- genau der gemeldete Fehler");
 });
 
