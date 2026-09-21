@@ -25,7 +25,8 @@
 <meta name="description" content="Premium 3D Container-Ladungsrechner: Auslastung, Stapelung & Container-Empfehlung in Sekunden." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
@@ -110,6 +111,35 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Massgeblich ist immer das CSC-Schild des KONKRETEN Containers; deshalb
   // ist das Tara-Feld im Dokument editierbar und der Wert nur "typisch".
   var TARA = { "20' GP": 2280, "20' HC": 2330, "40' GP": 3880, "40' HC": 3900, "45' HC": 4900 };
+  // ── Strassenlimit je Land (Richtwert) ────────────────────────────────────
+  // Ein Container darf laut CSC-Schild oft weit mehr tragen, als im Vor-/
+  // Nachlauf auf der Strasse legal faehrt: massgeblich ist das zulaessige
+  // Gesamtgewicht der ZUGKOMBINATION, und davon gehen Zugmaschine und
+  // Containerchassis ab. Verglichen wird deshalb Ladung + Container-Tara
+  // (TARA) gegen brutto = zgg - fahrzeug. TYPISCHE Werte, offen als
+  // Richtwert ausgewiesen -- reale Fahrzeuge, Bundesstaaten und
+  // Sondergenehmigungen weichen ab. Die Wissensseite
+  // ratgeber/container-gewicht-strasse rechnet DIESELBE Tabelle vor;
+  // test/strassenlimit.test.mjs koppelt beide Quellen und die Invariante
+  // brutto = zgg - fahrzeug.
+  //   zgg      zulaessiges Gesamtgewicht der Kombination (kg)
+  //            (DE/CH 40 t nach StVZO/VRV; EU kombinierter Verkehr 44 t nach
+  //            RL 96/53/EG; UK 44 t fuer 6-Achser; USA 80.000 lbs Bundesrecht,
+  //            gerundet 36.300 kg)
+  //   fahrzeug typische Zugmaschine + Containerchassis (kg). 12.000 kg ist
+  //            DIESELBE Beispielannahme wie die Strassen-Tabelle der
+  //            Zuladungs-Wissensseite -- zwei Seiten mit zwei verschiedenen
+  //            "typischen" Fahrzeugen waeren genau die Drift, die dieses
+  //            Projekt ueberall sonst ausgebaut hat. USA hoeher, weil dort
+  //            schwerere Zugmaschinen ueblich sind.
+  //   brutto   Richtwert fuer Container SAMT Ladung (kg)
+  var STRASSE = {
+    de40: { zgg: 40000, fahrzeug: 12000, brutto: 28000 },
+    kv44: { zgg: 44000, fahrzeug: 12000, brutto: 32000 },
+    uk44: { zgg: 44000, fahrzeug: 12000, brutto: 32000 },
+    ch40: { zgg: 40000, fahrzeug: 12000, brutto: 28000 },
+    us80: { zgg: 36300, fahrzeug: 15400, brutto: 20900 }
+  };
   var PRESETS = {
     "20' GP": { l: 590, w: 235, h: 239, payload: 28200, door: { w: 234, h: 228 } },
     "20' HC": { l: 590, w: 235, h: 270, payload: 28150, door: { w: 234, h: 258 } },
@@ -401,6 +431,56 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
     });
     return { idx, critical };
+  };
+  // Tuer-Fit ueber eine ganze KETTE: jede Kiste zaehlt gegen die Tuer IHRES
+  // Containers. Gemeldet mit Bild: der Konflikt lag in einem Folgecontainer,
+  // Warnrahmen und Ghost klebten trotzdem am Tuerende von C1 -- die Pruefung
+  // kannte nur den ersten Container.
+  //   cargo        die Ladungsliste (fuer den Bestfall-Rueckfall unplatzierter Typen)
+  //   chain        Slots mit .placed und .preset (Folgecontainer: Tuer aus dem Preset)
+  //   tuer0        Tuer des ERSTEN Containers -- den Custom-Sonderfall (keine
+  //                Preset-Tuer -> volle Innenflaeche) kennt nur der Aufrufer
+  //   mitRueckfall Typen ganz ohne Platzierung im Bestfall gegen tuer0 pruefen
+  //                (false im Fokus: dort geht es nur um den gezeigten Container)
+  // Rueckgabe: idx = Positionen mit Konflikt; slots = je Konflikt-Container die
+  // Oeffnung und die kritischste Kante (dz/dy/dx wie gepackt) fuers 3D-Bild.
+  var tuerKonflikte = (cargo, chain, tuer0, mitRueckfall = true) => {
+    const idx = /* @__PURE__ */ new Set();
+    const slots = [];
+    const platziert = /* @__PURE__ */ new Set();
+    (chain || []).forEach((c) => (c.placed || []).forEach((b) => platziert.add(b.ti)));
+    (chain || []).forEach((c, ci) => {
+      const kind = (c.preset && c.preset.kind) || "dry";
+      if (kind !== "dry") return;
+      const tuer = ci === 0 ? tuer0 : (c.preset && c.preset.door) || { w: num(c.preset && c.preset.w), h: num(c.preset && c.preset.h) };
+      if (!tuer || !(tuer.w > 0) || !(tuer.h > 0)) return;
+      let critical = null;
+      (c.placed || []).forEach((b) => {
+        if (num(b.dz) > tuer.w + 1e-6 || num(b.dy) > tuer.h + 1e-6) {
+          idx.add(b.ti);
+          if (!critical || num(b.dz) > critical.w) critical = { w: num(b.dz), h: num(b.dy), d: num(b.dx) };
+        }
+      });
+      if (critical) slots.push({ ci, tuer, critical });
+    });
+    // Bestfall-Rueckfall wie in doorFailCheck: ein Typ ganz ohne Platzierung
+    // hat keine gepackte Lage zum Nachschauen. Er zaehlt gegen die Haupt-Tuer
+    // und haengt sein Ghost-Bild an Slot 0.
+    if (mitRueckfall && tuer0 && tuer0.w > 0 && tuer0.h > 0) {
+      let rest = null;
+      (cargo || []).forEach((it, i) => {
+        if (num(it.qty) <= 0 || platziert.has(i) || fitsThroughDoor(it, tuer0)) return;
+        idx.add(i);
+        const w = Math.min(num(it.l), num(it.w)), h = num(it.h);
+        if (!rest || w > rest.w) rest = { w, h, d: Math.max(num(it.l), num(it.w)) };
+      });
+      if (rest) {
+        const s0 = slots.find((s) => s.ci === 0);
+        if (!s0) slots.push({ ci: 0, tuer: tuer0, critical: rest });
+        else if (rest.w > s0.critical.w) s0.critical = rest;
+      }
+    }
+    return { idx, slots };
   };
   var _id = 0;
   var uid = () => `c${_id++}`;
@@ -3123,6 +3203,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichSchwer: (name, kg) => `${name} wiegt ${kg} kg je St\xFCck. Ein schweres Einzelst\xFCck. Braucht beim Sichern besondere Aufmerksamkeit.`,
       sichAssume: "Richtwerte: CTU-Code (L\xFCckensumme je Richtung unter 15 cm, Einzell\xFCcken bis 5 cm), homogene Masse angenommen. Der Rechner kennt die Ware selbst nicht und schl\xE4gt bewusst keine Sicherungsmittel vor. Womit gesichert wird, entscheidet die Verladestelle. Dieser Check ersetzt keine Pr\xFCfung nach VDI 2700 oder CTU-Code.",
       cogNoGuarantee: "Richtwert \xB7 ohne Gew\xE4hr",
+      strasseTitle: "Stra\xDFenlimit Vor-/Nachlauf",
+      strasseKeine: "Land w\xE4hlen …",
+      strasseLand: { de40: "Deutschland / EU \xB7 40 t", kv44: "EU kombinierter Verkehr \xB7 44 t", uk44: "Gro\xDFbritannien \xB7 44 t", ch40: "Schweiz \xB7 40 t", us80: "USA \xB7 80.000 lbs" },
+      strasseMeter: "Container + Ladung",
+      strasseTara: (kg) => `Ladung plus typische Tara von ${kg.toLocaleString("de-DE")} kg — ma\xDFgeblich ist das CSC-Schild des Containers.`,
+      strasseOhneTara: "Leergewicht dieses Typs unbekannt — Vergleich ohne Tara, die echte Summe liegt h\xF6her.",
+      strasseUeber: (kg) => `${kg.toLocaleString("de-DE")} kg \xFCber dem Stra\xDFen-Richtwert — auf der Stra\xDFe z\xE4hlt das Gesamtgewicht der Zugkombination, nicht die Container-Zuladung.`,
+      strassePasst: "Unter dem Stra\xDFen-Richtwert.",
+      strasseAssume: "Richtwert: zul. Gesamtgewicht minus typischer Zugmaschine samt Containerchassis. Reale Fahrzeuge, Bundesstaaten und Sondergenehmigungen weichen ab — keine Rechtsberatung.",
       cogFront: "vorne", cogRear: "hinten",
       cogFrontShare: "Anteil vorne", cogRearShare: "Anteil hinten",
       cogBalanced: "ausbalanciert", cogFrontHeavy: "Tendenz kopflastig", cogRearHeavy: "Tendenz hecklastig",
@@ -3486,6 +3575,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       sichSchwer: (name, kg) => `${name} weighs ${kg} kg per piece. A heavy single piece. Needs special attention when securing.`,
       sichAssume: "Guide values: CTU Code (gap sum per direction under 15 cm, single gaps up to 5 cm), homogeneous mass assumed. The calculator does not know the goods themselves and deliberately suggests no securing equipment. What to secure with is up to the loading site. This check replaces no inspection per VDI 2700 or the CTU Code.",
       cogNoGuarantee: "Estimate \xB7 no guarantee",
+      strasseTitle: "Road limit pre-/on-carriage",
+      strasseKeine: "Choose a country …",
+      strasseLand: { de40: "Germany / EU \xB7 40 t", kv44: "EU intermodal \xB7 44 t", uk44: "United Kingdom \xB7 44 t", ch40: "Switzerland \xB7 40 t", us80: "USA \xB7 80,000 lbs" },
+      strasseMeter: "Container + cargo",
+      strasseTara: (kg) => `Cargo plus a typical tare of ${kg.toLocaleString("en-GB")} kg — the container's CSC plate governs.`,
+      strasseOhneTara: "Tare of this type unknown — compared without it, the true total is higher.",
+      strasseUeber: (kg) => `${kg.toLocaleString("en-GB")} kg over the road guide value — on the road the gross weight of the truck combination governs, not the container payload.`,
+      strassePasst: "Below the road guide value.",
+      strasseAssume: "Guide value: permitted gross combination weight minus a typical tractor and container chassis. Real vehicles, states and permits differ — not legal advice.",
       cogFront: "front", cogRear: "rear",
       cogFrontShare: "Front share", cogRearShare: "Rear share",
       cogBalanced: "balanced", cogFrontHeavy: "front-heavy", cogRearHeavy: "rear-heavy",
@@ -5777,6 +5875,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       reveal.current.prevN = placed0.length;
       const prevC = reveal.current.prevContainers || 0;
       const cgSlots = []; // Gruppe je Slot – wird fuer die manuell platzierten Kisten weiterverwendet
+      // Tuer-Konflikte einmal ueber die ganze Kette (je Kiste die Tuer IHRES
+      // Containers); gezeichnet wird unten am Tuerende des jeweiligen Slots.
+      // Im manuellen Modus traegt die oertliche chain absichtlich keine Kisten
+      // (sie werden einzeln gezeichnet) -- die Pruefung liest dann das Ergebnis.
+      const tuer0 = (preset !== "Custom" && container.door) ? container.door : { w: num(container.w), h: num(container.h) };
+      const tuerLage = (container.kind || "dry") === "dry"
+        ? tuerKonflikte(cargo, manualMode ? (result.chain || []) : chain, tuer0)
+        : { idx: /* @__PURE__ */ new Set(), slots: [] };
+      t.tuer = null;
       chain.forEach((c, ci) => {
         const d = dimsArr[ci], S = getShell(d.CL, d.CH, d.CW);
         const ckind = c.preset && c.preset.kind || "dry";
@@ -5795,18 +5902,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Sie lasen sich wie Ladung, nicht wie Markierung, und im leeren Equipment blieben zwei
         // gelbe Balken stehen. Der Kasten "Out of Gauge" sagt dasselbe in Zentimetern.
         // ── Tuer-Konflikt: Oeffnung in Warnfarbe rahmen + kritisches Packstueck als Ghost am Tuerspalt.
-        //    Nur Hauptcontainer (ci===0) und nur dry. Tuer-Fit prueft die TATSAECHLICHE Ausrichtung
-        //    jedes platzierten Stuecks (doorFailCheck), nicht nur die guenstigste denkbare. ──
-        if (ci === 0 && ckind === "dry") {
-          const doorOpen = (preset !== "Custom" && container.door)
-            ? container.door
-            : { w: num(container.w), h: num(container.h) };
-          // Im manuellen Modus traegt die oertliche chain absichtlich keine Kisten (sie werden
-        // einzeln gezeichnet) -- die Tuerpruefung nimmt sie deshalb aus dem Ergebnis.
-        const doorPlaced = manualMode ? ((result.chain && result.chain[0] && result.chain[0].placed) || []) : chain[0].placed || [];
-          const dc = doorFailCheck(cargo, doorOpen, doorPlaced);
-          if (dc.idx.size > 0 && doorOpen.w > 0 && doorOpen.h > 0) {
-            const dw = doorOpen.w / 100, dh = doorOpen.h / 100;
+        //    JE CONTAINER (gemeldet mit Bild: der Konflikt lag in einem Folgecontainer, der
+        //    Ghost klebte trotzdem an C1). tuerKonflikte prueft die TATSAECHLICHE Ausrichtung
+        //    jedes platzierten Stuecks gegen die Tuer SEINES Containers; unplatzierte Typen
+        //    haengen ihr Bestfall-Ghost wie bisher an Slot 0. ──
+        {
+          const tk = tuerLage.slots.find((s2) => s2.ci === ci);
+          if (tk && ckind === "dry") {
+            const dw = tk.tuer.w / 100, dh = tk.tuer.h / 100;
+            const dc = { critical: tk.critical };
             // (a) Oeffnungsrahmen door.w x door.h in Warn-Amber
             const apGeo = new THREE.EdgesGeometry(new THREE.PlaneGeometry(dw, dh));
             const ap = new THREE.LineSegments(apGeo, new THREE.LineBasicMaterial({ color: 0xffb454, transparent: true, opacity: 0.55 }));
@@ -5840,8 +5944,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             });
             // Alles, was die "Warum?"-Animation braucht, am aktuellen Aufbau:
             // Gruppe, Tuerebene, Oeffnung, die kritische Kante samt Tiefe (echte
-            // Ausrichtung aus doorFailCheck) und der Oeffnungsrahmen zum Pulsieren.
-            t.tuer = { cg, CL: d.CL, CW: d.CW, dw, dh, gw, gh, gd: Math.max(0.2, num(dc.critical.d) / 100), frame: ap };
+            // Ausrichtung) und der Oeffnungsrahmen zum Pulsieren. Bei mehreren
+            // Konflikt-Containern spielt die Sequenz am ERSTEN davon.
+            if (!t.tuer) t.tuer = { cg, CL: d.CL, CW: d.CW, dw, dh, gw, gh, gd: Math.max(0.2, num(dc.critical.d) / 100), frame: ap };
           }
         }
         const byType = {};
@@ -7394,6 +7499,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const colorOf = (item, i) => item.color || TYPE_COLORS_AUTO[i % TYPE_COLORS_AUTO.length];
     // Gewichtsverteilungs-Indikator: aufklappbar, standardmaessig zu.
     const [cogOpen, setCogOpen] = useState(false);
+    // Strassenlimit-Land fuer den Vor-/Nachlauf. Bewusst NUR Sitzungszustand
+    // (kein localStorage): eine Bequemlichkeit, kein neuer Speicher-Schluessel.
+    const [strasse, setStrasse] = useState("");
     const [sichOpen, setSichOpen] = useState(false);
     const [sichZeige, setSichZeige] = useState(false);   // 3D-Zonen eingeblendet
     const [sichBannerWeg, setSichBannerWeg] = useState(false); // Aufplopp-Hinweis weggeklickt
@@ -7728,6 +7836,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         else next[slot] = name;
         return next;
       });
+    };
+    // Die Kombi-Empfehlung uebernehmen: C1 auf den ersten Typ, die Folgeslots
+    // per chainOverride EXAKT auf die restlichen Typen -- nicht "C1 wechseln
+    // und hoffen, dass die Auto-Kette dieselbe Kombination findet". Gemeldet:
+    // fuer "es ginge auch mit 2x 40' HC + 1x 40' GP" gab es gar keinen Knopf
+    // (nur Einzelcontainer und Equipment hatten einen), und die drei 40er
+    // mussten von Hand nachgebaut werden.
+    const uebernehmeKombi = (combo) => {
+      const liste = [];
+      (combo || []).forEach((x) => { for (let i = 0; i < x.count; i++) liste.push(x.name); });
+      if (!liste.length || !PRESETS[liste[0]]) return;
+      applyPreset(liste[0]);
+      const ov = {};
+      for (let i = 1; i < liste.length; i++) ov[i] = liste[i];
+      setChainOverride(ov);
     };
     const upd = (id, k, v) => { zaehl("ladung-eingegeben"); setCargo((cs) => cs.map((c) => c.id === id ? { ...c, [k]: v } : c)); };
     // Stapel-Selector -> setzt stackable + stackMax (Gesamt-Lagen) in einem Rutsch.
@@ -8408,6 +8531,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const sichtVol = sichtReihe ? sichtReihe.vol : result.usedVol;
     const sichtContVol = sichtReihe ? sichtReihe.cVol : result.contVol;
     const sichtKg = sichtReihe ? sichtReihe.kg : result.weight;
+    // Strassenlimit-Richtwert (nur Seefracht -- in der Landfracht IST das
+    // Fahrzeug die Grenze): Ladung des gezeigten Containers plus typischer
+    // Tara gegen das Landes-Brutto aus STRASSE. Ohne bekannten Tara-Wert
+    // (Custom, Special Equipment) vergleicht die Zeile nur die Ladung und
+    // sagt es dazu -- notwendige, keine hinreichende Bedingung.
+    const strasseInfo = (() => {
+      if (domain !== "sea" || !strasse || !STRASSE[strasse]) return null;
+      const grenze = STRASSE[strasse];
+      const slotName = (fokusSlot ? fokusSlot.name : result.chain && result.chain[0] && result.chain[0].name) || preset;
+      const tara = TARA[slotName] || null;
+      const kg = sichtKg + (tara || 0);
+      return { grenze, tara, kg, ueber: kg > grenze.brutto + 0.5 };
+    })();
     const sichtBoxes = sichtReihe ? sichtReihe.stueck : result.boxes;
     // Bilanz je Position fuer die Ladungsliste. Ohne Fokus bleibt es bei der Kettenbilanz.
     const sichtUtil = sichtContVol > 0 ? sichtVol / sichtContVol * 100 : 0;
@@ -8621,6 +8757,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 ),
             achsRuecke > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3" }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: AC, fontWeight: FW.semi } }, T.axleShift(achsRuecke / 100)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("achslast-ansehen"); setAchsKino((v) => ({ n: (v ? v.n : 0) + 1, slot: fokusSlot ? fokus : 0, cm: achsRuecke })); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, T.axleKino)),
             /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.axleAssume)
+          ),
+          // ── Strassenlimit Vor-/Nachlauf (nur Seefracht) ──────────────────
+          // Die Container-Zuladung ist NICHT die Strassengrenze: massgeblich
+          // ist das Gesamtgewicht der Zugkombination im gewaehlten Land.
+          // Dieselbe Ehrlichkeitslinie wie Achslast und Schwerpunkt --
+          // Richtwert-Pille, Annahmen sichtbar, Vergleich je gezeigtem
+          // Container (sichtKg + typische Tara).
+          domain === "sea" && /* @__PURE__ */ React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: SP.s } },
+            /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 flex-wrap" },
+              /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.strasseTitle),
+              /* @__PURE__ */ React.createElement("span", { className: "rounded-full whitespace-nowrap", style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, padding: `2px ${SP.s}px`, background: hexA(C.warn, 0.16), color: C.warn } }, T.cogNoGuarantee),
+              /* @__PURE__ */ React.createElement("select", { value: strasse, onChange: (e) => { const v = e.target.value; if (v) zaehl("strassenlimit"); setStrasse(v); }, "aria-label": T.strasseTitle, className: "rounded-lg", style: { marginLeft: "auto", background: C.field, border: `1px solid ${C.fieldBorder}`, color: strasse ? C.text : C.dim, fontFamily: SANS, fontSize: FS.small, padding: `${SP.xs}px ${SP.m}px`, outline: "none" } },
+                /* @__PURE__ */ React.createElement("option", { value: "" }, T.strasseKeine),
+                Object.keys(STRASSE).map((k) => /* @__PURE__ */ React.createElement("option", { key: k, value: k }, T.strasseLand[k])))
+            ),
+            strasseInfo && /* @__PURE__ */ React.createElement(React.Fragment, null,
+              /* @__PURE__ */ React.createElement(Meter, { label: T.strasseMeter, pct: Math.min(100, strasseInfo.kg / strasseInfo.grenze.brutto * 100), color: AC, text: `${fmtDE(Math.round(strasseInfo.kg))} / ${fmtDE(strasseInfo.grenze.brutto)} kg`, over: strasseInfo.ueber }),
+              /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, lineHeight: 1.45, color: strasseInfo.ueber ? C.bad : C.good, fontWeight: FW.semi } }, strasseInfo.ueber ? "⚠ " + T.strasseUeber(Math.round(strasseInfo.kg - strasseInfo.grenze.brutto)) : "✓ " + T.strassePasst),
+              /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.dim } }, strasseInfo.tara ? T.strasseTara(strasseInfo.tara) : T.strasseOhneTara)
+            ),
+            strasse && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.45, color: C.faint } }, T.strasseAssume)
           )
         )
       )
@@ -8662,11 +8819,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // kann eine andere haben als der gewaehlte.
     const doorOpening = sichtCont.door && (fokusSlot || preset !== "Custom") ? sichtCont.door : { w: num(sichtCont.w), h: num(sichtCont.h) };
     // Special Equipment wird von oben/seitlich beladen – die Tuerpruefung ist hier nicht aussagekraeftig.
-    // Seit Schritt 06 braucht der manuelle Modus hier keinen eigenen Weg mehr: result ist
-    // dort die von Hand gestaute Kette, und sichtPlaced damit genau der Container, ueber den
-    // die Oberflaeche gerade spricht.
-    const doorPlaced = sichtPlaced;
-    const doorCheck = sichtCont.kind && sichtCont.kind !== "dry" ? { idx: /* @__PURE__ */ new Set(), critical: null } : doorFailCheck(cargo, doorOpening, doorPlaced);
+    // Ohne Fokus zaehlt der GANZE Plan: jede Kiste gegen die Tuer IHRES Containers
+    // (tuerKonflikte -- gemeldet mit Bild: der Konflikt lag in einem Folgecontainer,
+    // die Warnung sprach von C1). Mit Fokus nur der gezeigte Container, dort ohne den
+    // Bestfall-Rueckfall, der von unplatzierten Typen des Gesamtplans erzaehlt. Der
+    // manuelle Modus braucht keinen eigenen Weg: result ist dort die von Hand
+    // gestaute Kette.
+    const doorCheck = sichtCont.kind && sichtCont.kind !== "dry"
+      ? { idx: /* @__PURE__ */ new Set(), slots: [] }
+      : fokusSlot
+        ? tuerKonflikte(cargo, [fokusSlot], doorOpening, false)
+        : tuerKonflikte(cargo, result.chain && result.chain.length ? result.chain : [{ placed: result.placed, preset: container }], doorOpening);
     const doorFails = cargo.filter((_, i) => doorCheck.idx.has(i));
     const oogRows = result.oog ? [["overHeight", T.oogH], ["overWidthL", T.oogWL], ["overWidthR", T.oogWR], ["overLengthFront", T.oogLF], ["overLengthBack", T.oogLB]].filter(([k]) => (result.oog[k] || 0) > 0).map(([k, lbl]) => ({ lbl, v: Math.round(result.oog[k]) })) : [];
     const buildLadevorschlag = () => {
@@ -9038,7 +9201,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0" }, /* Auf dem Telefon steht die 3D-Ansicht ZUERST (order-Klassen): wer einen geteilten
        Plan an der Rampe oeffnet, will den Plan sehen, nicht erst durch Container-Wahl und
        Ladungsliste scrollen. Ab lg gilt wieder die Dokument-Reihenfolge (Spalten). */
-    /* @__PURE__ */ React.createElement("aside", { className: "order-2 lg:order-none w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", wide: true, disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("oog-ansehen"); setOogKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg transition hover:brightness-110", style: { pointerEvents: "auto", marginTop: 8, background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.oogKran))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("tuer-warum"); setTuerKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.doorWhy))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply))), !manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, T.sichBanner(sichWarnzahl)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.sichBtn), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichBannerWeg(true), "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×"))), !manualMode && sichZeige && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 10, height: 10, borderRadius: R.s, background: hexA(C.warn, 0.55), border: `1px solid ${C.warn}`, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: "#d4dce5", fontWeight: FW.semi, whiteSpace: "nowrap" } }, T.sichChip((sichZonen || []).length)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.small, fontWeight: FW.semi, cursor: "pointer" } }, T.railDetails), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichZeige(false), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "none", border: 0, color: C.faint, fontSize: FS.small, cursor: "pointer" } }, T.sichChipZu)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), className: "px-2 py-2 lg:px-0 lg:py-0", style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×")), rampeEl, /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
+    /* @__PURE__ */ React.createElement("aside", { className: "order-2 lg:order-none w-full lg:w-[360px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { borderRight: "1px solid #1C2531" } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: recDisabled ? "quiet" : "accent", wide: true, disabled: recDisabled, onClick: openRec }, T.recBtn)); })(), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", wide: true, disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden" }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino }), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA("#121821", 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : "#2E3A49"}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA("#121821", 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: "#ffd9a8", marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("oog-ansehen"); setOogKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg transition hover:brightness-110", style: { pointerEvents: "auto", marginTop: 8, background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.oogKran))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA("#1a0f08", 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: "#ffd9a8", maxWidth: 250 } }, T.doorWarn(doorFails.length), " \xB7 ", T.doorHint(doorOpening.w, doorOpening.h)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("tuer-warum"); setTuerKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.doorWhy))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: "#04121A", fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "multi" && sug.combo && sug.combo.length > 0 && /* @__PURE__ */ React.createElement("button", { onClick: () => uebernehmeKombi(sug.combo), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply))), !manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: "#d4dce5" } }, T.sichBanner(sichWarnzahl)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: "#1a0f08", fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.sichBtn), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichBannerWeg(true), "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×"))), !manualMode && sichZeige && /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-4 left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 10, height: 10, borderRadius: R.s, background: hexA(C.warn, 0.55), border: `1px solid ${C.warn}`, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: "#d4dce5", fontWeight: FW.semi, whiteSpace: "nowrap" } }, T.sichChip((sichZonen || []).length)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "#1C2531", border: "1px solid #2E3A49", color: C.text, fontSize: FS.small, fontWeight: FW.semi, cursor: "pointer" } }, T.railDetails), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichZeige(false), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "none", border: 0, color: C.faint, fontSize: FS.small, cursor: "pointer" } }, T.sichChipZu)))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[380px] flex-shrink-0 min-h-0 overflow-y-auto", style: { borderLeft: "1px solid #1C2531" } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), className: "px-2 py-2 lg:px-0 lg:py-0", style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×")), rampeEl, /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: "1px solid #1C2531", fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
           /* @__PURE__ */ React.createElement("span", null, T.footR),
           // Der Weg zurueck. Er stand hier als unterstrichene Textstelle in derselben Farbe wie
           // die Fusszeile drumherum -- gemeldet als "zu unscheinbar", und das war er auch:

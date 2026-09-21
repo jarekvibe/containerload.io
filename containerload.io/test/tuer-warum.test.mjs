@@ -88,3 +88,58 @@ test("die Verdrahtung: App -> Viewport", () => {
   assert.ok(roh.includes("setZeigeNummern, tuerKino, oogKino, achsKino }) {"),
     "die Viewport-Signatur kennt die Kino-Zaehler nicht");
 });
+
+// ── Die Tuerpruefung je Container (gemeldet: Ghost an C1, Konflikt in C3) ──
+const { tuerKonflikte } = new Function(
+  'var num = (v, d = 0) => Number.isFinite(+v) && v !== "" ? +v : d;\n'
+  + "var fitsThroughDoor = (it, o) => Math.min(num(it.l), num(it.w)) <= o.w && num(it.h) <= o.h;\n"
+  + schnitt("var tuerKonflikte = (cargo, chain, tuer0", "return { idx, slots };\n  };")
+  + "\nreturn { tuerKonflikte };"
+)();
+
+test("tuerKonflikte findet den Konflikt im RICHTIGEN Container", () => {
+  const tuer = { w: 234, h: 228 };
+  const preset = { door: tuer, w: 235, h: 239 };
+  const cargo = [{ qty: 1, l: 120, w: 80, h: 100 }, { qty: 1, l: 250, w: 245, h: 100 }];
+  const chain = [
+    { preset, placed: [{ ti: 0, dx: 120, dy: 100, dz: 80 }] },                 // C1: alles gut
+    { preset, placed: [{ ti: 1, dx: 250, dy: 100, dz: 245 }] }                 // C2: 245 > 234
+  ];
+  const r = tuerKonflikte(cargo, chain, tuer);
+  assert.deepStrictEqual([...r.idx], [1]);
+  assert.strictEqual(r.slots.length, 1, "genau EIN Konflikt-Container");
+  assert.strictEqual(r.slots[0].ci, 1, "der Ghost gehoert an C2, nicht an C1");
+  assert.deepStrictEqual(r.slots[0].critical, { w: 245, h: 100, d: 250 });
+  // Jede Kiste zaehlt gegen die Tuer IHRES Containers: eine engere Tuer im
+  // Folgecontainer macht denselben Fussabdruck dort zum Konflikt.
+  const eng = { preset: { door: { w: 200, h: 228 }, w: 235, h: 239 }, placed: [{ ti: 0, dx: 120, dy: 100, dz: 210 }] };
+  const r2 = tuerKonflikte([{ qty: 1, l: 210, w: 120, h: 100 }], [{ preset, placed: [] }, eng], tuer);
+  assert.strictEqual(r2.slots.length, 1);
+  assert.strictEqual(r2.slots[0].ci, 1);
+});
+
+test("der Bestfall-Rueckfall haengt an Slot 0 -- und schweigt im Fokus", () => {
+  const tuer = { w: 234, h: 228 };
+  const preset = { door: tuer, w: 235, h: 239 };
+  // Typ 0 ist NIRGENDS platziert und passt im Bestfall nicht durch die Tuer.
+  const cargo = [{ qty: 1, l: 300, w: 240, h: 100 }];
+  const r = tuerKonflikte(cargo, [{ preset, placed: [] }], tuer);
+  assert.deepStrictEqual([...r.idx], [0]);
+  assert.strictEqual(r.slots[0].ci, 0);
+  assert.deepStrictEqual(r.slots[0].critical, { w: 240, h: 100, d: 300 });
+  // Im Fokus (mitRueckfall = false) erzaehlt der gezeigte Container nur von
+  // sich selbst -- ein Typ, der in einem ANDEREN Container liegt, ist hier
+  // weder platziert noch ein Konflikt.
+  const r2 = tuerKonflikte(cargo, [{ preset, placed: [] }], tuer, false);
+  assert.strictEqual(r2.idx.size, 0);
+  assert.strictEqual(r2.slots.length, 0);
+});
+
+test("der Vertrag im Quelltext: gezeichnet wird je Slot, die Sequenz am ersten Konflikt", () => {
+  assert.ok(roh.includes("tuerLage.slots.find((s2) => s2.ci === ci)"),
+    "das 3D-Bild zeichnet den Tuer-Konflikt nicht mehr am jeweiligen Container");
+  assert.ok(roh.includes("if (!t.tuer) t.tuer = { cg, CL: d.CL"),
+    "die Warum-Animation haengt nicht mehr am ersten Konflikt-Container");
+  assert.ok(!/if \(ci === 0 && ckind === "dry"\)/.test(roh),
+    "die Tuerpruefung im Bild ist wieder auf C1 festgenagelt");
+});

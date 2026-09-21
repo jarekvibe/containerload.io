@@ -181,7 +181,9 @@ test("die Oberflaeche liest im manuellen Modus dieselbe Quelle wie sonst", () =>
   for (const muster of [
     /const slotsImBild = \(slotRows \|\| \[\]\)\.slice\(0, 8\);/,
     /const blatt = exportLayout === "blatt" && slotsImBild\.length > 1;/,
-    /const doorPlaced = sichtPlaced;/,
+    // Die Tuerpruefung liest result.chain -- im manuellen Modus ist das die von
+    // Hand gestaute Kette, derselbe Weg wie sonst (seit tuerKonflikte kettenweit).
+    /tuerKonflikte\(cargo, result\.chain && result\.chain\.length \? result\.chain : \[\{ placed: result\.placed, preset: container \}\], doorOpening\)/,
   ]) assert.ok(muster.test(roh), `Sonderweg fuer den manuellen Modus steht wieder da: ${muster}`);
   // Ladevorschlag und CSV sind nicht mehr gesperrt -- sie lesen result, und das stimmt jetzt.
   assert.ok(/\{ label: T\.exportBtn, sub: T\.exportTitle, fn: doExportCSV \}/.test(roh),
