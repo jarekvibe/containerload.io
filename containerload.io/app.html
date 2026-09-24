@@ -2823,6 +2823,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
       } else {
+        // Traegt die Wahl nichts, gibt es keine Kette zu bauen -- der Fang unten
+        // antwortet dann ehrlich (leerer C1, alles offen) statt Folgecontainer um
+        // eine leere Huelle herumzustellen.
+        if (!(slot0.placed || []).length) return null;
         chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
       }
@@ -2849,6 +2853,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
+    // Zuweisungen und Stopps koennen den ERSTEN Container leeren (alles auf spaetere
+    // Slots gepinnt, nichts Freies passt hinein) -- bauen() sagt dann null, und ohne
+    // diesen Fang stuerzte die App genau hier ab (erg.chain von null). Die ehrliche
+    // Antwort ist dieselbe wie bei "nichts passt in die Wahl": die gewaehlte Huelle,
+    // alles offen, keine Auto-Kette um einen leeren C1 herum.
+    if (!erg) {
+      const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
+      erg = { chain: [{ name: preset0, preset: container0, placed: [] }], remaining: start,
+        totRem: start.reduce((s, t) => s + t.qty, 0), slot0: null, sortenrein: false, ordentlich: false };
+    }
     // Die sortenreine Kette lohnt nur bei mehr als einer Sorte, und nur beim gewoehnlichen
     // Trockencontainer: Special Equipment packt packKind, nicht packCargo.
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
@@ -2975,6 +2989,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         chain = [{ name: preset0, preset: container0, placed: erst.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (erst.perType[i] ? erst.perType[i].loaded : 0) }));
       } else {
+        // Traegt die Wahl nichts, gibt es keine Kette zu bauen -- der Fang unten
+        // antwortet dann ehrlich (leerer C1, alles offen) statt Folgecontainer um
+        // eine leere Huelle herumzustellen.
+        if (!(slot0.placed || []).length) return null;
         chain = [{ name: preset0, preset: container0, placed: slot0.placed }];
         remaining = start.map((t, i) => ({ ...t, qty: t.qty - (slot0.perType[i] ? slot0.perType[i].loaded : 0) }));
       }
@@ -3001,6 +3019,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
     };
     let erg = bauen(false);
+    // Derselbe Fang wie in der Seefracht: Zuweisungen/Stopps koennen das erste
+    // Fahrzeug leeren, bauen() sagt dann null statt einer Kette.
+    if (!erg) {
+      const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
+      erg = { chain: [{ name: preset0, preset: container0, placed: [] }], remaining: start,
+        totRem: start.reduce((s, t) => s + t.qty, 0), slot0: null, sortenrein: false, ordentlich: false };
+    }
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
     const gemischt = erg.chain.slice(0, -1).some((c) => new Set(c.placed.map((b) => b.ti)).size > 1);
     if (!stopps && gemischt && sorten > 1 && sorten <= SORTENREIN_MAX && erg.chain.length <= MAXDRAW) {
@@ -7621,7 +7646,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // die Chips so taten, als gaebe es eine Entladereihenfolge (gemeldet
         // mit Bild, 6 Stuecke im 20' HC).
         const stoppsAktiv = kind === "dry" && !!stoppWerte(cargo);
-        if ((r.boxes < r.totalBoxes || stoppsAktiv) && r.totalBoxes > 0) {
+        // Die Kette setzt eine tragende Wahl voraus: passt KEIN einziges Packstueck in
+        // den gewaehlten Container, wird kein leerer C1 mitgebucht und keine Auto-Kette
+        // darum herumgebaut (gemeldet per ?q=-Link: 22 Stuecke a 600 cm, Default 20' GP
+        // -- "3 Container", einer davon leer, und kein Wort dazu, dass 600 cm nicht in
+        // 590 cm Innenlaenge gehen). Stattdessen der ehrliche Zustand von vor der Kette:
+        // alles offen, rote Statuszeile, und die Empfehlung darunter hat seit dem
+        // Kombi-Knopf fuer jeden Vorschlag einen Handgriff. Die Landfracht verhielt
+        // sich immer schon so -- Folgefahrzeug = dasselbe Fahrzeug, da traegt die Kette
+        // nie mehr als die Wahl.
+        if ((r.boxes < r.totalBoxes || stoppsAktiv) && r.totalBoxes > 0 && r.boxes > 0) {
           const ch = domain === "road"
             ? chainVehicles(container, preset, cargo, r, chainOverride, MAXVIS)
             : chainContainers(container, preset, cargo, r, chainOverride, MAXVIS, carrier);
@@ -7650,7 +7684,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           }
         } else {
           r.chain = [{ name: preset, preset: container, placed: r.placed }];
-          r.remainingBoxes = 0;
+          // Dieser Zweig traegt zwei Faelle: alles passt in die Wahl (Rest 0) -- oder
+          // NICHTS passt hinein, dann ist alles offen und die Empfehlung uebernimmt.
+          r.remainingBoxes = Math.max(0, r.totalBoxes - r.boxes);
           r.gekappt = false;
           r.pinOffen = 0;
           r.perTypeAll = r.perType;
