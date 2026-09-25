@@ -1010,6 +1010,8 @@ Die Animation läuft **nicht** bei `prefers-reduced-motion` und **nicht** auf ec
 ### Die Ergebnisleiste zeigt vier Zahlen, nicht sechs
 Sechs Kennzahlen plus Statusblock brauchen rund 850 px. Im Dreispalten-Layout stehen der Gruppe 490 zur Verfügung — die Leiste war deshalb zwischen **1440 und 1800 px immer zweizeilig**, also auf den meisten Laptops. In der Leiste stehen jetzt **Voll · Verladen · Volumen · Gewicht** (Landfracht: Lademeter statt Volumen), die übrigen zwei in der Schublade „Details". Wer eine neue Kennzahl einbaut, entscheidet sich für eine der beiden Listen — `statCards` oder `detailCards` — und misst nach, ob die Leiste noch einzeilig ist.
 
+**Ausnahme Landfracht: fünf Karten.** Gemeldet („bei Landfracht auch noch die cbm"): das Volumen stand auf der Straße nur in der Schublade, und dort suchte es niemand — Straßenfracht wird nach ldm, kg **und** cbm eingekauft. Die Straßen-Leiste trägt deshalb **Voll · Verladen · Lademeter · Volumen · Gewicht**; die cbm stehen ohne Nenner (ein Planensattel wird nicht gegen sein Hüllvolumen verkauft), die Schublade zeigt sie nicht doppelt. Nachgemessen: 1920 px einzeilig, 1440–1800 px zweizeilig wie eh, Handy stapelt sauber. `test/leiste-landfracht-cbm.test.mjs`.
+
 Zwei Dinge, die die Leiste falsch erzählt hat und die nicht zurückkommen dürfen:
 - **Grün heißt „alles ist drin".** Vorher hieß es nur „Gewicht und Auslastung sind in Ordnung" — der Punkt stand auf Grün, während daneben „30 offen" stand.
 - **„Verladen 62 / 92" zählt den ersten Container**, das Bild darüber zeigt aber bis zu vier. Die Zahl trägt deshalb dieselbe Marke wie die Hülle im Bild (`C1` / `F1`), sobald es mehr als eine gibt.
