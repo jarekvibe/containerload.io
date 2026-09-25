@@ -86,7 +86,7 @@ test("die Beispielladung hinter dem Knopf passt zur genannten Zahl", () => {
   // Rechner die Zahl im Text im selben Moment widerlegen, in dem jemand draufklickt.
   const erwartet = { "euro-pallets-20ft-container.html": 11, "euro-pallets-40ft-container.html": 25,
     "industrial-pallets-container.html": 22, "wire-mesh-pallets-container.html": 11,
-    "truck-trailer-load-calculation.html": 34 };
+    "truck-trailer-load-calculation.html": 34, "ibc-totes-container.html": 9 };
   for (const [datei, menge] of Object.entries(erwartet)) {
     const m = enSeite(datei).match(/href="\/app\?lang=en&q=([^"]+)"/);
     assert.ok(m, `${datei}: kein ?q=-Link`);
@@ -181,4 +181,70 @@ test("die Dreh-Gewinne auf der Startseite stimmen, in beiden Sprachen", () => {
     assert.ok(zahlen.includes(mit), `${was}: die gerechnete Zahl ${mit} fehlt in "${txt.trim()}"`);
     assert.ok(zahlen.includes(ohne), `${was}: die Vergleichszahl muesste ${ohne} sein — im Text steht ${zahlen.join(", ")}`);
   }
+});
+
+// ── Der Ausbau der Passt-rein-Seiten ────────────────────────────────────────
+// Jede Seite erklaert jetzt ihre Stauung: das Warum (mit und ohne Drehen), die
+// Draufsicht als SVG DIREKT aus dem Packer, und die Stapelzahl mit sichtbarer
+// Hoehen-Annahme. Alles, was dort als Zahl steht, wird hier nachgerechnet --
+// die Seiten versprechen woertlich "berechnet, nicht abgeschrieben".
+const AUSBAU = [
+  // [DE-Datei, EN-Datei, Preset, Grundmass, je Lage, ohne Drehen, 2 Lagen]
+  ["europaletten-20-fuss-container.html", "euro-pallets-20ft-container.html", "20' GP", [120, 80], 11, 8, 22],
+  ["europaletten-40-fuss-container.html", "euro-pallets-40ft-container.html", "40' GP", [120, 80], 25, 20, 50],
+  ["ibc-container.html", "ibc-totes-container.html", "20' GP", [120, 100], 9, null, 18],
+];
+
+test("Warum- und Stapelzahlen: nachgerechnet, und auf beiden Sprachfassungen", () => {
+  for (const [de, en, preset, [l, w], lage, ohne, zweiLagen] of AUSBAU) {
+    const C = PRESETS[preset];
+    assert.strictEqual(makeFloorPacker(l, w, true)(C.l, C.w).count, lage, `${de}: Stellzahl je Lage`);
+    if (ohne !== null) assert.strictEqual(makeFloorPacker(l, w, false)(C.l, C.w).count, ohne,
+      `${de}: die Ohne-Drehen-Zahl stimmt nicht mehr mit dem Packer`);
+    assert.strictEqual(zweiLagen, 2 * lage, `${de}: zwei Lagen sind zweimal der Boden`);
+    for (const [datei, txt] of [[de, seite(de)], [en, enSeite(en)]]) {
+      for (const z of [lage, ohne, zweiLagen].filter((v) => v !== null))
+        assert.ok(new RegExp(`\\b${z}\\b`).test(txt), `${datei}: die Zahl ${z} steht nicht auf der Seite`);
+    }
+  }
+});
+
+test("die Draufsicht zeichnet exakt die Stellplaetze der ersten Lage", () => {
+  // Das SVG kommt aus dem Packer: ein Rechteck je Stellplatz plus der Umriss.
+  // Weniger waere eine geschoente Skizze, mehr eine erfundene.
+  for (const [de, en, , , lage] of AUSBAU) {
+    for (const [datei, txt] of [[de, seite(de)], [en, enSeite(en)]]) {
+      const m = txt.match(/<figure class="stau">([\s\S]*?)<\/figure>/);
+      assert.ok(m, `${datei}: keine Draufsicht (figure.stau)`);
+      const rects = (m[1].match(/<rect /g) || []).length;
+      assert.strictEqual(rects, lage + 1, `${datei}: ${rects - 1} gezeichnete Stellplaetze, der Packer rechnet ${lage}`);
+      assert.ok(m[1].includes("#2E8FFF") && m[1].includes("#2FD8A0"),
+        `${datei}: die Draufsicht traegt nicht beide Ausrichtungsfarben`);
+    }
+  }
+});
+
+test("die IBC-Gewichte folgen aus der genannten Annahme", () => {
+  // Annahme auf der Seite: voller 1.000-l-IBC rund 1.070 kg. Die Tonnen-Angaben
+  // sind daraus gerechnet, nicht daneben gepflegt.
+  const kg = 1070;
+  const t = (n) => (Math.round(n * kg / 100) / 10).toFixed(1);
+  assert.strictEqual(t(18), "19.3"); assert.strictEqual(t(22), "23.5");
+  assert.ok(seite("ibc-container.html").includes("19,3") && seite("ibc-container.html").includes("23,5"),
+    "die deutsche IBC-Seite nennt andere Tonnen als 18 bzw. 22 x 1.070 kg ergeben");
+  assert.ok(enSeite("ibc-totes-container.html").includes("19.3") && enSeite("ibc-totes-container.html").includes("23.5"),
+    "die englische IBC-Seite nennt andere Tonnen");
+});
+
+test("die IBC-Seite haengt im Netz: Sitemap, Uebersichten, GUIDE, hreflang", () => {
+  const sm = fs.readFileSync(path.join(dir, "..", "sitemap.xml"), "utf8");
+  assert.ok(sm.includes("https://containerload.io/ratgeber/ibc-container</loc>"), "Sitemap: DE-URL fehlt");
+  assert.ok(sm.includes("https://containerload.io/en/guide/ibc-totes-container</loc>"), "Sitemap: EN-URL fehlt");
+  const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+  assert.ok(start.includes("'/ratgeber/ibc-container':'/en/guide/ibc-totes-container'"),
+    "GUIDE-Tabelle der Startseite kennt das Paar nicht (Sprachumschalter bricht)");
+  assert.ok(seite("index.html").includes('href="/ratgeber/ibc-container"'), "Ratgeber-Uebersicht verlinkt die Seite nicht");
+  assert.ok(enSeite("index.html").includes('href="/en/guide/ibc-totes-container"'), "Guide-Uebersicht verlinkt die Seite nicht");
+  assert.ok(seite("ibc-container.html").includes('hreflang="en" href="https://containerload.io/en/guide/ibc-totes-container"'));
+  assert.ok(enSeite("ibc-totes-container.html").includes('hreflang="de" href="https://containerload.io/ratgeber/ibc-container"'));
 });
