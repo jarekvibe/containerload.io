@@ -8668,10 +8668,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // etwa 850 px; im Dreispalten-Layout stehen der Gruppe 490 zur Verfuegung. Die Leiste ist
     // deshalb zwischen 1440 und 1800 px immer zweizeilig umgebrochen — auf genau den Breiten,
     // auf denen die meisten arbeiten.
+    // Landfracht traegt fuenf: cbm ist neben ldm und kg die dritte Groesse, nach der
+    // Strassenfracht eingekauft wird (gemeldet: "bei Landfracht auch noch die cbm") --
+    // sie stand nur in der Schublade, und dort suchte sie niemand.
     const statCards = domain === "road"
-      ? [kpiFull, kpiLoaded, kpiLdm, kpiWeight]
+      ? [kpiFull, kpiLoaded, kpiLdm, kpiVol, kpiWeight]
       : [kpiFull, kpiLoaded, kpiVol, kpiWeight];
-    const detailCards = domain === "road" ? [kpiVol, kpiSpots] : [kpiFreeLen, kpiLayers];
+    const detailCards = domain === "road" ? [kpiSpots] : [kpiFreeLen, kpiLayers];
     // ── Restplatz: was noch frei ist. Bewusst konservativ und nachpruefbar. ──
     // Indikative Laengs-Gewichtsverteilung (Slice 1): nur aus placed + Stueckgewichten, kein neuer Input.
     const cog = computeLongCog(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), num(sichtCont.l));
