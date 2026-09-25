@@ -207,6 +207,15 @@ footer{border-top:1px solid var(--line);margin-top:40px;padding:26px 0;color:var
 footer .wrap{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center;justify-content:space-between}
 footer a{color:var(--dim)}
 
+/* ── Draufsicht der Passt-rein-Seiten ──────────────────────
+ * Die Stauung kommt als eingebettetes SVG direkt aus dem Packer des Rechners
+ * (test/wissen-zahlen.test.mjs zaehlt die Rechtecke gegen die Stellzahl).
+ * Farben: laengs im Akzentblau, quer gedreht im Gruen, das Tuerende orange. */
+.stau{margin:24px 0;padding:16px;background:var(--deep);border:1px solid var(--line);border-radius:var(--r-m)}
+.stau svg{display:block;width:100%;height:auto}
+.stau figcaption{margin-top:8px;font-size:13px;color:var(--faint);line-height:1.5}
+.stau .leg{display:inline-block;width:10px;height:10px;border-radius:4px;margin-right:4px;vertical-align:-1px}
+
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
   *{animation:none!important;transition:none!important}
