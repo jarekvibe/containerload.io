@@ -440,6 +440,12 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
 
+### Der Teilen-Anstoß: die Wachstumsschleife bekommt ihren Moment
+Gemessen (Admin-Export, 30 Tage): 95 gerechnete Pläne, genau **ein** geteilter. Die Schleife (teilen → Empfänger sieht 3D → wird Nutzer) existiert als Feature, zündete aber nicht — der Teilen-Knopf oben rechts ist nicht im Blick, wenn der Plan unten fertig wird. Der Anstoß erscheint als Banner im Bild („Plan fertig. Als Link öffnet er sich beim Empfänger direkt in 3D"), **genau einmal im Leben**: Wegklicken oder Teilen (über jeden Weg, `doShare` ruft `teilenNudgeWeg`) schaltet ihn dauerhaft ab (`cl-teilen-anstoss-weg`). Prioritäten: die Empfehlung (`zeigeBanner`) geht immer vor; der Sicherungs-Aufplopp lässt dem einmaligen Anstoß den Vortritt (`!teilenAnstossAktiv` in seiner Bedingung) — sonst sähe ihn nie jemand, denn Sicherungs-Hinweise gibt es bei fast jedem Plan. Kein Anstoß bei: unfertigem Plan, empfangenem Plan (`shareBar`), manuellem Modus, EMBEDDED. Klick zählt `teilen-anstoss` (Liste in messen-und-melden). `test/teilen-anstoss.test.mjs`.
+
+### Die Startseiten-Snippets zielen auf die Kategorie
+GSC-Befund: „container loading calculator" und Verwandte holten Impressionen auf Position 38–79, und keine Seite zielte darauf — der Titel war schlicht „ContainerLoad". Jetzt: DE-Titel „Containerbeladung in 3D berechnen — ContainerLoad", EN (im `META`-Objekt, wird beim Sprachwechsel gesetzt) „Container Loading Calculator — free 3D tool | ContainerLoad", Beschreibungen mit derselben Kategorie, und einmal **sichtbar** in der EN-Hero-Unterzeile. Grenzen wie im Snippet-Schnitt (Titel ≤ 60, Beschreibung ≤ 155). `test/seo-startseite.test.mjs`. og:title bleibt bewusst die Marken-Zeile („Jede Ladung, im richtigen Container") — Social ist kein SERP.
+
 ### Das Empfehlungsbanner spricht nur, wenn es etwas zu sagen hat
 Gemeldet: *„Wenn man mehrere Container hat, zum Beispiel 2× 20 GP, wird einem unten trotzdem noch irgendwas vorgeschlagen mit ‚Du brauchst ca. 1× 40HC + 1× 20GP', obwohl man die Auswahl ja selbst bereits getroffen hat."* Daneben stand gleichzeitig **„Alles verladen · 2 Container"** in Grün. Zwei Antworten auf dieselbe Frage, und die untere war die falsche.
 
