@@ -83,7 +83,9 @@ test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", 
   assert.ok(roh.includes("const sichB = sichErg ? sichBefunde(sichErg) : [];"), "Befunde kommen nicht aus der einen Quelle");
   assert.ok(roh.includes("onFokus: setFokus, sichZonen"), "Viewport bekommt die Zonen nicht");
   // Der Hinweis ploppt nur bei echten Warnungen auf, nie ueber dem Empfehlungs-Banner.
-  assert.ok(roh.includes("!manualMode && !zeigeBanner && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen &&"), "Aufplopp-Bedingung fehlt");
+  // Seit dem Teilen-Anstoss laesst der Aufplopp dem EINMALIGEN Anstoss den
+  // Vortritt (!teilenAnstossAktiv) -- dieselbe Zusage, um ein Glied erweitert.
+  assert.ok(roh.includes("!manualMode && !zeigeBanner && !teilenAnstossAktiv && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen &&"), "Aufplopp-Bedingung fehlt");
   // Die Annahmen stehen SICHTBAR im Dialog, in beiden Sprachen.
   assert.ok(roh.includes("sichAssume: \"Richtwerte: CTU-Code"), "deutsche Annahmen fehlen");
   assert.ok(roh.includes("sichAssume: \"Guide values: CTU Code"), "englische Annahmen fehlen");
