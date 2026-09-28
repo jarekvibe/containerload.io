@@ -4213,7 +4213,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Zuletzt gewaehlte Reederei merken: wer fuer eine Reederei arbeitet, tut das meist morgen
   // wieder. Nur lokal im Browser, und beim Oeffnen eines geteilten Links ohne Wirkung (dort
   // gelten die Masse aus dem Link).
-  var FB_KEY = "containerload.feedback.v1"; // nur ein Datum: "die Frage kam schon"
+  var FB_KEY = "containerload.feedback.v1"; // Datum der letzten Frage (30-Tage-Rhythmus)
+  var FB_TAG = "containerload.feedback.tag"; // letzter Kalendertag mit gerechnetem Plan
+  var FB_TAGE = "containerload.feedback.tage"; // Zahl solcher Arbeitstage (Zaehler, kein Inhalt)
   var CARRIER_KEY = "containerload.carrier.v1";
   var loadCarrier = () => {
     try { const v = window.localStorage.getItem(CARRIER_KEY); return v && CARRIERS[v] ? v : ""; } catch (e) { return ""; }
@@ -7470,7 +7472,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const fbFragen = () => {
       if (EMBEDDED || fbSchonGefragt.current) return;
-      try { if (window.localStorage.getItem(FB_KEY)) { fbSchonGefragt.current = true; return; } } catch (e) {}
+      // Sechs Wochen, drei Feedbacks (zwei davon vom Betreiber): die Frage kam
+      // EINMAL im Leben, 60 s nach dem allerersten Plan -- bevor jemand ein
+      // Urteil hat, und danach nie wieder. Jetzt andersherum: Neulinge werden
+      // gar nicht gefragt (erst ab dem zweiten Arbeitstag mit gerechnetem
+      // Plan), Wiederkehrer alle 30 Tage -- die haben ein Urteil.
+      try {
+        const her = Date.now() - (+window.localStorage.getItem(FB_KEY) || 0);
+        if (her < 30 * 24 * 3600 * 1e3) { fbSchonGefragt.current = true; return; }
+        if ((+window.localStorage.getItem(FB_TAGE) || 0) < 2) return;
+      } catch (e) { return; }
       fbSchonGefragt.current = true;
       setFbAsk(true);
     };
@@ -7617,8 +7628,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const t = setTimeout(() => {
         const kind = container.kind || "dry";
         const r = packKind(container, cargo, {}, forceCentered);
-        // Empfehlung bei Ueberladung: See -> Container-Kombi; Strasse -> "N× gleiches Fahrzeug".
-        if (domain === "sea" && r.boxes < r.totalBoxes && r.totalBoxes > 0 && !r.rotHintAll) r.suggestion = suggestContainer(cargo, carrier);
+        // Empfehlung: See rechnet IMMER (auch wenn alles passt) -- sonst gibt es kein
+        // "Es ginge auch mit 1x 20' GP", wenn jemand nach einem Upgrade wieder Ladung
+        // wegnimmt (gemeldet: 11 Kisten im 40er, kein Downgrade-Vorschlag). empfBesser
+        // filtert selbst; Kosten gemessen: 2 ms im Normalfall, <= 85 ms bei Grossladung.
+        // Strasse unveraendert: "N x gleiches Fahrzeug" ergibt nur bei Rest einen Sinn.
+        if (domain === "sea" && r.totalBoxes > 0 && !r.rotHintAll) r.suggestion = suggestContainer(cargo, carrier);
         else if (domain === "road" && r.boxes < r.totalBoxes && r.totalBoxes > 0 && !r.rotHintAll) r.suggestion = suggestVehicles(container, cargo, preset);
         // Special Equipment: Out-of-Gauge-Vermessung (cm) gegen das gauge-Huellmass des
         // Hauptcontainers. Schaetzung zur Buchungsvorbereitung – keine verbindliche Stauplanung.
@@ -7734,7 +7749,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (r.remainingBoxes > 0) zaehl("passt-nicht");
         }
         setResult(r);
-        if (r.totalBoxes > 0 && r.boxes > 0 && !fbSchonGefragt.current && !fbUhr.current) fbUhr.current = setTimeout(fbFragen, 6e4);
+        if (r.totalBoxes > 0 && r.boxes > 0) {
+          try {
+            const heute = new Date().toISOString().slice(0, 10);
+            if (window.localStorage.getItem(FB_TAG) !== heute) {
+              window.localStorage.setItem(FB_TAG, heute);
+              window.localStorage.setItem(FB_TAGE, String((+window.localStorage.getItem(FB_TAGE) || 0) + 1));
+            }
+          } catch (e) {}
+          if (!fbSchonGefragt.current && !fbUhr.current) fbUhr.current = setTimeout(fbFragen, 6e4);
+        }
       }, 200);
       return () => clearTimeout(t);
     }, [container, cargo, preset, chainOverride, forceCentered, domain, carrier]);

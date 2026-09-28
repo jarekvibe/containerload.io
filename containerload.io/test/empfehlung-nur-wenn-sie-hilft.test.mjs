@@ -118,3 +118,26 @@ test("der neue Text steht in beiden Sprachen", () => {
   assert.ok(de > 0, "deutscher Text recBetter fehlt");
   assert.ok(en > 0, "englischer Text recBetter fehlt");
 });
+
+// ── Der Rueckweg: Ladung wegnehmen muss den kleineren Container anbieten ──
+// Gemeldet mit Bild: 11 Kisten 120x80x110 im 40' Standard, "Alles verladen",
+// aber kein "Es ginge auch mit 1x 20' GP". Ursache: die Empfehlung wurde nur
+// gerechnet, wenn etwas liegen blieb -- wer nach einem Upgrade Ladung wegnahm,
+// blieb stumm auf dem grossen Container sitzen.
+test("nach dem Wegnehmen wird der kleinere Container wieder angeboten", () => {
+  const cargo = [{ name: "P", l: 120, w: 80, h: 110, qty: 11, weight: 300 }];
+  const gross = PRESETS["40' GP"];
+  const r = packCargo(gross, cargo, {});
+  assert.strictEqual(r.boxes, 11, "alles muss in den 40er passen");
+  const sug = suggestContainer(cargo, null);
+  assert.ok(sug && sug.type === "single" && sug.name === "20' GP",
+    `die freie Empfehlung muss den 20' GP nennen, sagt aber ${sug && (sug.name || sug.type)}`);
+  // empfBesser-Rangfolge: gleiche Containerzahl, kleineres gebuchtes Volumen.
+  const klein = PRESETS[sug.name];
+  assert.ok(klein.l * klein.w * klein.h < gross.l * gross.w * gross.h);
+  // Und der Effekt rechnet die Empfehlung jetzt AUCH bei voll passender Ladung:
+  assert.ok(roh.includes('if (domain === "sea" && r.totalBoxes > 0 && !r.rotHintAll) r.suggestion = suggestContainer(cargo, carrier);'),
+    "die Empfehlung wird wieder nur bei Rest gerechnet -- der Rueckweg ist tot");
+  assert.ok(!roh.includes('domain === "sea" && r.boxes < r.totalBoxes'),
+    "der alte Rest-Waechter im See-Zweig ist zurueck");
+});
