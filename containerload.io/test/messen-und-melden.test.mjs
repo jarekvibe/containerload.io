@@ -191,7 +191,11 @@ test("geht das Absenden schief, faellt der Dialog auf die E-Mail zurueck", () =>
 test("die Frage nach dem Plan kommt hoechstens einmal — und nicht im eingebetteten Rechner", () => {
   const block = schnitt("const fbFragen = () => {", "};");
   assert.match(block, /EMBEDDED \|\| fbSchonGefragt\.current/, "kein Schutz gegen Mehrfach-Fragen");
+  // Seit dem Feedback-Umbau: 30-Tage-Rhythmus statt einmal im Leben, und
+  // Neulinge (unter zwei Arbeitstagen) werden gar nicht gefragt.
   assert.match(block, /localStorage\.getItem\(FB_KEY\)/, "die Frage kommt bei jedem Besuch wieder");
+  assert.match(block, /30 \* 24 \* 3600 \* 1e3/, "der 30-Tage-Rhythmus fehlt");
+  assert.match(block, /FB_TAGE.*< 2\) return;/, "das Neulings-Gate (zweiter Arbeitstag) fehlt");
   const vorbei = schnitt("const fbVorbei = () => {", "};");
   assert.match(vorbei, /localStorage\.setItem\(FB_KEY/, "die Antwort wird nicht gemerkt");
 });
