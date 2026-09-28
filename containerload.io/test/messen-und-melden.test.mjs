@@ -40,7 +40,7 @@ const EREIGNISSE = [
   "palettierer", "plan-gerechnet", "mehrere-container", "passt-nicht", "empfehlung",
   "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet",
   "sicherung-geprueft", "nummern-3d", "rampen-modus", "tuer-warum", "oog-ansehen", "achslast-ansehen",
-  "strassenlimit"
+  "strassenlimit", "teilen-anstoss"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {
