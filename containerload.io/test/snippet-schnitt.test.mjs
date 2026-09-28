@@ -19,7 +19,15 @@ const SEITEN = [
   { f: "ratgeber/cbm-berechnen.html", zahl: false },
   { f: "ratgeber/stellplaetze-container.html", zahl: true },
   { f: "ratgeber/stauplan-container.html", zahl: false },
-  { f: "ratgeber/industriepaletten-container.html", zahl: true }
+  { f: "ratgeber/industriepaletten-container.html", zahl: true },
+  { f: "ratgeber/gitterboxen-container.html", zahl: true },
+  { f: "ratgeber/ibc-container.html", zahl: true },
+  { f: "ratgeber/faesser-container.html", zahl: true },
+  { f: "ratgeber/big-bags-container.html", zahl: true },
+  { f: "en/guide/wire-mesh-pallets-container.html", zahl: true },
+  { f: "en/guide/ibc-totes-container.html", zahl: true },
+  { f: "en/guide/drums-container.html", zahl: true },
+  { f: "en/guide/big-bags-container.html", zahl: true }
 ];
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
 const greif = (s, re, was, f) => {
