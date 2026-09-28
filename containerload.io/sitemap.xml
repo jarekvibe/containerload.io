@@ -116,6 +116,38 @@
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
+    <loc>https://containerload.io/ratgeber/faesser-container</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/faesser-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/drums-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/faesser-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/drums-container</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/faesser-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/drums-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/faesser-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/big-bags-container</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/big-bags-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/big-bags-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/big-bags-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/big-bags-container</loc>
+    <lastmod>2026-09-28</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/big-bags-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/big-bags-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/big-bags-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel</loc>
     <lastmod>2026-07-09</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
