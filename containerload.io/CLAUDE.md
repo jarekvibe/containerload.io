@@ -17,6 +17,8 @@ Langfristig soll das Projekt wachsen und auch monetarisierbare Funktionen tragen
 
 **Leitprinzip bei jeder Änderung:** Macht es das Tool für jemanden an der Rampe oder am Schreibtisch klarer, schneller oder vertrauenswürdiger? Wenn nein, ist es wahrscheinlich die falsche Änderung.
 
+**Arbeitsweise (seit 28.09.2026, von Jarek so erteilt):** Claude priorisiert selbst, was wichtig ist, und setzt es um — datengetrieben (GSC, Admin-Dashboard), im Zweifel entlang des Leitprinzips und des erklärten Ziels: ContainerLoad soll unter Spediteuren vom Geheimtipp zum Praxis-Werkzeug werden. Unverändert gilt: **Merges in main nur auf Jareks Zusage** (Push auf main deployt live), Rechtsseiten-Texte nur mit Rücksprache, und die Ehrlichkeitslinie ist nicht verhandelbar. Größere Richtungswechsel (neue Produktkapitel, Monetarisierung, Auftritt nach außen unter Jareks Namen) werden weiterhin vorgeschlagen, nicht vollzogen.
+
 ---
 
 ## 2. Technische Grundregeln (nicht verhandelbar ohne Rücksprache)
