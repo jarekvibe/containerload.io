@@ -83,6 +83,13 @@ export function feedbackAufbereiten(subs) {
 // Events (je mit .tag "YYYY-MM-DD", optional .land/.ts) -> Kennzahlen fuers Dashboard.
 export function aggregiere(events) {
   const tage = new Map(), container = {}, modus = {}, sprachen = {}, funktionen = {}, laender = {};
+  // Leere Aufrufe: keine Position und keine Funktion ausser "plan-gerechnet"
+  // (der feuert beim blossen Oeffnen der App). Menschen hinterlassen so etwas
+  // auch (kurz reingeschaut), aber Crawler, die JS ausfuehren, hinterlassen
+  // NUR so etwas -- deshalb getrennt gezaehlt statt geloescht. Gemeldet, als
+  // "HK · 4" auf der Laenderkarte auftauchte und nach Bots aussah.
+  const laenderLeer = {};
+  let leerGesamt = 0;
   // Wann gerechnet wird: Stunden (UTC, das Dashboard verschiebt in die Ortszeit
   // des Betrachters) und Wochentage (0 = Montag). Beides aus dem ts, das die
   // Function aus dem Blob-Schluessel ableitet -- gespeichert wird nichts Neues.
@@ -101,7 +108,12 @@ export function aggregiere(events) {
     if (e.container) container[e.container] = (container[e.container] || 0) + 1;
     modus[e.modus] = (modus[e.modus] || 0) + 1;
     sprachen[e.sprache] = (sprachen[e.sprache] || 0) + 1;
-    if (e.land) laender[e.land] = (laender[e.land] || 0) + 1;
+    const leer = e.positionen.length === 0 && e.funktionen.every((f) => f === "plan-gerechnet");
+    if (leer) leerGesamt += 1;
+    if (e.land) {
+      laender[e.land] = (laender[e.land] || 0) + 1;
+      if (leer) laenderLeer[e.land] = (laenderLeer[e.land] || 0) + 1;
+    }
     for (const f of e.funktionen) funktionen[f] = (funktionen[f] || 0) + 1;
     if (e.geteilt) geteiltGesamt += 1;
     dauerSumme += e.dauerS || 0;
@@ -121,7 +133,7 @@ export function aggregiere(events) {
     stunden,
     wochentage,
     tage: [...tage.values()].sort((a, b) => a.tag < b.tag ? -1 : 1),
-    container, modus, sprachen, funktionen, laender,
+    container, modus, sprachen, funktionen, laender, laenderLeer, leerGesamt,
   };
 }
 

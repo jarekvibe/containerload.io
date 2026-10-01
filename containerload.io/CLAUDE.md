@@ -442,6 +442,9 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
 
+### Leere Aufrufe stehen getrennt — Crawler sehen nicht wie Kunden aus
+Gemeldet, als „HK · 4" auf der Länderkarte auftauchte: Ein Aufruf ohne Position und ohne Funktion außer `plan-gerechnet` (feuert beim bloßen Öffnen) ist das Muster eines Crawlers, der JS ausführt — Menschen hinterlassen so etwas auch (kurz reingeschaut), Crawler hinterlassen **nur** so etwas. `aggregiere` zählt deshalb `leerGesamt` und `laenderLeer` getrennt (gelöscht wird nichts, das CSV bleibt roh); das Dashboard zeigt an der Rechnungen-KPI „davon N leer (ohne Ladung)" und in der Länderliste den echten Wert mit „· N leer" am Namen. `test/nutzungsstatistik.test.mjs`.
+
 ### Die Empfehlung rechnet auch rückwärts
 Gemeldet mit Bild: 11 Kisten im 40′ Standard, „Alles verladen", aber kein „Es ginge auch mit 1× 20′ GP". Ursache: `r.suggestion` wurde nur gerechnet, wenn etwas liegen blieb — wer nach einem Upgrade Ladung wegnahm, blieb stumm auf dem großen Container sitzen. Der See-Zweig rechnet die freie Empfehlung jetzt **immer** (`r.totalBoxes > 0`, ohne Rest-Wächter); `empfBesser` filtert selbst und zeigt das Angebot nur, wenn es wirklich weniger Equipment ist. Kosten gemessen: 2 ms im Normalfall, ≤ 85 ms bei Großladung — im selben setTimeout-Rebuild verschwindend. Die Straße bleibt beim Rest-Wächter („N× gleiches Fahrzeug" ergibt nur bei Rest einen Sinn). `test/empfehlung-nur-wenn-sie-hilft.test.mjs` (Rückweg-Test).
 
