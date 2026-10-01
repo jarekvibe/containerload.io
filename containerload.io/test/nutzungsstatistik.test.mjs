@@ -66,15 +66,23 @@ test("aggregiere zaehlt Tage, Container, Modi und Funktionen aus einer Quelle", 
     { ...pruefeEvent({ ...gut(), modus: "road", container: "Planensattel 13,6 m", funktionen: ["ladung-eingegeben"] }), tag: "2026-09-02" },
   ];
   events[0].land = "DE"; events[1].land = "DE"; events[2].land = "AT";
+  // Ein leerer Aufruf (keine Position, nur plan-gerechnet) -- das Muster eines
+  // Crawlers, der JS ausfuehrt. Er zaehlt mit, aber getrennt ausgewiesen.
+  events.push({ ...pruefeEvent({ ...gut(), positionen: [], funktionen: ["plan-gerechnet"] }), tag: "2026-09-02", land: "HK" });
   const a = aggregiere(events);
-  assert.strictEqual(a.events, 3);
-  assert.deepStrictEqual(a.tage.map((t) => t.events), [2, 1]);
+  assert.strictEqual(a.events, 4);
+  assert.strictEqual(a.leerGesamt, 1, "der leere Aufruf wird nicht getrennt gezaehlt");
+  assert.deepStrictEqual(a.laenderLeer, { HK: 1 });
+  assert.strictEqual(a.laender.HK, 1);
+  // Und ein echter Plan ohne Land zaehlt NICHT als leer:
+  assert.ok(!a.laenderLeer.DE, "echte Rechnungen gelten als leer");
+  assert.deepStrictEqual(a.tage.map((t) => t.events), [2, 2]);
   assert.strictEqual(a.positionenGesamt, 3);
   assert.strictEqual(a.stueckGesamt, 30);
-  assert.strictEqual(a.container["20' GP"], 2);
+  assert.strictEqual(a.container["20' GP"], 3);
   assert.strictEqual(a.modus.road, 1);
   assert.strictEqual(a.funktionen["excel-import"], 2);
-  assert.deepStrictEqual(a.laender, { DE: 2, AT: 1 });
+  assert.deepStrictEqual(a.laender, { DE: 2, AT: 1, HK: 1 });
   // Events ohne Land (Bestand von vor der Laender-Erfassung) stoeren nicht.
   assert.deepStrictEqual(aggregiere([{ ...pruefeEvent(gut()), tag: "2026-09-01" }]).laender, {});
 });

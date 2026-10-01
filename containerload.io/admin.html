@@ -201,7 +201,7 @@
     const geteilt = d.geteiltGesamt || 0;
     const tonnen = ((d.kgGesamt || 0) / 1000).toLocaleString("de-DE", { maximumFractionDigits: 1 });
     const karten = [
-      ["Rechnungen", d.events, "im Zeitraum"],
+      ["Rechnungen", d.events, d.leerGesamt ? "davon " + d.leerGesamt + " leer (ohne Ladung)" : "im Zeitraum"],
       ["Trend", trend === null ? "—" : (trend >= 0 ? "+" : "") + trend + " %", "2. Hälfte vs 1. Hälfte"],
       ["Positionen", d.positionenGesamt, "Ø " + posProEvent + " je Rechnung"],
       ["Packstücke", d.stueckGesamt, tonnen + " t verplant"],
@@ -341,8 +341,16 @@
       }
       $("weltChart").innerHTML = '<svg viewBox="0 0 1000 520" style="width:100%;height:auto">' + pf + "</svg>";
     }
+    // Die Liste zaehlt ECHTE Rechnungen (mit Ladung oder Interaktion); leere
+    // Aufrufe -- das Muster von Crawlern -- stehen als Zusatz am Namen, damit
+    // "HK · 4" nicht wie vier Kunden aussieht, wenn es vier Renderer waren.
+    const leerJeLand = d.laenderLeer || {};
     const benannt = {};
-    for (const [a2, n] of Object.entries(laender)) benannt[typeof WELT !== "undefined" && WELT[a2] ? WELT[a2].n : a2] = n;
+    for (const [a2, n] of Object.entries(laender)) {
+      const name = typeof WELT !== "undefined" && WELT[a2] ? WELT[a2].n : a2;
+      const leer = leerJeLand[a2] || 0;
+      benannt[leer ? name + " · " + leer + " leer" : name] = n - leer;
+    }
     if (Object.keys(benannt).length) balkenListe($("laenderChart"), benannt, FARBE.blau);
     else $("laenderChart").innerHTML = '<div class="leer">Noch kein Land erfasst.</div>';
   }
