@@ -77,7 +77,7 @@ test("Schwergut ab 1,5 t je Stueck", () => {
 test("die Oberflaeche traegt den Check in beiden Sprachen und liest die Sicht", () => {
   assert.ok(roh.includes('sichBtn: "Sicherung pr\\xFCfen"'), "deutscher Knopf fehlt");
   assert.ok(roh.includes('sichBtn: "Check securing"'), "englischer Knopf fehlt");
-  assert.ok(roh.includes('disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, T.sichBtn)'), "Knopf haengt nicht an der Sicht");
+  assert.ok(roh.includes('disabled: !sichtPlaced.length, onClick: () => setSichOpen(true), title: sichWarnzahl > 0 ? T.sichBanner(sichWarnzahl) : void 0 }, T.sichBtn,'), "Knopf haengt nicht an der Sicht");
   // EINE Quelle: Dialog, Aufplopp-Hinweis und 3D lesen dieselbe Analyse der Sicht.
   assert.ok(roh.includes("sichAnalyse(sichtPlaced, (ti) => num(cargo[ti] && cargo[ti].weight), sichtCont, domain)"), "Analyse liest nicht die Sicht");
   assert.ok(roh.includes("const sichB = sichErg ? sichBefunde(sichErg) : [];"), "Befunde kommen nicht aus der einen Quelle");

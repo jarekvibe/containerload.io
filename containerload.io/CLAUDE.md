@@ -908,6 +908,7 @@ Drei Verträge, alle in `test/positionsnummern.test.mjs`:
 - **Eine Nummernquelle.** 3D rechnet wörtlich dieselbe Formel wie `tiPos` in `buildLadevorschlag` (Index unter den Positionen mit Menge > 0, `items.indexOf + 1`). „Im Bild die 03, auf dem Papier die 04" wäre genau der Widerspruch, den das Projekt überall sonst ausgebaut hat — der Test prüft **beide Seiten** und fällt um, sobald eine allein geändert wird.
 - **Sprites werden entsorgt** (Textur + Material) bei jedem Neuaufbau, und der **Fokus gilt auch für Plaketten** — dasselbe Effekt-Muster wie die Sicherungszonen direkt darüber.
 - Das Einschalten zählt `nummern-3d` (Liste in `test/messen-und-melden.test.mjs`).
+- **Die Ladungsliste trägt dieselbe Nummer** („01" vor dem Namen, `posItems` = wörtlich dieselbe Formel; Menge 0 zeigt „––"). Vorher verband nur die Farbe Liste und Bild — „nimm die 04er" fand man in der Liste nicht wieder, und fünf importierte Zeilen ohne Namen hießen alle „Position". Bewusst **nicht** in den Namen geschrieben („Position 3"): die Nummer verschiebt sich, sobald eine Zeile Menge 0 bekommt, ein Name nicht — „Position 3" mit der Plakette 02 wäre genau der Widerspruch, den die eine Nummernquelle verhindert. Das Namensfeld trägt Platzhalter und `title`, damit man sieht, dass es eins ist.
 
 > Zwei Fallen aus dem Einbau: `colorOf` lebt in der **App-Komponente**, nicht im Viewport — die Plakette liest die Kennfarbe deshalb selbst (`cargo[ti].color || TYPE_COLORS_AUTO[…]`, dieselbe Formel wie `typeMat`). Und ein Tailwind-Arbitrary-Wert (`right-[100px]`) fehlt im vorgebauten `tw.out.css` des Test-Harness — der Knopf sitzt deshalb per Inline-`right`.
 
@@ -1034,6 +1035,27 @@ Sechs Kennzahlen plus Statusblock brauchen rund 850 px. Im Dreispalten-Layout st
 Zwei Dinge, die die Leiste falsch erzählt hat und die nicht zurückkommen dürfen:
 - **Grün heißt „alles ist drin".** Vorher hieß es nur „Gewicht und Auslastung sind in Ordnung" — der Punkt stand auf Grün, während daneben „30 offen" stand.
 - **„Verladen 62 / 92" zählt den ersten Container**, das Bild darüber zeigt aber bis zu vier. Die Zahl trägt deshalb dieselbe Marke wie die Hülle im Bild (`C1` / `F1`), sobald es mehr als eine gibt.
+
+- **„Voll" ist die engere Grenze**, nicht das Volumen. Siehe den nächsten Abschnitt.
+
+### „Voll" zeigt die engere Grenze: Raum oder Gewicht
+Bis Oktober 2026 war „Voll" in der Seefracht schlicht die Volumenauslastung. Damit wiederholte die Kachel die Volumen-Kachel daneben („Voll 44 %" neben „33,5 / 76,3 m³"), und bei schwerer Ware log sie: die **Farbe** kannte das Gewicht längst (`railHot` = max(Raum, Gewicht)), die **Zahl** nicht. Bei sechs Stahlkisten im 20′ stand „Voll 32 %" in Orange, während 27 von 28,2 t verladen waren.
+
+Jetzt liefert **`vollGrenze(raumPct, gewPct)`** (Modulebene, neben `fitsThroughDoor`) die Grenze, die zuerst erreicht ist — `{ pct, nach: "raum" | "gewicht" }`, bei Gleichstand der Raum. Raum heißt in der See Volumen, auf der Straße Lademeter. **Alle Anzeigen lesen diese eine Funktion:** die Kachel, ihre Farbe (`railColor`, `railHot = voll.pct >= 90`), der 2-px-Balken unter der Leiste, die Spalte „Voll" der Tabelle je Container (`slotRows.vollPct`) und damit die PDF-Übersicht (`LV_UEBERSICHT(slotRows, …)`).
+
+- **Bindet das Gewicht, sagt die Beschriftung es:** „Voll · Gewicht" (`T.railFullKg`). Der Normalfall bleibt beim kurzen „Voll" — ein Zusatz bei jeder Ladung hätte die Leiste breiter gemacht, ohne etwas zu sagen. Beide Werte stehen im `title` (`T.railFullTitle`), dafür trägt `Kpi` jetzt ein optionales `title`.
+- **Grün ab 80 %** wie bisher beim Volumen, jetzt bezogen auf die engere Grenze; die Straße bleibt im Akzent.
+- **Nachgemessen bei 1440 und 1920 px, beide Sprachen:** die Leiste bleibt einzeilig, wo sie es vorher war („Voll · Gewicht" ist schmaler als die Volumen-Kachel daneben). Mit Kette ist sie bei 1440 px zweizeilig — wie vorher, der Nebenbefund unten gilt weiter.
+
+`test/voll-engere-grenze.test.mjs` rechnet die Funktion nach (leicht, Stahl, Gleichstand, kaputte Eingaben, Überladung) **und** prüft, dass Kachel, Balken, Tabelle und PDF sie lesen.
+
+### Die UI-Durchsicht vom Oktober 2026: vier Stellen, an denen die Oberfläche ihre Regeln brach
+Aus einer Durchsicht mit Screenshot; jede für sich klein, zusammen der Grund, warum der Rechner dort mehrdeutig wirkte. `test/oberflaeche-klarheit.test.mjs` hält alle vier fest.
+
+- **Die Mengen-Pille spricht nur, wenn etwas offen bleibt** (`pt && !done && pt.total > 0`). Fünf grüne „2/2 · 3/3 · 4/4" sagten dasselbe wie „Alles verladen" in der Leiste, und „2/2" direkt hinter „Position" las sich wie „Position 2 von 2". Orange „0/2" bleibt — das ist eine Information; der `title` sagt „2 Stück noch nicht verladen" (im Fokus nicht, dort zählt die Pille diesen Container).
+- **Der Sicherungs-Hinweis ist getönt, nicht voll orange.** Orange ist eine Statusfarbe („wird knapp"), kein Aktionsknopf; voll orange war der Knopf das lauteste Element der Seite, lauter als „Teilen". Dafür trägt der Seitenleisten-Knopf jetzt die **Zahl der Hinweise** und die Variante `accent` statt `quiet` (er las sich wie eine Beschriftung — derselbe Befund wie früher bei „Leeren"). Die Zahl bleibt sichtbar, wenn der Aufplopp weggeklickt ist oder hinter Empfehlung und Teilen-Anstoß zurücksteht.
+- **Der Drehen-Umschalter sagt seinen Zustand.** Er hieß in beiden Zuständen „↻ 90°" und las sich wie „jetzt drehen"; der Zustand stand nur in einer 16-%-Tönung. Jetzt: Beschriftung „Drehen 90°", Knopf „↻ ja" / „↻ nein", `aria-pressed`, erklärender `title`. Aus trägt er die Kante der Eingabefelder (`C.fieldBorder`) — `C.field` ist derselbe Ton wie die offene Karte (`C.raised`), ohne Kante verschwand er.
+- **Das Türmaß läuft über `dimDE` und trägt seine Einheit** (`tuerTxt`): „235×227,4 cm" statt „235" groß und „×227.4" klein — mit Punkt in der deutschen Oberfläche, gegen die Regel „Zahlen nur über `nf()`/`fmtDE()`". Die Kennzahlen der Containerkarte brechen nicht mehr um (`whiteSpace: nowrap`, außer Text-Kacheln); die 1fr-Spalten geben nach, Volumen und Nutzlast passen in den Rest (gemessen bei 1440 px mit Maersk-Werten).
 
 ### Die Gewichtsanzeige und die Überladung
 Die Zuladungsanzeige misst `result.weight` — das Gewicht dessen, was in **diesem** Container liegt. Dafür ist sie richtig. Was sie nicht sagen kann: dass die **eingegebene** Ladung als Ganzes schwerer ist, als der Container tragen darf. Ein einzelnes 30-t-Stück auf einem 28,2-t-Container wird gar nicht erst platziert, `result.weight` bleibt 0, und die Anzeige stünde auf 0 %. Diesen Satz trägt jetzt die Statuszeile (`overweight` / `overKg` / `T.overCap`). **Beides zusammen ist vollständig, eines allein war es nicht.**

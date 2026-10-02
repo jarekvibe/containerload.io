@@ -131,8 +131,11 @@ test("die Tabelle steht in der Schublade und nur bei mehr als einem Container", 
 });
 
 test('"Voll" meint dasselbe wie in der Leiste - auf der Strasse Lademeter', () => {
-  assert.ok(/vollPct: domain === "road"\s*\n\s*\? \(ldmT > 0 \? ldmB \/ ldmT \* 100 : 0\)\s*\n\s*: \(cVol > 0 \? vol \/ cVol \* 100 : 0\)/.test(roh),
+  assert.ok(/const raumPct = domain === "road"\s*\n\s*\? \(ldmT > 0 \? ldmB \/ ldmT \* 100 : 0\)\s*\n\s*: \(cVol > 0 \? vol \/ cVol \* 100 : 0\);/.test(roh),
     "die Spalte 'Voll' zeigt auf der Strasse wieder Volumen statt Lademeter");
+  // Und wie in der Leiste zaehlt die engere Grenze, Raum ODER Gewicht (test/voll-engere-grenze).
+  assert.ok(roh.includes("vollPct: vollGrenze(raumPct, pPct).pct,"),
+    "die Spalte 'Voll' liest nicht mehr dieselbe Grenze wie die Leiste");
 });
 
 test("die Schublade schneidet nicht mehr still ab", () => {
