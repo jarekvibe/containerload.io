@@ -2362,6 +2362,41 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Container, dann das gebuchte Volumen.
       if (rein.offen < best.offen || (rein.offen === best.offen && (rein.n < best.n || (rein.n === best.n && rein.vol < best.vol)))) best = rein;
     }
+    // Dritter Kandidat: N GLEICHE Container eines kleineren Typs. Beide Wege oben beginnen mit
+    // dem Arbeitspferd (40' HC) und haengen den Rest an -- bei schwerer Ware ist das die
+    // falsche Richtung. Gemeldet: 18 Kisten a 1.483 kg (26,7 t). Der 40' HC traegt 26,58 t,
+    // also kam "1x 40' HC + 1x 20' GP" heraus, und die Kette darunter buchte genau das.
+    // 2x 20' GP nehmen dieselbe Ladung auf (je 9 Stueck, je 13,3 t) -- gleich viele Container,
+    // 40 % weniger gebuchtes Volumen, und bei schwerer Ware der uebliche Weg. Gesucht wird
+    // nur, wo es gewinnen KANN: hoechstens so viele Container wie best, und bei gleicher
+    // Zahl nur Typen, deren Volumen darunter bleibt. Damit kostet es meist zwei Packlaeufe.
+    if (best.offen === 0 && best.n >= 2) {
+      // Untergrenze ohne Packlauf: so viele Container braucht es mindestens, nach Gewicht
+      // und nach Volumen. Liegt sie ueber kmax, kann der Typ nicht gewinnen -- bei 1.900
+      // leichten Kisten spart das ~200 ms fuer einen Vergleich, der nie aufgegangen waere.
+      const mindestens = (o, rest) => {
+        let kg = 0, v = 0;
+        for (const t of rest) { kg += t.qty * Math.max(0, num(t.weight)); v += t.qty * num(t.l) * num(t.w) * num(t.h); }
+        const pay = num(o.p.payload);
+        return Math.max(pay > 0 ? Math.ceil(kg / pay - 1e-9) : 0, Math.ceil(v / o.vol - 1e-9));
+      };
+      for (const o of stdOrder) {
+        const kmax = best.n * o.vol < best.vol - 1e-6 ? best.n : best.n - 1;
+        if (kmax < 2) continue; // ein einzelner Container wurde oben schon verworfen
+        let rest = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
+        let k = 0;
+        while (k < kmax && rest.some((t) => t.qty > 0)) {
+          if (mindestens(o, rest) > kmax - k) break; // geht nicht mehr auf
+          const r = packCargo(o.p, rest, OPT);
+          if (r.boxes === 0) break;
+          k++;
+          rest = rest.map((t, i) => ({ ...t, qty: t.qty - (r.perType[i] ? r.perType[i].loaded : 0) }));
+        }
+        if (rest.some((t) => t.qty > 0)) continue;
+        const gleich = { used: { [o.name]: k }, offen: 0, n: k, vol: k * o.vol };
+        if (gleich.n < best.n || (gleich.n === best.n && gleich.vol < best.vol)) best = gleich;
+      }
+    }
     const combo = stdOrder.slice().reverse().filter((o) => best.used[o.name]).map((o) => ({ name: o.name, count: best.used[o.name] }));
     return { type: "multi", combo };
   }
@@ -2775,14 +2810,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       return offen <= 0 ? neu : null;
     };
+    // Nicht die erste Stufe, die aufgeht, sondern die erste, die GUT GENUG ist. Gemeldet:
+    // 18 Kisten a 1.483 kg auf 40' HC + 20' GP. Stufe 1 (f = 1) traf ein Zielgewicht knapp
+    // unter neun Stueck und ergab 8 / 10 -- der gewaehlte 40-Fuesser trug weniger als der
+    // angehaengte 20-Fuesser, 2.966 kg Spanne. Das war kleiner als gierig, also gewann es;
+    // Stufe 2 (f = 1,08) haette 9 / 9 und 0 kg Spanne gebracht. Gut genug heisst: die
+    // Spanne ist nicht groesser als das schwerste Stueck -- ein einzelnes Stueck umzulegen
+    // braechte dann nichts mehr. Bis dahin wird weiterprobiert und die beste Stufe behalten.
+    const schwerstes = cargo.reduce((m, t, i) => stueck[i] > 0 ? Math.max(m, num(t.weight)) : m, 0);
+    let besteNeu = null, besteSpanne = istSpanne - 1e-6;
     for (const f of AUSGLEICH_LUFT) {
       const neu = versuch(f);
       if (!neu) continue;
-      if (spanne(neu.map((c) => slotKg(c.placed, cargo))) >= istSpanne - 1e-6) return null; // kein Gewinn
-      const slot0 = neu[0].res;
-      return { chain: neu.map((c) => ({ name: c.name, preset: c.preset, placed: c.placed })), slot0 };
+      const sp = spanne(neu.map((c) => slotKg(c.placed, cargo)));
+      // Bringt eine Stufe keinen Gewinn, bleibt es beim alten fruehen Abbruch. Mit noch mehr
+      // Luft wird es in aller Regel nicht besser, und ohne den Abbruch kostete die Kette ueber
+      // 160 Zufallsladungen ein Drittel mehr Rechenzeit (mit ihm: +13 %).
+      if (sp >= besteSpanne) break;
+      besteNeu = neu; besteSpanne = sp;
+      if (sp <= schwerstes + 1e-6) break;
     }
-    return null;
+    if (!besteNeu) return null;
+    const slot0 = besteNeu[0].res;
+    return { chain: besteNeu.map((c) => ({ name: c.name, preset: c.preset, placed: c.placed })), slot0 };
   }
   function chainContainers(container0, preset0, cargo, slot0, overrides, MAXVIS, carrier) {
     // Auto-Folgecontainer nur aus Standard-Typen; Special Equipment nur per manueller Wahl.
@@ -8726,7 +8776,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       title: T.railFullTitle(domain === "road", Math.round(primaryMeter.pct), Math.round(payPct)) };
     // Bei leerer Ladung neutral: "0 / 0" in Orange behauptet ein Problem, wo noch gar
     // nichts eingegeben wurde.
-    const kpiLoaded = { label: T.loaded + slot1, value: `${sichtBoxes}`, sub: fokusSlot ? "" : `/ ${result.totalBoxes}`, accent: fokusSlot ? C.text : leer ? C.text : allFit ? C.good : C.warn };
+    // Bei einer Kette zaehlt die Zahl nur C1 ("8 / 18"). Traegt der PLAN alles, ist das kein
+    // Problem, sondern die Aufteilung -- orange neben gruenem "Alles verladen \xB7 2 Container"
+    // las sich wie "10 fehlen". Orange bleibt dem, was wirklich offen ist.
+    const kpiLoaded = { label: T.loaded + slot1, value: `${sichtBoxes}`, sub: fokusSlot ? "" : `/ ${result.totalBoxes}`, accent: fokusSlot ? C.text : leer ? C.text : allFit ? C.good : planFit ? C.text : C.warn };
     const kpiWeight = { label: T.weight, value: fmtDE(sichtKg), sub: num(sichtCont.payload) > 0 ? `/ ${fmtDE(sichtCont.payload)} kg` : "kg", accent: payColor };
     const kpiVol = domain === "road"
       ? { label: T.volume, value: nf(sichtVol, 2), sub: "cbm" }
