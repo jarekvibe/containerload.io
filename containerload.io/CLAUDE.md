@@ -180,7 +180,7 @@ Seitdem gelten beide Hälften nebeneinander, geprüft in **einem** Durchgang üb
 Das Werkzeug dafür ist kein zweiter Algorithmus, sondern **eine andere Schranke**: jeder Container wird mit einer künstlich gesenkten Zuladung gepackt (dem Zielgewicht), nur der letzte mit seiner echten. Der Packer lässt dann von sich aus schwere Stücke für die nächsten liegen.
 
 - **Das Zielgewicht ist anteilig zur Zuladung**, nicht stur der Durchschnitt. Bei gleichen Containern ist das dasselbe (der Normalfall); bei gemischten heißt „gleichmäßig verteilt" nicht „gleich viele Kilo", sondern „keiner prozentual voller als die anderen".
-- **Ein Zielgewicht exakt auf dem Schnitt geht selten auf** — das nächste Stück passt immer knapp nicht mehr, und was vorne liegenbleibt, muss hinten zusätzlich hinein. Deshalb `AUSGLEICH_LUFT = [1, 1.08, 1.2, 1.45]`: die erste Stufe, die aufgeht **und die Spanne verkleinert**, gewinnt. Jede Stufe ist ein kompletter zweiter Packlauf über die ganze Kette — deshalb sind es vier und nicht zwanzig.
+- **Ein Zielgewicht exakt auf dem Schnitt geht selten auf** — das nächste Stück passt immer knapp nicht mehr, und was vorne liegenbleibt, muss hinten zusätzlich hinein. Deshalb `AUSGLEICH_LUFT = [1, 1.08, 1.2, 1.45]`. Jede Stufe ist ein kompletter zweiter Packlauf über die ganze Kette — deshalb sind es vier und nicht zwanzig. **Gewählt wird seit Oktober 2026 die erste Stufe, die gut genug ist**, nicht mehr die erste, die aufgeht: weiterprobiert wird, solange die Spanne größer ist als das schwerste Stück (`schwerstes` — darunter brächte es nichts, ein einzelnes Stück umzulegen), und behalten wird die beste Stufe. Bringt eine Stufe keinen Gewinn, bleibt es beim alten frühen Abbruch. Anlass und Messung im Abschnitt „Schwere Ware" weiter unten.
 - **Gedeckelt** auf `AUSGLEICH_MAXSTK = 600` Packstücke und `MAXDRAW` Container. Gemessen: die gemeldete Sendung 84 → 142 ms, der schlimmste gedeckelte Fall (600 Kisten auf 8 Containern) 281 → 647 ms.
 - **Special Equipment bleibt außen vor.** Open Top und Flat Rack packt `packKind`, nicht `packCargo`; ein zweiter Durchgang über `packCargo` ließe die Übermaß-Stücke stillschweigend fallen.
 
@@ -228,6 +228,21 @@ Gemessen über 200 zufällige Ketten: **kein einziger Fall braucht mehr Containe
 
 > **Die Falle, die fünf Testdateien auf einmal umgeworfen hat:** Beim Umbau wurde aus `return { chain, remainingBoxes: … }` ein `const out = { … }; return out;`. Fünf Test-Slices schneiden das Ende von `chainContainers` an genau dieser Zeichenkette ab — sie liefen ins Leere, und die halbe Kette war nicht mehr getestet. Die Zeile beginnt jetzt in **beiden** Ketten-Funktionen wieder wörtlich mit `return { chain, remainingBoxes`, mit einem Kommentar darüber.
 
+
+### Schwere Ware: gleiche Container in der Empfehlung, und der Ausgleich hört bei „gut genug" auf
+Gemeldet mit Bild, Kommentar „hä": 18 Kisten 110 × 95 × 176 cm à 1.483 kg (26.694 kg), gewählt 40′ HC (26.580 kg Zuladung — 114 kg zu wenig). Der Rechner zeigte 40′ HC + 20′ GP, im **gewählten 40-Füßer 8 Stück, im angehängten 20-Füßer 10** („Voll 19 %"), dazu „Verladen · C1 8 / 18" in Orange neben grünem „Alles verladen". Keine Empfehlung — obwohl **2× 20′ GP** dieselbe Ladung tragen (je 9 Stück, 13,3 t), mit gleich vielen Containern und 40 % weniger gebuchtem Volumen. Bei schwerer Ware ist das der übliche Weg.
+
+Drei Ursachen, drei Korrekturen:
+
+- **Die Empfehlung kannte nur eine Richtung.** `kombi` (gierig wie sortenrein) nimmt immer zuerst das Arbeitspferd (40′ HC) und hängt für den Rest den kleinsten passenden Typ an. N **gleiche** kleinere Container kamen nie in Betracht. Jetzt gibt es einen dritten Kandidaten: je Standardtyp so viele gleiche Container, wie nötig — **gedeckelt** auf höchstens so viele wie der bisher beste Vorschlag (bei gleicher Zahl nur Typen mit weniger Volumen), und mit einer **Untergrenze ohne Packlauf** (`mindestens`: nach Gewicht und Volumen), die Flotten aussortiert, die nie aufgehen können. Rangfolge wie überall: offen, Zahl, Volumen. Das Banner bietet dann „Es ginge auch mit 2× 20′ GP" samt Übernehmen-Knopf an — derselbe Weg wie jede Kombi-Empfehlung.
+- **Der Ausgleich nahm die erste Stufe, die aufging.** Stufe 1 traf ein Zielgewicht knapp unter neun Stück → 8 / 10, Spanne 2.966 kg; Stufe 2 hätte 9 / 9 und 0 kg gebracht. Siehe die geänderte Regel oben bei „Zwei Ziele, zwei Stufen".
+- **„Verladen · C1" stand orange**, obwohl nichts offen war. Siehe die Ergebnisleiste.
+
+**Gemessen über 160 Zufallsladungen** (alt gegen neu, `fall/bench.mjs` im Scratchpad): **346 Container vorher wie nachher, nichts offen, nichts überladen**, Gewichtsspanne −10,5 %. Die Empfehlung ändert sich in 47 Fällen, **jedes Mal zum Besseren** (weniger Container oder weniger Volumen), und in **allen 47 hält die Kette, was sie verspricht** (Übernehmen → nichts offen, nicht mehr Container). Rechenzeit: Kette +13 %, Empfehlung +14 % im Mittel; die Großladungen (600 schwere Kisten, 1.900 leichte) liegen innerhalb der Messstreuung — ohne die Untergrenze kostete die Empfehlung dort 220–300 ms mehr, ohne den frühen Abbruch die Kette ein Drittel mehr.
+
+Nebenwirkung, gewollt: auch leichte Ladungen bekommen „2× 40′ GP statt 40′ HC + 40′ GP", wenn die Höhe keinen Unterschied macht (die gemeldete 9-flache-plus-22-Paletten-Sendung ab 40′ HC). Das ist dieselbe Regel, die bei einem einzelnen Container längst „Es ginge auch mit 1× 20′ GP" sagt. `test/empfehlung-nur-wenn-sie-hilft.test.mjs` prüft das „Banner schweigt" deshalb jetzt mit Start 40′ GP und den 40′-HC-Start als eigenen Fall.
+
+`test/schwere-ware-kette.test.mjs`: der gemeldete Fall (9 / 9, Empfehlung 2× 20′ GP, die übernommene Kette geht auf), 30 Zufallsladungen „was die Empfehlung verspricht, hält die Kette", und der Vertrag im Quelltext.
 ### Stufe 3: ordentlich stauen, solange es nichts kostet
 Gemeldet: *„die Ladung wird teilweise auch weird gestaut … Ich weiß, dass es schwierig ist umzusetzen, dass nach Logik gestaut wird, aber vielleicht kann man das probieren?"*
 
@@ -908,6 +923,7 @@ Drei Verträge, alle in `test/positionsnummern.test.mjs`:
 - **Eine Nummernquelle.** 3D rechnet wörtlich dieselbe Formel wie `tiPos` in `buildLadevorschlag` (Index unter den Positionen mit Menge > 0, `items.indexOf + 1`). „Im Bild die 03, auf dem Papier die 04" wäre genau der Widerspruch, den das Projekt überall sonst ausgebaut hat — der Test prüft **beide Seiten** und fällt um, sobald eine allein geändert wird.
 - **Sprites werden entsorgt** (Textur + Material) bei jedem Neuaufbau, und der **Fokus gilt auch für Plaketten** — dasselbe Effekt-Muster wie die Sicherungszonen direkt darüber.
 - Das Einschalten zählt `nummern-3d` (Liste in `test/messen-und-melden.test.mjs`).
+- **Die Ladungsliste trägt dieselbe Nummer** („01" vor dem Namen, `posItems` = wörtlich dieselbe Formel; Menge 0 zeigt „––"). Vorher verband nur die Farbe Liste und Bild — „nimm die 04er" fand man in der Liste nicht wieder, und fünf importierte Zeilen ohne Namen hießen alle „Position". Bewusst **nicht** in den Namen geschrieben („Position 3"): die Nummer verschiebt sich, sobald eine Zeile Menge 0 bekommt, ein Name nicht — „Position 3" mit der Plakette 02 wäre genau der Widerspruch, den die eine Nummernquelle verhindert. Das Namensfeld trägt Platzhalter und `title`, damit man sieht, dass es eins ist.
 
 > Zwei Fallen aus dem Einbau: `colorOf` lebt in der **App-Komponente**, nicht im Viewport — die Plakette liest die Kennfarbe deshalb selbst (`cargo[ti].color || TYPE_COLORS_AUTO[…]`, dieselbe Formel wie `typeMat`). Und ein Tailwind-Arbitrary-Wert (`right-[100px]`) fehlt im vorgebauten `tw.out.css` des Test-Harness — der Knopf sitzt deshalb per Inline-`right`.
 
@@ -1034,6 +1050,28 @@ Sechs Kennzahlen plus Statusblock brauchen rund 850 px. Im Dreispalten-Layout st
 Zwei Dinge, die die Leiste falsch erzählt hat und die nicht zurückkommen dürfen:
 - **Grün heißt „alles ist drin".** Vorher hieß es nur „Gewicht und Auslastung sind in Ordnung" — der Punkt stand auf Grün, während daneben „30 offen" stand.
 - **„Verladen 62 / 92" zählt den ersten Container**, das Bild darüber zeigt aber bis zu vier. Die Zahl trägt deshalb dieselbe Marke wie die Hülle im Bild (`C1` / `F1`), sobald es mehr als eine gibt.
+- **„Verladen · C1 8 / 18" ist nicht orange, wenn der Plan alles trägt** (`planFit`). Orange neben grünem „Alles verladen · 2 Container" las sich wie „10 fehlen"; die Zahl beschreibt dann die Aufteilung, kein Problem. Grün bleibt für „alles in diesem einen Container", Orange für wirklich Offenes.
+
+- **„Voll" ist die engere Grenze**, nicht das Volumen. Siehe den nächsten Abschnitt.
+
+### „Voll" zeigt die engere Grenze: Raum oder Gewicht
+Bis Oktober 2026 war „Voll" in der Seefracht schlicht die Volumenauslastung. Damit wiederholte die Kachel die Volumen-Kachel daneben („Voll 44 %" neben „33,5 / 76,3 m³"), und bei schwerer Ware log sie: die **Farbe** kannte das Gewicht längst (`railHot` = max(Raum, Gewicht)), die **Zahl** nicht. Bei sechs Stahlkisten im 20′ stand „Voll 32 %" in Orange, während 27 von 28,2 t verladen waren.
+
+Jetzt liefert **`vollGrenze(raumPct, gewPct)`** (Modulebene, neben `fitsThroughDoor`) die Grenze, die zuerst erreicht ist — `{ pct, nach: "raum" | "gewicht" }`, bei Gleichstand der Raum. Raum heißt in der See Volumen, auf der Straße Lademeter. **Alle Anzeigen lesen diese eine Funktion:** die Kachel, ihre Farbe (`railColor`, `railHot = voll.pct >= 90`), der 2-px-Balken unter der Leiste, die Spalte „Voll" der Tabelle je Container (`slotRows.vollPct`) und damit die PDF-Übersicht (`LV_UEBERSICHT(slotRows, …)`).
+
+- **Bindet das Gewicht, sagt die Beschriftung es:** „Voll · Gewicht" (`T.railFullKg`). Der Normalfall bleibt beim kurzen „Voll" — ein Zusatz bei jeder Ladung hätte die Leiste breiter gemacht, ohne etwas zu sagen. Beide Werte stehen im `title` (`T.railFullTitle`), dafür trägt `Kpi` jetzt ein optionales `title`.
+- **Grün ab 80 %** wie bisher beim Volumen, jetzt bezogen auf die engere Grenze; die Straße bleibt im Akzent.
+- **Nachgemessen bei 1440 und 1920 px, beide Sprachen:** die Leiste bleibt einzeilig, wo sie es vorher war („Voll · Gewicht" ist schmaler als die Volumen-Kachel daneben). Mit Kette ist sie bei 1440 px zweizeilig — wie vorher, der Nebenbefund unten gilt weiter.
+
+`test/voll-engere-grenze.test.mjs` rechnet die Funktion nach (leicht, Stahl, Gleichstand, kaputte Eingaben, Überladung) **und** prüft, dass Kachel, Balken, Tabelle und PDF sie lesen.
+
+### Die UI-Durchsicht vom Oktober 2026: vier Stellen, an denen die Oberfläche ihre Regeln brach
+Aus einer Durchsicht mit Screenshot; jede für sich klein, zusammen der Grund, warum der Rechner dort mehrdeutig wirkte. `test/oberflaeche-klarheit.test.mjs` hält alle vier fest.
+
+- **Die Mengen-Pille spricht nur, wenn etwas offen bleibt** (`pt && !done && pt.total > 0`). Fünf grüne „2/2 · 3/3 · 4/4" sagten dasselbe wie „Alles verladen" in der Leiste, und „2/2" direkt hinter „Position" las sich wie „Position 2 von 2". Orange „0/2" bleibt — das ist eine Information; der `title` sagt „2 Stück noch nicht verladen" (im Fokus nicht, dort zählt die Pille diesen Container).
+- **Der Sicherungs-Hinweis ist getönt, nicht voll orange.** Orange ist eine Statusfarbe („wird knapp"), kein Aktionsknopf; voll orange war der Knopf das lauteste Element der Seite, lauter als „Teilen". Dafür trägt der Seitenleisten-Knopf jetzt die **Zahl der Hinweise** und die Variante `accent` statt `quiet` (er las sich wie eine Beschriftung — derselbe Befund wie früher bei „Leeren"). Die Zahl bleibt sichtbar, wenn der Aufplopp weggeklickt ist oder hinter Empfehlung und Teilen-Anstoß zurücksteht.
+- **Der Drehen-Umschalter sagt seinen Zustand.** Er hieß in beiden Zuständen „↻ 90°" und las sich wie „jetzt drehen"; der Zustand stand nur in einer 16-%-Tönung. Jetzt: Beschriftung „Drehen 90°", Knopf „↻ ja" / „↻ nein", `aria-pressed`, erklärender `title`. Aus trägt er die Kante der Eingabefelder (`C.fieldBorder`) — `C.field` ist derselbe Ton wie die offene Karte (`C.raised`), ohne Kante verschwand er.
+- **Das Türmaß läuft über `dimDE` und trägt seine Einheit** (`tuerTxt`): „235×227,4 cm" statt „235" groß und „×227.4" klein — mit Punkt in der deutschen Oberfläche, gegen die Regel „Zahlen nur über `nf()`/`fmtDE()`". Die Kennzahlen der Containerkarte brechen nicht mehr um (`whiteSpace: nowrap`, außer Text-Kacheln); die 1fr-Spalten geben nach, Volumen und Nutzlast passen in den Rest (gemessen bei 1440 px mit Maersk-Werten).
 
 ### Die Gewichtsanzeige und die Überladung
 Die Zuladungsanzeige misst `result.weight` — das Gewicht dessen, was in **diesem** Container liegt. Dafür ist sie richtig. Was sie nicht sagen kann: dass die **eingegebene** Ladung als Ganzes schwerer ist, als der Container tragen darf. Ein einzelnes 30-t-Stück auf einem 28,2-t-Container wird gar nicht erst platziert, `result.weight` bleibt 0, und die Anzeige stünde auf 0 %. Diesen Satz trägt jetzt die Statuszeile (`overweight` / `overKg` / `T.overCap`). **Beides zusammen ist vollständig, eines allein war es nicht.**

@@ -86,3 +86,19 @@ test("der 01-Modus lebt in der App und schaltet auch die Stopp-Felder", () => {
   assert.ok(src.includes("(zeigeNummern || (Number.isInteger(c.stop) && c.stop >= 1)) &&"),
     "der Stopp-Select haengt nicht am 01-Modus (oder versteckt gesetzte Stopps)");
 });
+
+test("die Ladungsliste traegt dieselbe Nummer -- dritte Seite derselben Formel", () => {
+  // Vorher verband nur die Farbe Liste und Bild; "nimm die 04er" fand man in der Liste
+  // nicht wieder. Die Liste rechnet woertlich dieselbe Formel wie PDF und 3D.
+  assert.ok(src.includes("const posItems = cargo.filter((c) => num(c.qty, 0) > 0);"),
+    "die Liste filtert nicht auf Menge > 0 -- Nummernquellen driften");
+  assert.ok(src.includes("const pos = posItems.indexOf(c) + 1;"),
+    "die Liste nummeriert nicht ueber indexOf + 1 -- Nummernquellen driften");
+  // Zweistellig wie Plakette und PDF ("04", nicht "4"); Menge 0 bekommt keine Nummer.
+  assert.ok(src.includes('pos > 0 ? String(pos).padStart(2, "0") : "\\u2013\\u2013"'),
+    "die Liste schreibt die Nummer anders als Plakette und PDF");
+  for (const k of ["posNrTitel", "cargoNameTitle"]) {
+    const n = (src.match(new RegExp(`\\b${k}: `, "g")) || []).length;
+    assert.strictEqual(n, 2, `${k} steht ${n}x in den Woerterbuechern, erwartet 2 (DE und EN)`);
+  }
+});

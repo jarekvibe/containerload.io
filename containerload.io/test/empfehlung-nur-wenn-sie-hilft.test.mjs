@@ -64,11 +64,28 @@ const GEMELDET = [
 ];
 
 test("nimmt die Kette alles auf und ist nicht schlechter, schweigt das Banner", () => {
-  const p = plan("40' HC", GEMELDET);
+  // Start 40' GP: die Kette bucht 2x 40' GP, und das ist auch die beste Kombination.
+  // (Bis Oktober 2026 stand hier der Start 40' HC. Seit die Empfehlung auch N GLEICHE
+  // Container prueft, findet sie dort "2x 40' GP" statt "40' HC + 40' GP" -- die Paletten
+  // stehen in beiden Typen zwei hoch, also weniger gebuchtes Volumen fuer dieselbe Ladung.
+  // Das ist der naechste Test, nicht mehr dieser.)
+  const p = plan("40' GP", GEMELDET);
   assert.strictEqual(p.ch.remainingBoxes, 0, "die Kette sollte die ganze Ladung aufnehmen");
   assert.ok(p.ch.chain.length > 1, "und dafuer mehr als einen Container brauchen");
   assert.strictEqual(p.zeigen, false,
     `Banner wuerde erscheinen: Kette ${p.kette.n} Container, Empfehlung ${p.empf && p.empf.n}`);
+});
+
+test("ab dem 40' HC sagt das Banner: 2x 40' GP reichen auch -- und die Kette dazu geht auf", () => {
+  const p = plan("40' HC", GEMELDET);
+  assert.strictEqual(p.ch.remainingBoxes, 0);
+  assert.deepStrictEqual(p.sug.combo, [{ name: "40' GP", count: 2 }],
+    `erwartet 2x 40' GP, bekommen ${JSON.stringify(p.sug.combo)}`);
+  assert.strictEqual(p.zeigen, true, "gleich viele Container, weniger Volumen -- das gehoert gesagt");
+  // Der Uebernehmen-Knopf darf nichts versprechen, was die Kette nicht haelt.
+  const q = plan("40' GP", GEMELDET);
+  assert.strictEqual(q.ch.remainingBoxes, 0);
+  assert.deepStrictEqual(q.ch.chain.map((c) => c.name), ["40' GP", "40' GP"]);
 });
 
 // ── Gegenprobe 1: es bleibt etwas liegen -> das Banner ist die Antwort ───────────────
