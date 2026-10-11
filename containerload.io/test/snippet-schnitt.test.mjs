@@ -27,7 +27,11 @@ const SEITEN = [
   { f: "en/guide/wire-mesh-pallets-container.html", zahl: true },
   { f: "en/guide/ibc-totes-container.html", zahl: true },
   { f: "en/guide/drums-container.html", zahl: true },
-  { f: "en/guide/big-bags-container.html", zahl: true }
+  { f: "en/guide/big-bags-container.html", zahl: true },
+  { f: "ratgeber/us-paletten-20-fuss-container.html", zahl: true },
+  { f: "ratgeber/us-paletten-40-fuss-container.html", zahl: true },
+  { f: "en/guide/pallets-20ft-container.html", zahl: true },
+  { f: "en/guide/pallets-40ft-container.html", zahl: true }
 ];
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
 const greif = (s, re, was, f) => {
