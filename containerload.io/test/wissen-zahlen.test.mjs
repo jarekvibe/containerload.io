@@ -48,7 +48,13 @@ const FAELLE = [
   ["faesser-container.html", "Faesser im 20'", "20' GP", [61, 61], 27],
   ["faesser-container.html", "Faesser im 40'", "40' GP", [61, 61], 57],
   ["big-bags-container.html", "Big Bags im 20'", "20' GP", [90, 90], 12],
-  ["big-bags-container.html", "Big Bags im 40'", "40' GP", [90, 90], 26]
+  ["big-bags-container.html", "Big Bags im 40'", "40' GP", [90, 90], 26],
+  // US-Palette: 48x40 Zoll. Die App rechnet Zoll mit *2,54 und rundet auf ganze
+  // Zentimeter — also 122x102, nicht 121,9x101,6. Die Seiten rechnen mit demselben
+  // gerundeten Mass, sonst widersprueche der ?q=-Knopf dem Text. Die Rundung selbst
+  // wird unten eigens festgenagelt.
+  ["us-paletten-20-fuss-container.html", "US-Paletten im 20'", "20' GP", [122, 102], 9],
+  ["us-paletten-40-fuss-container.html", "US-Paletten im 40'", "40' GP", [122, 102], 20]
 ];
 
 test("die genannten Stellzahlen stimmen mit dem Packer ueberein", () => {
@@ -79,7 +85,9 @@ const EN_FAELLE = [
   ["drums-container.html", "Drums in 20'", "20' GP", [61, 61], 27],
   ["drums-container.html", "Drums in 40'", "40' GP", [61, 61], 57],
   ["big-bags-container.html", "Big bags in 20'", "20' GP", [90, 90], 12],
-  ["big-bags-container.html", "Big bags in 40'", "40' GP", [90, 90], 26]
+  ["big-bags-container.html", "Big bags in 40'", "40' GP", [90, 90], 26],
+  ["pallets-20ft-container.html", "US pallets in 20'", "20' GP", [122, 102], 9],
+  ["pallets-40ft-container.html", "US pallets in 40'", "40' GP", [122, 102], 20]
 ];
 
 test("die englische Fassung nennt dieselben gerechneten Zahlen", () => {
@@ -95,7 +103,8 @@ test("die Beispielladung hinter dem Knopf passt zur genannten Zahl", () => {
   const erwartet = { "euro-pallets-20ft-container.html": 11, "euro-pallets-40ft-container.html": 25,
     "industrial-pallets-container.html": 22, "wire-mesh-pallets-container.html": 11,
     "truck-trailer-load-calculation.html": 34, "ibc-totes-container.html": 9,
-    "drums-container.html": 27, "big-bags-container.html": 12 };
+    "drums-container.html": 27, "big-bags-container.html": 12,
+    "pallets-20ft-container.html": 9, "pallets-40ft-container.html": 20 };
   for (const [datei, menge] of Object.entries(erwartet)) {
     const m = enSeite(datei).match(/href="\/app\?lang=en&q=([^"]+)"/);
     assert.ok(m, `${datei}: kein ?q=-Link`);
@@ -208,6 +217,8 @@ const AUSBAU = [
   ["gitterboxen-container.html", "wire-mesh-pallets-container.html", "40' GP", [124, 83], 23, 18, null, true],
   ["faesser-container.html", "drums-container.html", "20' GP", [61, 61], 27, null, 54, false],
   ["big-bags-container.html", "big-bags-container.html", "20' GP", [90, 90], 12, null, null, false],
+  ["us-paletten-20-fuss-container.html", "pallets-20ft-container.html", "20' GP", [122, 102], 9, 8, 18, true],
+  ["us-paletten-40-fuss-container.html", "pallets-40ft-container.html", "40' GP", [122, 102], 20, 18, 40, true],
 ];
 
 test("Warum- und Stapelzahlen: nachgerechnet, und auf beiden Sprachfassungen", () => {
@@ -254,7 +265,9 @@ test("die IBC-Gewichte folgen aus der genannten Annahme", () => {
 
 test("die neuen Passt-rein-Paare haengen im Netz: Sitemap, Uebersichten, GUIDE, hreflang", () => {
   const PAARE = [["ibc-container", "ibc-totes-container"], ["faesser-container", "drums-container"],
-    ["big-bags-container", "big-bags-container"]];
+    ["big-bags-container", "big-bags-container"],
+    ["us-paletten-20-fuss-container", "pallets-20ft-container"],
+    ["us-paletten-40-fuss-container", "pallets-40ft-container"]];
   const sm = fs.readFileSync(path.join(dir, "..", "sitemap.xml"), "utf8");
   const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
   for (const [de, en] of PAARE) {
@@ -266,5 +279,50 @@ test("die neuen Passt-rein-Paare haengen im Netz: Sitemap, Uebersichten, GUIDE, 
     assert.ok(enSeite("index.html").includes(`href="/en/guide/${en}"`), `Guide-Uebersicht verlinkt ${en} nicht`);
     assert.ok(seite(de + ".html").includes(`hreflang="en" href="https://containerload.io/en/guide/${en}"`), de + ": hreflang en fehlt");
     assert.ok(enSeite(en + ".html").includes(`hreflang="de" href="https://containerload.io/ratgeber/${de}"`), en + ": hreflang de fehlt");
+  }
+});
+
+// ── US-Paletten: die Zoll-Rundung ist Teil des Versprechens ────────────────
+// Die Seiten rechnen mit 122x102 cm, weil die App "48x40x55 Zoll" genau dorthin
+// rundet (*2,54, dann ganze Zentimeter). Driftet der Parser, luegen die Seiten im
+// selben Moment — deshalb laufen die ?q=-Knoepfe hier woertlich durch den echten
+// parseCargoText und muessen exakt die gerechnete Ladung ergeben.
+test("die US-Knoepfe laden durch den echten Parser exakt die gerechnete Ladung", () => {
+  const von = L.findIndex((l) => l.includes("var PALLET_PRESETS = ["));
+  const bis = L.findIndex((l, i) => i > von && l.includes("var hexA"));
+  assert.ok(von >= 0 && bis > von, "Parser-Ausschnitt nicht gefunden");
+  const { parseCargoText } = new Function(L.slice(von, bis).join("\n") + "\nreturn { parseCargoText };")();
+  const faelle = [
+    [seite("us-paletten-20-fuss-container.html"), 9], [seite("us-paletten-40-fuss-container.html"), 20],
+    [enSeite("pallets-20ft-container.html"), 9], [enSeite("pallets-40ft-container.html"), 20],
+  ];
+  for (const [txt, menge] of faelle) {
+    const m = txt.match(/href="\/app\?[^"]*q=([^"&]+)/);
+    assert.ok(m, "kein ?q=-Link");
+    const rows = parseCargoText(decodeURIComponent(m[1]));
+    assert.strictEqual(rows.length, 1, "der Knopf laedt nicht genau eine Position");
+    const r = rows[0];
+    assert.strictEqual(r.qty, menge, `der Knopf laedt ${r.qty} Stueck, die Seite nennt ${menge}`);
+    assert.deepStrictEqual([r.l, r.w], [122, 102], `48x40 Zoll ergeben ${r.l}x${r.w} statt 122x102`);
+    assert.ok(r.weight > 0, "die Beispielladung hat kein Gewicht");
+  }
+});
+
+// ── Der Knopf einer 40-Fuss-Zahl muss den 40-Fuss-Container oeffnen ─────────
+// Ohne Vorwahl landet die Beispielladung im 20'-Default, die Kette verteilt sie
+// auf 2 x 20' -- und die Seite sieht im Moment des Klicks widerlegt aus, obwohl
+// die Zahl stimmt. Deshalb tragen alle Knoepfe mit 40-Fuss-Mengen &cont=40gp,
+// und der Rechner kennt das Kuerzel (QCONT-Whitelist in app.html).
+test("die 40-Fuss-Knoepfe waehlen den 40-Fuss-Container vor (&cont=40gp)", () => {
+  assert.ok(app.includes(`"40gp": "40' GP"`), "die cont-Whitelist in app.html kennt 40gp nicht mehr");
+  const vierziger = [
+    [seite, "europaletten-40-fuss-container.html"], [enSeite, "euro-pallets-40ft-container.html"],
+    [seite, "industriepaletten-container.html"], [enSeite, "industrial-pallets-container.html"],
+    [seite, "us-paletten-40-fuss-container.html"], [enSeite, "pallets-40ft-container.html"],
+  ];
+  for (const [lese, f] of vierziger) {
+    const links = lese(f).match(/href="\/app\?[^"]*q=[^"]*"/g) || [];
+    assert.ok(links.length >= 2, `${f}: CTA-Links nicht gefunden`);
+    for (const l of links) assert.ok(l.includes("cont=40gp"), `${f}: ${l} oeffnet nicht den 40-Fuss`);
   }
 });
