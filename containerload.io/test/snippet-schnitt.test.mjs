@@ -28,6 +28,8 @@ const SEITEN = [
   { f: "en/guide/ibc-totes-container.html", zahl: true },
   { f: "en/guide/drums-container.html", zahl: true },
   { f: "en/guide/big-bags-container.html", zahl: true },
+  { f: "ratgeber/container-masse-innenmasse.html", zahl: true },
+  { f: "en/guide/container-internal-dimensions.html", zahl: true },
   { f: "ratgeber/us-paletten-20-fuss-container.html", zahl: true },
   { f: "ratgeber/us-paletten-40-fuss-container.html", zahl: true },
   { f: "en/guide/pallets-20ft-container.html", zahl: true },
