@@ -135,6 +135,71 @@ test("der Bestfall-Rueckfall haengt an Slot 0 -- und schweigt im Fokus", () => {
   assert.strictEqual(r2.slots.length, 0);
 });
 
+// ── Der Ladeweg je Bauart (Kollegen-Meldung: "Dachoeffnung bei OTs bedenken") ──
+// Der Open Top wird meist von oben beladen, aber die Dachoeffnung ist KLEINER als
+// das Innenmass. Vorher prueften wir beim OT gar nichts -- ein Stueck in voller
+// Innenlaenge sah ladbar aus, passt real aber weder durch Tuer noch Dach. Und der
+// Reefer (geschlossener Kasten, engste Tuer) stand faelschlich auf "nie pruefen".
+test("Open Top: Konflikt ist erst, was weder durch Tuer noch Dachoeffnung geht", () => {
+  const tuer = { w: 234, h: 230 };
+  const ot = { door: tuer, kind: "opentop", roof: { l: 540, w: 222 }, w: 235, h: 239 };
+  // Zu hoch fuer die Tuer, passt aber von oben (Grundflaeche in der Dachoeffnung).
+  const vonOben = tuerKonflikte([{ qty: 1, l: 300, w: 150, h: 250 }],
+    [{ preset: ot, placed: [{ ti: 0, dx: 300, dy: 250, dz: 150 }] }], tuer);
+  assert.strictEqual(vonOben.idx.size, 0, "was von oben geht, ist kein Konflikt");
+  // Zu lang fuers Dach, passt aber durch die Tuer: auch kein Konflikt.
+  const durchTuer = tuerKonflikte([{ qty: 1, l: 560, w: 200, h: 100 }],
+    [{ preset: ot, placed: [{ ti: 0, dx: 560, dy: 100, dz: 200 }] }], tuer);
+  assert.strictEqual(durchTuer.idx.size, 0, "was durch die Tuer geht, ist kein Konflikt");
+  // Weder noch: zu breit fuer die Tuer UND zu lang fuers Dach.
+  const weder = tuerKonflikte([{ qty: 1, l: 560, w: 240, h: 100 }],
+    [{ preset: ot, placed: [{ ti: 0, dx: 560, dy: 100, dz: 240 }] }], tuer);
+  assert.deepStrictEqual([...weder.idx], [0], "weder Tuer noch Dach -- das ist der Konflikt");
+  assert.strictEqual(weder.slots.length, 1);
+  // Ohne Dachmass (alte Custom-artige OTs) bleibt das alte Verhalten: keine Pruefung.
+  const ohneDach = tuerKonflikte([{ qty: 1, l: 560, w: 240, h: 100 }],
+    [{ preset: { door: tuer, kind: "opentop", w: 235, h: 239 }, placed: [{ ti: 0, dx: 560, dy: 100, dz: 240 }] }], tuer);
+  assert.strictEqual(ohneDach.idx.size, 0);
+});
+
+test("Open Top: der Bestfall-Rueckfall kennt den Dach-Ladeweg", () => {
+  const tuer = { w: 234, h: 230 };
+  const ot = { door: tuer, kind: "opentop", roof: { l: 540, w: 222 }, w: 235, h: 239 };
+  // Unplatziert, zu hoch fuer die Tuer -- aber die Grundflaeche passt von oben.
+  const ok = tuerKonflikte([{ qty: 1, l: 300, w: 200, h: 260 }], [{ preset: ot, placed: [] }], tuer);
+  assert.strictEqual(ok.idx.size, 0, "die Dachoeffnung rettet den Bestfall");
+  // Unplatziert und fuer beide Wege zu gross (240 > 234 Tuer, 240 > 222 Dachbreite).
+  const nein = tuerKonflikte([{ qty: 1, l: 560, w: 240, h: 100 }], [{ preset: ot, placed: [] }], tuer);
+  assert.deepStrictEqual([...nein.idx], [0]);
+});
+
+test("Reefer prueft jetzt mit, Flat Rack und Platform bleiben offen", () => {
+  const reefer = { door: { w: 228, h: 218 }, kind: "reefer", w: 228, h: 220 };
+  const r = tuerKonflikte([{ qty: 1, l: 250, w: 230, h: 100 }],
+    [{ preset: reefer, placed: [{ ti: 0, dx: 250, dy: 100, dz: 230 }] }], reefer.door);
+  assert.deepStrictEqual([...r.idx], [0], "230 > 228: durch die Reefer-Tuer geht das nicht");
+  for (const kind of ["flatrack", "platform"]) {
+    const f = tuerKonflikte([{ qty: 1, l: 400, w: 250, h: 260 }],
+      [{ preset: { kind, w: 244, h: 218 }, placed: [{ ti: 0, dx: 400, dy: 260, dz: 250 }] }], { w: 244, h: 218 });
+    assert.strictEqual(f.idx.size, 0, kind + " hat keinen Ladeweg-Engpass");
+  }
+});
+
+test("der Vertrag im Quelltext: die Bauart haengt an allen drei Toren", () => {
+  // Beide OT-Presets tragen die Dachoeffnung.
+  assert.ok(/20' Open Top": \{[^\n]*roof: \{ l: \d+, w: \d+ \}/.test(roh), "20' OT ohne roof-Mass");
+  assert.ok(/40' Open Top": \{[^\n]*roof: \{ l: \d+, w: \d+ \}/.test(roh), "40' OT ohne roof-Mass");
+  // Die Aussen-Gates sperren nur noch die offenen Bauarten aus -- nicht Reefer/OT.
+  assert.ok(roh.includes('sichtCont.kind === "flatrack" || sichtCont.kind === "platform"'),
+    "das UI-Gate prueft Reefer/Open Top nicht mehr mit");
+  assert.ok(roh.includes('container.kind === "flatrack" || container.kind === "platform"'),
+    "das 3D-Gate prueft Reefer/Open Top nicht mehr mit");
+  assert.ok(!roh.includes('if (kind !== "dry") return;'), "tuerKonflikte sperrt wieder alles ausser dry");
+  // Die Warnung spricht beim OT vom richtigen Ladeweg, in beiden Sprachen.
+  for (const key of ["doorWarnOT", "doorHintOT", "doorChipOT"])
+    assert.strictEqual((roh.match(new RegExp(key + ":", "g")) || []).length, 2, key + " fehlt in einer Sprache");
+});
+
 test("der Vertrag im Quelltext: gezeichnet wird je Slot, die Sequenz am ersten Konflikt", () => {
   assert.ok(roh.includes("tuerLage.slots.find((s2) => s2.ci === ci)"),
     "das 3D-Bild zeichnet den Tuer-Konflikt nicht mehr am jeweiligen Container");
