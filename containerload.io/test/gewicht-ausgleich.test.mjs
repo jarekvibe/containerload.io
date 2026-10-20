@@ -105,6 +105,26 @@ test("der Ausgleich kostet niemals einen Container und verliert kein Packstueck"
   assert.ok(ausgeglichen > 0, "in 40 Faellen hat der Ausgleich kein einziges Mal gegriffen -- dann prueft der Test nichts");
 });
 
+test("ein Ueberlauf-Container bleibt Ueberlauf (gemeldet: 25 IBC wurden 12+13)", () => {
+  // 25 x 120x100x116 zu je 1.100 kg im 40' GP: geometrisch passen alle, das GEWICHT
+  // begrenzt auf 24 (26.400 von 26.600 kg). Die gierige Kette sagt also 24 + 1 --
+  // und genau dieses "+1" ist die wertvollste Aussage des Plans. Der Ausgleich hat
+  // daraus 12 + 13 gemacht: der gewaehlte 40' sah halb leer aus, der Beistell-20'
+  // wurde zum gleichwertigen Partner aufgepumpt. Seit AUSGLEICH_MIN gilt: erst wenn
+  // schon die gierige Kette JEDEN Container nennenswert belaedt, wird verteilt.
+  const ibc = [{ name: "IBC", l: 120, w: 100, h: 116, weight: 1100, qty: 25, stackable: true, rotatable: true }];
+  const { ch } = kette("40' GP", ibc);
+  assert.strictEqual(ch.chain.length, 2, `${ch.chain.length} Container statt 2`);
+  assert.strictEqual(ch.remainingBoxes, 0);
+  assert.strictEqual(ch.chain[0].placed.length, 24, `C1 traegt ${ch.chain[0].placed.length} statt 24`);
+  assert.strictEqual(ch.chain[1].placed.length, 1, "C2 ist der Ueberlauf fuer genau ein Stueck");
+  assert.strictEqual(ch.ausgeglichen, false, "der Ausgleich darf hier nicht anspringen");
+  // Die Untergrenze steht als benannte Konstante im Quelltext -- mit Obergrenze allein
+  // kaeme der Fall zurueck (C1 lag bei 99 Prozent, AUSGLEICH_AB war erfuellt).
+  assert.ok(/var AUSGLEICH_MIN = 0\.\d+;/.test(roh), "AUSGLEICH_MIN fehlt in app.html");
+  assert.ok(roh.includes("Math.min(...voll) < AUSGLEICH_MIN"), "die Untergrenze wird nicht geprueft");
+});
+
 test("bei nur einem Container gibt es nichts auszugleichen", () => {
   const klein = [{ name: "P", l: 120, w: 80, h: 100, weight: 300, qty: 6, stackable: true, rotatable: true }];
   const { ch } = kette("40' HC", klein);
