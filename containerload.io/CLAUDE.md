@@ -197,6 +197,8 @@ Dahinter lagen **zwei unabhängige Fehler**, beide im selben Bild sichtbar.
 
 `AUSGLEICH_AB = 0.6` — der Ausgleich greift erst, wenn **ein Container über 60 % seiner Zuladung** liegt. Bei der ursprünglich gemeldeten 37-Paletten-Sendung waren es 99 %; dort greift er weiterhin. Wo Gewicht nichts entscheidet, darf es auch nichts entscheiden.
 
+`AUSGLEICH_MIN = 0.2` — die Untergrenze dazu (20.10.26, gemeldet mit Bild): 25 schwere IBC im 40′ GP ergaben gierig 24 + 1 (Gewichtsgrenze; der zweite Container existiert für genau EIN Stück) — der Ausgleich machte daraus 12 + 13. Der gewählte 40′ sah halb leer aus, und die wertvollste Aussage des Plans, „genau ein Stück ist zu viel“, war weg. Seitdem gilt: Der Ausgleich springt nur an, wenn schon die gierige Kette **jeden** Container über 20 % seiner Zuladung belädt — ein fast leerer Überlauf-Container bleibt Überlauf. Die 37-Paletten-Sendung lag beim leichtesten Container bei 63 % und wird weiter ausgeglichen; `test/gewicht-ausgleich.test.mjs` rechnet beide Fälle nach und nagelt die Konstante im Quelltext fest.
+
 **Fehler 2: gierig ist lokal optimal und global schlechter.** Die Kette packte in den ersten Container 22 Paletten **und** 2 der großen Stücke — weil das dort die meisten Stücke sind (24 statt 22). Die übrigen 6 großen Stücke brauchten danach **zwei weitere 40-Füßer**, den letzten für ganze zwei Stück.
 
 Der Ausweg ist nicht, gierig abzuschaffen, sondern **eine zweite Kette danebenzustellen**:

@@ -2735,6 +2735,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // ueber diesem Anteil seiner Zuladung liegt, ist die gleichmaessige Verteilung ein echtes
   // Ziel -- vorher ist sie nur Kosmetik, die die Geometrie zerstoert.
   var AUSGLEICH_AB = 0.6;
+  // Und die Untergrenze dazu: ein fast leerer UEBERLAUF-Container bleibt Ueberlauf.
+  // Gemeldet, mit Bild: 25 schwere IBC im 40' GP -- gierig 24 + 1 (der zweite Container
+  // existiert fuer genau EIN Stueck), nach dem Ausgleich 12 + 13. Der gewaehlte 40'
+  // sah halb leer aus, und die wertvollste Aussage des Plans, "genau ein Stueck ist
+  // zu viel", war weg. Erst wenn schon die gierige Kette JEDEN Container nennenswert
+  // belaedt, ist "gleich schwer" ein Ziel; die 37-Paletten-Sendung, fuer die der
+  // Ausgleich gebaut wurde, lag beim leichtesten Container bei 63 Prozent.
+  var AUSGLEICH_MIN = 0.2;
   // Sortenrein lohnt bei wenigen, deutlich verschiedenen Sorten. Bei 37 einzeln erfassten
   // Paletten waere jede Sorte ein Stueck -- da gibt es nichts zu trennen, nur Rechenzeit.
   var SORTENREIN_MAX = 12;
@@ -2759,6 +2767,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Zuladung kommt, ist jede Umverteilung ein Eingriff ohne Gegenwert.
     const voll = chain.map((c, i) => { const p = num(c.preset && c.preset.payload); return p > 0 ? istKg[i] / p : 0; });
     if (Math.max(...voll) < AUSGLEICH_AB) return null;
+    // Untergrenze (AUSGLEICH_MIN): traegt ein Container der gierigen Kette fast nichts,
+    // ist er ein Ueberlauf fuer die letzten Stuecke -- den aufzupumpen wuerde die
+    // Aussage "fast alles passt in die Container davor" zerstoeren.
+    if (Math.min(...voll) < AUSGLEICH_MIN) return null;
     // Zuladung je Slot. Ohne Angabe (Custom ohne Gewichtsgrenze) zaehlt der Container mit dem
     // Durchschnitt mit -- sonst zoege ein einziges Infinity die ganze Verteilung an sich.
     const zul = chain.map((c) => num(c.preset && c.preset.payload) > 0 ? num(c.preset.payload) : 0);
