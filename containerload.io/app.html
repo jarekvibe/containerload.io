@@ -2751,6 +2751,23 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     for (const b of placed) { const t = cargo[b.ti]; if (t) kg += Math.max(0, num(t.weight)); }
     return kg;
   }
+  // Warum mehrere Container? Wenn die Kette teilt, obwohl der erste Container halb
+  // leer AUSSIEHT, war das Gewicht die Grenze -- gemeldet (25 IBC zu je 1.100 kg:
+  // "ich habe nicht auf das Gewicht geachtet und mich gewundert, wieso er das auf
+  // mehrere Container verteilt"). Die Gegenprobe ist derselbe Packlauf ohne
+  // Gewichtsdeckel: passt dann mehr hinein, hat die Zuladung geteilt, nicht der
+  // Platz. Nur dann gibt es etwas zu erklaeren -- ein raeumlich voller Container
+  // erklaert sich selbst.
+  function kettenGrund(preset0, cargo, chain) {
+    if (!chain || chain.length < 2 || !chain[0] || !(chain[0].placed || []).length) return null;
+    const pay = num(preset0 && preset0.payload);
+    if (!(pay > 0)) return null;
+    const kg = slotKg(chain[0].placed, cargo);
+    if (kg < pay * 0.9) return null; // die Zuladung war nicht die Grenze
+    const ohne = packCargo({ ...preset0, payload: 0 }, cargo, { noHint: true, quick: true });
+    if (ohne.boxes <= chain[0].placed.length) return null; // auch ohne Deckel nicht mehr: der Platz teilt
+    return { kg, pay };
+  }
   function ketteAusgleichen(chain, cargo, ordentlich, pins) {
     const N = chain.length;
     if (N < 2 || N > MAXDRAW) return null;
@@ -3409,6 +3426,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualBadge: "MANUELL",
       autoCont: "Auto",
       chainN: (n) => `${n} Container \xB7 mit dieser Wahl`,
+      kettenGrund: (kg, pay) => `Das Gewicht teilt die Sendung: C1 tr\xE4gt ${kg} von ${pay} kg. Platz w\xE4re noch frei.`,
+      kettenGrundRoad: (kg, pay) => `Das Gewicht teilt die Sendung: F1 tr\xE4gt ${kg} von ${pay} kg. Platz w\xE4re noch frei.`,
       fokusAlle: "Alle",
       slotLabel: "Container",
       slotAuto: "Auto \u00B7 der Rechner entscheidet",
@@ -3786,6 +3805,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       manualBadge: "MANUAL",
       autoCont: "Auto",
       chainN: (n) => `${n} containers \xB7 with this pick`,
+      kettenGrund: (kg, pay) => `Weight splits this load: C1 carries ${kg} of ${pay} kg. Space to spare.`,
+      kettenGrundRoad: (kg, pay) => `Weight splits this load: F1 carries ${kg} of ${pay} kg. Space to spare.`,
       fokusAlle: "All",
       slotLabel: "Container",
       slotAuto: "Auto \u00B7 let the calculator decide",
@@ -6710,6 +6731,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       t.sph.theta = -0.92;
       t.sph.phi = 1;
     };
+    // Die Grund-Zeile unterm Ketten-Chip: nur im Auto-Modus (von Hand gestaut ist
+    // von Hand begruendet) und nur, wenn wirklich das Gewicht teilt (kettenGrund).
+    const grund = useMemo(
+      () => manualMode || !result.chain || result.chain.length < 2 ? null : kettenGrund(container, cargo, result.chain),
+      [result, cargo, container, manualMode]
+    );
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full h-full" }, /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { background: "radial-gradient(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: "radial-gradient(75% 70% at 50% 45%, transparent 55%, rgba(4,7,11,0.55) 100%)" } }), /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-3 left-4 text-[11px]", title: T.orbitHintLong, style: { fontFamily: SANS, color: C.faint, cursor: "default" } }, T.orbitHint), stoppWerte(cargo || []) && result && result.chain && result.chain.some((c2) => c2.placed && c2.placed.length) && /* @__PURE__ */ React.createElement("div", { className: "absolute top-3 left-3 pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.dim, background: hexA("#161D27", 0.82), border: `1px solid ${hexA(C.accent, 0.3)}`, borderRadius: R.s, padding: "4px 8px", zIndex: 6 } }, domain === "road" ? T.stopPillRoad : T.stopPill), result && result.chain && result.chain.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col items-end gap-2", style: { top: 48, right: 10, zIndex: 6, pointerEvents: "none", maxWidth: "54%" } },
             // Die Zahl zuerst. Sie ist die Frage, mit der jemand hier hinschaut -- vorher
             // musste man die Huellen abzaehlen, und ab der vierten ging das gar nicht mehr.
@@ -6719,6 +6746,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // auf py-2, damit sie sich mit dem Finger treffen laesst.
             /* @__PURE__ */ React.createElement("button", { key: "n", onClick: () => onFokus("alle"), title: T.fokusAlleTitel, "aria-pressed": fokus === "alle" ? "true" : "false", className: "px-2 py-2 lg:py-1", style: { pointerEvents: "auto", cursor: "pointer", textAlign: "right", fontFamily: SANS, fontSize: FS.label, fontWeight: FW.bold, letterSpacing: "0.03em", color: "#dbe8ff", background: hexA("#161D27", 0.88), border: `1px solid ${hexA(C.accent, fokus === "alle" ? 0.9 : 0.45)}`, borderRadius: R.s } },
               (fokus === "alle" ? "" : T.fokusAlle + " \xB7 ") + (result.gekappt ? "\u2265 " : "") + (domain === "road" ? T.chainNRoad(result.chain.length) : T.chainN(result.chain.length))),
+            grund && /* @__PURE__ */ React.createElement("div", { key: "grund", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.35, color: "#ffd9a8", background: hexA("#161D27", 0.86), border: "1px solid " + hexA(C.warn, 0.45), borderRadius: R.s, padding: "4px 8px", maxWidth: 250, textAlign: "right" } }, (domain === "road" ? T.kettenGrundRoad : T.kettenGrund)(fmtDE(grund.kg), fmtDE(grund.pay))),
             result.chain.slice(0, MAXDRAW).map((c, i) => /* @__PURE__ */ React.createElement(SlotPick, { key: i, idx: i, name: c.name, isMain: i === 0, mainPreset: preset, overrides, onPick: onSlotType, domain, fokus, onFokus })),
             result.chain.length > MAXDRAW && /* @__PURE__ */ React.createElement("div", { key: "rest", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, background: hexA("#161D27", 0.82), border: "1px solid #2E3A49", borderRadius: R.s, padding: "4px 8px" } }, T.chainMore(result.chain.length - MAXDRAW)),
             // Im manuellen Modus sagt der Packer nichts: was noch nicht steht, steht noch
