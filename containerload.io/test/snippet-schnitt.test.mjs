@@ -39,7 +39,11 @@ const SEITEN = [
   { f: "ratgeber/reefer-container-masse.html", zahl: true },
   { f: "en/guide/open-top-container-dimensions.html", zahl: true },
   { f: "en/guide/flat-rack-container-dimensions.html", zahl: true },
-  { f: "en/guide/reefer-container-dimensions.html", zahl: true }
+  { f: "en/guide/reefer-container-dimensions.html", zahl: true },
+  { f: "nl/gids/europallets-20ft-container.html", zahl: true },
+  { f: "nl/gids/europallets-40ft-container.html", zahl: true },
+  { f: "nl/gids/cbm-container.html", zahl: true },
+  { f: "nl/gids/container-afmetingen.html", zahl: true }
 ];
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
 const greif = (s, re, was, f) => {
