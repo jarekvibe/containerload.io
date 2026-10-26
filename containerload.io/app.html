@@ -2302,6 +2302,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       for (const t of cargo) {
         if (num(t.qty) > 0 && packCargo(hc40.p, [{ ...t, qty: 1 }], { noHint: true, quick: true }).boxes === 0 && packCargo(hc45.p, [{ ...t, qty: 1 }], { noHint: true, quick: true }).boxes > 0) { need45 = true; break; }
       }
+      // Zweite ehrliche Ausnahme (auf Jareks Wunsch): macht der 45' HC aus MEHREREN
+      // Containern EINEN, darf er genannt werden. Der Ausloeser war eine reine
+      // Gewichtsklemme (25 x 1.100 kg: jeder 40er deckelt bei ~26,6 t, der 45' HC
+      // traegt 27,6 t) -- die Pruefung ist bewusst die ganze Ladung, nicht das
+      // Einzelstueck, und greift nur, wenn der 45er wirklich ALLES nimmt. Dadurch
+      // endet die Einzel-Schleife unten spaetestens bei ihm, die Kombi-Logik sieht
+      // ihn nie -- und die Kette (autoFollow) kennt ihn weiterhin nicht: er bleibt
+      // ein Hinweis mit Uebernehmen-Knopf, nie eine stille Auto-Wahl.
+      if (!need45 && packCargo(hc40.p, cargo, { noHint: true, quick: true }).boxes < totalBoxes
+        && packCargo(hc45.p, cargo, { noHint: true, quick: true }).boxes >= totalBoxes) need45 = true;
     }
     // Standard-Arbeitsmenge: ohne 45' HC (40' HC ist der groesste Standard und das "Arbeitspferd").
     // Nur im Ausnahmefall (need45) bleibt der 45' HC fuer Einzel- und Kombi-Empfehlung dabei.
@@ -5052,7 +5062,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // ein Deeplink darf den Container vorwaehlen, aber sonst nichts setzen.
   var QCONT = (() => {
     if (!QIMPORT || QROAD) return null;
-    const k = { "20gp": "20' GP", "20hc": "20' HC", "40gp": "40' GP", "40hc": "40' HC", "45hc": "45' HC" };
+    const k = { "20gp": "20' GP", "20hc": "20' HC", "40gp": "40' GP", "40hc": "40' HC", "45hc": "45' HC",
+      "20ot": "20' Open Top", "40ot": "40' Open Top", "20fr": "20' Flat Rack", "40fr": "40' Flat Rack",
+      "20rf": "20' Reefer", "40rf": "40' Reefer" };
     try { return k[new URLSearchParams(window.location.search).get("cont")] || null; } catch (e) { return null; }
   })();
   // ?rampe=1 oeffnet den Rampen-Modus direkt -- fuer Links, die an der Rampe

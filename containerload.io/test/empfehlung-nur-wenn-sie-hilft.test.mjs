@@ -141,3 +141,29 @@ test("nach dem Wegnehmen wird der kleinere Container wieder angeboten", () => {
   assert.ok(!roh.includes('domain === "sea" && r.boxes < r.totalBoxes'),
     "der alte Rest-Waechter im See-Zweig ist zurueck");
 });
+
+// ── Die zweite ehrliche Ausnahme: der 45' HC als Ein-Container-Rettung ─────────────
+// Jareks Wunsch (21.10.26): 25 x 1.100 kg passen in KEINEN 40er (Zuladung ~26,6 t),
+// der 45' HC traegt 27,6 t. Macht der 45er aus mehreren Containern EINEN, wird er
+// als "Es ginge auch mit ..." genannt -- sonst bleibt er die unuebliche Ausnahme,
+// und die Auto-Kette (autoFollow) kennt ihn weiterhin gar nicht.
+test("die Gewichtsklemme bekommt den 45er-Hinweis -- und nur sie", () => {
+  const ibc = [{ name: "IBC", l: 120, w: 100, h: 116, weight: 1100, qty: 25, stackable: true, rotatable: true }];
+  const p = plan("40' GP", ibc);
+  assert.strictEqual(p.ch.chain.length, 2, "ohne Hinweis-Anlass gibt es nichts zu testen");
+  assert.ok(p.sug && p.sug.type === "single" && p.sug.name === "45' HC",
+    `Empfehlung ist ${JSON.stringify(p.sug)} statt single 45' HC`);
+  assert.ok(p.besser && p.zeigen, "der Hinweis muss als Angebot erscheinen (weniger Container)");
+  // Und der 45er traegt die Sendung wirklich -- sonst waere das Angebot eine Luege.
+  assert.strictEqual(packCargo(PRESETS["45' HC"], ibc, { noHint: true }).boxes, 25);
+  // Gegenwachen: wo der 45er nicht aus mehreren Containern einen macht, taucht er
+  // nicht auf -- weder bei grossen leichten Mengen noch bei hoffnungslos Schwerem.
+  const leicht = [{ name: "EP", l: 120, w: 80, h: 144, weight: 300, qty: 50, stackable: false, rotatable: true }];
+  assert.ok(!JSON.stringify(suggestContainer(leicht, "")).includes("45' HC"),
+    "50 leichte Paletten brauchen keinen 45er-Hinweis");
+  const schwer = [{ name: "X", l: 120, w: 100, h: 116, weight: 2000, qty: 30, stackable: true, rotatable: true }];
+  assert.ok(!JSON.stringify(suggestContainer(schwer, "")).includes("45' HC"),
+    "60 t rettet kein 45er -- er darf dort nicht auftauchen");
+  // Die Auto-Kette bleibt 45er-frei: der Hinweis ist ein Knopf, keine stille Wahl.
+  assert.ok(p.ch.chain.every((c) => c.name !== "45' HC"), "die Kette hat sich selbst einen 45er gegeben");
+});

@@ -32,8 +32,15 @@ test("die englische Fassung zielt auf 'container loading calculator'", () => {
   assert.ok(m, "EN META nicht gefunden");
   const [, t, d] = m;
   assert.ok(/container loading calculator/i.test(t), `EN-Titel ohne Kategorie: "${t}"`);
+  // "3D" fuehrt im Titel: "3d load calculator" stand auf Position 9,6 mit 81
+  // Impressionen und NULL Klicks -- ein Query mit reiner Tool-Absicht, das keine
+  // SERP-Box beantworten kann. Der Titel muss das Tool zuerst nennen.
+  assert.ok(/^3D /.test(t), `der EN-Titel fuehrt nicht mit 3D: "${t}"`);
   assert.ok(t.length <= 60, `EN-Titel ${t.length} Zeichen`);
-  assert.ok(/container loading calculator/i.test(d), "EN-Beschreibung ohne Kategorie");
+  // Die Beschreibung traegt "load calculator" woertlich (die Query-Familie sagt
+  // "load calculator", nicht nur "loading calculator") -- die Kategorie-Phrase
+  // steht weiterhin im Titel.
+  assert.ok(/load(ing)? calculator/i.test(d), "EN-Beschreibung ohne Calculator-Phrase");
   assert.ok(d.length <= 155, `EN-Beschreibung ${d.length} Zeichen`);
   // Und einmal sichtbar im Text, nicht nur im Kopf: die Unterzeile des Heros.
   assert.ok(/hero_sub": "The free 3D container loading calculator/.test(roh),
