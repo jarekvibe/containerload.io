@@ -5062,7 +5062,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // ein Deeplink darf den Container vorwaehlen, aber sonst nichts setzen.
   var QCONT = (() => {
     if (!QIMPORT || QROAD) return null;
-    const k = { "20gp": "20' GP", "20hc": "20' HC", "40gp": "40' GP", "40hc": "40' HC", "45hc": "45' HC" };
+    const k = { "20gp": "20' GP", "20hc": "20' HC", "40gp": "40' GP", "40hc": "40' HC", "45hc": "45' HC",
+      "20ot": "20' Open Top", "40ot": "40' Open Top", "20fr": "20' Flat Rack", "40fr": "40' Flat Rack",
+      "20rf": "20' Reefer", "40rf": "40' Reefer" };
     try { return k[new URLSearchParams(window.location.search).get("cont")] || null; } catch (e) { return null; }
   })();
   // ?rampe=1 oeffnet den Rampen-Modus direkt -- fuer Links, die an der Rampe
