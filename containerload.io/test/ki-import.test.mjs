@@ -11,11 +11,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { BILD_MAX, BILD_TYPEN, BRIEF_AUFTRAG, BRIEF_SCHEMA, BRIEF_SPRACHEN, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, briefNachricht, kiNachricht, pruefeBild, pruefeBrief, pruefeFakten, pruefePositionen } from "../../netlify/functions/lib/ki.mjs";
+import { AKTIONEN_MAX, BILD_MAX, BILD_TYPEN, BRIEF_AUFTRAG, BRIEF_SCHEMA, BRIEF_SPRACHEN, CHAT_AKTION_TYPEN, CHAT_AUFTRAG, CHAT_CONTAINER, CHAT_SCHEMA, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, briefNachricht, chatNachricht, kiNachricht, pruefeAktionen, pruefeBild, pruefeBrief, pruefeChatAntwort, pruefeFakten, pruefePositionen, pruefeVerlauf } from "../../netlify/functions/lib/ki.mjs";
 
 const app = readFileSync(new URL("../app.html", import.meta.url), "utf8");
 const fn = readFileSync(new URL("../../netlify/functions/ki-import.mjs", import.meta.url), "utf8");
 const fnBrief = readFileSync(new URL("../../netlify/functions/ki-brief.mjs", import.meta.url), "utf8");
+const fnChat = readFileSync(new URL("../../netlify/functions/ki-chat.mjs", import.meta.url), "utf8");
 const ds = readFileSync(new URL("../datenschutz.html", import.meta.url), "utf8");
 
 // ── pruefePositionen: die Uebersetzung in die Zeilen des Import-Dialogs ─────
@@ -280,9 +281,9 @@ test("die Brief-Function haelt dieselben Deckel wie der Import", () => {
 test("die App: ein Brief-Aufrufer, Fakten aus den echten Quellen, Mensch prueft", () => {
   assert.equal(app.split('fetch("/api/ki-brief"').length - 1, 1, "genau EIN Aufrufer");
   assert.match(app, /zaehl\("ki-brief"\)/);
-  const von = app.indexOf("const briefFakten");
+  const von = app.indexOf("const planFakten");
   const bis = app.indexOf("const briefKopieren");
-  assert.ok(von > 0 && bis > von, "briefFakten/briefKopieren fehlen");
+  assert.ok(von > 0 && bis > von, "planFakten/briefKopieren fehlen");
   const rumpf = app.slice(von, bis);
   assert.match(rumpf, /kettenGrund\(container, cargo, result\.chain\)/, "die Grund-Zeile kommt aus derselben Rechnung wie im Bild");
   assert.match(rumpf, /alsText\(T\.recBetter\(sugLabel\)\)/,
@@ -303,6 +304,108 @@ test("die Brief-Sprachtexte gibt es paarweise (DE und EN)", () => {
   }
 });
 
+// ── Lade-Assistent (Stufe 4): Woerterbuch statt Willkuer ────────────────────
+
+test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () => {
+  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen"]);
+  const item = CHAT_SCHEMA.properties.aktionen.items;
+  assert.deepEqual(item.properties.typ.enum, CHAT_AKTION_TYPEN);
+  assert.deepEqual(item.required.sort(), Object.keys(item.properties).sort(), "strikt: alle Felder Pflicht");
+  assert.equal(item.additionalProperties, false);
+  assert.deepEqual(CHAT_SCHEMA.required.sort(), ["aktionen", "antwort"]);
+  // Die Container-Whitelist muss die ECHTEN Preset-Namen der App tragen
+  for (const n of CHAT_CONTAINER) assert.ok(app.includes(`"${n}"`), `Preset ${n} gibt es in der App nicht`);
+});
+
+test("pruefeAktionen: nur Plausibles, Deckel, nach entfernen ist Schluss", () => {
+  const voll = { preset: "", position: 0, wert: "", bis_cm: 0, anzahl: 0, name: "", l: 0, b: 0, h: 0, gewicht: 0, erlaubt: true };
+  const ok = pruefeAktionen([
+    { ...voll, typ: "container", preset: "40' HC" },
+    { ...voll, typ: "stapeln", position: 2, wert: "nein" },
+    { ...voll, typ: "menge", position: 1, anzahl: 12 },
+    { ...voll, typ: "container", preset: "Boeser Container" },
+    { ...voll, typ: "menge", position: 1, anzahl: 5000 },
+    { ...voll, typ: "zaubern", position: 1 },
+  ]);
+  assert.deepEqual(ok.map((a) => a.typ), ["container", "stapeln", "menge"], "nur die drei gueltigen (Deckel: 5 betrachtet)");
+  // entfernen beendet die Liste — die P-Nummern dahinter wuerden verrutschen
+  const weg = pruefeAktionen([
+    { ...voll, typ: "entfernen", position: 1 },
+    { ...voll, typ: "menge", position: 2, anzahl: 3 },
+  ]);
+  assert.deepEqual(weg.map((a) => a.typ), ["entfernen"]);
+  assert.equal(pruefeAktionen(Array(20).fill({ ...voll, typ: "drehen", position: 1 })).length, AKTIONEN_MAX);
+  assert.deepEqual(pruefeAktionen("quatsch"), []);
+});
+
+test("pruefeVerlauf und pruefeChatAntwort halten die Grenzen", () => {
+  const v = pruefeVerlauf([
+    { rolle: "nutzer", text: " hallo " }, { rolle: "ki", text: "hi" },
+    { rolle: "chef", text: "nein" }, { rolle: "nutzer", text: "" }, null,
+  ]);
+  assert.deepEqual(v, [{ rolle: "nutzer", text: "hallo" }, { rolle: "ki", text: "hi" }]);
+  assert.equal(pruefeVerlauf(Array(40).fill({ rolle: "ki", text: "x" })).length, 10);
+  assert.equal(pruefeChatAntwort({ antwort: "", aktionen: [] }), null);
+  const a = pruefeChatAntwort({ antwort: " Passt. ", aktionen: "nix" });
+  assert.deepEqual(a, { antwort: "Passt.", aktionen: [] });
+});
+
+test("pruefeFakten ohne Link-Pflicht (Chat) laesst den Link weg", () => {
+  const { link, sprache, ...rest } = FAKTEN_OK;
+  const ok = pruefeFakten(rest, false);
+  assert.ok(ok, "Chat-Fakten ohne Link muessen durch");
+  assert.ok(!("link" in ok) && !("sprache" in ok), "kein Link- und kein Sprach-Feld im Chat-Faktenpaket");
+  assert.equal(pruefeFakten(rest), null, "fuer den BRIEF bleibt der Link Pflicht");
+});
+
+test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
+  assert.match(CHAT_AUFTRAG, /NUR diese Zahlen/, "die Nur-Fakten-Regel fehlt");
+  assert.match(CHAT_AUFTRAG, /kennst das Ergebnis NICHT/, "keine Ergebniszahlen nach Aktionen — der Packer rechnet");
+  assert.match(CHAT_AUFTRAG, /die neuen Zahlen stehen im Plan/, "der Verweis auf den Plan fehlt");
+  assert.match(CHAT_AUFTRAG, /Richtwerte, keine verbindliche Pruefung/, "der Richtwert-Vorbehalt fehlt");
+  assert.match(CHAT_AUFTRAG, /nach einem entfernen keine weitere Aktion/, "die entfernen-Regel fehlt");
+  for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
+  assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
+});
+
+test("die Chat-Function haelt dieselben Deckel wie die anderen", () => {
+  assert.match(fnChat, /path: "\/api\/ki-chat"/);
+  assert.match(fnChat, /containerload\\\.io/);
+  assert.match(fnChat, /ANTHROPIC_API_KEY/);
+  assert.match(fnChat, /tagesdeckel/);
+  assert.match(fnChat, /json_schema/);
+  assert.match(fnChat, /pruefeFakten\(body\.fakten, false\)/, "Chat-Fakten ohne Link-Pflicht");
+  assert.match(fnChat, /pruefeVerlauf/);
+  assert.match(fnChat, /pruefeChatAntwort/, "die Antwort muss durch die Pruefung");
+  assert.match(fnChat, /KI_MODELL/);
+  assert.doesNotMatch(fnChat, /getStore/, "der Zaehler lebt in lib/deckel.mjs");
+});
+
+test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
+  assert.equal(app.split('fetch("/api/ki-chat"').length - 1, 1, "genau EIN Aufrufer");
+  assert.match(app, /zaehl\("ki-chat"\)/);
+  const von = app.indexOf("const kiAktionenAnwenden");
+  const bis = app.indexOf("const chatSenden");
+  assert.ok(von > 0 && bis > von, "kiAktionenAnwenden fehlt oder steht falsch");
+  const rumpf = app.slice(von, bis);
+  assert.match(rumpf, /domain === "sea" && PRESETS\[a\.preset\]/, "Container nur im See-Modus und nur echte PRESETS-Namen");
+  assert.match(rumpf, /merk\(cargo\);\s*setCargo\(neu\)/, "Aenderungen laufen ueber merk + setCargo — Strg+Z nimmt sie zurueck");
+  assert.match(rumpf, /splice\(i, 1\);[^]{0,120}break;/, "nach entfernen ist Schluss (P-Nummern verrutschen sonst)");
+  assert.doesNotMatch(rumpf, /eval|innerHTML/, "keine wilden Wege");
+  // Fakten: die P-Nummer ist der UNGEFILTERTE cargo-Index — sonst zeigen Aktionen daneben
+  assert.match(app, /cargo\.map\(\(c, ci\) => `P\$\{ci \+ 1\}/, "P-Nummer muss der cargo-Index sein");
+});
+
+test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
+  const knopf = app.indexOf("T.chatBtn)");
+  assert.ok(knopf > 0);
+  assert.match(app.slice(Math.max(0, knopf - 300), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
+  assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
+  for (const key of ["chatBtn:", "chatTitle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:"]) {
+    assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
+  }
+});
+
 // ── Datenschutz: der Fall ist benannt, bevor er live geht ───────────────────
 
 test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-Weg", () => {
@@ -318,4 +421,8 @@ test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-
   assert.match(ds, /„KI-Brief zum Plan“/, "der KI-Brief ist nicht benannt");
   assert.match(ds, /deine Positionsbezeichnungen/, "dass Positionsnamen mitgehen, muss dastehen");
   assert.match(ds, /bearbeitbaren Feld/, "dass der Mensch den Entwurf vor dem Senden sieht, gehoert dazu");
+  // Stufe 4: der Assistent ueberträgt Verlauf + Plan je Nachricht — benannt
+  assert.match(ds, /Lade-Assistent/, "der Assistent ist nicht benannt");
+  assert.match(ds, /der bisherige Verlauf dieser Unterhaltung/, "dass der Verlauf mitgeht, muss dastehen");
+  assert.match(ds, /mit „Rückgängig“ \(Strg\+Z\) zurücknehmbar/, "dass Aenderungen zuruecknehmbar sind, gehoert dazu");
 });
