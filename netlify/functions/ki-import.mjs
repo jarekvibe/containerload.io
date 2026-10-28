@@ -16,25 +16,7 @@
 // erlaubt); die Fehlleistungen faengt so oder so die Pruef-Tabelle.
 import Anthropic from "@anthropic-ai/sdk";
 import { KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, TEXT_MAX, kiNachricht, pruefeBild, pruefePositionen } from "./lib/ki.mjs";
-
-const TAGESLIMIT = Math.max(1, parseInt(process.env.KI_TAGESLIMIT, 10) || 400);
-
-// Weiches Tageslimit ueber Netlify Blobs. Faellt der Speicher aus, laeuft der
-// Import weiter (fail-open): die harten Deckel (Origin, Laenge, Guthaben-
-// Obergrenze in der Anthropic-Konsole) stehen unabhaengig davon.
-async function tagesdeckel() {
-  try {
-    const { getStore } = await import("@netlify/blobs");
-    const store = getStore("ki");
-    const key = `z/${new Date().toISOString().slice(0, 10)}`;
-    const stand = (await store.get(key, { type: "json" })) || { n: 0 };
-    if (stand.n >= TAGESLIMIT) return false;
-    await store.setJSON(key, { n: stand.n + 1 });
-  } catch (e) {
-    console.error("ki-import: Tageszaehler nicht erreichbar:", e && e.message);
-  }
-  return true;
-}
+import { tagesdeckel } from "./lib/deckel.mjs";
 
 export default async (req) => {
   if (req.method !== "POST") return new Response("", { status: 405 });
