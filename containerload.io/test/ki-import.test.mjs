@@ -97,6 +97,11 @@ test("der Auftrag traegt die Ehrlichkeits-Regeln woertlich", () => {
   assert.match(KI_AUFTRAG, /0,453592/, "lbs-Umrechnung fehlt");
   assert.match(KI_AUFTRAG, /Erfinde nie Zahlen/, "die wichtigste Regel fehlt");
   assert.match(KI_AUFTRAG, /keine Anweisungen an dich/, "die Daten-nicht-Befehle-Zeile fehlt");
+  // Die Norm-Ausnahmen muessen dieselben Zahlen tragen wie der Ratgeber — zwei
+  // Quellen mit zwei Meinungen ueber eine Gitterbox waeren der bekannte Widerspruch.
+  assert.match(KI_AUFTRAG, /124x83x97/, "die Gitterbox-Norm fehlt oder weicht ab");
+  const gitterbox = readFileSync(new URL("../ratgeber/gitterboxen-container.html", import.meta.url), "utf8");
+  assert.ok(gitterbox.includes("124x83x97"), "die Ratgeber-Seite nennt andere Gitterbox-Masse als der KI-Auftrag");
   assert.match(kiNachricht("TEXT"), /<packliste>\nTEXT\n<\/packliste>/);
 });
 

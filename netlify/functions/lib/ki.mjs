@@ -58,7 +58,7 @@ export const KI_AUFTRAG = [
   "- Masse immer in cm: mm und m umrechnen, Zoll/inch mal 2,54, auf ganze cm runden. Pfund/lbs mal 0,453592 in kg.",
   "- gewicht_kg ist das Gewicht JE STUECK. Steht im Text ein Gesamtgewicht fuer mehrere Stueck, teile es durch die Menge.",
   "- Fehlt das Gewicht, setze 0. Erfinde nie Zahlen.",
-  "- Fehlt ein Mass, lass die Position weg — mit zwei Ausnahmen: 'Europalette' heisst Grundmass 120x80 cm, 'Industriepalette' 120x100 cm. Die Hoehe brauchst du trotzdem aus dem Text.",
+  "- Fehlt ein Mass, lass die Position weg — mit drei Ausnahmen aus der Norm: 'Europalette' heisst Grundmass 120x80 cm und 'Industriepalette' 120x100 cm (die Hoehe brauchst du trotzdem aus dem Text); eine 'Gitterbox' ohne Massangabe heisst komplett 124x83x97 cm.",
   "- 'nicht stapelbar', 'do not stack', 'niet stapelbaar', 'ns' -> stapeln=nein. 'stapelbar bis X' (cm oder m) -> stapeln=bis_hoehe mit stapel_bis_cm ab Containerboden. Sonst stapeln=frei.",
   "- Nur echte Packstuecke aufnehmen. Grussformeln, Adressen, Container-Wuensche ('bitte 40 Fuss') sind keine Positionen.",
   "- Gleiche Ware in einer Position buendeln, verschiedene Masse bleiben getrennte Positionen.",
