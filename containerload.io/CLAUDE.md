@@ -426,6 +426,18 @@ Die übrigen Felder sind so zusammengefasst, dass die Mail **ohne Gestaltung les
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
+### Der KI-Import — Stufe 1 der KI-Integration (28.10.26, Jareks Go)
+Die erste Funktion, die Claude nutzt, und zugleich das Muster für alles Weitere. Architektur: Browser → Netlify Function `/api/ki-import` (`netlify/functions/ki-import.mjs`) → Anthropic-API. **Der API-Schlüssel lebt ausschließlich als Netlify-Umgebungsvariable `ANTHROPIC_API_KEY`** — nie im Browser-Code, nie im Repo. `package.json` trägt dafür `@anthropic-ai/sdk`; es bleibt eine reine Function-Abhängigkeit, die Seite selbst ist weiterhin build-frei (die CDN-Regel aus Abschnitt 2 gilt unverändert für den Browser-Teil).
+
+Fünf Regeln, die nicht kippen dürfen (`test/ki-import.test.mjs` koppelt alle):
+- **Die KI LIEST nur.** Text → Positionen über ein festes Schema (strukturierte Ausgabe, `lib/ki.mjs`); gerechnet wird ausschließlich im Packer. Jede Zahl läuft durch `pruefePositionen` (Server: Grenzen, Wörterbuch, 60-Zeilen-Deckel) und durch die **Prüf-Tabelle des Import-Dialogs** — ein Mensch bestätigt mit „Hinzufügen". KI-Zeilen gehen nie an `setCargo` vorbei, und der Auftrag verbietet Erfinden („Fehlt ein Maß, lass die Position weg").
+- **Übertragung nur auf Klick.** „Mit KI erkennen" ist ein eigener Knopf neben „Erkennen"; der lokale Parser funktioniert unverändert und ohne Netz. Datenschutz-Abschnitt 7 nennt den Fall, Abschnitt 2 zählt jetzt **drei** Ausnahmen (messen-und-melden prüft den Satz). Im eingebetteten Demo der Startseite (`EMBEDDED`) gibt es den Knopf nicht.
+- **Deckel ohne IP:** `TEXT_MAX` 6.000 Zeichen, globaler Tageszähler in Blobs (`KI_TAGESLIMIT`, Standard 400, fail-open — die harte Grenze ist das Guthaben-Limit in der Anthropic-Konsole), weiche Origin-Prüfung. Es wird keine IP gelesen oder gespeichert — dieselbe Linie wie `beacon.mjs`.
+- **Modellwahl ist dokumentierte Entscheidung:** Standard `claude-haiku-5-5` (synchrone Netlify Functions enden nach ~10 s, und ein Import kostet so ~0,05 ct), per `KI_MODELL` ohne Code-Änderung umstellbar (z. B. `claude-opus-5-5`). Fehlleistungen fängt die Prüf-Tabelle — genau dafür ist sie da.
+- **Der Kern ist abhängigkeitsfrei** (`netlify/functions/lib/ki.mjs`): Schema, Auftrag und Prüfung importiert der Test direkt — die CI läuft ohne `npm install`, das SDK darf deshalb nur in `ki-import.mjs` selbst stehen.
+
+Gezählt wird `ki-import` (Liste in messen-und-melden). Geplant als nächste Stufen (nur mit Jareks Go je Stufe): Foto-Import (Vision), „Plan erklären & versenden", Lade-Assistent neben dem Plan.
+
 ### Der Entwurf, das Rückgängig und der leere Start
 **Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.
 
