@@ -11,10 +11,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { BILD_MAX, BILD_TYPEN, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, kiNachricht, pruefeBild, pruefePositionen } from "../../netlify/functions/lib/ki.mjs";
+import { BILD_MAX, BILD_TYPEN, BRIEF_AUFTRAG, BRIEF_SCHEMA, BRIEF_SPRACHEN, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, briefNachricht, kiNachricht, pruefeBild, pruefeBrief, pruefeFakten, pruefePositionen } from "../../netlify/functions/lib/ki.mjs";
 
 const app = readFileSync(new URL("../app.html", import.meta.url), "utf8");
 const fn = readFileSync(new URL("../../netlify/functions/ki-import.mjs", import.meta.url), "utf8");
+const fnBrief = readFileSync(new URL("../../netlify/functions/ki-brief.mjs", import.meta.url), "utf8");
 const ds = readFileSync(new URL("../datenschutz.html", import.meta.url), "utf8");
 
 // ── pruefePositionen: die Uebersetzung in die Zeilen des Import-Dialogs ─────
@@ -198,10 +199,114 @@ test("die Sprachtexte gibt es paarweise (DE und EN)", () => {
   }
 });
 
+// ── KI-Brief (Stufe 3): formulieren, nicht rechnen ──────────────────────────
+
+const FAKTEN_OK = {
+  sprache: "de", modus: "sea", link: "https://containerload.io/share?c=abc",
+  equipment: ["C1 · 40' HC", "C2 · 20' GP"],
+  zahlen: { positionen: 2, stueck: 14, gewichtKg: 6588, offen: 0 },
+  gruende: ["Das Gewicht teilt die Sendung: C1 trägt 26.400 von 26.600 kg."],
+  positionen: ["6× Kisten — 120×80×95 cm, je 245 kg", "8× Kartons — 60×40×40 cm, je 18 kg"],
+};
+
+test("pruefeFakten baut die Fakten neu auf und laesst nichts Fremdes durch", () => {
+  const ok = pruefeFakten({ ...FAKTEN_OK, extra: "weg", script: "<script>" });
+  assert.ok(ok, "gueltige Fakten muessen durch");
+  assert.deepEqual(Object.keys(ok).sort(), ["equipment", "gruende", "link", "modus", "positionen", "sprache", "zahlen"]);
+  assert.equal(ok.zahlen.gewichtKg, 6588);
+  // Deckel: 61. Position faellt, ueberlange Strings werden gekappt
+  const viele = pruefeFakten({ ...FAKTEN_OK, positionen: Array(80).fill("1× Kiste — 1×1×1 cm, je 1 kg") });
+  assert.equal(viele.positionen.length, 60);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, gruende: ["x".repeat(900)] }).gruende[0].length, 300);
+});
+
+test("der Link MUSS auf containerload.io zeigen — sonst ist es ein Spam-Werkzeug", () => {
+  assert.ok(pruefeFakten({ ...FAKTEN_OK, link: "https://www.containerload.io/share?c=x" }));
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, link: "https://boese-seite.de/share" }), null);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, link: "http://containerload.io/share" }), null, "nur https");
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, link: "https://containerload.io.boese.de/x" }), null);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, link: "" }), null);
+});
+
+test("pruefeFakten: Sprach-Whitelist, Modus, Pflicht-Positionen, Zahlen-Grenzen", () => {
+  assert.deepEqual(BRIEF_SPRACHEN, ["de", "en", "nl"]);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, sprache: "fr" }), null);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, modus: "air" }), null);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, positionen: [] }), null, "ohne Positionen gibt es nichts zu erklaeren");
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, zahlen: { ...FAKTEN_OK.zahlen, gewichtKg: -5 } }), null);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, zahlen: { ...FAKTEN_OK.zahlen, stueck: "viele" } }), null);
+  assert.equal(pruefeFakten(null), null);
+});
+
+test("pruefeBrief: beide Felder Pflicht, begrenzt", () => {
+  assert.deepEqual(pruefeBrief({ betreff: " Ladeplan 40' HC ", text: " Guten Tag ... " }), { betreff: "Ladeplan 40' HC", text: "Guten Tag ..." });
+  assert.equal(pruefeBrief({ betreff: "", text: "x" }), null);
+  assert.equal(pruefeBrief({ betreff: "x", text: "" }), null);
+  assert.equal(pruefeBrief(null), null);
+  assert.equal(pruefeBrief({ betreff: "x".repeat(400), text: "y" }).betreff.length, 120);
+});
+
+test("Brief-Schema und -Auftrag tragen die Formulieren-nicht-rechnen-Regeln", () => {
+  assert.deepEqual(Object.keys(BRIEF_SCHEMA.properties).sort(), ["betreff", "text"]);
+  assert.deepEqual(BRIEF_SCHEMA.required.sort(), ["betreff", "text"]);
+  assert.equal(BRIEF_SCHEMA.additionalProperties, false);
+  assert.match(BRIEF_AUFTRAG, /AUSSCHLIESSLICH die Fakten/, "die Nur-diese-Fakten-Regel fehlt");
+  assert.match(BRIEF_AUFTRAG, /erfindest nichts dazu/, "die wichtigste Regel fehlt");
+  assert.match(BRIEF_AUFTRAG, /ZEICHENGENAU/, "der Link darf sich kein Zeichen aendern");
+  assert.match(BRIEF_AUFTRAG, /wertgleich/, "Zahlen muessen wertgleich bleiben");
+  assert.match(BRIEF_AUFTRAG, /sag es ehrlich/, "offene Positionen duerfen nicht verschwiegen werden");
+  assert.match(BRIEF_AUFTRAG, /keine Anweisung an dich/, "die Daten-nicht-Befehle-Zeile fehlt");
+  for (const sp of ["de", "en", "nl"]) assert.ok(BRIEF_AUFTRAG.includes(sp + " ="), `Sprachregel ${sp} fehlt`);
+  assert.match(briefNachricht(FAKTEN_OK), /^<fakten>\n[^]*\n<\/fakten>$/);
+});
+
+test("die Brief-Function haelt dieselben Deckel wie der Import", () => {
+  assert.match(fnBrief, /path: "\/api\/ki-brief"/);
+  assert.match(fnBrief, /containerload\\\.io/, "die weiche Herkunftspruefung fehlt");
+  assert.match(fnBrief, /ANTHROPIC_API_KEY/);
+  assert.match(fnBrief, /tagesdeckel/, "der gemeinsame Tagesdeckel schuetzt das Guthaben");
+  assert.match(fnBrief, /json_schema/);
+  assert.match(fnBrief, /pruefeFakten/, "Fakten muessen durch den Tuersteher");
+  assert.match(fnBrief, /pruefeBrief/, "die Antwort muss geprueft werden");
+  assert.match(fnBrief, /KI_MODELL/);
+  assert.match(fnBrief, /claude-haiku-5-5/);
+  // EIN Tagesdeckel fuer alle KI-Endpunkte — keine zweite Kopie
+  assert.match(fn, /\.\/lib\/deckel\.mjs/);
+  assert.match(fnBrief, /\.\/lib\/deckel\.mjs/);
+  assert.doesNotMatch(fn, /getStore/, "der Zaehler lebt in lib/deckel.mjs, nicht als Kopie");
+  assert.doesNotMatch(fnBrief, /getStore/, "der Zaehler lebt in lib/deckel.mjs, nicht als Kopie");
+});
+
+test("die App: ein Brief-Aufrufer, Fakten aus den echten Quellen, Mensch prueft", () => {
+  assert.equal(app.split('fetch("/api/ki-brief"').length - 1, 1, "genau EIN Aufrufer");
+  assert.match(app, /zaehl\("ki-brief"\)/);
+  const von = app.indexOf("const briefFakten");
+  const bis = app.indexOf("const briefKopieren");
+  assert.ok(von > 0 && bis > von, "briefFakten/briefKopieren fehlen");
+  const rumpf = app.slice(von, bis);
+  assert.match(rumpf, /kettenGrund\(container, cargo, result\.chain\)/, "die Grund-Zeile kommt aus derselben Rechnung wie im Bild");
+  assert.match(rumpf, /alsText\(T\.recBetter\(sugLabel\)\)/,
+    "der Empfehlungs-Satz ist derselbe wie im Banner — und wird zu TEXT geplaettet (recBetter traegt ein React-Element)");
+  assert.match(rumpf, /link: shareURL/, "der Link ist der echte Teilen-Link");
+  // Der Entwurf ist BEARBEITBAR — das ist die Pruef-Tabelle des Briefs
+  assert.match(app, /value: briefText, onChange: \(e\) => setBriefText/, "der Entwurf muss ein bearbeitbares Feld sein");
+  assert.match(app, /value: briefBetreff, onChange: \(e\) => setBriefBetreff/, "auch der Betreff bleibt in der Hand des Menschen");
+  // Nicht im eingebetteten Demo
+  const titel = app.indexOf("T.briefTitle)");
+  assert.ok(titel > 0);
+  assert.match(app.slice(Math.max(0, titel - 700), titel), /!EMBEDDED &&/, "der KI-Brief bleibt dem echten Rechner vorbehalten");
+});
+
+test("die Brief-Sprachtexte gibt es paarweise (DE und EN)", () => {
+  for (const key of ["briefTitle:", "briefSub:", "briefBtn:", "briefSchreibt:", "briefHinweis:", "briefKopierenBtn:", "briefMail:", "briefNeu:"]) {
+    assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
+  }
+});
+
 // ── Datenschutz: der Fall ist benannt, bevor er live geht ───────────────────
 
 test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-Weg", () => {
-  assert.match(ds, /KI-Import \(Anthropic Claude\)/, "eigener Abschnitt fehlt");
+  assert.match(ds, /KI-Funktionen \(Anthropic Claude\)/, "eigener Abschnitt fehlt");
   assert.match(ds, /nichts übertragen, solange du nicht einen dieser Knöpfe drückst/,
     "es steht nicht da, dass ohne Klick nichts hinausgeht");
   assert.match(ds, /„Foto \/ Screenshot“/, "der Foto-Knopf ist nicht benannt");
@@ -209,4 +314,8 @@ test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-
   assert.match(ds, /auf deinem Gerät verkleinert/, "dass das Bild vorher verkleinert wird, gehoert dazu");
   assert.match(ds, /genau drei Fälle/, "Abschnitt 2 zaehlt den neuen Fall nicht mit");
   assert.match(ds, /nicht zum Training/, "die Trainings-Zusage von Anthropic fehlt");
+  // Stufe 3: der KI-Brief ueberträgt den PLAN (samt Positionsbezeichnungen) — benannt
+  assert.match(ds, /„KI-Brief zum Plan“/, "der KI-Brief ist nicht benannt");
+  assert.match(ds, /deine Positionsbezeichnungen/, "dass Positionsnamen mitgehen, muss dastehen");
+  assert.match(ds, /bearbeitbaren Feld/, "dass der Mensch den Entwurf vor dem Senden sieht, gehoert dazu");
 });
