@@ -307,7 +307,7 @@ test("die Brief-Sprachtexte gibt es paarweise (DE und EN)", () => {
 // ── Lade-Assistent (Stufe 4): Woerterbuch statt Willkuer ────────────────────
 
 test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () => {
-  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen"]);
+  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen", "maxzahl"]);
   const item = CHAT_SCHEMA.properties.aktionen.items;
   assert.deepEqual(item.properties.typ.enum, CHAT_AKTION_TYPEN);
   assert.deepEqual(item.required.sort(), Object.keys(item.properties).sort(), "strikt: alle Felder Pflicht");
@@ -336,6 +336,9 @@ test("pruefeAktionen: nur Plausibles, Deckel, nach entfernen ist Schluss", () =>
   assert.deepEqual(weg.map((a) => a.typ), ["entfernen"]);
   assert.equal(pruefeAktionen(Array(20).fill({ ...voll, typ: "drehen", position: 1 })).length, AKTIONEN_MAX);
   assert.deepEqual(pruefeAktionen("quatsch"), []);
+  // maxzahl ist eine reine Probe: nur die P-Nummer reist mit, sonst nichts.
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 3 }]), [{ typ: "maxzahl", position: 3 }]);
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 0 }]), [], "ohne gueltige P-Nummer keine Probe");
 });
 
 test("pruefeVerlauf und pruefeChatAntwort halten die Grenzen", () => {
@@ -356,6 +359,13 @@ test("pruefeFakten ohne Link-Pflicht (Chat) laesst den Link weg", () => {
   assert.ok(ok, "Chat-Fakten ohne Link muessen durch");
   assert.ok(!("link" in ok) && !("sprache" in ok), "kein Link- und kein Sprach-Feld im Chat-Faktenpaket");
   assert.equal(pruefeFakten(rest), null, "fuer den BRIEF bleibt der Link Pflicht");
+  // Der befund (Maxzahl-Saetze des Rechners) reist nur im Chat-Nachzug mit — als
+  // Whitelist-Neuaufbau mit Deckel, und im Brief-Pfad gar nicht.
+  const mitBefund = pruefeFakten({ ...rest, befund: [" P1: maximal 25 Stueck ", 7, "", "x".repeat(500)] }, false);
+  assert.deepEqual(mitBefund.befund, ["P1: maximal 25 Stueck", "x".repeat(200)]);
+  assert.equal(pruefeFakten(rest, false).befund, void 0, "ohne befund-Feld kein befund");
+  const brief = pruefeFakten({ ...FAKTEN_OK, befund: ["schmuggel"] });
+  assert.ok(brief && !("befund" in brief), "der Brief kennt keinen befund");
 });
 
 test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
@@ -371,6 +381,13 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /Hilf durch Handeln/, "die Handeln-statt-Anleitung-Regel fehlt");
   assert.match(CHAT_AUFTRAG, /Strg\+Z/, "der Hinweis auf das Ruecknehmen fehlt im Auftrag");
   assert.match(CHAT_AUFTRAG, /im Verlauf oder in den Fakten/, "die Nutze-den-Kontext-Regel fehlt");
+  // Jareks zweiter Live-Befund ('Wieso weiss er nicht, dass 25 reinpassen?'):
+  // maxzahl laesst den RECHNER das Maximum ermitteln, und der Nachzug bringt
+  // Stevie die frischen Zahlen — erst damit kann er konkret antworten.
+  assert.match(CHAT_AUFTRAG, /maxzahl \(position\)/, "die maxzahl-Aktion ist nicht erklaert");
+  assert.match(CHAT_AUFTRAG, /nimm IMMER maxzahl/, "Wie-viele-passen-Fragen muessen auf maxzahl zeigen");
+  assert.match(CHAT_AUFTRAG, /Nachzug-Nachricht/, "der Nachzug ist nicht erklaert");
+  assert.match(CHAT_AUFTRAG, /aus fakten und befund/, "die Nachzug-Antwort muss aus fakten und befund kommen");
   for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
   assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
 });
@@ -386,6 +403,9 @@ test("die Chat-Function haelt dieselben Deckel wie die anderen", () => {
   assert.match(fnChat, /pruefeChatAntwort/, "die Antwort muss durch die Pruefung");
   assert.match(fnChat, /KI_MODELL/);
   assert.doesNotMatch(fnChat, /getStore/, "der Zaehler lebt in lib/deckel.mjs");
+  // Zwei Stevie-Antworten in Folge (Ankuendigung + Nachzug) muessen zu EINEM
+  // assistant-Zug zusammengelegt werden — die API verlangt den Rollenwechsel.
+  assert.match(fnChat, /letzte\.role === m\.role/, "gleiche Rollen in Folge werden nicht zusammengelegt");
 });
 
 test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
@@ -400,7 +420,9 @@ test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
   assert.match(rumpf, /splice\(i, 1\);[^]{0,120}break;/, "nach entfernen ist Schluss (P-Nummern verrutschen sonst)");
   assert.doesNotMatch(rumpf, /eval|innerHTML/, "keine wilden Wege");
   // Fakten: die P-Nummer ist der UNGEFILTERTE cargo-Index — sonst zeigen Aktionen daneben
-  assert.match(app, /cargo\.map\(\(c, ci\) => `P\$\{ci \+ 1\}/, "P-Nummer muss der cargo-Index sein");
+  assert.match(app, /cargo\.map\(\(c, ci\) => \{/, "P-Nummer muss der cargo-Index sein (ungefiltertes map)");
+  assert.match(app, /return `P\$\{ci \+ 1\}/, "P-Nummer muss der cargo-Index sein");
+  assert.match(app, /verladen \$\{je\.loaded\} von \$\{je\.total\}/, "die Verladen-Zahl des Packers fehlt in den Fakten");
 });
 
 test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
@@ -408,9 +430,22 @@ test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
   assert.ok(knopf > 0);
   assert.match(app.slice(Math.max(0, knopf - 900), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
   assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
-  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:"]) {
+  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:", "chatChipMax:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
+});
+
+test("der Nachzug bringt Stevie die frischen Zahlen des Packers", () => {
+  // Jareks Live-Befund: Stevie konnte '25 Paletten passen' nie sagen, weil er das
+  // Ergebnis seiner Aktionen nie sah. Jetzt meldet sich die App nach Aktionen EINMAL
+  // automatisch mit frischen Fakten — und bei maxzahl rechnet packCargo die Probe,
+  // ohne den Plan anzufassen. Der Nachzug selbst darf keinen weiteren ausloesen.
+  assert.match(app, /const CHAT_NACHZUG = "Nachzug vom Rechner:/, "die Nachzug-Nachricht fehlt");
+  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe \}/, "der Nachzug wird nicht angestossen");
+  assert.match(app, /packCargo\(container, \[\{ \.\.\.cargo\[i\], qty: 600 \}\]\)\.boxes/, "die maxzahl-Probe rechnet nicht ueber den Packer");
+  assert.match(app, /\}, \[result, nachzugTick\]\);/, "der Nachzug-Effekt haengt nicht am frischen result");
+  assert.match(app, /chatRunde\(CHAT_NACHZUG, verlauf, befund, false\)/, "der Nachzug darf keinen weiteren Nachzug ausloesen");
+  assert.equal(app.split("chatRunde(CHAT_NACHZUG").length - 1, 1, "genau EIN Nachzug-Aufrufer");
 });
 
 test("Stevie hat Gesicht, Namen und einen Platz auf der Flaeche", () => {
@@ -461,4 +496,5 @@ test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-
   assert.match(ds, /Lade-Assistent/, "der Assistent ist nicht benannt");
   assert.match(ds, /der bisherige Verlauf dieser Unterhaltung/, "dass der Verlauf mitgeht, muss dastehen");
   assert.match(ds, /mit „Rückgängig“ \(Strg\+Z\) zurücknehmbar/, "dass Aenderungen zuruecknehmbar sind, gehoert dazu");
+  assert.match(ds, /folgt automatisch eine zweite Anfrage/, "der Nachzug muss in der Datenschutzerklaerung stehen");
 });
