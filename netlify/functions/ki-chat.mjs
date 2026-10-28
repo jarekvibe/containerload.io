@@ -38,10 +38,17 @@ export default async (req) => {
       max_tokens: 1600,
       output_config: { effort: "low", format: { type: "json_schema", schema: CHAT_SCHEMA } },
       system: CHAT_AUFTRAG,
+      // Zwei Stevie-Antworten hintereinander (Ankuendigung + Nachzug) waeren zwei
+      // assistant-Zuege in Folge — die API verlangt den Wechsel, also zusammenlegen.
       messages: [
         ...verlauf.map((m) => ({ role: m.rolle === "ki" ? "assistant" : "user", content: m.text })),
         { role: "user", content: chatNachricht({ sprache, ...fakten }, frage) },
-      ],
+      ].reduce((acc, m) => {
+        const letzte = acc[acc.length - 1];
+        if (letzte && letzte.role === m.role) letzte.content += "\n\n" + m.content;
+        else acc.push({ ...m });
+        return acc;
+      }, []),
     });
     const block = antwort.content.find((b) => b.type === "text");
     let daten = null;

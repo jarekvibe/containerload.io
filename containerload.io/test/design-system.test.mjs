@@ -74,7 +74,9 @@ test("die Skalen stehen als Marken oben in der Datei", () => {
 test("Eckenradien: zwei Stufen, sonst nur Pille und Kreis", () => {
   // "0 2px 2px 0" ist kein Eckenradius aus der Reihe, sondern das runde Ende eines
   // 2px hohen Fortschrittsbalkens — der Wert IST die Balkenhoehe.
-  const erlaubt = new Set(["R.s", "R.l", "999", '"50%"', '"0 2px 2px 0"']);
+  // Stevies Sprechblasen tragen ein Schwaenzchen (Jareks Richtung: der Chat darf
+  // anders aussehen als der Rest) — zwei asymmetrische Radien aus R.l/4, sonst nichts.
+  const erlaubt = new Set(["R.s", "R.l", "999", '"50%"', '"0 2px 2px 0"', '"16px 16px 16px 4px"', '"16px 16px 4px 16px"']);
   const falsch = [...new Set((app.match(/borderRadius: ([\w.]+|"[^"]*")/g) || [])
     .map((m) => m.slice("borderRadius: ".length)))]
     .filter((v) => !erlaubt.has(v) && !v.startsWith("`"));
