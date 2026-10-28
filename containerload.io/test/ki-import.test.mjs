@@ -364,6 +364,13 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /die neuen Zahlen stehen im Plan/, "der Verweis auf den Plan fehlt");
   assert.match(CHAT_AUFTRAG, /Richtwerte, keine verbindliche Pruefung/, "der Richtwert-Vorbehalt fehlt");
   assert.match(CHAT_AUFTRAG, /nach einem entfernen keine weitere Aktion/, "die entfernen-Regel fehlt");
+  // Jareks Richtung nach dem ersten Live-Test: Stevie hilft durch HANDELN. Wer fragt,
+  // wie viel in einen anderen Container passt, bekommt den Wechsel — nicht eine
+  // Anleitung. Und wer '40 HC' schon gesagt hat, wird nicht erneut danach gefragt.
+  assert.match(CHAT_AUFTRAG, /Du bist Stevie/, "die KI kennt ihren Namen nicht");
+  assert.match(CHAT_AUFTRAG, /Hilf durch Handeln/, "die Handeln-statt-Anleitung-Regel fehlt");
+  assert.match(CHAT_AUFTRAG, /Strg\+Z/, "der Hinweis auf das Ruecknehmen fehlt im Auftrag");
+  assert.match(CHAT_AUFTRAG, /im Verlauf oder in den Fakten/, "die Nutze-den-Kontext-Regel fehlt");
   for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
   assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
 });
@@ -401,9 +408,38 @@ test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
   assert.ok(knopf > 0);
   assert.match(app.slice(Math.max(0, knopf - 900), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
   assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
-  for (const key of ["chatBtn:", "chatTitle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:"]) {
+  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
+});
+
+test("Stevie hat Gesicht, Namen und einen Platz auf der Flaeche", () => {
+  // Das Maskottchen ist EINE Komponente (StevieKopf) — Launcher, Seitenleisten-Knopf
+  // und Panel-Kopf zeigen denselben Kopf, keine Kopien.
+  assert.match(app, /var StevieKopf = /, "die Maskottchen-Komponente fehlt");
+  assert.ok(app.split("React.createElement(StevieKopf").length - 1 >= 3, "Launcher, Knopf und Panel-Kopf tragen den Kopf");
+  // Der Launcher schwebt im Bild (Jareks Richtung: 'der Button verdient einen Platz
+  // auf der Flaeche'). Er versteckt sich NICHT hinter den Bannern — Sicherungs-
+  // Hinweise gibt es bei fast jedem Plan —, sondern rueckt hoch, solange eins spricht.
+  assert.match(app, /const stevieLauncher = !chatOffen && !EMBEDDED;/, "der Launcher-Schalter fehlt oder haengt falsch");
+  assert.match(app, /bottom: stevieHoch \? 88 : 16/, "der Launcher weicht den Bannern nicht aus");
+  assert.match(app, /stevieLauncher && \/\* @__PURE__ \*\/ React\.createElement\("button"/, "der Launcher-Knopf fehlt im Bild");
+  // Entdeckt-Zaehler: beide Wege zaehlen dasselbe Ereignis (zaehl dedupliziert selbst).
+  assert.equal(app.split('zaehl("stevie-geoeffnet")').length - 1, 2, "beide Oeffnen-Wege zaehlen stevie-geoeffnet");
+});
+
+test("die Startseite stellt Stevie vor — in beiden Sprachen", () => {
+  const start = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+  assert.match(start, /<section id="stevie"/, "die Stevie-Sektion fehlt");
+  assert.match(start, /Frag Stevie\./, "die deutsche Ueberschrift fehlt");
+  assert.match(start, /Stevie erfindet keine Zahlen/, "die Ehrlichkeitszeile fehlt auf der Startseite");
+  // Die englische Fassung haengt im EN-Woerterbuch — sonst bleibt die Sektion deutsch.
+  for (const key of ["st_ey", "st_h", "st_p", "st_c1", "st_c2", "st_c3", "st_c4", "st_cta", "st_b1", "st_b2", "st_chip", "nav_stevie"]) {
+    assert.ok(new RegExp('"' + key + '": "').test(start), `EN-Uebersetzung ${key} fehlt`);
+    assert.ok(start.includes(`data-i18n="${key}"`), `data-i18n="${key}" fehlt im Markup`);
+  }
+  // Der CTA ist ein /app-Link — setLang haengt ihn auf ?lang=en um wie jeden anderen.
+  assert.match(start, /data-i18n="st_cta" href="\/app"/, "der CTA zeigt nicht auf den Rechner");
 });
 
 // ── Datenschutz: der Fall ist benannt, bevor er live geht ───────────────────
