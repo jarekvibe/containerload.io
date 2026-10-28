@@ -15,7 +15,7 @@
 // (z. B. auf claude-opus-5-5, wenn der Netlify-Plan laengere Laufzeiten
 // erlaubt); die Fehlleistungen faengt so oder so die Pruef-Tabelle.
 import Anthropic from "@anthropic-ai/sdk";
-import { KI_AUFTRAG, KI_SCHEMA, TEXT_MAX, kiNachricht, pruefePositionen } from "./lib/ki.mjs";
+import { KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, TEXT_MAX, kiNachricht, pruefeBild, pruefePositionen } from "./lib/ki.mjs";
 
 const TAGESLIMIT = Math.max(1, parseInt(process.env.KI_TAGESLIMIT, 10) || 400);
 
@@ -47,11 +47,17 @@ export default async (req) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ fehler: "ANTHROPIC_API_KEY ist in Netlify nicht gesetzt." }, { status: 503 });
   }
-  let text = "";
-  try { text = String((await req.json()).text || ""); } catch {}
-  text = text.trim();
-  if (!text) return Response.json({ fehler: "leer" }, { status: 400 });
-  if (text.length > TEXT_MAX) return Response.json({ fehler: "zu lang" }, { status: 413 });
+  // Stufe 1: {text} — Stufe 2: {bild: {media_type, data}} (Foto/Screenshot,
+  // von der App schon verkleinert). Ein Bild gewinnt, wenn beides kommt.
+  let text = "", bild = null;
+  try {
+    const body = await req.json();
+    text = String(body.text || "").trim();
+    bild = pruefeBild(body.bild);
+    if (body.bild && !bild) return Response.json({ fehler: "bild" }, { status: 400 });
+  } catch {}
+  if (!text && !bild) return Response.json({ fehler: "leer" }, { status: 400 });
+  if (!bild && text.length > TEXT_MAX) return Response.json({ fehler: "zu lang" }, { status: 413 });
   if (!(await tagesdeckel())) return Response.json({ fehler: "limit" }, { status: 429 });
 
   const client = new Anthropic({ timeout: 20000, maxRetries: 0 });
@@ -61,7 +67,9 @@ export default async (req) => {
       max_tokens: 4000,
       output_config: { effort: "low", format: { type: "json_schema", schema: KI_SCHEMA } },
       system: KI_AUFTRAG,
-      messages: [{ role: "user", content: kiNachricht(text) }],
+      messages: [{ role: "user", content: bild
+        ? [{ type: "image", source: { type: "base64", media_type: bild.media_type, data: bild.data } }, { type: "text", text: KI_FOTO_FRAGE }]
+        : kiNachricht(text) }],
     });
     const block = antwort.content.find((b) => b.type === "text");
     let daten = null;

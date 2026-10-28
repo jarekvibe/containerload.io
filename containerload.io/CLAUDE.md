@@ -426,7 +426,7 @@ Die übrigen Felder sind so zusammengefasst, dass die Mail **ohne Gestaltung les
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
-### Der KI-Import — Stufe 1 der KI-Integration (28.10.26, Jareks Go)
+### Der KI-Import — Stufen 1+2 der KI-Integration (28.10.26, Jareks Go)
 Die erste Funktion, die Claude nutzt, und zugleich das Muster für alles Weitere. Architektur: Browser → Netlify Function `/api/ki-import` (`netlify/functions/ki-import.mjs`) → Anthropic-API. **Der API-Schlüssel lebt ausschließlich als Netlify-Umgebungsvariable `ANTHROPIC_API_KEY`** — nie im Browser-Code, nie im Repo. `package.json` trägt dafür `@anthropic-ai/sdk`; es bleibt eine reine Function-Abhängigkeit, die Seite selbst ist weiterhin build-frei (die CDN-Regel aus Abschnitt 2 gilt unverändert für den Browser-Teil).
 
 Fünf Regeln, die nicht kippen dürfen (`test/ki-import.test.mjs` koppelt alle):
@@ -436,7 +436,9 @@ Fünf Regeln, die nicht kippen dürfen (`test/ki-import.test.mjs` koppelt alle):
 - **Modellwahl ist dokumentierte Entscheidung:** Standard `claude-haiku-5-5` (synchrone Netlify Functions enden nach ~10 s, und ein Import kostet so ~0,05 ct), per `KI_MODELL` ohne Code-Änderung umstellbar (z. B. `claude-opus-5-5`). Fehlleistungen fängt die Prüf-Tabelle — genau dafür ist sie da.
 - **Der Kern ist abhängigkeitsfrei** (`netlify/functions/lib/ki.mjs`): Schema, Auftrag und Prüfung importiert der Test direkt — die CI läuft ohne `npm install`, das SDK darf deshalb nur in `ki-import.mjs` selbst stehen.
 
-Gezählt wird `ki-import` (Liste in messen-und-melden). Geplant als nächste Stufen (nur mit Jareks Go je Stufe): Foto-Import (Vision), „Plan erklären & versenden", Lade-Assistent neben dem Plan.
+**Stufe 2 — Foto & Screenshot (gleicher Tag, Jareks Go):** derselbe Endpunkt nimmt `{bild: {media_type, data}}` an. `pruefeBild` ist der Türsteher (Typ-Whitelist jpeg/png/webp, `BILD_MAX` 4 M base64-Zeichen, echtes base64 — sonst 400); die Bild-Frage `KI_FOTO_FRAGE` lebt in lib/ki.mjs, nie als zweite Kopie. Die App verkleinert VOR dem Senden auf 1568 px Kantenlänge als JPEG (`bildVerkleinern`; EXIF-Drehung macht der Browser beim Dekodieren) — Handyfotos haben 10+ MB, synchrone Functions nehmen ~6 MB an, und mehr Auflösung liest die KI ohnehin nicht. Drei Wege, alle nur auf bewusste Handlung: der Knopf „Foto / Screenshot" (verstecktes `input type=file accept=image/*`), das EINFÜGEN eines Bildschirmfotos in die Textarea (onPaste), und beide laufen durch `kiFoto`, das EMBEDDED selbst prüft — der Paste-Weg hat keinen Knopf, den ein Gate verstecken könnte. Eigenes Event `ki-import-foto`. Kommen Text und Bild zusammen an, gewinnt das Bild.
+
+Gezählt werden `ki-import` und `ki-import-foto` (Liste in messen-und-melden). Geplant als nächste Stufen (nur mit Jareks Go je Stufe): „Plan erklären & versenden", Lade-Assistent neben dem Plan.
 
 ### Der Entwurf, das Rückgängig und der leere Start
 **Der Rechner startet leer.** Vorher stand beim Öffnen ein erfundenes Packstück (120 × 80 × 110, 300 kg) in der Liste, das jeder erst von Hand wegwerfen musste, bevor er die eigene Ladung eintippen konnte. `INIT_CARGO` ist jetzt `[]`, und weil es keine Position mehr geben muss, hängt das × einer Zeile an `cargo.length > 0` statt an `> 1` — sonst ließe sich die letzte nicht löschen.

@@ -11,7 +11,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { KI_AUFTRAG, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, kiNachricht, pruefePositionen } from "../../netlify/functions/lib/ki.mjs";
+import { BILD_MAX, BILD_TYPEN, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, kiNachricht, pruefeBild, pruefePositionen } from "../../netlify/functions/lib/ki.mjs";
 
 const app = readFileSync(new URL("../app.html", import.meta.url), "utf8");
 const fn = readFileSync(new URL("../../netlify/functions/ki-import.mjs", import.meta.url), "utf8");
@@ -77,6 +77,22 @@ test("hoechstens POSITIONEN_MAX Zeilen, voelliger Unsinn ergibt []", () => {
   assert.deepEqual(pruefePositionen(42), []);
 });
 
+// ── pruefeBild: der Tuersteher des Foto-Imports (Stufe 2) ───────────────────
+
+test("pruefeBild laesst nur echte, gedeckelte Bilder durch", () => {
+  const ok = pruefeBild({ media_type: "image/jpeg", data: "QUJD" });
+  assert.deepEqual(ok, { media_type: "image/jpeg", data: "QUJD" });
+  assert.ok(pruefeBild({ media_type: "image/png", data: "QUJDRA==" }));
+  assert.ok(pruefeBild({ media_type: "image/webp", data: "QUJD" }));
+  assert.equal(pruefeBild({ media_type: "image/gif", data: "QUJD" }), null, "nur die Whitelist");
+  assert.equal(pruefeBild({ media_type: "image/jpeg", data: "kein base64 !!" }), null);
+  assert.equal(pruefeBild({ media_type: "image/jpeg", data: "" }), null);
+  assert.equal(pruefeBild({ media_type: "image/jpeg", data: "A".repeat(BILD_MAX + 1) }), null, "Groessendeckel");
+  assert.equal(pruefeBild(null), null);
+  assert.equal(pruefeBild("data:image/jpeg;base64,abc"), null, "nur die Objekt-Form, nie eine Daten-URL");
+  assert.deepEqual(BILD_TYPEN, ["image/jpeg", "image/png", "image/webp"]);
+});
+
 // ── Schema und Auftrag: ein Vertrag, keine zwei Meinungen ───────────────────
 
 test("das Schema traegt genau die Felder, die pruefePositionen liest", () => {
@@ -100,6 +116,8 @@ test("der Auftrag traegt die Ehrlichkeits-Regeln woertlich", () => {
   // Die Norm-Ausnahmen muessen dieselben Zahlen tragen wie der Ratgeber — zwei
   // Quellen mit zwei Meinungen ueber eine Gitterbox waeren der bekannte Widerspruch.
   assert.match(KI_AUFTRAG, /124x83x97/, "die Gitterbox-Norm fehlt oder weicht ab");
+  assert.match(KI_AUFTRAG, /Foto oder Bildschirmfoto/, "die Bild-Regel (Stufe 2) fehlt");
+  assert.match(KI_AUFTRAG, /weg, statt zu raten/, "unleserliche Bild-Zeilen muessen wegfallen, nicht geraten werden");
   const gitterbox = readFileSync(new URL("../ratgeber/gitterboxen-container.html", import.meta.url), "utf8");
   assert.ok(gitterbox.includes("124x83x97"), "die Ratgeber-Seite nennt andere Gitterbox-Masse als der KI-Auftrag");
   assert.match(kiNachricht("TEXT"), /<packliste>\nTEXT\n<\/packliste>/);
@@ -116,6 +134,8 @@ test("die Function haelt Pfad, Herkunft, Deckel und Modell-Standard fest", () =>
   assert.match(fn, /tagesdeckel/, "der Tagesdeckel schuetzt das Guthaben");
   assert.match(fn, /json_schema/, "ohne strukturierte Ausgabe ist die Antwort Glueckssache");
   assert.match(fn, /pruefePositionen/, "die Antwort muss durch die Pruefung, bevor sie die App sieht");
+  assert.match(fn, /pruefeBild/, "Bilder muessen durch den Tuersteher, bevor sie zur KI gehen");
+  assert.match(fn, /KI_FOTO_FRAGE/, "die Bild-Frage kommt aus lib/ki.mjs, nicht als zweite Kopie");
   assert.doesNotMatch(fn, /sk-ant/, "nie ein Schluessel im Quelltext");
 });
 
@@ -134,35 +154,59 @@ test("die App ruft /api/ki-import nur aus kiErkennen und zaehlt das feste Event"
 });
 
 test("KI-Zeilen landen in der Pruef-Tabelle, nie direkt in der Ladung", () => {
-  const von = app.indexOf("const kiErkennen");
+  const von = app.indexOf("const kiSenden");
   const bis = app.indexOf("const applyImport");
-  assert.ok(von > 0 && bis > von, "kiErkennen steht nicht mehr vor applyImport");
+  assert.ok(von > 0 && bis > von, "kiSenden steht nicht mehr vor applyImport");
   const rumpf = app.slice(von, bis);
   assert.match(rumpf, /setImportRows\(rows\)/, "das Ergebnis muss in die Pruef-Tabelle");
   assert.doesNotMatch(rumpf, /setCargo\(/, "KI-Zeilen duerfen den Menschen nicht umgehen");
 });
 
-test("beide KI-Knoepfe sind im eingebetteten Demo aus (EMBEDDED)", () => {
-  const stellen = [...app.matchAll(/kiBusy \? T\.kiLiest : T\.kiBtn/g)];
-  assert.equal(stellen.length, 2, "ein Knopf in der Eingabe-Stufe, einer bei 'nichts erkannt'");
-  for (const m of stellen) {
-    const davor = app.slice(Math.max(0, m.index - 220), m.index);
+test("alle KI-Bedienstellen sind im eingebetteten Demo aus (EMBEDDED)", () => {
+  // Zwei Text-Knoepfe (Eingabe-Stufe und 'nichts erkannt'), ein Foto-Knopf
+  const textKnoepfe = [...app.matchAll(/, T\.kiBtn\)/g)];
+  assert.equal(textKnoepfe.length, 2, "ein Text-KI-Knopf in der Eingabe-Stufe, einer bei 'nichts erkannt'");
+  for (const m of textKnoepfe) {
+    const davor = app.slice(Math.max(0, m.index - 260), m.index);
     assert.match(davor, /!EMBEDDED &&/, "der KI-Knopf darf im iframe der Startseite nicht erscheinen");
   }
+  const foto = [...app.matchAll(/, T\.kiFotoBtn\)/g)];
+  assert.equal(foto.length, 1, "genau ein Foto-Knopf");
+  assert.match(app.slice(Math.max(0, foto[0].index - 320), foto[0].index), /!EMBEDDED &&/,
+    "auch der Foto-Knopf bleibt dem echten Rechner vorbehalten");
+  // Der Einfuege-Weg (Screenshot in die Textarea) laeuft durch kiFoto — und
+  // kiFoto prueft EMBEDDED selbst, damit kein Weg am Gate vorbeifuehrt.
+  assert.match(app, /const kiFoto = async[^]{0,120}kiBusy \|\| EMBEDDED/,
+    "kiFoto muss EMBEDDED selbst pruefen (der Paste-Weg hat keinen Knopf)");
+});
+
+test("Foto-Weg: Datei-Feld, Einfuegen und Verkleinern sind verdrahtet", () => {
+  assert.match(app, /type: "file", accept: "image\/\*"/, "das versteckte Datei-Feld fehlt");
+  assert.match(app, /onPaste:[^}]+indexOf\("image\/"\)/, "eingefuegte Bildschirmfotos muessen erkannt werden");
+  const von = app.indexOf("const bildVerkleinern");
+  assert.ok(von > 0, "bildVerkleinern fehlt");
+  const rumpf = app.slice(von, von + 1600);
+  assert.match(rumpf, /1568/, "die Kantenlaenge folgt der Vision-Empfehlung (1568 px)");
+  assert.match(rumpf, /toDataURL\("image\/jpeg"/, "gesendet wird ein verkleinertes JPEG, nie das Original");
+  assert.match(rumpf, /4 \* 1024 \* 1024/, "die App prueft den Deckel vor dem Senden (wie BILD_MAX)");
+  assert.match(app, /zaehl\("ki-import-foto"\)/, "der Foto-Import zaehlt sein eigenes festes Event");
 });
 
 test("die Sprachtexte gibt es paarweise (DE und EN)", () => {
-  for (const key of ["kiBtn:", "kiLiest:", "kiHinweis:", "kiFehler:", "kiLimit:", "kiLang:"]) {
+  for (const key of ["kiBtn:", "kiLiest:", "kiHinweis:", "kiFehler:", "kiLimit:", "kiLang:", "kiFotoBtn:", "kiLiestFoto:", "kiBildGross:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
 });
 
 // ── Datenschutz: der Fall ist benannt, bevor er live geht ───────────────────
 
-test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme", () => {
+test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-Weg", () => {
   assert.match(ds, /KI-Import \(Anthropic Claude\)/, "eigener Abschnitt fehlt");
-  assert.match(ds, /nichts übertragen, solange du nicht auf diesen Knopf drückst/,
+  assert.match(ds, /nichts übertragen, solange du nicht einen dieser Knöpfe drückst/,
     "es steht nicht da, dass ohne Klick nichts hinausgeht");
+  assert.match(ds, /„Foto \/ Screenshot“/, "der Foto-Knopf ist nicht benannt");
+  assert.match(ds, /Bildschirmfoto in das Eingabefeld einfügst/, "der Einfuege-Weg ist nicht benannt");
+  assert.match(ds, /auf deinem Gerät verkleinert/, "dass das Bild vorher verkleinert wird, gehoert dazu");
   assert.match(ds, /genau drei Fälle/, "Abschnitt 2 zaehlt den neuen Fall nicht mit");
   assert.match(ds, /nicht zum Training/, "die Trainings-Zusage von Anthropic fehlt");
 });
