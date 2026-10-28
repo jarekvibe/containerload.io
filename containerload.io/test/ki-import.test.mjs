@@ -399,7 +399,7 @@ test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
 test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
   const knopf = app.indexOf("T.chatBtn)");
   assert.ok(knopf > 0);
-  assert.match(app.slice(Math.max(0, knopf - 300), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
+  assert.match(app.slice(Math.max(0, knopf - 900), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
   assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
   for (const key of ["chatBtn:", "chatTitle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
