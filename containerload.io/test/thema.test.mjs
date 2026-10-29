@@ -104,6 +104,33 @@ test("die Datenschutzerklaerung nennt die gemerkte Wahl", () => {
     "datenschutz.html erwaehnt die Hell/Dunkel-Wahl nicht — neuer localStorage-Schluessel cl_theme");
 });
 
+// ── Die Startseite traegt denselben Schalter ─────────────────────────────────────────
+const index = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
+
+test("die Startseite teilt Schluessel und Farbsatz mit dem Rechner", () => {
+  // EIN Produkt: dieselbe gemerkte Wahl (cl_theme) gilt auf beiden Seiten, und der helle
+  // Variablensatz der Landingpage traegt WOERTLICH die Kernwerte von C_HELL aus app.html.
+  assert.ok(index.includes('localStorage.getItem("cl_theme")'), "index.html liest cl_theme nicht (fruehes Script)");
+  assert.ok(index.includes("localStorage.setItem('cl_theme',t)"), "index.html merkt die Hand-Wahl nicht unter cl_theme");
+  assert.ok(index.includes('window.matchMedia("(prefers-color-scheme: light)")'), "index.html fragt die Systemeinstellung nicht");
+  const hell = /:root\[data-theme="hell"\]\{([\s\S]*?)\}/.exec(index);
+  assert.ok(hell, 'index.html: :root[data-theme="hell"] fehlt');
+  const appHell = /var C_HELL = \{([\s\S]*?)\n  \};/.exec(app)[1];
+  for (const [vari, marke] of [["--bg", "bg"], ["--text", "text"], ["--accent", "accent"], ["--good", "good"], ["--warn", "warn"], ["--bad", "bad"]]) {
+    const iv = new RegExp(vari.replace(/-/g, "\\-") + ":(#[0-9A-Fa-f]{6})").exec(hell[1]);
+    const av = new RegExp(marke + ': "(#[0-9A-Fa-f]{6})"').exec(appHell);
+    assert.ok(iv && av, `${vari}/${marke} nicht gefunden`);
+    assert.strictEqual(iv[1].toUpperCase(), av[1].toUpperCase(),
+      `Startseite ${vari} (${iv[1]}) weicht von C_HELL.${marke} (${av[1]}) ab — zwei Stellen, EIN Wert`);
+  }
+  // Das fruehe Script laeuft VOR dem Stylesheet, sonst blitzt der falsche Grund auf.
+  assert.ok(index.indexOf("document.documentElement.dataset.theme=t") < index.indexOf("<style>"),
+    "das fruehe Theme-Script der Startseite muss VOR dem Stylesheet stehen");
+  // Sonne/Mond stehen in der Nav; der aktive Knopf haengt REIN am data-theme (CSS).
+  assert.ok(index.includes('data-thema="hell"') && index.includes('data-thema="dunkel"'), "der Umschalter fehlt in der Nav");
+  assert.ok(index.includes(':root[data-theme="hell"] .themabtn[data-thema="hell"]'), "der aktive Knopf haengt nicht am data-theme");
+});
+
 test("die 3D-Buehne bleibt in beiden Themen dunkel", () => {
   // Der Verlauf hinter der Buehne ist ein BILD (fester dunkler Grund), kein Formular —
   // er darf nicht an C haengen, sonst kippt er im Hellen mit.
