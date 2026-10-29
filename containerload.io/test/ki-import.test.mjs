@@ -307,7 +307,7 @@ test("die Brief-Sprachtexte gibt es paarweise (DE und EN)", () => {
 // ── Lade-Assistent (Stufe 4): Woerterbuch statt Willkuer ────────────────────
 
 test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () => {
-  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen", "maxzahl"]);
+  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen", "maxzahl", "leeren"]);
   const item = CHAT_SCHEMA.properties.aktionen.items;
   assert.deepEqual(item.properties.typ.enum, CHAT_AKTION_TYPEN);
   assert.deepEqual(item.required.sort(), Object.keys(item.properties).sort(), "strikt: alle Felder Pflicht");
@@ -339,6 +339,11 @@ test("pruefeAktionen: nur Plausibles, Deckel, nach entfernen ist Schluss", () =>
   // maxzahl ist eine reine Probe: nur die P-Nummer reist mit, sonst nichts.
   assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 3 }]), [{ typ: "maxzahl", position: 3 }]);
   assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 0 }]), [], "ohne gueltige P-Nummer keine Probe");
+  // leeren raeumt den Plan ab — aber NUR als erste Aktion: danach zeigten alle
+  // P-Nummern auf eine Liste, die es nicht mehr gibt (Jareks 54-Paletten-Fall:
+  // Maximalmenge wurde in einen Plan mit Bestand gemischt).
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "leeren" }, { ...voll, typ: "neu", name: "Europalette", l: 120, b: 80, h: 100, gewicht: 25, anzahl: 1 }]).map((a) => a.typ), ["leeren", "neu"]);
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "menge", position: 1, anzahl: 5 }, { ...voll, typ: "leeren" }]).map((a) => a.typ), ["menge"], "leeren nach anderen Aktionen wird verworfen");
 });
 
 test("pruefeVerlauf und pruefeChatAntwort halten die Grenzen", () => {
@@ -393,6 +398,13 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /ECHTE Ergebnisse des Rechners/, "der befund muss als echt ausgewiesen sein");
   assert.match(CHAT_AUFTRAG, /Nenn Zahlen nicht nur, setze sie um/, "die Umsetzen-Regel fehlt");
   assert.match(CHAT_AUFTRAG, /fuehrst die Aenderung, auf die die Frage zielt, direkt mit aus/, "der Nachzug soll handeln duerfen");
+  // Jareks Mobil-Befund: drei lange Blasen je Frage, Richtwert-Floskel ueberall,
+  // und die Maximalmenge wurde ungefragt in den Bestand gemischt (54 statt 50).
+  assert.match(CHAT_AUFTRAG, /FASSE DICH KURZ/, "die Kuerze-Regel fehlt");
+  assert.match(CHAT_AUFTRAG, /ALLEIN in einem leeren Container/, "die Proben-Isolation ist nicht erklaert");
+  assert.match(CHAT_AUFTRAG, /mische die Maximalmenge NIE ungefragt/, "die Bestand-Misch-Sperre fehlt");
+  assert.match(CHAT_AUFTRAG, /leeren nur als ERSTE Aktion/, "die leeren-Regel fehlt");
+  assert.match(CHAT_AUFTRAG, /missbrauche keine vorhandene Position als Naeherung/, "fremde Ware braucht eine eigene Position (neu)");
   for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
   assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
 });
@@ -435,7 +447,7 @@ test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
   assert.ok(knopf > 0);
   assert.match(app.slice(Math.max(0, knopf - 900), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
   assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
-  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:", "chatChipMax:"]) {
+  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:", "chatChipMax:", "chatChipLeer:", "chatKlein:", "chatGross:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
 });
@@ -456,6 +468,17 @@ test("der Nachzug bringt Stevie die frischen Zahlen des Packers", () => {
   assert.match(app, /chatRunde\(CHAT_NACHZUG, verlauf, befund, n\.tiefe\)/, "der Nachzug traegt seine Tiefe nicht weiter");
   assert.match(app, /chatRunde\(frage, verlauf, null, 0\)/, "die Nutzerfrage startet nicht bei Tiefe 0");
   assert.equal(app.split("chatRunde(CHAT_NACHZUG").length - 1, 1, "genau EIN Nachzug-Aufrufer");
+  // Eine Frage, EINE Stevie-Blase: der Nachzug ersetzt die Ankuendigung und
+  // nimmt deren Chips mit, statt eine dritte Nachricht anzuhaengen.
+  assert.match(app, /if \(tiefe > 0\) \{\s*setChatVerlauf/, "der Nachzug ersetzt die Ankuendigungs-Blase nicht");
+  assert.match(app, /chips: \[\.\.\.\(k\[j\]\.chips \|\| \[\]\), \.\.\.erg\.chips\]/, "die Chips der Ankuendigung muessen mitwandern");
+  // leeren in der App: nur als erste Aktion, und [] ist eine echte Arbeitskopie.
+  assert.match(app, /a\.typ === "leeren"/, "die leeren-Aktion fehlt in der App");
+  assert.match(app, /if \(erste && cargo\.length\) \{ neu = \[\];/, "leeren darf nur als erste Aktion abraeumen");
+  // Das Panel bleibt gedeckelt und laesst sich klein machen — der Plan dahinter
+  // bleibt sichtbar (Jareks Handy-Befund).
+  assert.match(app, /maxHeight: "min\(60%, 460px\)"/, "der Hoehen-Deckel des Panels fehlt");
+  assert.equal(app.split("setChatMini(false)").length - 1, 3, "Senden und beide Oeffnen-Wege heben Mini auf");
 });
 
 test("Stevie hat Gesicht, Namen und einen Platz auf der Flaeche", () => {
