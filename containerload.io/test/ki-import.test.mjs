@@ -490,7 +490,9 @@ test("Stevie hat Gesicht, Namen und einen Platz auf der Flaeche", () => {
   // auf der Flaeche'). Er versteckt sich NICHT hinter den Bannern — Sicherungs-
   // Hinweise gibt es bei fast jedem Plan —, sondern rueckt hoch, solange eins spricht.
   assert.match(app, /const stevieLauncher = !chatOffen && !EMBEDDED;/, "der Launcher-Schalter fehlt oder haengt falsch");
-  assert.match(app, /bottom: stevieHoch \? 88 : 16/, "der Launcher weicht den Bannern nicht aus");
+  // Seit Phase 2 rechnet der Ausweich-Abstand vom Buehnen-Boden aus: ueber der Glasleiste
+  // (wide: 128) bzw. ueber dem Bildrand (16), plus 72 wenn ein Banner spricht.
+  assert.match(app, /bottom: buehneUnten \+ \(stevieHoch \? 72 : 0\)/, "der Launcher weicht den Bannern nicht aus");
   assert.match(app, /stevieLauncher && \/\* @__PURE__ \*\/ React\.createElement\("button"/, "der Launcher-Knopf fehlt im Bild");
   // Entdeckt-Zaehler: beide Wege zaehlen dasselbe Ereignis (zaehl dedupliziert selbst).
   assert.equal(app.split('zaehl("stevie-geoeffnet")').length - 1, 2, "beide Oeffnen-Wege zaehlen stevie-geoeffnet");
