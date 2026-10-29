@@ -388,6 +388,11 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /nimm IMMER maxzahl/, "Wie-viele-passen-Fragen muessen auf maxzahl zeigen");
   assert.match(CHAT_AUFTRAG, /Nachzug-Nachricht/, "der Nachzug ist nicht erklaert");
   assert.match(CHAT_AUFTRAG, /aus fakten und befund/, "die Nachzug-Antwort muss aus fakten und befund kommen");
+  // Jareks dritter Live-Befund: Zahl genannt, aber nicht eingetragen — und Stevie
+  // zweifelte sein eigenes Rechner-Ergebnis an. Beides steht jetzt im Auftrag.
+  assert.match(CHAT_AUFTRAG, /ECHTE Ergebnisse des Rechners/, "der befund muss als echt ausgewiesen sein");
+  assert.match(CHAT_AUFTRAG, /Nenn Zahlen nicht nur, setze sie um/, "die Umsetzen-Regel fehlt");
+  assert.match(CHAT_AUFTRAG, /fuehrst die Aenderung, auf die die Frage zielt, direkt mit aus/, "der Nachzug soll handeln duerfen");
   for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
   assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
 });
@@ -441,10 +446,15 @@ test("der Nachzug bringt Stevie die frischen Zahlen des Packers", () => {
   // automatisch mit frischen Fakten — und bei maxzahl rechnet packCargo die Probe,
   // ohne den Plan anzufassen. Der Nachzug selbst darf keinen weiteren ausloesen.
   assert.match(app, /const CHAT_NACHZUG = "Nachzug vom Rechner:/, "die Nachzug-Nachricht fehlt");
-  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe \}/, "der Nachzug wird nicht angestossen");
+  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1 \}/, "der Nachzug wird nicht angestossen");
   assert.match(app, /packCargo\(container, \[\{ \.\.\.cargo\[i\], qty: 600 \}\]\)\.boxes/, "die maxzahl-Probe rechnet nicht ueber den Packer");
   assert.match(app, /\}, \[result, nachzugTick\]\);/, "der Nachzug-Effekt haengt nicht am frischen result");
-  assert.match(app, /chatRunde\(CHAT_NACHZUG, verlauf, befund, false\)/, "der Nachzug darf keinen weiteren Nachzug ausloesen");
+  // Stevie darf im Nachzug selbst handeln (eintragen statt nur nennen, Jareks
+  // Richtung) — die Kette ist dafuer hart gedeckelt: hoechstens ZWEI Nachzuege.
+  assert.match(app, /tiefe < 2 && \(erg\.geaendert \|\| erg\.probe\.length\)/, "der Tiefen-Deckel der Nachzug-Kette fehlt");
+  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1 \}/, "die Tiefe wird nicht mitgezaehlt");
+  assert.match(app, /chatRunde\(CHAT_NACHZUG, verlauf, befund, n\.tiefe\)/, "der Nachzug traegt seine Tiefe nicht weiter");
+  assert.match(app, /chatRunde\(frage, verlauf, null, 0\)/, "die Nutzerfrage startet nicht bei Tiefe 0");
   assert.equal(app.split("chatRunde(CHAT_NACHZUG").length - 1, 1, "genau EIN Nachzug-Aufrufer");
 });
 
@@ -496,5 +506,5 @@ test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-
   assert.match(ds, /Lade-Assistent/, "der Assistent ist nicht benannt");
   assert.match(ds, /der bisherige Verlauf dieser Unterhaltung/, "dass der Verlauf mitgeht, muss dastehen");
   assert.match(ds, /mit „Rückgängig“ \(Strg\+Z\) zurücknehmbar/, "dass Aenderungen zuruecknehmbar sind, gehoert dazu");
-  assert.match(ds, /folgt automatisch eine zweite Anfrage/, "der Nachzug muss in der Datenschutzerklaerung stehen");
+  assert.match(ds, /folgen automatisch bis zu zwei weitere Anfragen/, "der Nachzug muss in der Datenschutzerklaerung stehen");
 });
