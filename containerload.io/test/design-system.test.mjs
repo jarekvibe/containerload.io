@@ -41,19 +41,103 @@ const AUSNAHMEN = new Set([
   "#000000"
 ]);
 
+// Die beiden Farbsaetze (UI-Umbau Phase 1): C_DUNKEL und C_HELL sind das sanktionierte
+// Register — Werte DORT sind Entscheidungen, Werte im Markup sind Streuner. Die Flaechen-
+// Wache nimmt die Definitionsbloecke deshalb aus (genau wie die Druckvorlage) und zaehlt
+// nur, was daneben im Markup steht. Die Paletten selbst prueft der Block weiter unten.
+const paletteBlock = (name) => {
+  const von = zeilen.findIndex((z) => z.includes(`var ${name} = {`));
+  assert.ok(von >= 0, `${name} nicht gefunden`);
+  let bis = von;
+  while (bis < zeilen.length && !/^\s{2}\};/.test(zeilen[bis])) bis++;
+  return [von + 1, bis + 1];                     // 1-basiert, inklusive
+};
+const PAL_DUNKEL = paletteBlock("C_DUNKEL");
+const PAL_HELL = paletteBlock("C_HELL");
+const inPalette = (nr) =>
+  (nr >= PAL_DUNKEL[0] && nr <= PAL_DUNKEL[1]) || (nr >= PAL_HELL[0] && nr <= PAL_HELL[1]);
+
+// Die head-CSS-Variablen (:root / [data-theme="hell"]) spiegeln dieselben Saetze —
+// auch sie sind Register, kein Markup.
+const istRegister = (nr) => inPalette(nr) || /^\s*:root(\[data-theme="hell"\])? \{ --/.test(zeilen[nr - 1]);
+
 test("es bleibt bei sechs Flaechenstufen", () => {
   const gezaehlt = new Set();
-  for (const roh of app.match(/#[0-9A-Fa-f]{6}\b/g) || []) {
-    const h = roh.toLowerCase();
-    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-    if ((r + g + b) / 3 >= 0x50) continue;      // nur dunkle Flaechen und Linien
-    if (AUSNAHMEN.has(h)) continue;
-    gezaehlt.add(h);
-  }
+  zeilen.forEach((z, i) => {
+    if (istRegister(i + 1)) return;
+    for (const roh of z.match(/#[0-9A-Fa-f]{6}\b/g) || []) {
+      const h = roh.toLowerCase();
+      const [r, g, b] = [1, 3, 5].map((j) => parseInt(h.slice(j, j + 2), 16));
+      if ((r + g + b) / 3 >= 0x50) continue;      // nur dunkle Flaechen und Linien
+      if (AUSNAHMEN.has(h)) continue;
+      gezaehlt.add(h);
+    }
+  });
   assert.ok(gezaehlt.size <= 6,
     `${gezaehlt.size} dunkle Werte statt hoechstens 6: ${[...gezaehlt].join(", ")}\n` +
     "Neue Zwischentoene sammeln sich an, bis kein Rahmen mehr etwas bedeutet. " +
     "Entweder eine bestehende Stufe nehmen oder hier bewusst eintragen.");
+});
+
+// ── Die zwei Farbsaetze: gleiche Schluessel, gleiche Lesbarkeit ──────────────────────────
+const liesPalette = ([von, bis]) => {
+  const obj = {};
+  for (let i = von; i <= bis; i++) {
+    const m = /^\s{4}(\w+): "(#[0-9A-Fa-f]{6}|linear-gradient[^"]*)"/.exec(zeilen[i - 1]);
+    if (m) obj[m[1]] = m[2];
+  }
+  return obj;
+};
+const DUNKEL = liesPalette(PAL_DUNKEL);
+const HELL = liesPalette(PAL_HELL);
+
+test("beide Farbsaetze tragen dieselben Marken", () => {
+  assert.ok(Object.keys(DUNKEL).length >= 20, `C_DUNKEL unvollstaendig gelesen (${Object.keys(DUNKEL).length})`);
+  assert.deepStrictEqual(Object.keys(HELL).sort(), Object.keys(DUNKEL).sort(),
+    "C_HELL und C_DUNKEL muessen DIESELBEN Schluessel tragen — ein Schluessel, den nur ein Satz " +
+    "kennt, ist im anderen Thema undefined und faerbt nichts.");
+});
+
+test("es gibt genau einen Akzent — in beiden Saetzen", () => {
+  for (const [name, p] of [["C_DUNKEL", DUNKEL], ["C_HELL", HELL]]) {
+    assert.ok(p.accent, `${name}: accent fehlt`);
+    assert.strictEqual(p.hint, p.accent, `${name}: hint (${p.hint}) weicht vom Akzent (${p.accent}) ab — ein Ton, nicht zwei`);
+    assert.strictEqual(p.teal, p.accent, `${name}: teal (${p.teal}) weicht vom Akzent (${p.accent}) ab — ein Ton, nicht zwei`);
+    assert.ok(p.grad.includes(p.accent), `${name}: grad traegt nicht den Akzent`);
+  }
+});
+
+test("die Lesbarkeitsgrenze 4,5:1 gilt fuer BEIDE Farbsaetze", () => {
+  // Dieselbe Rechnung, mit der faint im Dunkeln auf #7689A0 gehoben wurde (WCAG AA) —
+  // jetzt als Wache, damit kein Satz beim Nachjustieren stillschweigend darunter rutscht.
+  const lum = (hex) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+      .map((c) => c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  const kontrast = (a, b) => {
+    const [la, lb] = [lum(a), lum(b)];
+    return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+  };
+  const flaechen = ["bg", "chrome", "surface", "raised", "field"];
+  // text/dim/faint/soft sind Fliess- und Nebentexte: 4,5:1 auf JEDER Flaechenstufe.
+  // Die Status- und Akzent-Texttoene stehen fett oder auf hellen Tint-Flaechen; fuer sie
+  // gilt 4,5:1 auf den Karten-Stufen (chrome/surface/raised/field), nicht auf bg.
+  for (const [name, p] of [["C_DUNKEL", DUNKEL], ["C_HELL", HELL]]) {
+    for (const t of ["text", "dim", "faint", "soft"])
+      for (const f of flaechen)
+        assert.ok(kontrast(p[t], p[f]) >= 4.5,
+          `${name}: ${t} (${p[t]}) auf ${f} (${p[f]}) = ${kontrast(p[t], p[f]).toFixed(2)}:1 — unter 4,5`);
+    for (const t of ["info", "accText", "warnSoft", "good", "warn", "bad"])
+      for (const f of ["chrome", "surface", "raised", "field"])
+        assert.ok(kontrast(p[t], p[f]) >= 4.5,
+          `${name}: ${t} (${p[t]}) auf ${f} (${p[f]}) = ${kontrast(p[t], p[f]).toFixed(2)}:1 — unter 4,5`);
+    // Knopftext auf gefuellten Flaechen.
+    assert.ok(kontrast(p.onAcc, p.accent) >= 4.0,
+      `${name}: onAcc auf accent = ${kontrast(p.onAcc, p.accent).toFixed(2)}:1`);
+    assert.ok(kontrast(p.onWarn, p.warn) >= 4.5,
+      `${name}: onWarn auf warn = ${kontrast(p.onWarn, p.warn).toFixed(2)}:1`);
+  }
 });
 
 test("die Skalen stehen als Marken oben in der Datei", () => {
@@ -161,15 +245,8 @@ test("die Flaeche haelt einen Ton - kein Verlauf hinter der Oberflaeche", () => 
     `Verlauf als Flaechenhintergrund: ${treffer.join(", ")} — die Flaeche haelt EINEN Ton`);
 });
 
-test("es gibt genau einen Akzent", () => {
-  // hint war #8B5CF6, ein Violett, das es sonst nirgends im Produkt gibt und auf der
-  // Startseite schon gar nicht. Ein zweiter Akzent ist genau das, was eine Oberflaeche
-  // zusammengesetzt aussehen laesst.
-  const akz = (/\n\s*accent: "(#[0-9A-Fa-f]{6})"/.exec(app) || [])[1];
-  const hint = (/\n\s*hint: "(#[0-9A-Fa-f]{6})"/.exec(app) || [])[1];
-  assert.ok(akz, "C.accent nicht gefunden");
-  assert.strictEqual(hint, akz, `hint (${hint}) weicht vom Akzent (${akz}) ab — ein Ton, nicht zwei`);
-});
+// „es gibt genau einen Akzent" ist in die Farbsatz-Wachen oben gewandert — seit Phase 1
+// gilt die Zusage je Satz (accent = hint = teal, in C_DUNKEL wie in C_HELL).
 
 test("Schriftgewicht hoert bei 700 auf", () => {
   const schwer = app.match(/fontWeight: (800|900)|font-weight:\s*(800|900)/g) || [];
