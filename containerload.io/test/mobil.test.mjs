@@ -108,7 +108,7 @@ test("im Rechner steht auf dem Telefon die 3D-Ansicht vor der Seitenleiste", () 
   // Die order-Klassen drehen die Reihenfolge nur unter lg; ab lg (Spalten) gilt wieder
   // die Dokument-Reihenfolge. Wer sie entfernt, holt das alte Problem zurueck.
   const s = lies("app.html");
-  assert.match(s, /"aside", \{ className: "order-2 lg:order-none w-full lg:w-\[360px\]/,
+  assert.match(s, /"aside", \{ className: "order-2 lg:order-none w-full lg:w-\[\d+px\]/,
     "die Seitenleiste rueckt auf dem Telefon nicht mehr hinter die 3D-Ansicht");
   assert.match(s, /"main", \{ className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col"/,
     "die 3D-Spalte steht auf dem Telefon nicht mehr zuerst");
