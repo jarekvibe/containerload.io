@@ -43,6 +43,17 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
 <script src="https://cdn.tailwindcss.com"></script>
+<script>
+(function(){
+  var t="dunkel";
+  try{
+    var m=localStorage.getItem("cl_theme");
+    if(m==="hell"||m==="dunkel")t=m;
+    else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="hell";
+  }catch(e){}
+  document.documentElement.dataset.theme=t;
+})();
+</script>
 <style>
 /* ============================================================
    ContainerLoad — Landingpage
@@ -66,8 +77,21 @@
      und --grad noch. Beide zeigen jetzt auf den einen Akzent statt auf einen
      Verlauf — dadurch bleibt die englische Fassung unveraendert lauffaehig. */
   --teal:#2E8FFF; --grad:#2E8FFF;
+  --onacc:#08111C; --accent-hov:#4CA2FF; --nav:rgba(14,17,22,.92);
   --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
   --r-s:6px; --r-m:10px; --r-l:14px;
+}
+/* Der helle Satz (UI-Umbau, Entwurf B2) — WOERTLICH die Werte von C_HELL in app.html,
+   damit Startseite und Rechner auch im Hellen wie EIN Produkt wirken. Der Akzent ist
+   eine Stufe tiefer (#1273E6): #2E8FFF kommt auf Weiss nur auf 3,2:1 (WCAG). */
+:root[data-theme="hell"]{
+  --bg:#EEF1F6; --card:#FFFFFF; --card2:#F6F8FB;
+  --line:#E3E8F0; --line2:#C6D0DD;
+  --text:#1C2733; --dim:#46566A; --faint:#5B6B7E;
+  --accent:#1273E6; --accent-soft:rgba(18,115,230,.10); --accent-line:rgba(18,115,230,.34);
+  --good:#177A4C; --warn:#A94E08; --bad:#C9271B;
+  --teal:#1273E6; --grad:#1273E6;
+  --onacc:#FFFFFF; --accent-hov:#0E63CC; --nav:rgba(255,255,255,.92);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scroll-behavior:smooth}
@@ -98,8 +122,8 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
   font-weight:600;border-radius:var(--r-m);cursor:pointer;white-space:nowrap;
   text-decoration:none;transition:background-color .14s,border-color .14s,color .14s}
-.btn-primary{background:var(--accent);color:#08111C;border:1px solid var(--accent)}
-.btn-primary:hover{background:#4CA2FF;border-color:#4CA2FF}
+.btn-primary{background:var(--accent);color:var(--onacc);border:1px solid var(--accent)}
+.btn-primary:hover{background:var(--accent-hov);border-color:var(--accent-hov)}
 .btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--text)}
 .btn-ghost:hover{background:var(--card2);border-color:var(--faint)}
 
@@ -112,7 +136,7 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .live-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent)}
 
 /* --- Kopfleiste --- */
-.glass-nav{background:rgba(14,17,22,.92);border:1px solid var(--line)}
+.glass-nav{background:var(--nav);border:1px solid var(--line)}
 .glass-nav.scrolled{background:var(--bg);border-color:var(--line2)}
 .navlink{color:var(--dim);font-size:14px;font-weight:500;transition:color .14s;text-decoration:none}
 .navlink:hover{color:var(--text)}
@@ -128,6 +152,13 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .langbtn:hover{text-decoration:none}
 /* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn. */
 .langswitch-lg .langbtn{padding:7px 14px;font-size:13px;border-radius:6px}
+/* Hell/Dunkel-Umschalter: gleiche Pille wie der Sprachumschalter. Der aktive Knopf
+   haengt REIN am data-theme des <html> — kein Zustand im Skript noetig. */
+.themaswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
+.themabtn{display:flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:5px;
+  color:var(--faint);background:transparent;border:0;cursor:pointer;padding:0;transition:color .15s,background-color .15s}
+:root:not([data-theme="hell"]) .themabtn[data-thema="dunkel"],
+:root[data-theme="hell"] .themabtn[data-thema="hell"]{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18)}
 /* Hinweis fuer englischsprachige Besucher. Bewusst ein Angebot statt automatischem
    Umschalten: dieselbe Adresse muss immer dieselbe Sprache zeigen, sonst raet Google
    sich die Sprache der Startseite zusammen. Unten angesetzt, weil die Navigation oben
@@ -311,6 +342,10 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <!-- Echte Links, keine Knoepfe: nur so kann eine Suchmaschine die englische
            Fassung ueberhaupt finden. Der Klick wird abgefangen und schaltet ohne
            Neuladen um, die Adresse zieht per replaceState mit. -->
+      <div class="themaswitch" role="group">
+        <button type="button" data-thema="hell" class="themabtn" aria-label="Helles Design" title="Helles Design"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
+        <button type="button" data-thema="dunkel" class="themabtn" aria-label="Dunkles Design" title="Dunkles Design"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
       <div class="hidden sm:flex langswitch">
         <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
         <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
@@ -364,15 +399,15 @@ details[open] .faq-plus{transform:rotate(45deg)}
     <div>
       <!-- Status-Strip: laeuft synchron zur 3D-Hero-Animation (Texte vom clh-Modul gesetzt, kein data-i18n) -->
       <div class="clh-status mx-auto mb-4" id="clhStatus" style="border-color:var(--line)">
-        <div class="clh-ic" id="clhStatusIc" style="background:#35BE87;color:#08111C">✓</div>
+        <div class="clh-ic" id="clhStatusIc" style="background:var(--good);color:var(--onacc)">✓</div>
         <div>
-          <div class="clh-txt" id="clhStatusTxt" style="color:#35BE87">Alles verstaut</div>
+          <div class="clh-txt" id="clhStatusTxt" style="color:var(--good)">Alles verstaut</div>
           <div class="clh-meta" id="clhStatusMeta">1× 40′ GP · gelöst</div>
         </div>
       </div>
       <div class="clh-stage reveal">
-      <div class="clh-pill f1" id="clhPillType"><span class="clh-dot" style="background:#35BE87"></span> 40′ GP</div>
-      <div class="clh-pill f2" id="clhPillFit"><span class="clh-dot" style="background:#35BE87"></span> ✓ passt</div>
+      <div class="clh-pill f1" id="clhPillType"><span class="clh-dot" style="background:var(--good)"></span> 40′ GP</div>
+      <div class="clh-pill f2" id="clhPillFit"><span class="clh-dot" style="background:var(--good)"></span> ✓ passt</div>
 
       <!-- SVG-Standbild: Default sichtbar, auf Desktop vom Canvas ersetzt -->
       <div class="clh-poster" id="clhPoster" aria-hidden="true">
@@ -410,7 +445,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <div class="clh-sep"></div>
         <div class="clh-step"><span class="clh-sd"></span><span class="clh-sl">Lösen</span></div>
         <div class="clh-sep"></div>
-        <div class="clh-step on"><span class="clh-sd" style="background:#35BE87"></span><span class="clh-sl">Gelöst</span></div>
+        <div class="clh-step on"><span class="clh-sd" style="background:var(--good)"></span><span class="clh-sl">Gelöst</span></div>
       </div>
       </div>
     </div>
@@ -647,7 +682,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <div data-i18n="imp_ey" class="eyebrow mb-3">Packlisten-Import</div>
       <h2 data-i18n="imp_h" class="font-bold text-[34px] md:text-[42px] tracking-tight leading-tight">Aus Excel.<br><span style="color:var(--dim)">In den Container.</span></h2>
       <p data-i18n="imp_p" class="mt-4 text-[15px] leading-relaxed max-w-[480px]" style="color:var(--dim)">Packliste in Excel markieren, kopieren, hier einfügen. ContainerLoad erkennt Spalten, Maße und Gewichte automatisch. Kein Abtippen.</p>
-      <div class="mt-5 flex flex-col gap-2 text-[14px]" style="color:#c8d2de">
+      <div class="mt-5 flex flex-col gap-2 text-[14px]" style="color:var(--dim)">
         <span data-i18n="imp_c1"><span style="color:var(--good)">✓</span> Erkennt Kopfzeilen auf Deutsch und Englisch</span>
         <span data-i18n="imp_c2"><span style="color:var(--good)">✓</span> Rechnet mm und Tonnen automatisch um</span>
         <span data-i18n="imp_c3"><span style="color:var(--good)">✓</span> Ohne Login, direkt im Browser</span>
@@ -675,7 +710,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <div data-i18n="st_ey" class="eyebrow mb-3">Neu · KI an Bord</div>
       <h2 data-i18n="st_h" class="font-bold text-[34px] md:text-[42px] tracking-tight leading-tight">Frag Stevie.<br><span style="color:var(--dim)">Die KI im Rechner.</span></h2>
       <p data-i18n="st_p" class="mt-4 text-[15px] leading-relaxed max-w-[480px]" style="color:var(--dim)">Stevie heißt wie der Stevedore — der Mann, der im Hafen die Schiffe staut. Er liest Packlisten, erklärt deinen Plan und stellt ihn auf Zuruf um. Gerechnet wird immer im 3D-Rechner: Stevie erfindet keine Zahlen.</p>
-      <div class="mt-5 flex flex-col gap-2 text-[14px]" style="color:#c8d2de">
+      <div class="mt-5 flex flex-col gap-2 text-[14px]" style="color:var(--dim)">
         <span data-i18n="st_c1"><span style="color:var(--good)">✓</span> Liest Packlisten aus Text, Excel, Foto und Screenshot</span>
         <span data-i18n="st_c2"><span style="color:var(--good)">✓</span> Stellt Container, Mengen und Stapel-Regeln auf Zuruf um</span>
         <span data-i18n="st_c3"><span style="color:var(--good)">✓</span> Schreibt den E-Mail-Entwurf zu deinem Plan — DE, EN oder NL</span>
@@ -703,7 +738,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
         </svg>
       </div>
       <div class="flex flex-col gap-2.5">
-        <div data-i18n="st_b1" class="text-[13.5px] leading-relaxed px-3.5 py-2.5" style="align-self:flex-end;max-width:85%;background:rgba(46,143,255,.13);border:1px solid rgba(46,143,255,.3);border-radius:14px;color:var(--text)">Passt das auch in einen 40′ HC?</div>
+        <div data-i18n="st_b1" class="text-[13.5px] leading-relaxed px-3.5 py-2.5" style="align-self:flex-end;max-width:85%;background:var(--accent-soft);border:1px solid rgba(46,143,255,.3);border-radius:14px;color:var(--text)">Passt das auch in einen 40′ HC?</div>
         <div data-i18n="st_b2" class="text-[13.5px] leading-relaxed px-3.5 py-2.5" style="align-self:flex-start;max-width:85%;background:var(--card2);border:1px solid var(--line2);border-radius:14px;color:var(--text)">Klar — ich habe auf 40′ HC umgestellt. Die neuen Zahlen stehen im Plan; Strg+Z nimmt es zurück.</div>
         <div style="align-self:flex-start"><span data-i18n="st_chip" class="text-[11.5px] font-semibold px-2 py-1" style="background:rgba(63,185,127,.12);color:var(--good);border-radius:8px">✓ Container → 40′ HC</span></div>
       </div>
@@ -1138,10 +1173,14 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   document.querySelectorAll('#clhTimeline .clh-step').forEach(function(s){tlSteps.push(s);});
   var lastKey='',lastLang='',lastActTL=-1;
   function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
+  // DOM-Texte und -Chips laufen ueber die CSS-Variablen, damit der helle Satz greift
+  // (#35BE87 auf weisser Karte waere zu blass; var(--good) ist dort das dunklere #177A4C).
+  // Die Three-Materialien brauchen ZAHLEN und bleiben bei hex() — die Zeichnung ist ein Bild.
+  function cssCol(c){return c===C_GOOD?'var(--good)':c===C_WARN?'var(--warn)':c===C_TEAL?'var(--accent)':hex(c);}
   function setTimeline(active,doneCol){
     tlSteps.forEach(function(st,i){
       var on=(i===active);st.classList.toggle('on',on);
-      var sd=st.querySelector('.clh-sd'); if(sd) sd.style.background= on?hex(doneCol):'#303A46';
+      var sd=st.querySelector('.clh-sd'); if(sd) sd.style.background= on?cssCol(doneCol):'var(--line2)';
     });
   }
   function applyStatus(act,key,vars,t){
@@ -1150,12 +1189,12 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     if(statusTxt) statusTxt.textContent=fill(s.txt[L]);
     if(statusMeta) statusMeta.textContent=fill(s.meta[L]);
     if(pillType&&pillType.lastChild) pillType.lastChild.textContent=' '+fill(s.type[L]);
-    if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+hex(s.fitCol)+'"></span> '+fill(s.fit[L]);
+    if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+cssCol(s.fitCol)+'"></span> '+fill(s.fit[L]);
     var id=act+':'+key;
     if(id!==lastKey){
-      var col=hex(s.col);
+      var col=cssCol(s.col);
       if(statusTxt) statusTxt.style.color=col;
-      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=col; statusIc.style.color='#08111C';}
+      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=col; statusIc.style.color='var(--onacc)';}
       if(statusBox){statusBox.style.borderColor=col;}
       if(pillType){var d=pillType.querySelector('.clh-dot'); if(d)d.style.background=col;}
       setTimeline(s.tl,s.col); lastKey=id;
@@ -1841,5 +1880,33 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 <!-- Besucherzaehler: GoatCounter (kostenlos, ohne Cookies, DSGVO-freundlich) -->
 <!-- Ersetze containerload durch deinen Code von goatcounter.com (z.B. containerload) -->
 <script data-goatcounter="https://containerload.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<script>
+/* Hell/Dunkel: Klick merkt die Wahl unter cl_theme (derselbe Schluessel wie im Rechner —
+   EIN Produkt, die Wahl gilt auf beiden Seiten). Ohne gemerkte Wahl folgt die Seite der
+   Systemeinstellung auch live. Die Adressleiste (theme-color) zieht mit. */
+(function(){
+  function setze(t){
+    document.documentElement.dataset.theme=t;
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', t==='hell' ? '#EEF1F6' : '#0E1116');
+  }
+  [].slice.call(document.querySelectorAll('.themabtn')).forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=b.getAttribute('data-thema');
+      try{localStorage.setItem('cl_theme',t);}catch(e){}
+      setze(t);
+    });
+  });
+  try{
+    var mq=window.matchMedia('(prefers-color-scheme: light)');
+    var folge=function(){
+      try{ if(localStorage.getItem('cl_theme')) return; }catch(e){}
+      setze(mq.matches?'hell':'dunkel');
+    };
+    if(mq.addEventListener) mq.addEventListener('change',folge); else if(mq.addListener) mq.addListener(folge);
+  }catch(e){}
+  setze(document.documentElement.dataset.theme||'dunkel');
+})();
+</script>
 </body>
 </html>

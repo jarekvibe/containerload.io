@@ -94,7 +94,9 @@ test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', 
 
   const i = s.indexOf('data-i18n="nav_open"');
   assert.ok(i > -1, 'der Knopf "Tool öffnen" wurde nicht gefunden');
-  const zeile = s.slice(Math.max(0, i - 700), i + 200);
+  // 700 -> 1600: seit dem Hell/Dunkel-Umschalter stehen zwei SVG-Knoepfe vor dem
+  // Sprachumschalter. Im Browser nachgemessen (390 px): Nav-Rechtskante 382 px — passt.
+  const zeile = s.slice(Math.max(0, i - 1600), i + 200);
   assert.match(zeile, /class="flex items-center gap-1 sm:gap-2"/,
     "der Abstand vor dem Burger ist auf dem Telefon nicht verkleinert");
   assert.match(zeile, /class="btn btn-primary text-\[13px\] px-2 sm:px-4 py-2"/,
