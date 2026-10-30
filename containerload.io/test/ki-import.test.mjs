@@ -11,7 +11,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { AKTIONEN_MAX, BILD_MAX, BILD_TYPEN, BRIEF_AUFTRAG, BRIEF_SCHEMA, BRIEF_SPRACHEN, CHAT_AKTION_TYPEN, CHAT_AUFTRAG, CHAT_CONTAINER, CHAT_SCHEMA, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, briefNachricht, chatNachricht, kiNachricht, pruefeAktionen, pruefeBild, pruefeBrief, pruefeChatAntwort, pruefeFakten, pruefePositionen, pruefeVerlauf } from "../../netlify/functions/lib/ki.mjs";
+import { AKTIONEN_MAX, BILD_MAX, BILD_TYPEN, BRIEF_AUFTRAG, BRIEF_SCHEMA, BRIEF_SPRACHEN, CHAT_AKTION_TYPEN, CHAT_AUFTRAG, CHAT_CONTAINER, CHAT_EASTER_EGGS, CHAT_SCHEMA, KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, POSITIONEN_MAX, TEXT_MAX, briefNachricht, chatNachricht, kiNachricht, pruefeAktionen, pruefeBild, pruefeBrief, pruefeChatAntwort, pruefeFakten, pruefePositionen, pruefeVerlauf } from "../../netlify/functions/lib/ki.mjs";
 
 const app = readFileSync(new URL("../app.html", import.meta.url), "utf8");
 const fn = readFileSync(new URL("../../netlify/functions/ki-import.mjs", import.meta.url), "utf8");
@@ -581,4 +581,19 @@ test("die Datenschutzseite nennt den KI-Import als Klick-Ausnahme — samt Foto-
   assert.match(ds, /der bisherige Verlauf dieser Unterhaltung/, "dass der Verlauf mitgeht, muss dastehen");
   assert.match(ds, /mit „Rückgängig“ \(Strg\+Z\) zurücknehmbar/, "dass Aenderungen zuruecknehmbar sind, gehoert dazu");
   assert.match(ds, /folgen automatisch bis zu zwei weitere Anfragen/, "der Nachzug muss in der Datenschutzerklaerung stehen");
+});
+
+test("Stevies Easter Eggs stehen im Auftrag — als feste Antworten ohne Aktionen", () => {
+  // Jareks Wunsch (30.10.26). Im Auftrag statt als Textvergleich in der App: Stevie erkennt
+  // die Frage dann in jeder Formulierung und Sprache.
+  const eier = Object.fromEntries(CHAT_EASTER_EGGS.map(([f, a]) => [a, f]));
+  assert.match(eier["Werder Bremen"] || "", /beste Fußballverein/, "der beste Verein fehlt");
+  assert.match(eier["Jarek Polep"] || "", /coolste Person/, "die coolste Person fehlt");
+  for (const [frage, antwort] of CHAT_EASTER_EGGS) {
+    assert.ok(CHAT_AUFTRAG.includes(`'${frage}' → '${antwort}'`), `${antwort} steht nicht im Auftrag`);
+    // Ein Ei darf die Ehrlichkeitslinie nicht beruehren: keine Zahl, kein Link.
+    assert.doesNotMatch(antwort, /\d|https?:|www\./, `${antwort}: Zahlen und Links haben in einem Ei nichts verloren`);
+  }
+  assert.match(CHAT_AUFTRAG, /NUR mit genau dieser Antwort, ohne Aktionen und ohne Zusatz/, "die Eier duerfen nichts am Plan aendern");
+  assert.match(CHAT_AUFTRAG, /Das gilt nur für genau diese Fragen/, "sonst wird jede 'beste'-Frage zum Ei");
 });
