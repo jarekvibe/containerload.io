@@ -1089,6 +1089,24 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // Ein Markenton, kein zweiter — dieselbe Regel wie im Rechner.
   var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF,C_WOOD=0x8A674A;
   var F_IDLE=0x1B2E45, F_WARN=0x453620, F_GOOD=0x1B3B31;
+  // Hell/Dunkel (Jareks Befund: „die Animation ist noch auf darkmode"): Die Szene setzt
+  // ihre Farben in JEDEM Akt-Update neu (tone()/CONT.setColor()) — es genuegt, diese
+  // Konstanten umzuschreiben, und die Animation faerbt sich live um. Im Dunkeln dunkle
+  // Fuellung + leuchtende Kante; im Hellen umgekehrt: kraeftige Fuellung + dunkle Kante,
+  // wie die Kisten im Rechner. Signal-Toene (C_GOOD/C_WARN als Kante) bleiben.
+  var HERO_T={
+    dunkel:{idle:0x1B2E45,warn:0x453620,good:0x1B3B31,edge:0x5AA9FF,amb:0.6},
+    hell:{idle:0x3875C9,warn:0xE2A64A,good:0x2FA876,edge:0x1D4E8F,amb:0.9}
+  };
+  var heroAmb=null,heroThemaMats=[];
+  window.clHeroThema=function(t){
+    var s=HERO_T[t==='hell'?'hell':'dunkel'];
+    F_IDLE=s.idle; F_WARN=s.warn; F_GOOD=s.good; C_BLUEEDGE=s.edge;
+    if(heroAmb) heroAmb.intensity=s.amb;
+    var k=(t==='hell'?'hell':'dunkel');
+    heroThemaMats.forEach(function(e){e[0].color.setHex(e[1][k]);});
+  };
+  window.clHeroThema(document.documentElement.dataset.theme);
 
   // ====================== Texte ======================
   // Jeder Akt liefert STA (Zustaende) und TL (vier Beschriftungen der Leiste).
@@ -1450,7 +1468,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
         shadow=makeShadow(root); shadow.place(L0,CX);
         // Plane und Dachspriegel — das, was am Open Top abgenommen wird.
         roofGrp=new THREE.Group(); root.add(roofGrp);
-        roofMat=new THREE.MeshBasicMaterial({color:0x202B3A,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthWrite:false});
+        roofMat=new THREE.MeshBasicMaterial({color:0x202B3A,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthWrite:false}); heroThemaMats.push([roofMat,{dunkel:0x202B3A,hell:0xC9D4E2}]);
         var tarp=new THREE.Mesh(new THREE.PlaneGeometry(L0,W),roofMat); tarp.rotation.x=-Math.PI/2; tarp.position.set(CX,H,0); roofGrp.add(tarp);
         var BV=[]; for(var i=1;i<=4;i++){var bx=CX-L0/2+i*L0/5; BV.push(bx,H,-W/2, bx,H,W/2);}
         BV.push(CX-L0/2,H,0, CX+L0/2,H,0);
@@ -1461,7 +1479,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
         crate=makeBox(root,mL,mH,mW);
         // Kran: Traverse plus Seile. Beides zusammen erklaert, warum es von oben gehen muss.
         spreader=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.055,mW*1.16),
-          new THREE.MeshStandardMaterial({color:0x2A3340,metalness:0.5,roughness:0.5,transparent:true,opacity:1}));
+          (function(){var fm=new THREE.MeshStandardMaterial({color:0x2A3340,metalness:0.5,roughness:0.5,transparent:true,opacity:1}); heroThemaMats.push([fm,{dunkel:0x2A3340,hell:0x9FB0C4}]); return fm;})());
         root.add(spreader);
         ropeGeo=new THREE.BufferGeometry(); ropeGeo.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(36),3));
         ropes=new THREE.LineSegments(ropeGeo,new THREE.LineBasicMaterial({color:0x6E7F92,transparent:true,opacity:0.9})); root.add(ropes);
@@ -1727,7 +1745,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     scene=new THREE.Scene();
     camera=new THREE.PerspectiveCamera(42,1,0.1,100);
     pivot=new THREE.Object3D(); scene.add(pivot);
-    scene.add(new THREE.AmbientLight(0x9fb6d6,0.6));
+    heroAmb=new THREE.AmbientLight(0x9fb6d6,0.6); scene.add(heroAmb); window.clHeroThema(document.documentElement.dataset.theme);
     var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
     var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
     ACTS.forEach(function(a){ var g=new THREE.Group(); g.visible=false; pivot.add(g); roots.push(g); a.build(g); });
@@ -1889,6 +1907,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     document.documentElement.dataset.theme=t;
     var meta=document.querySelector('meta[name="theme-color"]');
     if(meta) meta.setAttribute('content', t==='hell' ? '#EEF1F6' : '#0E1116');
+    if(window.clHeroThema) window.clHeroThema(t);
   }
   [].slice.call(document.querySelectorAll('.themabtn')).forEach(function(b){
     b.addEventListener('click',function(){
