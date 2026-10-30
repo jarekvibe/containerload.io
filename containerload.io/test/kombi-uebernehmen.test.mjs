@@ -32,13 +32,14 @@ const schnitt = (von, bis) => {
 const bauen = () => {
   const rufe = [];
   const uebernehmeKombi = new Function(
-    "PRESETS", "applyPreset", "setChainOverride",
+    "PRESETS", "setzePreset", "setChainOverride", "merkCont",
     schnitt("const uebernehmeKombi = (combo) => {", "setChainOverride(ov);\n    };")
     + "\nreturn uebernehmeKombi;"
   )(
     { "40' HC": {}, "40' GP": {}, "20' GP": {} },
     (n) => rufe.push(["preset", n]),
-    (ov) => rufe.push(["override", ov])
+    (ov) => rufe.push(["override", ov]),
+    (was) => rufe.push(["merk", was])
   );
   return { uebernehmeKombi, rufe };
 };
@@ -47,14 +48,15 @@ test("die Kombination wird woertlich uebernommen: C1 + gepinnte Folgeslots", () 
   const { uebernehmeKombi, rufe } = bauen();
   uebernehmeKombi([{ name: "40' HC", count: 2 }, { name: "40' GP", count: 1 }]);
   assert.deepStrictEqual(rufe, [
+    ["merk", ["container"]],
     ["preset", "40' HC"],
     ["override", { 1: "40' HC", 2: "40' GP" }],
-  ], "erwartet: C1 -> 40' HC, Slot 1 -> 40' HC, Slot 2 -> 40' GP");
+  ], "erwartet: EIN Rueckgaengig-Schritt, dann C1 -> 40' HC, Slot 1 -> 40' HC, Slot 2 -> 40' GP");
   // Ein Einzel-Eintrag mit count 1: C1 wechselt, kein Slot wird gepinnt --
   // dieselbe Wirkung wie der bestehende Einzelcontainer-Knopf.
   const b2 = bauen();
   b2.uebernehmeKombi([{ name: "20' GP", count: 1 }]);
-  assert.deepStrictEqual(b2.rufe, [["preset", "20' GP"], ["override", {}]]);
+  assert.deepStrictEqual(b2.rufe, [["merk", ["container"]], ["preset", "20' GP"], ["override", {}]]);
 });
 
 test("Unsinn prallt ab: leere Kombi oder unbekannter Typ ruehrt nichts an", () => {

@@ -396,7 +396,7 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /NUR diese Zahlen/, "die Nur-Fakten-Regel fehlt");
   assert.match(CHAT_AUFTRAG, /kennst das Ergebnis NICHT/, "keine Ergebniszahlen nach Aktionen — der Packer rechnet");
   assert.match(CHAT_AUFTRAG, /die neuen Zahlen stehen im Plan/, "der Verweis auf den Plan fehlt");
-  assert.match(CHAT_AUFTRAG, /Richtwerte, keine verbindliche Pruefung/, "der Richtwert-Vorbehalt fehlt");
+  assert.match(CHAT_AUFTRAG, /Richtwerte, keine verbindliche Prüfung/, "der Richtwert-Vorbehalt fehlt");
   assert.match(CHAT_AUFTRAG, /nach einem entfernen keine weitere Aktion/, "die entfernen-Regel fehlt");
   assert.match(CHAT_AUFTRAG, /Du bist Stevie/, "die KI kennt ihren Namen nicht");
   assert.match(CHAT_AUFTRAG, /Strg\+Z/, "der Hinweis auf das Ruecknehmen fehlt im Auftrag");
@@ -411,23 +411,23 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /ALLEIN in einem leeren Container/, "die Isolation der Rechnung ist nicht erklaert");
   assert.match(CHAT_AUFTRAG, /mische die Maximalmenge NIE ungefragt/, "die Bestand-Misch-Sperre fehlt");
   assert.match(CHAT_AUFTRAG, /leeren nur als ERSTE Aktion/, "die leeren-Regel fehlt");
-  assert.match(CHAT_AUFTRAG, /missbrauche keine vorhandene Position als Naeherung/, "fremde Ware darf keine vorhandene Position missbrauchen");
+  assert.match(CHAT_AUFTRAG, /missbrauche keine vorhandene Position als Näherung/, "fremde Ware darf keine vorhandene Position missbrauchen");
   // Bug-Liste 30.10.26 ─────────────────────────────────────────────────────────────
   // Bug 1: Bedingungen aus der Frage MUESSEN als Annahme in die Rechnung — und der Plan
   // bleibt bei Fragen unveraendert (frueher: 'Hilf durch Handeln', die Zahl wurde
   // eingetragen; jetzt aendert Stevie den Plan nur auf ausdruecklichen Wunsch).
   assert.match(CHAT_AUFTRAG, /MUSST du sie als Annahme mitgeben/, "Bedingungen aus der Frage muessen in die Rechnung");
   assert.match(CHAT_AUFTRAG, /'nur auf den Boden'[^.]*= annahme_stapeln nein/, "'nur auf den Boden' muss 'nicht stapelbar' heissen");
-  assert.match(CHAT_AUFTRAG, /Den Plan aenderst du NUR, wenn der Nutzer es ausdruecklich verlangt/, "Fragen duerfen den Plan nicht aendern");
-  assert.match(CHAT_AUFTRAG, /laesst den Plan, wie er ist/);
+  assert.match(CHAT_AUFTRAG, /Den Plan änderst du NUR, wenn der Nutzer es ausdrücklich verlangt/, "Fragen duerfen den Plan nicht aendern");
+  assert.match(CHAT_AUFTRAG, /lässt den Plan, wie er ist/);
   assert.match(CHAT_AUFTRAG, /nenne in deiner Antwort NUR diese Bedingungen und erfinde keine dazu/, "Stevie darf nur benutzte Bedingungen nennen");
   assert.doesNotMatch(CHAT_AUFTRAG, /Hilf durch Handeln|setze sie um|direkt mit aus/, "die alte Eintragen-statt-Antworten-Regel ist zurueck");
   // Bug 2: nach jeder Rechnung die Zahl — oder ehrlich sagen, was fehlt.
   assert.match(CHAT_AUFTRAG, /Auf eine Rechner-Meldung antwortest du IMMER mit der konkreten Zahl/, "die Zahl muss genannt werden");
-  assert.match(CHAT_AUFTRAG, /tu nie so, als haettest du gerechnet/, "Stevie darf keine Rechnung vortaeuschen");
+  assert.match(CHAT_AUFTRAG, /tu nie so, als hättest du gerechnet/, "Stevie darf keine Rechnung vortaeuschen");
   // Bug 3: die Sprache der letzten Nutzernachricht, nicht die der Oberflaeche.
   assert.match(CHAT_AUFTRAG, /Sprache der letzten Nachricht, die der Nutzer selbst geschrieben hat/, "die Sprachregel fehlt");
-  assert.match(CHAT_AUFTRAG, /auch in der Ankuendigung/, "auch die Ankuendigung muss in der Nutzersprache sein");
+  assert.match(CHAT_AUFTRAG, /auch in der Ankündigung/, "auch die Ankuendigung muss in der Nutzersprache sein");
   assert.doesNotMatch(CHAT_AUFTRAG, /Zielsprache ist das Feld sprache/, "die UI-Sprache ist nur noch Ersatz");
   // Bug 4: keine internen Begriffe in den Antworten.
   assert.match(CHAT_AUFTRAG, /befund, Probe, Nachzug, Rechner-Meldung, fakten, rechenergebnisse/, "die Liste der verbotenen Begriffe fehlt");
@@ -470,7 +470,8 @@ test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
   assert.ok(von > 0 && bis > von, "kiAktionenAnwenden fehlt oder steht falsch");
   const rumpf = app.slice(von, bis);
   assert.match(rumpf, /domain === "sea" && PRESETS\[a\.preset\]/, "Container nur im See-Modus und nur echte PRESETS-Namen");
-  assert.match(rumpf, /merk\(cargo\);\s*setCargo\(neu\)/, "Aenderungen laufen ueber merk + setCargo — Strg+Z nimmt sie zurueck");
+  assert.match(rumpf, /if \(neu \|\| gewechselt\) stevieMerk\(was, gewechselt\);\s*if \(neu\) setCargo\(neu\)/, "Aenderungen laufen ueber stevieMerk + setCargo — EIN Strg+Z nimmt die ganze Antwort zurueck");
+  assert.doesNotMatch(rumpf, /applyPreset\(a\.preset\)/, "Stevies Containerwechsel darf keinen eigenen Rueckgaengig-Schritt anlegen");
   assert.match(rumpf, /splice\(i, 1\);[^]{0,120}break;/, "nach entfernen ist Schluss (P-Nummern verrutschen sonst)");
   assert.doesNotMatch(rumpf, /eval|innerHTML/, "keine wilden Wege");
   // Fakten: die P-Nummer ist der UNGEFILTERTE cargo-Index — sonst zeigen Aktionen daneben
