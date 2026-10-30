@@ -3656,7 +3656,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       orbitHintLong: "Ziehen dreht \xB7 rechte Maustaste (oder Shift) schiebt \xB7 das Rad zoomt dorthin, wo der Zeiger steht \xB7 Doppelklick holt einen Container in die Mitte",
       resetView: "Ansicht zur\xFCcksetzen",
       numAn: "Positionsnummern & Stopp-Felder anzeigen", numAus: "Positionsnummern & Stopp-Felder ausblenden",
-      autoRotatePause: "Drehung pausieren", autoRotateResume: "Drehung fortsetzen",
       unitToCm: "Auf Zentimeter umschalten", unitToMm: "Auf Millimeter umschalten",
       domSea: "Seefracht", domRoad: "Landfracht", vehicle: "Fahrzeug",
       ldm: "Lademeter", ldmUtil: "Lademeter-Auslastung", spots: "Stellpl\xE4tze", spotsSub: "Bodenlage",
@@ -4072,7 +4071,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       orbitHintLong: "Drag to orbit \xB7 right mouse button (or Shift) pans \xB7 the wheel zooms towards the pointer \xB7 double-click centres a container",
       resetView: "Reset view",
       numAn: "Show position numbers & stop fields", numAus: "Hide position numbers & stop fields",
-      autoRotatePause: "Pause rotation", autoRotateResume: "Resume rotation",
       unitToCm: "Switch to centimetres", unitToMm: "Switch to millimetres",
       domSea: "Sea freight", domRoad: "Road freight", vehicle: "Vehicle",
       ldm: "Loading meters", ldmUtil: "Loading-meter usage", spots: "Floor spots", spotsSub: "ground layer",
@@ -5342,8 +5340,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const mountRef = useRef(null);
     const three = useRef(null);
     const lastDims = useRef("");
-    const autoRotateRef = useRef(true); // per Ref gelesen: tick() ist ein Mount-Once-Dauerlauf-Closure
-    const [autoRotateOn, setAutoRotateOn] = useState(true);
     const reveal = useRef({ start: 0, animate: false, prevN: -1, dur: 0.4, stag: 0.55, firstShare: !!SHARED });
     const isRoad = domain === "road";
     const BASE_Y = 1.2; // Sattelkupplungshoehe in m: Auflieger + Ladung schweben darueber.
@@ -5418,7 +5414,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         );
         camera.lookAt(target);
       };
-      let lastInteract = performance.now();
       let dragging = false, schiebt = false, px = 0, py = 0, downX = 0, downY = 0;
       // Pinch-Zoom auf dem Telefon: das Rad gibt es dort nicht, und ohne Zoom kommt der
       // Empfaenger eines geteilten Plans nicht an die Positionen heran. Zwei Finger auf der
@@ -5629,7 +5624,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             pinchR0 = sph.r;
             pinchte = true;
             dragging = false;
-            lastInteract = performance.now();
             dom.setPointerCapture?.(e.pointerId);
             return;
           }
@@ -5643,7 +5637,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         py = e.clientY;
         downX = e.clientX;
         downY = e.clientY;
-        lastInteract = performance.now();
         dom.setPointerCapture?.(e.pointerId);
       };
       const move = (e) => {
@@ -5652,13 +5645,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const [a, b] = [...zeiger.values()];
           const d = Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
           sph.r = Math.max(2.5, Math.min(95, pinchR0 * pinchD0 / d));
-          lastInteract = performance.now();
           return;
         }
         const p = propsRef.current;
         if (p.manualMode && p.manualArmedTi != null && !dragging) updateGhost(e);
         if (!dragging) return;
-        lastInteract = performance.now();
         const dx = e.clientX - px, dy = e.clientY - py;
         if (schiebt) {
           // Ein Pixel Mauszug = ein Pixel Bild: die sichtbare Hoehe auf Zielentfernung
@@ -5697,7 +5688,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       const wheel = (e) => {
         e.preventDefault();
-        lastInteract = performance.now();
         const vorher = sph.r;
         sph.r = Math.max(2.5, Math.min(95, sph.r * (1 + e.deltaY * 11e-4)));
         // Beim HINEINzoomen wandert das Ziel zum Punkt unter dem Zeiger - und zwar genau um
@@ -5721,7 +5711,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         if (!p) return;
         target.copy(p);
         zielKlemmen();
-        lastInteract = performance.now();
       };
       const keinMenue = (e) => e.preventDefault();
       dom.addEventListener("pointerdown", down);
@@ -5734,12 +5723,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       dom.addEventListener("dblclick", dbl);
       dom.addEventListener("contextmenu", keinMenue);
       let raf;
+      // Keine Leerlaufdrehung (Jareks Wunsch, 30.10.26: „das nervt"): die Kamera bewegt sich
+      // nur, wenn jemand zieht, scrollt oder einen Fokus setzt. Wer einen Plan liest, will,
+      // dass er stillhaelt.
       const tick = () => {
         const now = performance.now();
-        // Leerlauf-Rotation stoert beim manuellen Platzieren (praezises Klicken braucht eine
-        // ruhige Kamera) – deshalb waehrend manualMode ausgesetzt. propsRef statt direktem Prop-
-        // Zugriff, da tick() ein einmalig erzeugter (Mount-Once-Effekt) Dauerlauf-Closure ist.
-        if (autoRotateRef.current && now - lastInteract > 2800 && !dragging && !propsRef.current.manualMode) sph.theta += 15e-4;
         cur.r += (sph.r - cur.r) * 0.12;
         cur.theta += (sph.theta - cur.theta) * 0.12;
         cur.phi += (sph.phi - cur.phi) * 0.12;
@@ -6980,7 +6968,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // Im manuellen Modus sagt der Packer nichts: was noch nicht steht, steht noch
             // nicht -- das ist keine Aussage ueber Container, sondern ueber die Arbeit. Die
             // Zahl steht dort, wo sie hingehoert: im Werkzeugkasten ("31 noch nicht platziert").
-            !manualMode && result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA(C.surface, 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, result.gekappt ? T.openMore(result.remainingBoxes, MAXCHAIN) : T.openStuck(result.remainingBoxes))), result && result.chain && result.chain.some((c) => c.placed && c.placed.length) && /* @__PURE__ */ React.createElement("button", { onClick: () => setZeigeNummern((v) => { const n = !v; if (n) zaehl("nummern-3d"); return n; }), className: "absolute top-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { right: 100, background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, zeigeNummern ? 0.9 : 0.3)}`, color: zeigeNummern ? C.accent : C.dim, fontFamily: MONO, fontSize: FS.small, fontWeight: FW.semi }, title: zeigeNummern ? T.numAus : T.numAn }, "01"), /* @__PURE__ */ React.createElement("button", { onClick: () => { autoRotateRef.current = !autoRotateRef.current; setAutoRotateOn(autoRotateRef.current); }, className: "absolute top-3 right-14 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.small }, title: autoRotateOn ? T.autoRotatePause : T.autoRotateResume }, autoRotateOn ? "\u23F8" : "\u25B6"),/* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
+            !manualMode && result.remainingBoxes > 0 && /* @__PURE__ */ React.createElement("div", { key: "more", className: "pointer-events-none", style: { fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.03em", color: C.warn, background: hexA(C.surface, 0.82), border: `1px solid ${hexA(C.warn, 0.4)}`, borderRadius: R.s, padding: "4px 8px" } }, result.gekappt ? T.openMore(result.remainingBoxes, MAXCHAIN) : T.openStuck(result.remainingBoxes))), result && result.chain && result.chain.some((c) => c.placed && c.placed.length) && /* @__PURE__ */ React.createElement("button", { onClick: () => setZeigeNummern((v) => { const n = !v; if (n) zaehl("nummern-3d"); return n; }), className: "absolute top-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { right: 56, background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, zeigeNummern ? 0.9 : 0.3)}`, color: zeigeNummern ? C.accent : C.dim, fontFamily: MONO, fontSize: FS.small, fontWeight: FW.semi }, title: zeigeNummern ? T.numAus : T.numAn }, "01"), /* @__PURE__ */ React.createElement("button", { onClick: reset, className: "absolute top-3 right-3 w-8 h-8 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim }, title: T.resetView }, "\u27F3"));
   }
   // ── Knopf ─────────────────────────────────────────────────────────────────
   // Vier Auspraegungen, mehr braucht der Rechner nicht:
@@ -10131,7 +10119,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Blick haengt an Kette, Uebermass, Tuerpruefung und manuellem Modus — nichts davon gibt es
   // hier, und ein zweiter Aufrufer haette jede kuenftige Aenderung dort zur Fallunterscheidung
   // gemacht. Kamerafuehrung, Beleuchtung und Materialien sind bewusst dieselben, damit sich der
-  // Dialog anfuehlt wie der Rechner: ziehen dreht, scrollen zoomt, im Leerlauf dreht es weiter.
+  // Dialog anfuehlt wie der Rechner: ziehen dreht, scrollen zoomt, und ohne Eingriff steht es still.
   //
   // build = EIN Palettenaufbau ({ layers: [{ti, count}] }); types = Muster und Masse je Typ.
   // Eine angebrochene Lage zeichnet nur ihre Kartons — man sieht der Restpalette an, dass
@@ -10140,9 +10128,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const mountRef = useRef(null);
     const ctl = useRef({});
     const dataRef = useRef({});
-    const [spin, setSpin] = useState(true);
-    const spinRef = useRef(true);
-    spinRef.current = spin;
     dataRef.current = { pal, build, types };
     const sig = build ? build.layers.map((l) => l.ti + ":" + l.count).join("|") : "";
 
@@ -10185,7 +10170,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       scene.add(group);
 
       // Kugelkoordinaten wie im grossen Blick — gleiche Startwinkel, gleiche Daempfung (0.12),
-      // gleiche Leerlaufdrehung nach 2,8 s ohne Eingriff.
+      // und wie dort keine Leerlaufdrehung.
       const target = new THREE.Vector3(0, 0.5, 0);
       const sph = { r: 3.4, theta: -0.92, phi: 1 };
       const cur = { r: 4.6, theta: -0.92, phi: 0.72 };
@@ -10197,12 +10182,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         );
         camera.lookAt(target);
       };
-      let lastInteract = performance.now(), dragging = false, px = 0, py = 0;
+      let dragging = false, px = 0, py = 0;
       const dom = renderer.domElement;
-      const down = (e) => { dragging = true; px = e.clientX; py = e.clientY; lastInteract = performance.now(); dom.setPointerCapture?.(e.pointerId); };
+      const down = (e) => { dragging = true; px = e.clientX; py = e.clientY; dom.setPointerCapture?.(e.pointerId); };
       const move = (e) => {
         if (!dragging) return;
-        lastInteract = performance.now();
         sph.theta -= (e.clientX - px) * 6e-3;
         sph.phi = Math.max(0.18, Math.min(Math.PI * 0.49, sph.phi - (e.clientY - py) * 6e-3));
         px = e.clientX; py = e.clientY;
@@ -10210,7 +10194,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const up = (e) => { dragging = false; dom.releasePointerCapture?.(e.pointerId); };
       const wheel = (e) => {
         e.preventDefault();
-        lastInteract = performance.now();
         sph.r = Math.max(0.9, Math.min(20, sph.r * (1 + e.deltaY * 11e-4)));
       };
       dom.addEventListener("pointerdown", down);
@@ -10220,8 +10203,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
 
       let raf;
       const tick = () => {
-        const now = performance.now();
-        if (spinRef.current && now - lastInteract > 2800 && !dragging) sph.theta += 15e-4;
         cur.r += (sph.r - cur.r) * 0.12;
         cur.theta += (sph.theta - cur.theta) * 0.12;
         cur.phi += (sph.phi - cur.phi) * 0.12;
@@ -10235,7 +10216,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       };
       window.addEventListener("resize", onResize);
       tick();
-      ctl.current = { group, target, sph, reset: () => { sph.r = ctl.current.fitR || 3.4; sph.theta = -0.92; sph.phi = 1; lastInteract = 0; } };
+      ctl.current = { group, target, sph, reset: () => { sph.r = ctl.current.fitR || 3.4; sph.theta = -0.92; sph.phi = 1; } };
 
       return () => {
         cancelAnimationFrame(raf);
@@ -10308,7 +10289,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return /* @__PURE__ */ React.createElement("div", { className: "relative w-full", style: { height: 230 } },
       /* @__PURE__ */ React.createElement("div", { ref: mountRef, className: "w-full h-full", style: { borderRadius: R.s, overflow: "hidden", background: B.grad } }),
       /* @__PURE__ */ React.createElement("div", { className: "absolute bottom-2 left-3", title: T.orbitHintLong, style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, cursor: "default" } }, T.orbitHint),
-      /* @__PURE__ */ React.createElement("button", { onClick: () => setSpin((v) => !v), className: "absolute top-2 right-11 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, spin ? "⏸" : "▶"),
       /* @__PURE__ */ React.createElement("button", { onClick: () => ctl.current.reset && ctl.current.reset(), className: "absolute top-2 right-2 w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: hexA(C.surface, 0.8), border: `1px solid ${hexA(C.accent, 0.3)}`, color: C.dim, fontSize: FS.label } }, "⟳"));
   }
   // Vorgabe einer Kartonzeile. Bewusst EINE Stelle: vorher stand in der ersten Zeile ein
