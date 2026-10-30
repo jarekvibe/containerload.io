@@ -131,9 +131,27 @@ test("die Startseite teilt Schluessel und Farbsatz mit dem Rechner", () => {
   assert.ok(index.includes(':root[data-theme="hell"] .themabtn[data-thema="hell"]'), "der aktive Knopf haengt nicht am data-theme");
 });
 
-test("die 3D-Buehne bleibt in beiden Themen dunkel", () => {
-  // Der Verlauf hinter der Buehne ist ein BILD (fester dunkler Grund), kein Formular —
-  // er darf nicht an C haengen, sonst kippt er im Hellen mit.
-  const treffer = app.match(/radial-gradient\(120% 80% at 50% 0%, #101a2b 0%, #121821 55%, #0E1116 100%\)/g) || [];
-  assert.ok(treffer.length >= 2, "der feste dunkle Verlauf hinter der 3D-Buehne fehlt — die Buehne muss in beiden Themen dunkel bleiben");
+test("die 3D-Buehne wechselt mit — ueber die Buehnen-Palette B", () => {
+  // Jareks Wunsch (30.10.26): die 3D-View auch hell. Die Buehne liest seither die eigene
+  // Palette B (B_DUNKEL/B_HELL) — DOM-Verlaeufe, Nebel, Licht, Stahl, Raster. Signalfarben
+  // (Ghost-Gruen/-Rot, Warn-Bernstein) und Kennfarben bleiben bewusst in beiden gleich.
+  const palette = (name) => {
+    const m = new RegExp(`var ${name} = \\{([\\s\\S]*?)\\n  \\};`).exec(app);
+    assert.ok(m, `${name} nicht gefunden`);
+    return Object.fromEntries([...m[1].matchAll(/(\w+): (0x[0-9a-fA-F]{6}|"[^"]*"|[\d.]+)/g)].map((x) => [x[1], x[2]]));
+  };
+  const d = palette("B_DUNKEL");
+  const h = palette("B_HELL");
+  assert.deepStrictEqual(Object.keys(h).sort(), Object.keys(d).sort(),
+    "B_HELL und B_DUNKEL muessen DIESELBEN Schluessel tragen");
+  assert.ok(app.includes('Object.assign(B, thema === "hell" ? B_HELL : B_DUNKEL);'),
+    "App() schaltet die Buehnen-Palette nicht um");
+  // Beide Buehnen-Flaechen (Hauptansicht + Palettierer-Vorschau) lesen den Verlauf aus B.
+  assert.ok((app.match(/background: B\.grad/g) || []).length >= 2,
+    "die Buehnen-Verlaeufe haengen nicht an B.grad");
+  // Der Bau-Effekt der Szene haengt am Thema — sonst bleibt die Huelle beim Wechsel stehen.
+  assert.ok(app.includes("[result, container, domain, cargo, preset, manualMode, manualPlaced, manualSel, thema]"),
+    "der Bau-Effekt der Szene kennt das Thema nicht");
+  // Und der Nachzieh-Effekt fasst an, was nur einmal gebaut wird.
+  assert.ok(app.includes("t.scene.fog.color.setHex(B.nebel)"), "der Nebel wechselt nicht mit");
 });
