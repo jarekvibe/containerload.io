@@ -20,13 +20,15 @@ export default async (req) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     return Response.json({ fehler: "ANTHROPIC_API_KEY ist in Netlify nicht gesetzt." }, { status: 503 });
   }
-  let sprache = "de", fakten = null, verlauf = [], frage = "";
+  let sprache = "de", fakten = null, verlauf = [], frage = "", ausRechner = false;
   try {
     const body = await req.json();
     sprache = BRIEF_SPRACHEN.includes(body.sprache) ? body.sprache : "de";
     fakten = pruefeFakten(body.fakten, false);
     verlauf = pruefeVerlauf(body.verlauf);
     frage = String(body.frage || "").trim().slice(0, CHAT_TEXT_MAX);
+    // Die automatische Rechner-Meldung der App (Nachzug) ist keine Nutzernachricht.
+    ausRechner = body.nachzug === true;
   } catch {}
   if (!fakten || !frage) return Response.json({ fehler: "fakten" }, { status: 400 });
   if (!(await tagesdeckel())) return Response.json({ fehler: "limit" }, { status: 429 });
@@ -42,7 +44,7 @@ export default async (req) => {
       // assistant-Zuege in Folge — die API verlangt den Wechsel, also zusammenlegen.
       messages: [
         ...verlauf.map((m) => ({ role: m.rolle === "ki" ? "assistant" : "user", content: m.text })),
-        { role: "user", content: chatNachricht({ sprache, ...fakten }, frage) },
+        { role: "user", content: chatNachricht({ sprache, ...fakten }, frage, ausRechner) },
       ].reduce((acc, m) => {
         const letzte = acc[acc.length - 1];
         if (letzte && letzte.role === m.role) letzte.content += "\n\n" + m.content;

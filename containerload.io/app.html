@@ -292,6 +292,48 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return s ? { ...base, l: s.l, w: s.w, h: s.h, door: s.door || base.door } : base;
   };
   // EQUIPMENT-END
+  // Stevies Maximal-Rechnung: wie viele Stueck EINER Position passen ALLEIN in einen leeren
+  // Container. Gemeldet: „Wie viele passen, wenn sie nicht stapelbar sind?" ergab 22 (= 11 x 2
+  // Lagen), weil die Rechnung die Stapel-Einstellung der Position nahm statt der Bedingung aus
+  // der Frage. Die Annahmen hier gelten NUR fuer diese Rechnung — gerechnet wird auf einer
+  // Kopie, der Plan bleibt unberuehrt.
+  //   annahmen.stapeln: "nein" | "frei" | "bis_hoehe" (mit bis_cm) — sonst wie die Position
+  //   annahmen.drehen:  true | false — sonst wie die Position
+  // Rueckgabe: die Zahl UND die tatsaechlich benutzten Regeln; nur die darf Stevie nennen.
+  var MAXPROBE_DECKEL = 600;
+  var maxProbe = (container, item, annahmen) => {
+    const a = annahmen || {};
+    const it = { ...item, qty: MAXPROBE_DECKEL };
+    if (a.stapeln === "nein") { it.stackable = false; it.stackMax = 1; it.stackH = null; }
+    else if (a.stapeln === "frei") { it.stackable = true; it.stackMax = Infinity; it.stackH = null; }
+    else if (a.stapeln === "bis_hoehe" && a.bis_cm >= 10 && a.bis_cm <= 1000) { it.stackable = true; it.stackMax = Infinity; it.stackH = Math.round(a.bis_cm); }
+    if (a.drehen === true || a.drehen === false) it.rotatable = a.drehen;
+    const anzahl = packCargo(container, [it]).boxes;
+    const cap = stackCapOf(it), hGrenze = stackHOf(it);
+    const stapeln = it.stackable === false ? "nein" : isFinite(hGrenze) ? "bis_hoehe" : cap === Infinity ? "frei" : "lagen";
+    return {
+      anzahl, deckel: anzahl >= MAXPROBE_DECKEL, stapeln,
+      bis_cm: stapeln === "bis_hoehe" ? hGrenze : 0, lagen: stapeln === "lagen" ? cap : 0,
+      drehen: it.rotatable !== false,
+    };
+  };
+  // Spart die frei gerechnete Empfehlung wirklich Equipment gegenueber der gewaehlten Kette?
+  // Verglichen wird ueber den Container-TYP, nicht ueber die Geometrie: die Reederei-Masse
+  // weichen um Millimeter vom Standard ab (Yang Ming 20' GP: 589,6 x 235,2 x 239,3 statt
+  // 590 x 235 x 239). Die Kette rechnete mit der Reederei-Geometrie, die Empfehlung mit dem
+  // Standard — derselbe Container wirkte 0,05 m³ kleiner, und unter einem gewaehlten 20' GP
+  // stand „Es ginge auch mit 1x 20' GP". Gleiche Typen = gleiche Kosten, keine Empfehlung.
+  // Ein Slot ohne Typ (eigene Masse) zaehlt mit seiner Geometrie (geoVol, cm³).
+  //   kette: [{ typ, geoVol }], empf: ["20' GP", ...]
+  var empfSpart = (kette, empf) => {
+    if (!kette || !kette.length || !empf || !empf.length) return false;
+    const nennVol = (n) => { const q = PRESETS[n]; return q ? q.l * q.w * q.h : 0; };
+    const typen = kette.map((s) => s.typ || "");
+    if (typen.every((t) => PRESETS[t]) && typen.slice().sort().join("|") === empf.slice().sort().join("|")) return false;
+    const kVol = kette.reduce((a, s) => a + (PRESETS[s.typ] ? nennVol(s.typ) : s.geoVol || 0), 0);
+    const eVol = empf.reduce((a, n) => a + nennVol(n), 0);
+    return empf.length < kette.length || (empf.length === kette.length && eVol < kVol - 1e-6);
+  };
   // === LANDFRACHT: Fahrzeuge (Phase 1: nur Planensattel) ===
   // Innenmasse in cm. Breite ~248 real (Nennmass 2,45) – bewusst approx.
   // door = volle Innenmasse => Curtainsider ist seitenladbar, kein Tuer-Warnhinweis.
@@ -3514,7 +3556,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       chatChipDrehen: (p, ok) => `${p} Drehen ${ok ? "an" : "aus"}`,
       chatChipWeg: (p) => `${p} entfernt`,
       chatChipNeu: (q, n) => `+ ${q}\xD7 ${n}`,
-      chatChipMax: (p) => `${p} Maximum gepr\xFCft`,
+      chatChipMax: (p) => `${p}: Maximum wird gerechnet \u2026`,
+      chatChipMaxErg: (p, n, bed) => `${p}: max. ${n} St\xFCck${bed ? " \xB7 " + bed : ""}`,
+      chatChipMaxFehl: (p) => `${p}: Maximum nicht berechenbar`,
+      chatBed: { nein: "nicht stapelbar", frei: "stapelbar", hoehe: (cm) => `stapelbar bis ${cm} cm`, mitDrehen: "mit Drehen", ohneDrehen: "ohne Drehen" },
       chatChipLeer: "Liste geleert",
       chatKlein: "Verkleinern",
       themaHell: "Helles Design",
@@ -3929,7 +3974,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       chatChipDrehen: (p, ok) => `${p} rotate ${ok ? "on" : "off"}`,
       chatChipWeg: (p) => `${p} removed`,
       chatChipNeu: (q, n) => `+ ${q}\xD7 ${n}`,
-      chatChipMax: (p) => `${p} maximum checked`,
+      chatChipMax: (p) => `${p}: computing maximum \u2026`,
+      chatChipMaxErg: (p, n, bed) => `${p}: max. ${n} pcs${bed ? " \xB7 " + bed : ""}`,
+      chatChipMaxFehl: (p) => `${p}: maximum could not be computed`,
+      chatBed: { nein: "not stackable", frei: "stackable", hoehe: (cm) => `stackable up to ${cm} cm`, mitDrehen: "rotation allowed", ohneDrehen: "no rotation" },
       chatChipLeer: "List cleared",
       chatKlein: "Minimize",
       themaHell: "Light mode",
@@ -9318,20 +9366,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // WENIGER Equipment auskommt als die gewaehlte Kette. Verglichen wird in derselben
     // Rangfolge wie in ketteBesser -- erst die Zahl der Container, dann das gebuchte Volumen
     // (2x 40' + 1x 20' ist billiger als 3x 40', auch wenn es dieselben drei sind).
-    const equipVol = (n) => { const q = PRESETS[n]; return q ? q.l * q.w * q.h : 0; };
+    // Verglichen wird ueber den Container-TYP (empfSpart): ein Reederei-20'-GP ist derselbe
+    // Typ wie der Standard-20'-GP, auch wenn er um Millimeter anders misst.
     const ketteKosten = result.chain && result.chain.length
-      ? { n: result.chain.length, vol: result.chain.reduce((a, c) => a + num(c.preset.l) * num(c.preset.w) * num(c.preset.h), 0) }
+      ? result.chain.map((c, ci) => ({ typ: c.name || (ci === 0 ? preset : ""), geoVol: num(c.preset.l) * num(c.preset.w) * num(c.preset.h) }))
       : null;
     const sugKosten = sug && sug.type === "multi" && sug.combo && sug.combo.length
-      ? { n: sug.combo.reduce((a, x) => a + x.count, 0), vol: sug.combo.reduce((a, x) => a + x.count * equipVol(x.name), 0) }
-      : sug && sug.type === "single" ? { n: 1, vol: equipVol(sug.name) } : null;
+      ? sug.combo.flatMap((x) => Array(x.count).fill(x.name))
+      : sug && sug.type === "single" ? [sug.name] : null;
     const sugLabel = sug && sug.type === "multi" && sug.combo ? sug.combo.map((x) => `${x.count}\xD7 ${x.name}`).join(" + ") : sug && sug.type === "single" ? `1\xD7 ${sug.name}` : "";
     // Mit Stopps schweigt der Guenstiger-Vorschlag: die freie Empfehlung rechnet
     // OHNE Wellen und verspricht damit einen Fuellgrad, den die Entlade-
     // reihenfolge womoeglich gar nicht halten kann. "Es ginge auch mit 1x 40'"
     // waere dann eine Zahl aus einer anderen Welt.
     const empfBesser = !!(planFit && ketteKosten && sugKosten && sugLabel && !stoppWerte(cargo)
-      && (sugKosten.n < ketteKosten.n || (sugKosten.n === ketteKosten.n && sugKosten.vol < ketteKosten.vol - 1e-6)));
+      && empfSpart(ketteKosten, sugKosten));
     // Was wegen einer ZUWEISUNG liegenbleibt, zaehlt hier nicht: der Vorschlag "du brauchst
     // ca. 1x 40' HC + 1x 40' GP" stand sonst unter einem Plan, der genau diese zwei bucht --
     // exakt der gemeldete Fehler, nur durch eine neue Tuer. Die Position sagt es selbst
@@ -9436,6 +9485,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           }
           continue;
         }
+        if (a.typ === "maxzahl") {
+          // Keine Planaenderung: gerechnet wird im Nachzug-Effekt auf einer Kopie (maxProbe),
+          // wenn der Zustand steht — sonst zaehlte die Rechnung gegen den alten Container.
+          // Die Annahmen aus der Frage pruefen wir hier ERNEUT (der Server hat schon gefiltert).
+          const pr = {};
+          if (a.stapeln === "nein" || a.stapeln === "frei") pr.stapeln = a.stapeln;
+          else if (a.stapeln === "bis_hoehe" && num(a.bis_cm) >= 10 && num(a.bis_cm) <= 1000) { pr.stapeln = "bis_hoehe"; pr.bis_cm = Math.round(num(a.bis_cm)); }
+          if (a.drehen === true || a.drehen === false) pr.drehen = a.drehen;
+          if (domain === "sea" && PRESETS[a.preset]) pr.preset = a.preset;
+          const pi = Math.floor(num(a.position)) - 1;
+          if (pi >= 0 && pi < (neu || cargo).length) pr.i = pi;
+          else if (a.ware && typeof a.ware === "object") {
+            const l = num(a.ware.l), w = num(a.ware.b), h = num(a.ware.h), wt = num(a.ware.gewicht);
+            if (!(l >= 1 && l <= 2000 && w >= 1 && w <= 2000 && h >= 1 && h <= 2000)) continue;
+            pr.ware = { name: String(a.ware.name || "Ware").slice(0, 40), l, w, h, weight: wt >= 0 && wt <= 60000 ? wt : 0, qty: 1, stackable: true, stackH: null, rotatable: true };
+          } else continue;
+          probe.push(pr);
+          chips.push(T.chatChipMax(pr.ware ? pr.ware.name : "P" + (pr.i + 1)));
+          continue;
+        }
         const i = Math.floor(num(a.position)) - 1;
         if (!(i >= 0 && i < (neu || cargo).length)) continue;
         const pn = "P" + (i + 1);
@@ -9449,11 +9518,6 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         } else if (a.typ === "drehen") {
           arbeit()[i].rotatable = a.erlaubt !== false;
           chips.push(T.chatChipDrehen(pn, a.erlaubt !== false));
-        } else if (a.typ === "maxzahl") {
-          // Keine Planaenderung: der Nachzug-Effekt rechnet die Probe, wenn der
-          // Zustand steht — sonst zaehlte sie gegen den alten Container.
-          probe.push(i);
-          chips.push(T.chatChipMax(pn));
         } else if (a.typ === "entfernen") {
           arbeit().splice(i, 1);
           chips.push(T.chatChipWeg(pn));
@@ -9466,7 +9530,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Die Nachzug-Nachricht ist eine feste Zeichenkette der App, kein Nutzertext:
     // sie sagt Stevie, dass die Fakten jetzt frisch sind und er die Frage des
     // Nutzers konkret beantworten soll. Der Nutzer sieht sie nicht im Verlauf.
-    const CHAT_NACHZUG = "Nachzug vom Rechner: Die Aktionen sind ausgefuehrt, fakten (und befund) sind frisch. Beantworte die urspruengliche Frage des Nutzers jetzt konkret mit diesen Zahlen — hoechstens zwei kurze Saetze, in der Zielsprache, ohne Richtwert-Floskel. Wenn die Frage eine Aenderung nahelegt (etwa die ermittelte Maximalzahl als Menge eintragen oder den besser passenden Container waehlen), fuehre sie jetzt direkt mit aus.";
+    const CHAT_NACHZUG = "Rechner-Meldung der App (keine Nutzernachricht): Die Rechnungen sind fertig, fakten und rechenergebnisse sind frisch. Beantworte jetzt die letzte Frage des Nutzers mit der konkreten Zahl — in SEINER Sprache, hoechstens zwei kurze Saetze, ohne Richtwert-Floskel. Nenne nur die Bedingungen, die im Ergebnis stehen. Deckt kein Ergebnis die Frage ab, sag klar, was fehlt. Aendere den Plan nur, wenn der Nutzer das ausdruecklich verlangt hat.";
     // Eine Runde gegen /api/ki-chat. Liefert true, wenn ein Nachzug ansteht und
     // chatBusy deshalb AN bleibt — der Nachzug-Effekt unten uebernimmt dann.
     // tiefe zaehlt die Runde: 0 = Nutzerfrage, danach hoechstens ZWEI Nachzuege —
@@ -9474,7 +9538,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // nur nennen), ohne dass eine Kette ohne Ende entsteht.
     const chatRunde = async (frage, verlauf, befund, tiefe) => {
       const fakten = { ...planFakten(), ...(befund && befund.length ? { befund } : {}) };
-      const r = await fetch("/api/ki-chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sprache: LANG === "en" ? "en" : "de", fakten, verlauf, frage }) });
+      const r = await fetch("/api/ki-chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sprache: LANG === "en" ? "en" : "de", fakten, verlauf, frage, nachzug: tiefe > 0 }) });
       if (r.status === 429) { setChatFehler(T.kiLimit); return false; }
       if (!r.ok) { setChatFehler(T.kiFehler); return false; }
       const d = await r.json();
@@ -9497,9 +9561,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       } else {
         setChatVerlauf((v) => [...v, { rolle: "ki", text: antwort, chips: erg.chips }]);
       }
-      if (tiefe < 2 && (erg.geaendert || erg.probe.length)) {
-        nachzugRef.current = { probe: erg.probe, tiefe: tiefe + 1 };
-        // Nur eine Probe ohne Planaenderung: result bleibt, der Tick weckt den Effekt.
+      // Ab Tiefe 2 fragt die App Stevie nicht mehr (Kosten-Deckel) — eine angeforderte
+      // Rechnung laeuft aber trotzdem und steht als Chip mit Zahl im Verlauf: nie
+      // „geprueft" ohne Ergebnis (gemeldet: Stevie rechnete und nannte keine Zahl).
+      if ((tiefe < 2 && (erg.geaendert || erg.probe.length)) || erg.probe.length) {
+        nachzugRef.current = { probe: erg.probe, tiefe: tiefe + 1, ohneKi: tiefe >= 2 };
+        // Nur eine Rechnung ohne Planaenderung: result bleibt, der Tick weckt den Effekt.
         if (!erg.geaendert) setNachzugTick((t) => t + 1);
         return true;
       }
@@ -9526,22 +9593,65 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
     };
     // Der Nachzug feuert, wenn der Packer nach Stevies Aktionen neu gerechnet hat
-    // (result ist dann frisch) — oder sofort ueber den Tick bei reinen Proben.
-    // Die maxzahl-Probe rechnet HIER, mit dem aktuellen Container: packCargo mit
-    // hochgesetzter Menge, der Plan selbst bleibt unberuehrt.
+    // (result ist dann frisch) — oder sofort ueber den Tick bei reinen Rechnungen.
+    // Die Maximal-Rechnung laeuft HIER, mit dem aktuellen Container, ueber maxProbe:
+    // auf einer Kopie, mit den Annahmen aus der Frage — der Plan bleibt unberuehrt.
+    // Jeder Ergebnissatz nennt die Bedingungen, mit denen gerechnet wurde; nur die darf
+    // Stevie wiedergeben. Und der Chip unter seiner Antwort zeigt die Zahl selbst.
+    const maxSatz = (was, m, zielName, pr) => {
+      const herkunft = (gesetzt) => gesetzt ? " (Annahme aus der Frage)" : pr.ware ? " (Standard fuer neue Ware)" : " (wie im Plan)";
+      const st = m.stapeln === "nein" ? "nicht stapelbar" : m.stapeln === "frei" ? "frei stapelbar" : m.stapeln === "bis_hoehe" ? `stapelbar bis ${m.bis_cm} cm ab Boden` : `hoechstens ${m.lagen} Lagen hoch`;
+      const bed = [st + herkunft(!!pr.stapeln), (m.drehen ? "Drehen erlaubt" : "ohne Drehen") + herkunft(pr.drehen !== void 0)];
+      if (pr.preset && pr.preset !== preset) bed.push("Container " + pr.preset + " (Annahme aus der Frage, nicht der gewaehlte)");
+      return `${was}: maximal ${m.deckel ? "mindestens " + MAXPROBE_DECKEL : m.anzahl} Stueck passen in 1\xD7 ${zielName} — gerechnet mit: ${bed.join(", ")}`;
+    };
+    const maxBedKurz = (m, pr) => [
+      pr.stapeln ? (m.stapeln === "nein" ? T.chatBed.nein : m.stapeln === "bis_hoehe" ? T.chatBed.hoehe(m.bis_cm) : T.chatBed.frei) : "",
+      pr.drehen !== void 0 ? (m.drehen ? T.chatBed.mitDrehen : T.chatBed.ohneDrehen) : "",
+      pr.preset && pr.preset !== preset ? pr.preset : "",
+    ].filter(Boolean).join(", ");
     useEffect(() => {
       const n = nachzugRef.current;
       if (!n) return;
       nachzugRef.current = null;
       (async () => {
         const befund = [];
-        for (const i of n.probe) {
-          if (!(i >= 0 && i < cargo.length)) continue;
+        const chipNeu = [];
+        for (const pr of n.probe) {
+          const item = pr.ware || (pr.i >= 0 && pr.i < cargo.length ? cargo[pr.i] : null);
+          if (!item) continue;
+          const label = pr.ware ? pr.ware.name : "P" + (pr.i + 1);
+          const platzhalter = T.chatChipMax(label);
           try {
-            const max = packCargo(container, [{ ...cargo[i], qty: 600 }]).boxes;
-            befund.push(`P${i + 1} (${String(cargo[i].name || "Position").slice(0, 40)}): maximal ${max >= 600 ? "mindestens 600" : max} Stueck passen in 1\xD7 ${preset === "Custom" ? "Container mit den eingestellten Massen" : preset}`);
-          } catch (e) {}
+            const pTyp = domain === "sea" && pr.preset && PRESETS[pr.preset] ? pr.preset : null;
+            const ziel = pTyp && pTyp !== preset ? applyCarrier(PRESETS[pTyp], carrier, pTyp) : container;
+            const zielName = pTyp || (preset === "Custom" ? "Container mit den eingestellten Massen" : preset);
+            const m = maxProbe(ziel, item, pr);
+            const was = pr.ware
+              ? `${pr.ware.name} ${dimDE(item.l)}\xD7${dimDE(item.w)}\xD7${dimDE(item.h)} cm (nicht im Plan)`
+              : `${label} (${String(item.name || "Position").slice(0, 40)})`;
+            befund.push(maxSatz(was, m, zielName, pr));
+            chipNeu.push([platzhalter, T.chatChipMaxErg(label, m.deckel ? MAXPROBE_DECKEL + "+" : m.anzahl, maxBedKurz(m, pr))]);
+          } catch (e) {
+            chipNeu.push([platzhalter, T.chatChipMaxFehl(label)]);
+          }
         }
+        if (chipNeu.length) {
+          setChatVerlauf((v) => {
+            const k = [...v];
+            for (let j = k.length - 1; j >= 0; j--) {
+              if (k[j].rolle === "nutzer") break;
+              if (k[j].rolle !== "ki") continue;
+              const chips = [...(k[j].chips || [])];
+              for (const [alt, ersatz] of chipNeu) { const ix = chips.indexOf(alt); if (ix >= 0) chips[ix] = ersatz; }
+              // Dieselbe Rechnung zweimal (Stevie rief sie erneut auf) steht nur einmal da.
+              k[j] = { ...k[j], chips: chips.filter((x, ix) => chips.indexOf(x) === ix) };
+              break;
+            }
+            return k;
+          });
+        }
+        if (n.ohneKi) { setChatBusy(false); return; }
         const verlauf = chatVerlauf.slice(-8).map((m) => ({ rolle: m.rolle, text: m.text }));
         let offenBleiben = false;
         try {
