@@ -313,6 +313,11 @@ test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () =
   assert.deepEqual(item.required.sort(), Object.keys(item.properties).sort(), "strikt: alle Felder Pflicht");
   assert.equal(item.additionalProperties, false);
   assert.deepEqual(CHAT_SCHEMA.required.sort(), ["aktionen", "antwort"]);
+  // Bug 1: die Maximal-Rechnung kennt hypothetische Regeln (nur fuer diese Rechnung).
+  assert.deepEqual(item.properties.annahme_stapeln.enum, ["wie_plan", "nein", "frei", "bis_hoehe"]);
+  assert.deepEqual(item.properties.annahme_drehen.enum, ["wie_plan", "ja", "nein"]);
+  assert.ok(item.properties.annahme_bis_cm, "annahme_bis_cm fehlt");
+  assert.doesNotMatch(CHAT_SCHEMA.properties.antwort.description, /Zielsprache/, "die Antwortsprache ist die des Nutzers, nicht die UI-Sprache");
   // Die Container-Whitelist muss die ECHTEN Preset-Namen der App tragen
   for (const n of CHAT_CONTAINER) assert.ok(app.includes(`"${n}"`), `Preset ${n} gibt es in der App nicht`);
 });
@@ -336,9 +341,23 @@ test("pruefeAktionen: nur Plausibles, Deckel, nach entfernen ist Schluss", () =>
   assert.deepEqual(weg.map((a) => a.typ), ["entfernen"]);
   assert.equal(pruefeAktionen(Array(20).fill({ ...voll, typ: "drehen", position: 1 })).length, AKTIONEN_MAX);
   assert.deepEqual(pruefeAktionen("quatsch"), []);
-  // maxzahl ist eine reine Probe: nur die P-Nummer reist mit, sonst nichts.
+  // maxzahl ist eine reine Rechnung: ohne Bedingung reist nur die P-Nummer mit.
   assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 3 }]), [{ typ: "maxzahl", position: 3 }]);
-  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 0 }]), [], "ohne gueltige P-Nummer keine Probe");
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "maxzahl", position: 0 }]), [], "ohne P-Nummer und ohne Masse keine Rechnung");
+  // Bug 1 (30.10.26): „Wie viele passen, wenn sie NICHT stapelbar sind?" rechnete mit der
+  // Stapel-Einstellung der Position. Die Bedingung aus der Frage reist jetzt als Annahme mit.
+  const ohne = { ...voll, annahme_stapeln: "wie_plan", annahme_bis_cm: 0, annahme_drehen: "wie_plan" };
+  assert.deepEqual(pruefeAktionen([{ ...ohne, typ: "maxzahl", position: 1, annahme_stapeln: "nein" }]),
+    [{ typ: "maxzahl", position: 1, stapeln: "nein" }]);
+  assert.deepEqual(pruefeAktionen([{ ...ohne, typ: "maxzahl", position: 1, annahme_stapeln: "bis_hoehe", annahme_bis_cm: 180, annahme_drehen: "nein", preset: "40' GP" }]),
+    [{ typ: "maxzahl", position: 1, stapeln: "bis_hoehe", bis_cm: 180, drehen: false, preset: "40' GP" }]);
+  assert.deepEqual(pruefeAktionen([{ ...ohne, typ: "maxzahl", position: 1, annahme_stapeln: "bis_hoehe", annahme_bis_cm: 3 }]),
+    [{ typ: "maxzahl", position: 1 }], "eine unplausible Hoehengrenze faellt weg, statt geraten zu werden");
+  assert.deepEqual(pruefeAktionen([{ ...ohne, typ: "maxzahl", position: 1, preset: "Boeser Container" }]),
+    [{ typ: "maxzahl", position: 1 }], "fremde Container-Namen reisen nicht mit");
+  // Ware ausserhalb des Plans: Masse direkt bei der Rechnung, der Plan bleibt unberuehrt.
+  assert.deepEqual(pruefeAktionen([{ ...ohne, typ: "maxzahl", position: 0, name: "Gitterbox", l: 124, b: 83, h: 97, gewicht: 85 }]),
+    [{ typ: "maxzahl", ware: { name: "Gitterbox", l: 124, b: 83, h: 97, gewicht: 85 } }]);
   // leeren raeumt den Plan ab — aber NUR als erste Aktion: danach zeigten alle
   // P-Nummern auf eine Liste, die es nicht mehr gibt (Jareks 54-Paletten-Fall:
   // Maximalmenge wurde in einen Plan mit Bestand gemischt).
@@ -367,7 +386,7 @@ test("pruefeFakten ohne Link-Pflicht (Chat) laesst den Link weg", () => {
   // Der befund (Maxzahl-Saetze des Rechners) reist nur im Chat-Nachzug mit — als
   // Whitelist-Neuaufbau mit Deckel, und im Brief-Pfad gar nicht.
   const mitBefund = pruefeFakten({ ...rest, befund: [" P1: maximal 25 Stueck ", 7, "", "x".repeat(500)] }, false);
-  assert.deepEqual(mitBefund.befund, ["P1: maximal 25 Stueck", "x".repeat(200)]);
+  assert.deepEqual(mitBefund.befund, ["P1: maximal 25 Stueck", "x".repeat(300)], "300 Zeichen: der Satz nennt auch seine Bedingungen");
   assert.equal(pruefeFakten(rest, false).befund, void 0, "ohne befund-Feld kein befund");
   const brief = pruefeFakten({ ...FAKTEN_OK, befund: ["schmuggel"] });
   assert.ok(brief && !("befund" in brief), "der Brief kennt keinen befund");
@@ -379,34 +398,49 @@ test("der Chat-Auftrag traegt die Grenzen des Assistenten", () => {
   assert.match(CHAT_AUFTRAG, /die neuen Zahlen stehen im Plan/, "der Verweis auf den Plan fehlt");
   assert.match(CHAT_AUFTRAG, /Richtwerte, keine verbindliche Pruefung/, "der Richtwert-Vorbehalt fehlt");
   assert.match(CHAT_AUFTRAG, /nach einem entfernen keine weitere Aktion/, "die entfernen-Regel fehlt");
-  // Jareks Richtung nach dem ersten Live-Test: Stevie hilft durch HANDELN. Wer fragt,
-  // wie viel in einen anderen Container passt, bekommt den Wechsel — nicht eine
-  // Anleitung. Und wer '40 HC' schon gesagt hat, wird nicht erneut danach gefragt.
   assert.match(CHAT_AUFTRAG, /Du bist Stevie/, "die KI kennt ihren Namen nicht");
-  assert.match(CHAT_AUFTRAG, /Hilf durch Handeln/, "die Handeln-statt-Anleitung-Regel fehlt");
   assert.match(CHAT_AUFTRAG, /Strg\+Z/, "der Hinweis auf das Ruecknehmen fehlt im Auftrag");
   assert.match(CHAT_AUFTRAG, /im Verlauf oder in den Fakten/, "die Nutze-den-Kontext-Regel fehlt");
-  // Jareks zweiter Live-Befund ('Wieso weiss er nicht, dass 25 reinpassen?'):
-  // maxzahl laesst den RECHNER das Maximum ermitteln, und der Nachzug bringt
-  // Stevie die frischen Zahlen — erst damit kann er konkret antworten.
+  // maxzahl laesst den RECHNER das Maximum ermitteln (Jareks Befund 'Wieso weiss er nicht,
+  // dass 25 reinpassen?'), die Rechner-Meldung bringt Stevie die echten Zahlen.
   assert.match(CHAT_AUFTRAG, /maxzahl \(position\)/, "die maxzahl-Aktion ist nicht erklaert");
   assert.match(CHAT_AUFTRAG, /nimm IMMER maxzahl/, "Wie-viele-passen-Fragen muessen auf maxzahl zeigen");
-  assert.match(CHAT_AUFTRAG, /Nachzug-Nachricht/, "der Nachzug ist nicht erklaert");
-  assert.match(CHAT_AUFTRAG, /aus fakten und befund/, "die Nachzug-Antwort muss aus fakten und befund kommen");
-  // Jareks dritter Live-Befund: Zahl genannt, aber nicht eingetragen — und Stevie
-  // zweifelte sein eigenes Rechner-Ergebnis an. Beides steht jetzt im Auftrag.
-  assert.match(CHAT_AUFTRAG, /ECHTE Ergebnisse des Rechners/, "der befund muss als echt ausgewiesen sein");
-  assert.match(CHAT_AUFTRAG, /Nenn Zahlen nicht nur, setze sie um/, "die Umsetzen-Regel fehlt");
-  assert.match(CHAT_AUFTRAG, /fuehrst die Aenderung, auf die die Frage zielt, direkt mit aus/, "der Nachzug soll handeln duerfen");
-  // Jareks Mobil-Befund: drei lange Blasen je Frage, Richtwert-Floskel ueberall,
-  // und die Maximalmenge wurde ungefragt in den Bestand gemischt (54 statt 50).
+  assert.match(CHAT_AUFTRAG, /aus fakten und rechenergebnisse/, "die Antwort muss aus fakten und rechenergebnisse kommen");
+  assert.match(CHAT_AUFTRAG, /ECHTE Ergebnisse des Rechners/, "die Ergebnisse muessen als echt ausgewiesen sein");
   assert.match(CHAT_AUFTRAG, /FASSE DICH KURZ/, "die Kuerze-Regel fehlt");
-  assert.match(CHAT_AUFTRAG, /ALLEIN in einem leeren Container/, "die Proben-Isolation ist nicht erklaert");
+  assert.match(CHAT_AUFTRAG, /ALLEIN in einem leeren Container/, "die Isolation der Rechnung ist nicht erklaert");
   assert.match(CHAT_AUFTRAG, /mische die Maximalmenge NIE ungefragt/, "die Bestand-Misch-Sperre fehlt");
   assert.match(CHAT_AUFTRAG, /leeren nur als ERSTE Aktion/, "die leeren-Regel fehlt");
-  assert.match(CHAT_AUFTRAG, /missbrauche keine vorhandene Position als Naeherung/, "fremde Ware braucht eine eigene Position (neu)");
+  assert.match(CHAT_AUFTRAG, /missbrauche keine vorhandene Position als Naeherung/, "fremde Ware darf keine vorhandene Position missbrauchen");
+  // Bug-Liste 30.10.26 ─────────────────────────────────────────────────────────────
+  // Bug 1: Bedingungen aus der Frage MUESSEN als Annahme in die Rechnung — und der Plan
+  // bleibt bei Fragen unveraendert (frueher: 'Hilf durch Handeln', die Zahl wurde
+  // eingetragen; jetzt aendert Stevie den Plan nur auf ausdruecklichen Wunsch).
+  assert.match(CHAT_AUFTRAG, /MUSST du sie als Annahme mitgeben/, "Bedingungen aus der Frage muessen in die Rechnung");
+  assert.match(CHAT_AUFTRAG, /'nur auf den Boden'[^.]*= annahme_stapeln nein/, "'nur auf den Boden' muss 'nicht stapelbar' heissen");
+  assert.match(CHAT_AUFTRAG, /Den Plan aenderst du NUR, wenn der Nutzer es ausdruecklich verlangt/, "Fragen duerfen den Plan nicht aendern");
+  assert.match(CHAT_AUFTRAG, /laesst den Plan, wie er ist/);
+  assert.match(CHAT_AUFTRAG, /nenne in deiner Antwort NUR diese Bedingungen und erfinde keine dazu/, "Stevie darf nur benutzte Bedingungen nennen");
+  assert.doesNotMatch(CHAT_AUFTRAG, /Hilf durch Handeln|setze sie um|direkt mit aus/, "die alte Eintragen-statt-Antworten-Regel ist zurueck");
+  // Bug 2: nach jeder Rechnung die Zahl — oder ehrlich sagen, was fehlt.
+  assert.match(CHAT_AUFTRAG, /Auf eine Rechner-Meldung antwortest du IMMER mit der konkreten Zahl/, "die Zahl muss genannt werden");
+  assert.match(CHAT_AUFTRAG, /tu nie so, als haettest du gerechnet/, "Stevie darf keine Rechnung vortaeuschen");
+  // Bug 3: die Sprache der letzten Nutzernachricht, nicht die der Oberflaeche.
+  assert.match(CHAT_AUFTRAG, /Sprache der letzten Nachricht, die der Nutzer selbst geschrieben hat/, "die Sprachregel fehlt");
+  assert.match(CHAT_AUFTRAG, /auch in der Ankuendigung/, "auch die Ankuendigung muss in der Nutzersprache sein");
+  assert.doesNotMatch(CHAT_AUFTRAG, /Zielsprache ist das Feld sprache/, "die UI-Sprache ist nur noch Ersatz");
+  // Bug 4: keine internen Begriffe in den Antworten.
+  assert.match(CHAT_AUFTRAG, /befund, Probe, Nachzug, Rechner-Meldung, fakten, rechenergebnisse/, "die Liste der verbotenen Begriffe fehlt");
+  assert.match(CHAT_AUFTRAG, /Laut Berechnung/, "der Ersatz 'Laut Berechnung' fehlt");
   for (const n of CHAT_CONTAINER) assert.ok(CHAT_AUFTRAG.includes(n), `Whitelist im Auftrag unvollstaendig: ${n}`);
   assert.match(chatNachricht({ a: 1 }, "Frage?"), /<fakten>\n[^]*\n<\/fakten>\n<nachricht>\nFrage\?\n<\/nachricht>/);
+  // Bug 4: das Modell sieht den befund als 'rechenergebnisse' — das interne Wort kommt
+  // im Eingang gar nicht mehr vor. Bug 3: die Rechner-Meldung ist keine Nutzernachricht.
+  const mitErg = chatNachricht({ sprache: "en", befund: ["P1: maximal 11 Stueck"] }, "Rechner-Meldung", true);
+  assert.match(mitErg, /"rechenergebnisse":\["P1: maximal 11 Stueck"\]/);
+  assert.doesNotMatch(mitErg, /befund/);
+  assert.match(mitErg, /<rechner_meldung>\nRechner-Meldung\n<\/rechner_meldung>$/);
+  assert.doesNotMatch(mitErg, /<nachricht>/);
 });
 
 test("die Chat-Function haelt dieselben Deckel wie die anderen", () => {
@@ -423,6 +457,9 @@ test("die Chat-Function haelt dieselben Deckel wie die anderen", () => {
   // Zwei Stevie-Antworten in Folge (Ankuendigung + Nachzug) muessen zu EINEM
   // assistant-Zug zusammengelegt werden — die API verlangt den Rollenwechsel.
   assert.match(fnChat, /letzte\.role === m\.role/, "gleiche Rollen in Folge werden nicht zusammengelegt");
+  // Bug 3: die Rechner-Meldung der App wird als solche markiert, nicht als Nutzernachricht.
+  assert.match(fnChat, /ausRechner = body\.nachzug === true/);
+  assert.match(fnChat, /chatNachricht\(\{ sprache, \.\.\.fakten \}, frage, ausRechner\)/);
 });
 
 test("die App wendet Aktionen nur geprueft und mit Undo an", () => {
@@ -447,7 +484,7 @@ test("der Chat ist im Demo aus und traegt die Ehrlichkeits-Fussnote", () => {
   assert.ok(knopf > 0);
   assert.match(app.slice(Math.max(0, knopf - 900), knopf), /!EMBEDDED &&/, "der Knopf bleibt dem echten Rechner vorbehalten");
   assert.match(app, /chatOffen && !EMBEDDED &&/, "auch das Panel selbst ist im iframe aus");
-  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:", "chatChipMax:", "chatChipLeer:", "chatKlein:", "chatGross:"]) {
+  for (const key of ["chatBtn:", "chatTitle:", "chatRolle:", "chatIntro:", "chatPh:", "chatSenden:", "chatDenkt:", "chatHinweis:", "chatChipContainer:", "chatChipStapeln:", "chatChipMenge:", "chatChipDrehen:", "chatChipWeg:", "chatChipNeu:", "chatChipMax:", "chatChipMaxErg:", "chatChipMaxFehl:", "chatBed:", "chatChipLeer:", "chatKlein:", "chatGross:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
 });
@@ -457,14 +494,25 @@ test("der Nachzug bringt Stevie die frischen Zahlen des Packers", () => {
   // Ergebnis seiner Aktionen nie sah. Jetzt meldet sich die App nach Aktionen EINMAL
   // automatisch mit frischen Fakten — und bei maxzahl rechnet packCargo die Probe,
   // ohne den Plan anzufassen. Der Nachzug selbst darf keinen weiteren ausloesen.
-  assert.match(app, /const CHAT_NACHZUG = "Nachzug vom Rechner:/, "die Nachzug-Nachricht fehlt");
-  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1 \}/, "der Nachzug wird nicht angestossen");
-  assert.match(app, /packCargo\(container, \[\{ \.\.\.cargo\[i\], qty: 600 \}\]\)\.boxes/, "die maxzahl-Probe rechnet nicht ueber den Packer");
+  assert.match(app, /const CHAT_NACHZUG = "Rechner-Meldung der App \(keine Nutzernachricht\):/, "die Rechner-Meldung fehlt");
+  assert.doesNotMatch(app.slice(app.indexOf("const CHAT_NACHZUG"), app.indexOf("const CHAT_NACHZUG") + 600), /befund|Nachzug vom/, "die Meldung selbst darf kein internes Wort vorsagen");
+  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1, ohneKi: tiefe >= 2 \}/, "der Nachzug wird nicht angestossen");
+  // Bug 1: gerechnet wird ueber maxProbe — mit den Annahmen aus der Frage, auf einer Kopie.
+  assert.match(app, /const m = maxProbe\(ziel, item, pr\);/, "die Maximal-Rechnung laeuft nicht ueber maxProbe");
+  assert.match(app, /gerechnet mit: \$\{bed\.join\(", "\)\}/, "der Ergebnissatz nennt seine Bedingungen nicht");
+  // Bug 2: die Zahl steht als Chip unter der Antwort — auch wenn Stevie sie nicht nennt,
+  // und auch am Ende der Kette (ohneKi), wo die App Stevie nicht mehr fragt.
+  assert.match(app, /T\.chatChipMaxErg\(label, /, "der Ergebnis-Chip fehlt");
+  assert.match(app, /chips: chips\.filter\(\(x, ix\) => chips\.indexOf\(x\) === ix\)/, "dieselbe Rechnung steht mehrfach als Chip da");
+  assert.match(app, /if \(n\.ohneKi\) \{ setChatBusy\(false\); return; \}/, "am Ende der Kette wird nicht mehr gerechnet");
+  assert.match(app, /\|\| erg\.probe\.length\) \{/, "angeforderte Rechnungen laufen am Ende der Kette nicht");
+  // Bug 3: die App markiert ihre Meldung, damit sie nicht die Antwortsprache bestimmt.
+  assert.match(app, /frage, nachzug: tiefe > 0 \}\)/, "die Rechner-Meldung wird nicht markiert");
   assert.match(app, /\}, \[result, nachzugTick\]\);/, "der Nachzug-Effekt haengt nicht am frischen result");
   // Stevie darf im Nachzug selbst handeln (eintragen statt nur nennen, Jareks
   // Richtung) — die Kette ist dafuer hart gedeckelt: hoechstens ZWEI Nachzuege.
   assert.match(app, /tiefe < 2 && \(erg\.geaendert \|\| erg\.probe\.length\)/, "der Tiefen-Deckel der Nachzug-Kette fehlt");
-  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1 \}/, "die Tiefe wird nicht mitgezaehlt");
+  assert.match(app, /nachzugRef\.current = \{ probe: erg\.probe, tiefe: tiefe \+ 1,/, "die Tiefe wird nicht mitgezaehlt");
   assert.match(app, /chatRunde\(CHAT_NACHZUG, verlauf, befund, n\.tiefe\)/, "der Nachzug traegt seine Tiefe nicht weiter");
   assert.match(app, /chatRunde\(frage, verlauf, null, 0\)/, "die Nutzerfrage startet nicht bei Tiefe 0");
   assert.equal(app.split("chatRunde(CHAT_NACHZUG").length - 1, 1, "genau EIN Nachzug-Aufrufer");
