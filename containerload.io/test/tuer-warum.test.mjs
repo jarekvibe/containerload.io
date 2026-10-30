@@ -83,9 +83,10 @@ test("prefers-reduced-motion: keine Fahrt, kein Pulsieren", () => {
 });
 
 test("die Verdrahtung: App -> Viewport", () => {
-  assert.ok(roh.includes("onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino })"),
+  // Seit der hellen Buehne reist hinter den Kino-Zaehlern noch das Thema mit.
+  assert.ok(roh.includes("onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino, thema })"),
     "der Viewport bekommt die Kino-Zaehler nicht");
-  assert.ok(roh.includes("setZeigeNummern, tuerKino, oogKino, achsKino }) {"),
+  assert.ok(roh.includes("setZeigeNummern, tuerKino, oogKino, achsKino, thema }) {"),
     "die Viewport-Signatur kennt die Kino-Zaehler nicht");
 });
 

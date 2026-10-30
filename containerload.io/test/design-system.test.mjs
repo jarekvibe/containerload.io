@@ -54,8 +54,12 @@ const paletteBlock = (name) => {
 };
 const PAL_DUNKEL = paletteBlock("C_DUNKEL");
 const PAL_HELL = paletteBlock("C_HELL");
+// Die Buehnen-Paletten (helle 3D-Ansicht) sind dasselbe Register fuer die Szene.
+const BUE_DUNKEL = paletteBlock("B_DUNKEL");
+const BUE_HELL = paletteBlock("B_HELL");
 const inPalette = (nr) =>
-  (nr >= PAL_DUNKEL[0] && nr <= PAL_DUNKEL[1]) || (nr >= PAL_HELL[0] && nr <= PAL_HELL[1]);
+  (nr >= PAL_DUNKEL[0] && nr <= PAL_DUNKEL[1]) || (nr >= PAL_HELL[0] && nr <= PAL_HELL[1]) ||
+  (nr >= BUE_DUNKEL[0] && nr <= BUE_DUNKEL[1]) || (nr >= BUE_HELL[0] && nr <= BUE_HELL[1]);
 
 // Die head-CSS-Variablen (:root / [data-theme="hell"]) spiegeln dieselben Saetze —
 // auch sie sind Register, kein Markup.
@@ -239,6 +243,7 @@ test("die Flaeche haelt einen Ton - kein Verlauf hinter der Oberflaeche", () => 
   zeilen.forEach((z, i) => {
     if (!/radial-gradient/.test(z)) return;
     if (/mountRef|pointer-events-none/.test(z)) return;   // 3D-Buehne und ihre Vignette
+    if (istRegister(i + 1)) return;                       // die Buehnen-Verlaeufe stehen in B
     treffer.push(`Zeile ${i + 1}`);
   });
   assert.deepStrictEqual(treffer, [],
