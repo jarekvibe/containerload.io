@@ -1095,7 +1095,7 @@ Vier Dinge waren konkret falsch, und alle vier sind Regeln, keine Geschmacksfrag
 | **Die Überschrift hatte keine Zahl** | „Jede Ladung. Im richtigen Container." könnte jeder Ladungsrechner sagen. Jetzt steht dort **„11 Paletten statt 8 im selben Container"** — der Dreh-Gewinn im 20-Fuß, unser Beweis, dass gerechnet und nicht geschätzt wird. Er stand vorher in Feature-Kachel Nummer vier |
 | **Unter dem Hero standen Eigenschaften, keine Leistungen** | „Ohne Account · Kostenlos · ISO 668" sagt, was wir *nicht verlangen*. Jetzt drei Zahlen: **18** Equipment-Typen, **8** Reedereien, **0** Anmeldungen |
 | **Zwei Abschnitte erzählten denselben Ablauf** | „So arbeitet der Rechner" (mit Bildern) und „In drei Schritten zum Ladeplan" (nur Text), einen Bildschirm auseinander. Der zweite ist weg |
-| **Das Funktionsraster war ungleich** | Es lief über `col-span-2` und `col-span-3`, und die Texte reichten von einem Satz bis zu fünf Zeilen. Jetzt **sechs gleich große Karten, ein bis zwei Sätze je Karte** — gemessen exakt 221 px hoch, alle sechs. Das ist der größte Anteil am „clean"-Eindruck |
+| **Das Funktionsraster war ungleich** | Es lief über `col-span-2` und `col-span-3`, und die Texte reichten von einem Satz bis zu fünf Zeilen. Damals **sechs gleich große Karten, ein bis zwei Sätze je Karte** (seit dem Umbau vom 01.11.26 eine ruhige Liste, siehe nächster Abschnitt) — gemessen exakt 221 px hoch, alle sechs. Das ist der größte Anteil am „clean"-Eindruck |
 
 **Die Zahlen im Band sind nachgerechnet, nicht gesetzt.** `test/startseite-zahlen.test.mjs` zählt `PRESETS` + `VEHICLES` und `CARRIERS` **aus `app.html`** und vergleicht mit dem, was auf der Startseite steht. Die Falle, gegen die das gebaut ist: jemand ergänzt einen Containertyp oder eine Reederei, und die Startseite behauptet weiter die alte Zahl. Das fällt niemandem auf — außer dem, der nachzählt und uns danach nichts mehr glaubt. Dieselbe Regel wie im Container-Wissen, aus demselben Grund.
 
@@ -1108,6 +1108,29 @@ Auch der Dreh-Gewinn wird nachgerechnet, an **beiden** Stellen (Überschrift = 2
 > Der Nebenbefund von hier (Knopf „Tool öffnen" ragte bei 390 px bis 410 px über den Rand) ist inzwischen behoben: vier Nav-Abstände tragen unter `sm` die nächstkleinere Stufe aus der Abstandsreihe, gemessen 410 → 380 px, ab 640 px unverändert. `test/mobil.test.mjs` hält die vier Klassenpaare fest.
 
 > **Für Browserprüfungen an der Startseite:** `tw.out.css` im Scratchpad ist ein **vorher erzeugtes** Tailwind-Bauergebnis. Wer eine neue Utility-Klasse benutzt (`gap-x-5`, `sm:grid-cols-3`), muss es neu bauen — sonst fehlt die Regel, das Bild zeigt ein kaputtes Layout, und man sucht den Fehler im Markup. Genau das ist hier zweimal passiert.
+
+### Die Startseite atmet (Umbau 01.11.26)
+Jareks Befund: „wirkt ein bisschen packed". Gemessen: 6.140 px auf dem Desktop (≈ 7 Bildschirme), ~10.600 px auf dem Handy, **neun Abschnitte gleich laut**, und vieles doppelt — die sechs Funktionskarten erzählten die drei Schritte, Stevie und den Import ein zweites Mal; „Tool kostenlos öffnen" stand dreimal in Folge; zwei Formulare (CBM, Excel-Import) standen als eigene Abschnitte mitten in der Geschichte. Danach: **4.650 px Desktop (−25 %), ~6.800 px Handy (−36 %)**, und kein Inhalt ist verloren gegangen.
+
+Die Reihenfolge ist jetzt eine Geschichte in fünf Blöcken:
+
+| Block | Was dort steht | Was weg ist |
+|---|---|---|
+| **Hero** (`#top`) | Überschrift, ein Satz, ein Knopf, „Reinschauen" als Textlink, die drei Zusagen als eine leise Zeile; rechts die Animation mit **einer** Statuszeile; darunter die Kennzahlen als Leiste zwischen zwei Linien (`.kpis`) statt drei Karten | Badge, schwebende Pillen, Schrittleiste mit Akt-Punkten — sie sagten dasselbe wie die Statuszeile |
+| **Der Rechner** (`#demo`) | die drei Schritte (unverändert der stärkste Block), darunter „Außerdem drin" als Liste mit Symbol links (`.feat-row`/`.feat`) | eigener Funktionen-Abschnitt (`#features`), die CTA-Zeile darunter |
+| **Stevie** (`#stevie`) | **das einzige farbige Band** (`.sv-band`, Stevie-Gelb `#FFB020` in beiden Themen, Tinte `#1a0f08` darauf) — derselbe Look wie im Vorstellvideo | — |
+| **Werkzeuge** (`#cbm`) | CBM-Rechner und Excel-Import als **ein Block mit zwei Reitern** (`role="tablist"`, Pfeiltasten). Beide Inhalte stehen im Dokument, der inaktive Reiter ist nur `hidden` | eigener Import-Abschnitt (`#import`) |
+| **FAQ + Container-Wissen** | nebeneinander, beide als Listen mit Trennlinien (`.faq-list`, `.wlist`) | sechs Karten fürs Container-Wissen |
+
+Danach ein schlanker Schluss-CTA ohne Kasten. Navigation: **vier Links** (Tool, Stevie, Container-Wissen, FAQ); CBM-Rechner und Excel-Import sind über den Footer erreichbar (der Footer-Link `data-tab="tabImp"` schaltet den Reiter gleich mit um).
+
+**Regeln, die daraus folgen:**
+- **Ein farbiges Band, nicht zwei.** Sobald ein zweiter Abschnitt eine eigene Fläche bekommt, sind wieder alle gleich laut. Abschnitte trennen sich durch Luft und Linien, nicht durch Kästen.
+- **Ein Formular gehört nicht in die Geschichte.** Neue Werkzeuge kommen als weiterer Reiter in `#cbm`, nicht als eigener Abschnitt.
+- **Die drei Zusagen bleiben** (`hero_trust`: kostenlos ohne Limit, ohne Anmeldung, keine Cookies) — nur als eine Zeile in `--faint`, nicht als Pillen. Begründung im Abschnitt davor.
+- **Telefon:** Unter 560 px läuft keine 3D-Animation (Standbild). Die Bühne ist dort so flach wie das Bild (`aspect-ratio:1.9/1`), die Statuszeile fällt weg (sie beschreibt eine Animation, die nicht läuft), und die drei Schritte liegen nebeneinander zum Wischen (`scroll-snap`, die nächste Karte schaut hervor). Das Standbild-SVG nimmt seine Farben aus den Variablen (`.pp-c/.pp-b/.pp-g`) — vorher war es fest dunkelgrün und stand im Hellen als Klotz da.
+- **Kopf auf dem Telefon:** Sprach- und Theme-Schalter tragen `nav-sm-hide` (eigene Media-Regel mit `!important`) und sitzen im Burger-Menü. Tailwinds `hidden sm:flex` hatte je nach Reihenfolge gegen `.langswitch{display:flex}` verloren — dann wurde „Tool öffnen" abgeschnitten.
+- **Sprachhinweis (`.langbar`):** `left/right:12px` + `width:max-content` + `margin:auto` statt `left:50%` + `translate`. Mit `left:50%` darf ein `position:fixed`-Kasten nur die halbe Breite nutzen und bricht schmal und vierzeilig um — dasselbe Muster wie bei der Hook-Blase im Video.
 
 ### Die Hero-Animation (drei Akte, `clh-*` in `index.html`)
 Im Kopf der Startseite laufen **drei Szenen nacheinander**, dann fängt die erste wieder an:
