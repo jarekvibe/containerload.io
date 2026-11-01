@@ -182,6 +182,41 @@ test("alle KI-Bedienstellen sind im eingebetteten Demo aus (EMBEDDED)", () => {
     "kiFoto muss EMBEDDED selbst pruefen (der Paste-Weg hat keinen Knopf)");
 });
 
+test("im echten Rechner gibt es nur noch 'Mit KI erkennen' -- der lokale Parser ist Rueckfall", () => {
+  // Jareks Wunsch (01.11.26): der Knopf "Erkennen" ist weg, die KI liest besser.
+  // Er bleibt nur im eingebetteten Demo, wo es keine KI gibt.
+  const erk = [...app.matchAll(/, T\.impDetect\)/g)];
+  assert.equal(erk.length, 1, "genau ein Erkennen-Knopf");
+  const davor = app.slice(Math.max(0, erk[0].index - 260), erk[0].index);
+  assert.match(davor, /[^!]EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\(Btn/, "Erkennen nur im eingebetteten Demo");
+  // Scheitert die KI oder ist die Liste zu lang, liest der lokale Parser -- niemand haengt fest.
+  const von = app.indexOf("const lokalLesen");
+  const bis = app.indexOf("const bildVerkleinern");
+  assert.ok(von > 0 && bis > von, "lokalLesen fehlt");
+  const rumpf = app.slice(von, bis);
+  assert.match(rumpf, /setImportRows\(parseCargoText\(importText\)\)/, "der Rueckfall landet in der Pruef-Tabelle");
+  assert.match(rumpf, /text\.length > 6000\) \{ lokalLesen\(T\.kiLang\)/, "zu lang fuer die KI -> lokal lesen");
+  assert.match(rumpf, /kiSenden\(\{ text \}, T\.kiLiest, lokalLesen\)/, "der Text-Weg gibt den Rueckfall mit");
+  assert.match(app, /const scheitern = \(msg\) => \{ if \(ersatz\) ersatz\(msg\); else setKiFehler\(msg\)/,
+    "Fehlschlag (429, Serverfehler, kein Netz) geht an den Rueckfall");
+  assert.doesNotMatch(app.slice(app.indexOf("const kiFoto ="), app.indexOf("const applyImport")), /lokalLesen/,
+    "ein Bild kann der lokale Parser nicht lesen -- der Foto-Weg hat keinen Rueckfall");
+  // Der Grund steht ueber der Pruef-Tabelle, die lokalen Hinweise nur bei lokal gelesener Liste
+  assert.match(app, /!kiQuelle && kiFehler && \/\* @__PURE__ \*\/ React\.createElement\("div"/);
+  assert.match(app, /!kiQuelle && LAST_TSV_MAP \?/, "Excel-Hinweis des lokalen Parsers nicht unter KI-Zeilen");
+});
+
+test("der Import-Dialog sagt, dass Fotos per Strg+V gehen", () => {
+  assert.match(app, /!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\(KiTipp, null\)/, "der Tipp fehlt oder steht auch im Demo");
+  assert.match(app, /var KiTipp = /);
+  assert.match(app, /"\\u2318V" : LANG === "en" \? "Ctrl\+V" : "Strg\+V"/, "Mac, Englisch und Deutsch bekommen ihre Taste");
+  for (const key of ["kiOhne:", "kiTipp:", "kiTippTouch:"]) {
+    assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
+  }
+  assert.equal(app.split("{V}").length - 1, 3, "beide kiTipp-Texte tragen den Platz fuer die Taste (plus split)");
+  assert.doesNotMatch(ds, /neben „Erkennen“/, "die Datenschutzseite nennt den alten Knopf nicht mehr");
+});
+
 test("Foto-Weg: Datei-Feld, Einfuegen und Verkleinern sind verdrahtet", () => {
   assert.match(app, /type: "file", accept: "image\/\*"/, "das versteckte Datei-Feld fehlt");
   assert.match(app, /onPaste:[^}]+indexOf\("image\/"\)/, "eingefuegte Bildschirmfotos muessen erkannt werden");
