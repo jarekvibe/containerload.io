@@ -317,6 +317,31 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       drehen: it.rotatable !== false,
     };
   };
+  // Stevies Container-Empfehlung (v6, Jareks Live-Befund 02.11.26): „5,8 x 2,5 x 3,0 m -- welcher
+  // Typ?" beantwortete Stevie selbst mit „40' HC", obwohl 2,5 m Breite in KEINEN Standardcontainer
+  // geht (innen hoechstens 235 cm) und das Banner daneben „20' Flat Rack" empfahl. Ein Sprachmodell
+  // vergleicht Masse nicht zuverlaessig -- deshalb holt sich Stevie hier DIESELBE Empfehlung wie das
+  // Banner (suggestContainer, darin suggestEquipment) und gibt nur deren Ergebnis wieder.
+  //   items: die Ware als Ladungsliste (eine Position, Ware ausserhalb des Plans, der ganze Plan)
+  // Rueckgabe: die Empfehlung, der Ueberstand je Achse gegen den groessten Standardcontainer und
+  // ob die Ware durch die Tuer des empfohlenen Containers geht (nur bei einem Standard-Treffer).
+  var empfProbe = (items, carrier) => {
+    const sug = suggestContainer(items, carrier);
+    const std = Object.values(PRESETS).filter((p) => !p.kind || p.kind === "dry");
+    const stdW = Math.max(...std.map((p) => p.w)), stdH = Math.max(...std.map((p) => p.h)), stdL = Math.max(...std.map((p) => p.l));
+    let breit = 0, hoch = 0, lang = 0;
+    const da = (items || []).filter((t) => num(t.qty) > 0);
+    da.forEach((t) => {
+      const rot = t.rotatable !== false;
+      const quer = rot ? Math.min(num(t.l), num(t.w)) : num(t.w), laengs = rot ? Math.max(num(t.l), num(t.w)) : num(t.l);
+      breit = Math.max(breit, quer - stdW); hoch = Math.max(hoch, num(t.h) - stdH); lang = Math.max(lang, laengs - stdL);
+    });
+    // Tuer: dieselbe Bestfall-Regel wie fitsThroughDoor (schmalste Kante voran) -- hier lokal,
+    // weil die Probe auch ohne den Rest der Oberflaeche laufen muss.
+    const tuer = sug && sug.type === "single" && PRESETS[sug.name] && PRESETS[sug.name].door ? PRESETS[sug.name].door : null;
+    const durchTuer = tuer ? da.every((t) => num(t.h) <= tuer.h && Math.min(num(t.l), num(t.w)) <= tuer.w) : null;
+    return { sug, ueber: { breit: Math.round(breit), hoch: Math.round(hoch), lang: Math.round(lang) }, std: { w: stdW, h: stdH, l: stdL }, tuer, durchTuer };
+  };
   // Spart die frei gerechnete Empfehlung wirklich Equipment gegenueber der gewaehlten Kette?
   // Verglichen wird ueber den Container-TYP, nicht ueber die Geometrie: die Reederei-Masse
   // weichen um Millimeter vom Standard ab (Yang Ming 20' GP: 589,6 x 235,2 x 239,3 statt
@@ -3562,6 +3587,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       chatChipMax: (p) => `${p}: Maximum wird gerechnet \u2026`,
       chatChipMaxErg: (p, n, bed) => `${p}: max. ${n} St\xFCck${bed ? " \xB7 " + bed : ""}`,
       chatChipMaxFehl: (p) => `${p}: Maximum nicht berechenbar`,
+      chatChipEmpf: (p) => `${p}: passender Container wird gesucht \u2026`,
+      chatChipEmpfErg: (p, n) => `${p} \u2192 ${n}`,
+      chatEmpfZuGross: "zu gro\xDF f\xFCr jeden Container",
+      chatEmpfZuSchwer: "zu schwer f\xFCr jeden Standardcontainer",
       chatBed: { nein: "nicht stapelbar", frei: "stapelbar", hoehe: (cm) => `stapelbar bis ${cm} cm`, mitDrehen: "mit Drehen", ohneDrehen: "ohne Drehen" },
       chatChipLeer: "Liste geleert",
       chatKlein: "Verkleinern",
@@ -3985,6 +4014,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       chatChipMax: (p) => `${p}: computing maximum \u2026`,
       chatChipMaxErg: (p, n, bed) => `${p}: max. ${n} pcs${bed ? " \xB7 " + bed : ""}`,
       chatChipMaxFehl: (p) => `${p}: maximum could not be computed`,
+      chatChipEmpf: (p) => `${p}: finding the right container \u2026`,
+      chatChipEmpfErg: (p, n) => `${p} \u2192 ${n}`,
+      chatEmpfZuGross: "too big for any container",
+      chatEmpfZuSchwer: "too heavy for any standard container",
       chatBed: { nein: "not stackable", frei: "stackable", hoehe: (cm) => `stackable up to ${cm} cm`, mitDrehen: "rotation allowed", ohneDrehen: "no rotation" },
       chatChipLeer: "List cleared",
       chatKlein: "Minimize",
@@ -9478,6 +9511,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const gruende = [];
       if (g) gruende.push(alsText((domain === "road" ? T.kettenGrundRoad : T.kettenGrund)(fmtDE(g.kg), fmtDE(g.pay))));
       if (empfBesser && sugLabel) gruende.push(alsText(T.recBetter(sugLabel)));
+      // Was das Banner im Bild gerade sagt (v6): Stevie meldete „still open to load", waehrend
+      // daneben „Passt nicht in einen Standard-Container -- Empfehlung: 20' Flat Rack" stand.
+      // Dieselben Zweige wie im Banner, nur als Text.
+      if (!manualMode && zeigeBanner && !empfBesser) {
+        const b = result.rotHintAll ? T.recRot(preset)
+          : sug && sug.type === "single" ? T.recSingle(sug.name)
+          : sug && sug.type === "multi" ? T.recMulti(sugLabel)
+          : sug && sug.type === "toobig" ? T.recTooBig(sug.item)
+          : sug && sug.type === "tooheavy" ? T.recTooHeavy(sug.item)
+          : sug && sug.type === "vehicles" ? T.recVehicles(sug.count, sug.name)
+          : sug && sug.type === "equip" ? T.recEquip(sug.name, sug.reason)
+          : T.recNoFit(offenGesamt);
+        const bt = alsText(b);
+        if (bt) gruende.push("Im Bild: " + bt);
+      }
+      if (doorFails && doorFails.length) gruende.push("Im Bild: " + (otDach ? T.doorWarnOT(doorFails.length) + " \xB7 " + T.doorHintOT(otDach.l, otDach.w) : T.doorWarn(doorFails.length) + " \xB7 " + T.doorHint(doorOpening.w, doorOpening.h)));
       return {
         modus: domain,
         equipment: (result.chain || []).map((c2, i2) => (domain === "road" ? "F" : "C") + (i2 + 1) + " \xB7 " + (c2.name || preset)).slice(0, 12),
@@ -9570,6 +9619,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             chips.push(T.chatChipNeu(q, String(a.name || "Position").slice(0, 30)));
             was.push("neu");
           }
+          continue;
+        }
+        if (a.typ === "empfehlen") {
+          // Wie maxzahl eine reine Rechnung im Nachzug-Effekt: welcher Container passt -- fuer eine
+          // Position, fuer Ware ausserhalb des Plans oder (ohne beides) fuer den ganzen Plan.
+          const pr = { art: "empfehlen" };
+          const pi = Math.floor(num(a.position)) - 1;
+          if (pi >= 0 && pi < (neu || cargo).length) pr.i = pi;
+          else if (a.ware && typeof a.ware === "object") {
+            const l = num(a.ware.l), w = num(a.ware.b), h = num(a.ware.h), wt = num(a.ware.gewicht), q = Math.floor(num(a.ware.anzahl, 1));
+            if (!(l >= 1 && l <= 2000 && w >= 1 && w <= 2000 && h >= 1 && h <= 2000)) continue;
+            pr.ware = { name: String(a.ware.name || "Ware").slice(0, 40), l, w, h, weight: wt >= 0 && wt <= 60000 ? wt : 0, qty: q >= 1 && q <= 999 ? q : 1, stackable: true, stackH: null, rotatable: true };
+          } else pr.plan = true;
+          probe.push(pr);
+          chips.push(T.chatChipEmpf(pr.plan ? "Plan" : pr.ware ? pr.ware.name : "P" + (pr.i + 1)));
           continue;
         }
         if (a.typ === "maxzahl") {
@@ -9696,6 +9760,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (pr.preset && pr.preset !== preset) bed.push("Container " + pr.preset + " (Annahme aus der Frage, nicht der gewählte)");
       return `${was}: maximal ${m.deckel ? "mindestens " + MAXPROBE_DECKEL : m.anzahl} Stück passen in 1\xD7 ${zielName} — gerechnet mit: ${bed.join(", ")}`;
     };
+    // Ergebnissatz der Container-Empfehlung (v6). Nennt bei Uebermass die Achsen mit Zentimetern
+    // und die Grenze des Standards -- Stevie soll den Grund wiedergeben, nicht erraten.
+    const empfSatz = (was, e) => {
+      const s2 = e.sug;
+      if (!s2) return `${was}: keine Empfehlung möglich (keine Maße oder keine Menge).`;
+      const ueber = [e.ueber.breit > 0 ? `${e.ueber.breit} cm zu breit` : "", e.ueber.hoch > 0 ? `${e.ueber.hoch} cm zu hoch` : "", e.ueber.lang > 0 ? `${e.ueber.lang} cm zu lang` : ""].filter(Boolean).join(", ");
+      const grenze = `Standardcontainer innen höchstens ${e.std.w} cm breit, ${e.std.h} cm hoch, ${e.std.l} cm lang`;
+      if (s2.type === "single") return `${was}: passt laut Berechnung in 1\xD7 ${s2.name} (der kleinste Standardcontainer, in den alles passt)` + (e.durchTuer === false ? `, geht aber nicht durch dessen Tür (ca. ${e.tuer.w}\xD7${e.tuer.h} cm)` : "") + ".";
+      if (s2.type === "multi") return `${was}: passt in keinen einzelnen Standardcontainer; laut Berechnung ca. ${(s2.combo || []).map((x) => x.count + "\xD7 " + x.name).join(" + ")}.`;
+      if (s2.type === "equip") return `${was}: passt in KEINEN Standardcontainer (${ueber || "Übermaß"}; ${grenze}). Empfehlung des Rechners: ${s2.name} (Special Equipment).`;
+      if (s2.type === "toobig") return `${was}: größer als jeder Container im Rechner, auch als Special Equipment${ueber ? " (" + ueber + ")" : ""}.`;
+      if (s2.type === "tooheavy") return `${was}: schwerer als die Zuladung jedes Standardcontainers.`;
+      return `${was}: keine Empfehlung möglich.`;
+    };
     const maxBedKurz = (m, pr) => [
       pr.stapeln ? (m.stapeln === "nein" ? T.chatBed.nein : m.stapeln === "bis_hoehe" ? T.chatBed.hoehe(m.bis_cm) : T.chatBed.frei) : "",
       pr.drehen !== void 0 ? (m.drehen ? T.chatBed.mitDrehen : T.chatBed.ohneDrehen) : "",
@@ -9709,6 +9787,28 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const befund = [];
         const chipNeu = [];
         for (const pr of n.probe) {
+          if (pr.art === "empfehlen") {
+            const items = pr.plan ? cargo : [pr.ware || (pr.i >= 0 && pr.i < cargo.length ? cargo[pr.i] : null)].filter(Boolean);
+            const label = pr.plan ? "Plan" : pr.ware ? pr.ware.name : "P" + (pr.i + 1);
+            const platzhalter = T.chatChipEmpf(label);
+            if (!items.length) continue;
+            const was = pr.plan ? `Der ganze Plan (${items.length} Positionen)`
+              : pr.ware ? `${Math.max(1, Math.floor(num(pr.ware.qty)))}\xD7 ${pr.ware.name} ${dimDE(pr.ware.l)}\xD7${dimDE(pr.ware.w)}\xD7${dimDE(pr.ware.h)} cm (nicht im Plan)`
+              : `${label} (${Math.max(0, Math.floor(num(items[0].qty)))}\xD7 ${String(items[0].name || "Position").slice(0, 40)}, ${dimDE(num(items[0].l))}\xD7${dimDE(num(items[0].w))}\xD7${dimDE(num(items[0].h))} cm)`;
+            try {
+              // Die Container-Empfehlung gibt es nur bei Seefracht (PRESETS); auf der Strasse
+              // sagt der Satz das ehrlich, statt einen Container zu nennen.
+              if (domain !== "sea") { befund.push(`${was}: Container-Empfehlungen gibt es nur bei Seefracht; gewählt ist ${preset}.`); chipNeu.push([platzhalter, T.chatChipEmpfErg(label, preset)]); continue; }
+              const e = empfProbe(items, carrier);
+              befund.push(empfSatz(was, e));
+              const kurz = !e.sug ? "\u2014" : e.sug.type === "multi" ? (e.sug.combo || []).map((x) => x.count + "\xD7 " + x.name).join(" + ")
+                : e.sug.type === "toobig" ? T.chatEmpfZuGross : e.sug.type === "tooheavy" ? T.chatEmpfZuSchwer : e.sug.name;
+              chipNeu.push([platzhalter, T.chatChipEmpfErg(label, kurz)]);
+            } catch (e2) {
+              chipNeu.push([platzhalter, T.chatChipMaxFehl(label)]);
+            }
+            continue;
+          }
           const item = pr.ware || (pr.i >= 0 && pr.i < cargo.length ? cargo[pr.i] : null);
           if (!item) continue;
           const label = pr.ware ? pr.ware.name : "P" + (pr.i + 1);
