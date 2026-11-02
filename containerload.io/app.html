@@ -8661,6 +8661,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (mail.length > 1900) mail = bauen("");
       try { window.location.href = mail; } catch (e) {}
     };
+    // Offizieller Haken fuer den Partner-Rechner (partner/index.html, gleiche Domain):
+    // liefert den Teilen-Link des aktuellen Plans, ohne den Teilen-Dialog zu oeffnen.
+    // Wird bei jedem Render neu gesetzt und sieht so immer den aktuellen Zustand.
+    window.containerloadShareUrl = () => encodePlanURL(preset, container, cargo, forceCentered, domain);
     const doShare = () => {
       zaehl("geteilt");
       teilenNudgeWeg();

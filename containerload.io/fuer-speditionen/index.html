@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Laderaum-Rechner mit Ihrem Logo – ContainerLoad für Speditionen</title>
+<meta name="description" content="Der 3D-Laderaum-Rechner von ContainerLoad unter Ihrem Namen: eigene Adresse, Ihr Logo, Ihre Farbe. Kunden schicken die Anfrage mit fertigem Ladeplan. 29 € im Monat, 14 Tage kostenlos.">
+<link rel="canonical" href="https://containerload.io/fuer-speditionen/">
+<style>
+:root{--brand:#2e8fff;--bg:#0b1118;--panel:#121923;--field:#0e141c;--line:#1c2531;--text:#e6edf5;--muted:#8a9bb0;--ok:#35c98a;--demo:#e2001a;--on-demo:#fff}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--text);font:17px/1.6 Archivo,system-ui,"Segoe UI",Roboto,sans-serif}
+a{color:inherit}
+h1,h2,h3{line-height:1.15;margin:0;text-wrap:balance}
+h1{font-size:clamp(34px,5.2vw,58px);letter-spacing:-.02em}
+h2{font-size:clamp(26px,3.4vw,38px);letter-spacing:-.01em}
+h3{font-size:19px}
+p{margin:0}
+.wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+.mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
+.eyebrow{color:var(--brand);font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;margin-bottom:12px}
+.muted{color:var(--muted)}
+section{padding:72px 0}
+section + section{border-top:1px solid var(--line)}
+
+.nav{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;max-width:1120px;margin:0 auto}
+.logo{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:700}
+.logo i{width:30px;height:30px;border-radius:8px;background:var(--brand);display:block}
+.logo span span{color:var(--brand)}
+.btn{display:inline-block;background:var(--brand);color:#fff;text-decoration:none;border:0;border-radius:10px;padding:13px 20px;font:inherit;font-weight:700;cursor:pointer}
+.btn:hover{filter:brightness(1.1)}
+.btn.small{padding:9px 14px;font-size:15px}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--text)}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+.hero{padding:48px 0 72px}
+.hero .wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:48px;align-items:center}
+.hero p.lead{font-size:19px;color:var(--muted);margin:20px 0 28px;max-width:34em}
+.cta-row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.price-note{font-size:14px;color:var(--muted);margin-top:14px}
+
+.mock{border:1px solid var(--line);border-radius:14px;overflow:hidden;background:var(--panel);box-shadow:0 30px 80px rgba(0,0,0,.45)}
+.mock .url{display:flex;gap:8px;align-items:center;padding:9px 12px;border-bottom:1px solid var(--line);font-size:12px;color:var(--muted)}
+.mock .url b{width:9px;height:9px;border-radius:50%;background:var(--line);display:block}
+.mock .url span{margin-left:8px;background:var(--field);border-radius:6px;padding:3px 10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;border-bottom:2px solid var(--demo)}
+.mbrand{display:flex;align-items:center;gap:10px;min-width:0}
+.mbadge{flex:none;width:32px;height:32px;border-radius:8px;background:var(--demo);color:var(--on-demo);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.mname{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msub{font-size:11px;color:var(--muted)}
+.mcta{flex:none;background:var(--demo);color:var(--on-demo);border-radius:7px;padding:7px 12px;font-size:13px;font-weight:700;white-space:nowrap}
+.mock svg{display:block;width:100%;height:auto}
+
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:36px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:24px}
+.card p{color:var(--muted);margin-top:10px;font-size:16px}
+.num{font-size:13px;color:var(--brand);font-weight:700;margin-bottom:10px}
+
+.gen{display:grid;grid-template-columns:.9fr 1.1fr;gap:36px;align-items:start;margin-top:36px}
+label{display:block;font-size:14px;color:var(--muted);margin-bottom:14px}
+input,textarea{display:block;width:100%;margin-top:6px;background:var(--field);border:1px solid var(--line);border-radius:10px;color:var(--text);font:inherit;padding:11px 12px}
+input[type=color]{padding:4px;height:46px;width:64px;cursor:pointer}
+.swatches{display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap}
+.sw{width:30px;height:30px;border-radius:8px;border:2px solid transparent;cursor:pointer;padding:0}
+.sw:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.linkbox{background:var(--field);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:12.5px;color:var(--muted);word-break:break-all;margin-top:14px}
+
+.offer{display:grid;grid-template-columns:1.1fr .9fr;gap:36px;align-items:start;margin-top:36px}
+ul.checks{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+ul.checks li{padding-left:30px;position:relative}
+ul.checks li::before{content:"✓";position:absolute;left:0;top:0;color:var(--ok);font-weight:700}
+ul.checks small{display:block;color:var(--muted);font-size:14.5px}
+.pricebox{background:var(--panel);border:1px solid var(--brand);border-radius:16px;padding:28px}
+.price{font-size:54px;font-weight:700;letter-spacing:-.02em;line-height:1}
+.price small{font-size:17px;font-weight:500;color:var(--muted);letter-spacing:0}
+.founder{margin-top:16px;padding:12px 14px;border-radius:10px;background:rgba(53,201,138,.1);border:1px solid rgba(53,201,138,.35);font-size:15px}
+
+form.order{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:28px;margin-top:36px;max-width:760px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.slug{display:flex;align-items:center;margin-top:6px;background:var(--field);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.slug span{padding:0 0 0 12px;color:var(--muted);font-size:14px;white-space:nowrap}
+.slug input{margin:0;border:0;border-radius:0;background:none;padding-left:2px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;color:var(--text)}
+.check input{width:18px;height:18px;margin:3px 0 0;flex:none}
+.fine{font-size:13.5px;color:var(--muted);margin-top:14px}
+.thanks{background:rgba(53,201,138,.1);border:1px solid rgba(53,201,138,.35);border-radius:14px;padding:24px;margin-top:36px;max-width:760px}
+.err{color:#ff8a8a;font-size:14.5px;margin-top:12px}
+.hp{position:absolute;left:-9999px}
+
+details{border-bottom:1px solid var(--line);padding:16px 0}
+summary{cursor:pointer;font-weight:600;font-size:18px}
+details p{color:var(--muted);margin-top:10px;max-width:46em}
+
+footer{border-top:1px solid var(--line);padding:28px 0;font-size:14px;color:var(--muted)}
+footer .wrap{display:flex;gap:20px;flex-wrap:wrap;justify-content:space-between}
+footer a{text-decoration:none}
+footer a:hover{color:var(--text)}
+
+@media (max-width:860px){
+  .hero .wrap,.gen,.offer{grid-template-columns:1fr}
+  .cards{grid-template-columns:1fr}
+  .two{grid-template-columns:1fr}
+  section{padding:52px 0}
+}
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <a class="logo" href="/"><i></i><span>Container<span>Load</span></span></a>
+  <a class="btn small" href="#bestellen">14 Tage kostenlos testen</a>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div>
+      <div class="eyebrow">Für Speditionen</div>
+      <h1>Ihr Laderaum-Rechner. Mit Ihrem Logo.</h1>
+      <p class="lead">Ihre Kunden stauen die Ladung selbst in 3D und schicken die Anfrage gleich mit: Maße, Gewichte, Route, Incoterm und der fertige Ladeplan. Sie kalkulieren sofort, statt Abmessungen nachzufragen.</p>
+      <div class="cta-row">
+        <a class="btn" href="#vorschau">Vorschau mit Ihrem Namen</a>
+        <a class="btn ghost" href="#bestellen">Kostenlos testen</a>
+      </div>
+      <p class="price-note">29 € im Monat · 14 Tage kostenlos · monatlich kündbar</p>
+    </div>
+
+    <div class="mock" aria-hidden="true">
+      <div class="url"><b></b><b></b><b></b><span class="mono">containerload.io/p/<span data-slug>ihre-spedition</span></span></div>
+      <div class="mbar">
+        <div class="mbrand">
+          <div class="mbadge" data-badge>IS</div>
+          <div style="min-width:0"><div class="mname" data-name>Ihre Spedition GmbH</div><div class="msub">Laderaum-Rechner · Container &amp; LKW in 3D</div></div>
+        </div>
+        <div class="mcta">Anfrage senden</div>
+      </div>
+      <svg viewBox="0 0 520 250" role="img">
+        <rect width="520" height="250" fill="#0b1118"/>
+        <g fill="none" stroke="#3c5a82" stroke-width="1.5">
+          <path d="M70 190 L330 215 L470 150 L470 50 L330 95 L70 75 Z"/>
+          <path d="M70 75 L210 35 L470 50 M330 95 L330 215 M70 190 L210 135 L470 150 M210 35 L210 135"/>
+        </g>
+        <g stroke="#0b1118" stroke-width="1">
+          <path d="M82 188 L82 128 L150 134 L150 195Z" fill="#2e8fff"/><path d="M82 128 L132 113 L200 118 L150 134Z" fill="#6bb0ff"/><path d="M150 134 L200 118 L200 178 L150 195Z" fill="#1f6fd1"/>
+          <path d="M156 195 L156 136 L224 142 L224 202Z" fill="#35c98a"/><path d="M156 136 L206 120 L274 126 L224 142Z" fill="#7be0b5"/><path d="M224 142 L274 126 L274 186 L224 202Z" fill="#249a68"/>
+          <path d="M230 202 L230 160 L298 166 L298 208Z" fill="#f5b301"/><path d="M230 160 L280 145 L348 150 L298 166Z" fill="#ffd45c"/><path d="M298 166 L348 150 L348 191 L298 208Z" fill="#c48f00"/>
+        </g>
+        <text x="20" y="238" fill="#8a9bb0" font-size="12" font-family="Consolas,monospace">Voll 71 % · Verladen 18 / 18 · 23,4 / 33,1 m³ · 14.300 kg</text>
+      </svg>
+    </div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Das Problem</div>
+    <h2>„Können Sie uns noch die Maße schicken?“</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Anfragen ohne Maße</h3>
+        <p>Viele Anfragen kommen ohne Abmessungen oder Gewicht. Das kostet eine Rückfrage, einen Tag und manchmal das Geschäft.</p>
+      </div>
+      <div class="card">
+        <h3>Der Kunde rechnet woanders</h3>
+        <p>Wer wissen will, ob die Ware in einen 20-Fuß passt, sucht ein Tool im Netz. Dort steht dann nicht Ihr Name.</p>
+      </div>
+      <div class="card">
+        <h3>Eigenes Tool lohnt nicht</h3>
+        <p>Einen 3D-Rechner programmieren zu lassen wird schnell teuer. Einen fertigen mit Ihrem Logo zu mieten kostet 29 € im Monat.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">So läuft es</div>
+    <h2>Drei Schritte, keine Installation</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="num mono">01</div>
+        <h3>Sie bekommen Ihre Adresse</h3>
+        <p><span class="mono" style="font-size:14px">containerload.io/p/ihre-firma</span> mit Logo, Firmenfarbe und Telefonnummer. Steht in ein bis zwei Werktagen.</p>
+      </div>
+      <div class="card">
+        <div class="num mono">02</div>
+        <h3>Sie verlinken den Rechner</h3>
+        <p>Als Button auf Ihrer Website, in der E-Mail-Signatur, in jeder Angebotsmail. Ihr Kunde braucht kein Login.</p>
+      </div>
+      <div class="card">
+        <div class="num mono">03</div>
+        <h3>Die Anfrage kommt vollständig</h3>
+        <p>Ein Klick auf „Anfrage senden“: Route, Incoterm, Termin und der 3D-Ladeplan landen als E-Mail in Ihrem Postfach.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="vorschau">
+  <div class="wrap">
+    <div class="eyebrow">Vorschau</div>
+    <h2>So sieht es mit Ihrem Namen aus</h2>
+    <div class="gen">
+      <div>
+        <label>Firmenname
+          <input id="gName" value="Ihre Spedition GmbH" maxlength="60" autocomplete="organization">
+        </label>
+        <label>Firmenfarbe
+          <div class="swatches">
+            <input id="gColor" type="color" value="#e2001a" aria-label="Firmenfarbe wählen">
+            <button class="sw" type="button" data-c="#e2001a" style="background:#e2001a" aria-label="Rot"></button>
+            <button class="sw" type="button" data-c="#003d7c" style="background:#003d7c" aria-label="Dunkelblau"></button>
+            <button class="sw" type="button" data-c="#f39200" style="background:#f39200" aria-label="Orange"></button>
+            <button class="sw" type="button" data-c="#00843d" style="background:#00843d" aria-label="Grün"></button>
+            <button class="sw" type="button" data-c="#ffcc00" style="background:#ffcc00" aria-label="Gelb"></button>
+          </div>
+        </label>
+        <div class="cta-row">
+          <a id="gOpen" class="btn" href="/partner/?demo=1" target="_blank" rel="noopener">Vorschau öffnen ↗</a>
+          <button id="gCopy" class="btn ghost" type="button">Link kopieren</button>
+        </div>
+        <div id="gLink" class="linkbox mono"></div>
+      </div>
+      <div class="mock" aria-hidden="true">
+        <div class="url"><b></b><b></b><b></b><span class="mono">containerload.io/p/<span data-slug>ihre-spedition</span></span></div>
+        <div class="mbar">
+          <div class="mbrand">
+            <div class="mbadge" data-badge>IS</div>
+            <div style="min-width:0"><div class="mname" data-name>Ihre Spedition GmbH</div><div class="msub">Laderaum-Rechner · Container &amp; LKW in 3D</div></div>
+          </div>
+          <div class="mcta">Anfrage senden</div>
+        </div>
+        <div style="padding:22px 18px;color:var(--muted);font-size:14.5px">Darunter läuft der vollständige 3D-Rechner. In der Vorschau können Sie alles ausprobieren, auch „Anfrage senden“.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Angebot</div>
+    <h2>Ein Preis. Alles drin.</h2>
+    <div class="offer">
+      <ul class="checks">
+        <li>Eigene Adresse mit Logo, Farbe und Telefonnummer<small>containerload.io/p/ihre-firma</small></li>
+        <li>Button „Anfrage senden“<small>Route, Incoterm, Termin, Gefahrgut und 3D-Ladeplan als E-Mail an Ihre Adresse</small></li>
+        <li>Der vollständige Rechner<small>18 Container- und Fahrzeugtypen, Innenmaße von 8 Reedereien, Paletten gedreht gestaut, mehrere Container</small></li>
+        <li>Packliste aus Excel einfügen, Ladeplan als PDF und Link</li>
+        <li>Ihre Kunden brauchen kein Konto. Keine Cookies, kein Banner.</li>
+        <li>Anfragen laufen direkt vom Kunden zu Ihnen<small>ContainerLoad speichert und liest sie nicht</small></li>
+        <li>Fertiger Button-Code für Website und Signatur</li>
+      </ul>
+      <div class="pricebox">
+        <div class="price">29 € <small>/ Monat</small></div>
+        <p class="muted" style="margin-top:8px;font-size:15px">zzgl. USt. · auf Rechnung · monatlich kündbar</p>
+        <div class="founder"><b>Gründerpreis:</b> Die ersten 10 Speditionen zahlen dauerhaft 19 € im Monat.</div>
+        <p style="margin-top:20px"><a class="btn" href="#bestellen" style="display:block;text-align:center">14 Tage kostenlos testen</a></p>
+        <p class="fine">Im Test entsteht keine Zahlungspflicht. Sie entscheiden nach 14 Tagen.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="bestellen">
+  <div class="wrap">
+    <div class="eyebrow">Loslegen</div>
+    <h2>14 Tage kostenlos testen</h2>
+    <p class="muted" style="margin-top:12px;max-width:40em">Sie füllen das Formular aus, wir richten Ihren Rechner in ein bis zwei Werktagen ein und schicken Ihnen die Adresse. Das Logo senden Sie einfach per E-Mail nach.</p>
+
+    <form class="order" id="order" name="partner-bestellung" method="POST" data-netlify="true" netlify-honeypot="bot-field" action="/fuer-speditionen/">
+      <input type="hidden" name="form-name" value="partner-bestellung">
+      <p class="hp"><label>Nicht ausfüllen <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+      <div class="two">
+        <label>Firma *<input name="firma" id="oFirma" required autocomplete="organization"></label>
+        <label>Ansprechpartner *<input name="ansprechpartner" required autocomplete="name"></label>
+        <label>Ihre E-Mail *<input name="email" type="email" required autocomplete="email"></label>
+        <label>Telefon<input name="telefon" type="tel" autocomplete="tel"></label>
+        <label>Wunschadresse *
+          <div class="slug"><span class="mono">containerload.io/p/</span><input name="wunschadresse" id="oSlug" required pattern="[a-z0-9-]{3,40}" placeholder="ihre-firma" title="Kleinbuchstaben, Ziffern und Bindestriche"></div>
+        </label>
+        <label>Anfragen gehen an (E-Mail) *<input name="anfragen_email" type="email" required placeholder="anfrage@ihre-firma.de"></label>
+      </div>
+      <input type="hidden" name="farbe" id="oFarbe" value="">
+      <label>Nachricht (optional)<textarea name="nachricht" rows="3"></textarea></label>
+      <label class="check"><input type="checkbox" name="unternehmer" value="ja" required> <span>Ich bestelle für ein Unternehmen (§ 14 BGB). Die <a href="/datenschutz">Datenschutzhinweise</a> habe ich gelesen.</span></label>
+      <button class="btn" type="submit" id="oSubmit">Kostenlosen Test starten</button>
+      <p class="err" id="oErr" hidden></p>
+      <p class="fine">Nach 14 Tagen 29 € pro Monat zzgl. USt. (Gründerpreis 19 €), nur wenn Sie den Rechner behalten möchten. Das Angebot richtet sich ausschließlich an Unternehmen.</p>
+    </form>
+
+    <div class="thanks" id="thanks" hidden>
+      <h3>Danke, die Bestellung ist da.</h3>
+      <p style="margin-top:8px">Sie bekommen in ein bis zwei Werktagen eine E-Mail mit Ihrer Adresse. Schicken Sie Ihr Logo gern schon als Antwort darauf.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="eyebrow">Fragen</div>
+    <h2>Kurz geklärt</h2>
+    <div style="margin-top:24px">
+      <details><summary>Wo landen die Anfragen?</summary><p>In Ihrem Postfach. Der Rechner öffnet beim Kunden eine fertig ausgefüllte E-Mail an Ihre Anfrage-Adresse. Sie antworten wie auf jede andere Mail.</p></details>
+      <details><summary>Sehen Sie unsere Anfragen?</summary><p>Nein. Die E-Mail geht vom Kunden direkt an Sie. ContainerLoad zählt nur anonym, wie oft Ihr Rechner geöffnet und wie oft „Anfrage senden“ geklickt wurde. Diese Zahlen bekommen Sie auf Wunsch.</p></details>
+      <details><summary>Können wir den Rechner in unsere Website einbauen?</summary><p>Sie verlinken ihn mit einem Button, den Code dafür bekommen Sie fertig. Er öffnet sich unter Ihrer eigenen Adresse mit Ihrem Logo. Eine direkte Einbettung in Ihre Seite gibt es noch nicht.</p></details>
+      <details><summary>Wir nutzen den kostenlosen Rechner schon. Ändert sich etwas?</summary><p>Nein. Der Rechner auf containerload.io bleibt kostenlos und ohne Anmeldung. Bezahlt wird nur die Version mit Ihrem Namen und dem Anfrage-Button.</p></details>
+      <details><summary>Wie kündigen wir?</summary><p>Mit einer E-Mail zum Monatsende. Ihre Adresse leitet danach auf den normalen Rechner weiter, es entsteht also kein toter Link.</p></details>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© 2026 ContainerLoad · Bremen</span>
+    <span><a href="/">Zum Rechner</a> · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var qs = new URLSearchParams(location.search);
+
+  function onColor(hex) {
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#0b1118' : '#ffffff';
+  }
+  function initials(name) {
+    var w = name.replace(/\b(gmbh|ag|kg|co|mbh|se|ohg|ug|e\.k\.|&)\b\.?/gi, ' ').trim().split(/\s+/).filter(Boolean);
+    return ((w[0] || 'I')[0] + (w[1] ? w[1][0] : '')).toUpperCase();
+  }
+  function slugify(name) {
+    return name.toLowerCase()
+      .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+      .replace(/\b(gmbh|ag|kg|mbh|ohg|ug|co)\b\.?/g, ' ').replace(/&/g, ' ')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'ihre-spedition';
+  }
+
+  // Vorbelegung, wenn jemand aus einer persönlichen Vorschau kommt
+  if (qs.get('firma')) $('gName').value = qs.get('firma').slice(0, 60);
+  if (/^[0-9a-f]{6}$/i.test(qs.get('farbe') || '')) $('gColor').value = '#' + qs.get('farbe');
+  if (qs.get('firma')) { $('oFirma').value = $('gName').value; $('oSlug').value = slugify($('gName').value); }
+
+  var demoUrl = '';
+  function render() {
+    var name = $('gName').value.trim() || 'Ihre Spedition GmbH';
+    var color = $('gColor').value;
+    document.documentElement.style.setProperty('--demo', color);
+    document.documentElement.style.setProperty('--on-demo', onColor(color));
+    document.querySelectorAll('[data-name]').forEach(function (e) { e.textContent = name; });
+    document.querySelectorAll('[data-badge]').forEach(function (e) { e.textContent = initials(name); });
+    document.querySelectorAll('[data-slug]').forEach(function (e) { e.textContent = slugify(name); });
+    document.querySelectorAll('.sw').forEach(function (s) { s.style.borderColor = s.dataset.c === color ? '#fff' : 'transparent'; });
+    var path = '/partner/?demo=1&name=' + encodeURIComponent(name) + '&color=' + encodeURIComponent(color);
+    demoUrl = location.origin + path;
+    $('gOpen').href = path;
+    $('gLink').textContent = demoUrl;
+    $('oFarbe').value = color;
+  }
+  $('gName').addEventListener('input', render);
+  $('gColor').addEventListener('input', render);
+  document.querySelectorAll('.sw').forEach(function (s) {
+    s.addEventListener('click', function () { $('gColor').value = s.dataset.c; render(); });
+  });
+  $('gCopy').addEventListener('click', function () {
+    var b = this;
+    (navigator.clipboard ? navigator.clipboard.writeText(demoUrl) : Promise.reject()).then(
+      function () { b.textContent = 'Kopiert ✓'; },
+      function () { b.textContent = 'Bitte Link unten markieren'; }
+    );
+    setTimeout(function () { b.textContent = 'Link kopieren'; }, 2500);
+  });
+  render();
+
+  $('oFirma').addEventListener('blur', function () {
+    if (!$('oSlug').value && this.value) $('oSlug').value = slugify(this.value);
+  });
+
+  // Bestellung per Netlify Forms, ohne die Seite zu verlassen
+  $('order').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var form = e.target, btn = $('oSubmit');
+    btn.disabled = true; btn.textContent = 'Wird gesendet …'; $('oErr').hidden = true;
+    fetch('/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(new FormData(form)).toString()
+    }).then(function (r) {
+      if (!r.ok) throw new Error(r.status);
+      form.hidden = true; $('thanks').hidden = false;
+      $('thanks').scrollIntoView({ block: 'center' });
+      if (window.goatcounter && window.goatcounter.count) window.goatcounter.count({ path: 'fuer-speditionen/bestellung', event: true });
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = 'Kostenlosen Test starten';
+      $('oErr').textContent = 'Das hat nicht geklappt. Bitte noch einmal versuchen oder kurz eine E-Mail schreiben (Adresse im Impressum).';
+      $('oErr').hidden = false;
+    });
+  });
+})();
+</script>
+<script data-goatcounter="https://containerload.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
+</body>
+</html>
