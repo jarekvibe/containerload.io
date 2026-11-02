@@ -1,75 +1,104 @@
 <!doctype html>
-<html lang="de">
+<html lang="de" data-thema="hell">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Laderaum-Rechner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-:root{--brand:#2e8fff;--on-brand:#fff;--bg:#0b1118;--panel:#121923;--field:#0e141c;--line:#1c2531;--text:#e6edf5;--muted:#7689a0}
+/* Der Partner-Rechner ist das Produkt der Spedition, nicht unseres: keine ContainerLoad-
+   Marke, die Firmenfarbe traegt, und der Rechner darunter laeuft im White-Label-Modus
+   (?wl=). Zwei Farbsaetze, dieselben Werte wie C_HELL / C_DUNKEL in app.html, damit
+   zwischen Kopfleiste und Rechner keine Naht entsteht. */
+:root{
+  --brand:#2E8FFF; --on-brand:#fff;
+  --bg:#EEF1F6; --panel:#FFFFFF; --field:#F6F8FB; --line:#E3E8F0; --line2:#C6D0DD;
+  --text:#1C2733; --dim:#46566A; --faint:#5B6B7E;
+  --shadow:0 30px 80px -30px rgba(16,24,40,.32); --scrim:rgba(16,24,40,.45);
+}
+:root[data-thema="dunkel"]{
+  --bg:#0E1116; --panel:#121821; --field:#1C2531; --line:#232C38; --line2:#2E3A49;
+  --text:#E9F0F7; --dim:#9DB0C2; --faint:#7E91A8;
+  --shadow:0 30px 80px -20px rgba(0,0,0,.85); --scrim:rgba(4,8,14,.74);
+}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{background:var(--bg);color:var(--text);font:15px/1.45 Archivo,system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden}
+body{background:var(--bg);color:var(--text);font:15px/1.45 Archivo,system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit}
 [hidden]{display:none!important}
+.mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
 
-.ribbon{background:#f5b301;color:#1a1300;font-size:13px;font-weight:600;padding:7px 16px;display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center}
-.ribbon a{background:#1a1300;color:#fff;text-decoration:none;padding:3px 10px;border-radius:6px;white-space:nowrap}
+.top{height:3px;background:var(--brand);flex:none}
+.ribbon{background:var(--panel);border-bottom:1px solid var(--line);color:var(--dim);font-size:13px;padding:7px 20px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center}
+.ribbon a{color:var(--brand);font-weight:600;text-decoration:none}
+.ribbon a:hover{text-decoration:underline}
 
-.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px;background:var(--panel);border-bottom:2px solid var(--brand)}
-.brand{display:flex;align-items:center;gap:12px;min-width:0}
-.brand img{height:36px;max-width:180px;object-fit:contain;background:#fff;border-radius:6px;padding:3px 6px}
-.badge{flex:none;width:36px;height:36px;border-radius:8px;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;letter-spacing:.02em}
-.pname{font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.psub{color:var(--muted);font-size:12px}
-.actions{display:flex;align-items:center;gap:14px;flex:none}
-.phone{color:var(--muted);text-decoration:none;font-size:14px;white-space:nowrap}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;height:64px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand img{height:40px;max-width:200px;object-fit:contain}
+.badge{flex:none;width:38px;height:38px;border-radius:10px;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;letter-spacing:.02em}
+.pname{font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.psub{color:var(--faint);font-size:12.5px;margin-top:1px}
+.actions{display:flex;align-items:center;gap:18px;flex:none}
+.phone{display:inline-flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.phone svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .phone:hover{color:var(--text)}
-.cta{background:var(--brand);color:var(--on-brand);border:0;border-radius:8px;padding:10px 16px;font:inherit;font-weight:700;cursor:pointer;white-space:nowrap}
-.cta:hover{filter:brightness(1.1)}
+.cta{background:var(--brand);color:var(--on-brand);border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;white-space:nowrap;transition:filter .15s,transform .15s}
+.cta:hover{filter:brightness(1.08);transform:translateY(-1px)}
 .cta:focus-visible,.ghost:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 
 #app{flex:1;width:100%;border:0;min-height:0;background:var(--bg)}
-.foot{font-size:11.5px;color:var(--muted);padding:5px 16px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.foot{flex:none;font-size:12px;color:var(--faint);padding:6px 20px;border-top:1px solid var(--line);background:var(--panel);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .foot a{text-decoration:none}
-.foot a:hover{color:var(--text)}
+.foot a:hover{color:var(--text);text-decoration:underline}
+.foot .short{display:none}
+@media (max-width:600px){.foot .long{display:none}.foot .short{display:inline}}
 
-#overlay{position:fixed;inset:0;background:rgba(3,6,10,.6);z-index:20}
-#drawer{position:fixed;top:0;right:0;bottom:0;width:min(440px,100%);background:var(--panel);border-left:1px solid var(--line);z-index:21;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .2s ease}
+#overlay{position:fixed;inset:0;background:var(--scrim);z-index:20}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:21;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s cubic-bezier(.2,.7,.2,1)}
 #drawer.open{transform:none}
 @media (prefers-reduced-motion:reduce){#drawer{transition:none}}
-.dhead{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
-.dhead h2{margin:0;font-size:18px}
-.x{background:none;border:0;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px}
-.dbody{padding:16px 20px 24px;overflow:auto;flex:1}
-.plan{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:13.5px;background:var(--field)}
-.plan b{display:block;margin-bottom:2px}
-.plan.warn{border-color:#f5b301}
-.plan .mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:12px;color:var(--muted);word-break:break-all}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.dhead h2{margin:0;font-size:18px;letter-spacing:-.01em}
+.x{background:none;border:0;color:var(--faint);font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:8px}
+.x:hover{background:var(--field);color:var(--text)}
+.dbody{padding:18px 22px 26px;overflow:auto;flex:1}
+.plan{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13.5px;background:var(--field)}
+.plan b{display:block;margin-bottom:3px}
+.plan.warn{border-color:#DDA24C}
+.plan .mono{font-size:12px;color:var(--faint);word-break:break-all;margin-top:4px}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .grid .full{grid-column:1/-1}
-label{display:block;font-size:12.5px;color:var(--muted)}
-input,select,textarea{display:block;width:100%;margin-top:4px;background:var(--field);border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:9px 10px}
+label{display:block;font-size:12.5px;color:var(--dim);font-weight:500}
+input,select,textarea{display:block;width:100%;margin-top:5px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--text);font:inherit;padding:9px 11px}
 textarea{resize:vertical;min-height:64px}
-.send{width:100%;margin-top:16px;padding:12px 16px;font-size:16px}
-.ghost{background:none;border:1px solid var(--line);border-radius:8px;color:var(--text);font:inherit;padding:9px 14px;cursor:pointer}
-.hint{font-size:12px;color:var(--muted);margin-top:10px}
+.send{width:100%;margin-top:18px;padding:13px 16px;font-size:16px}
+.ghost{background:none;border:1px solid var(--line2);border-radius:8px;color:var(--text);font:inherit;padding:10px 14px;cursor:pointer}
+.ghost:hover{background:var(--field)}
+.hint{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5}
 #done textarea{min-height:260px;font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:12.5px}
 #done .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
 
-@media (max-width:560px){
+@media (max-width:600px){
   .phone,.psub{display:none}
-  .bar{padding:8px 12px}
-  .cta{padding:9px 12px}
+  .bar{padding:0 14px;height:58px}
+  .brand img{height:32px}
+  .cta{padding:10px 13px;font-size:14px}
   .grid{grid-template-columns:1fr}
+  .foot{justify-content:center}
 }
 </style>
 </head>
 <body>
 
+<div class="top" aria-hidden="true"></div>
+
 <div id="ribbon" class="ribbon" hidden>
-  <span>Vorschau: So sieht der Rechner mit Ihrem Namen aus.</span>
-  <a id="ribbonLink" href="/fuer-speditionen/#bestellen">14 Tage kostenlos freischalten</a>
+  <span>Vorschau mit Ihrem Namen. So würden Ihre Kunden den Rechner sehen.</span>
+  <a id="ribbonLink" href="/fuer-speditionen/#bestellen">14 Tage kostenlos freischalten →</a>
 </div>
 
 <header class="bar">
@@ -82,16 +111,17 @@ textarea{resize:vertical;min-height:64px}
     </div>
   </div>
   <div class="actions">
-    <a id="phone" class="phone" hidden></a>
+    <a id="phone" class="phone" hidden><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg><span id="phoneText"></span></a>
     <button id="openBtn" class="cta" type="button">Anfrage senden</button>
   </div>
 </header>
 
-<iframe id="app" src="/app" title="3D-Laderaum-Rechner"></iframe>
+<iframe id="app" title="3D-Laderaum-Rechner"></iframe>
 
 <footer class="foot">
-  <span>Geometrische Schätzung · ohne Gewähr</span>
-  <a id="footLink" href="/fuer-speditionen/" target="_blank" rel="noopener">Rechner von ContainerLoad · Auch mit Ihrem Logo →</a>
+  <span class="long">Geometrische Schätzung · ohne Gewähr · ersetzt keine Prüfung der Ladungssicherung</span>
+  <span class="short">Geometrische Schätzung · ohne Gewähr</span>
+  <span><a href="/impressum" target="_blank" rel="noopener">Impressum</a> · <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a></span>
 </footer>
 
 <div id="overlay" hidden></div>
@@ -129,7 +159,7 @@ textarea{resize:vertical;min-height:64px}
         <label class="full">Bemerkung<textarea name="bemerkung"></textarea></label>
       </div>
       <button class="cta send" type="submit">Anfrage an <span id="sendTo">uns</span> senden</button>
-      <p class="hint" id="privacy">Die Anfrage geht als E-Mail direkt an <span id="privName"></span>. ContainerLoad speichert sie nicht.</p>
+      <p class="hint" id="privacy">Die Anfrage geht als E-Mail direkt an <span id="privName"></span>. Sie wird nirgends sonst gespeichert.</p>
     </form>
 
     <div id="done" hidden>
@@ -151,7 +181,7 @@ textarea{resize:vertical;min-height:64px}
   var pathSlug = (location.pathname.match(/^\/p\/([a-z0-9-]+)/i) || [])[1];
   var slug = (qs.get('p') || pathSlug || '').toLowerCase();
   var isDemo = qs.has('demo');
-  var isEmbed = qs.has('embed'); // in der Live-Demo der Verkaufsseite: ohne Band und ohne Fusszeilen-Link
+  var isEmbed = qs.has('embed'); // in der Live-Demo der Verkaufsseite: ohne Band
   var frame = $('app');
   var partner = null;
   var plan = { url: '', stats: '', empty: true };
@@ -162,7 +192,7 @@ textarea{resize:vertical;min-height:64px}
   // Schwarz oder Weiß auf der Firmenfarbe, je nach Helligkeit
   function onColor(hex) {
     var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
-    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#0b1118' : '#ffffff';
+    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#0E1116' : '#ffffff';
   }
   function initials(name) {
     var w = name.replace(/\b(gmbh|ag|kg|co|mbh|se|ohg|ug|e\.k\.|&)\b\.?/gi, ' ').trim().split(/\s+/).filter(Boolean);
@@ -179,9 +209,11 @@ textarea{resize:vertical;min-height:64px}
 
   function loadPartner() {
     if (isDemo) {
+      var th = qs.get('thema');
       return Promise.resolve({
         name: (qs.get('name') || 'Ihre Spedition').slice(0, 60),
-        color: qs.get('color'), phone: (qs.get('phone') || '').slice(0, 30), email: '', demo: true
+        color: qs.get('color'), phone: (qs.get('phone') || '').slice(0, 30), email: '',
+        thema: th === 'dunkel' ? 'dunkel' : 'hell', demo: true
       });
     }
     if (!slug) return Promise.resolve(null);
@@ -191,8 +223,22 @@ textarea{resize:vertical;min-height:64px}
       .catch(function () { return null; });
   }
 
+  // Der Rechner laeuft im White-Label-Modus: Firmenfarbe als Akzent, Thema der Spedition,
+  // Teilen-Links auf diese Adresse. Geteilte Plaene (?c=) und die Sprache reichen wir durch.
+  function appSrc(p, color, thema) {
+    var sp = new URLSearchParams();
+    sp.set('wl', p.demo ? 'vorschau' : slug);
+    sp.set('accent', color);
+    sp.set('thema', thema);
+    ['c', 'p', 'q', 'd', 'cont', 'lang', 'rampe'].forEach(function (k) { if (qs.has(k) && k !== 'p') sp.set(k, qs.get(k)); });
+    // ?p= ist hier der Partner-Slug (Alt-Form), nicht der alte Plan-Parameter
+    return '/app?' + sp.toString();
+  }
+
   function applyPartner(p) {
-    var color = validColor(p.color) || '#2e8fff';
+    var color = validColor(p.color) || '#2E8FFF';
+    var thema = p.thema === 'dunkel' ? 'dunkel' : 'hell';
+    document.documentElement.dataset.thema = thema;
     document.documentElement.style.setProperty('--brand', color);
     document.documentElement.style.setProperty('--on-brand', onColor(color));
     document.title = 'Laderaum-Rechner · ' + p.name;
@@ -203,21 +249,21 @@ textarea{resize:vertical;min-height:64px}
       $('logo').src = p.logo; $('logo').alt = p.name; $('logo').hidden = false; $('badge').hidden = true;
     }
     if (p.phone) {
-      $('phone').textContent = p.phone;
+      $('phoneText').textContent = p.phone;
       $('phone').href = 'tel:' + p.phone.replace(/[^\d+]/g, '');
       $('phone').hidden = false;
     }
     $('sendTo').textContent = p.name;
     $('privName').textContent = p.name;
-    if (p.demo && isEmbed) {
+    if (p.demo) {
       $('privacy').textContent = 'Vorschau: In der freigeschalteten Version geht diese Anfrage als E-Mail direkt an Ihre Adresse.';
-      $('footLink').hidden = true;
-    } else if (p.demo) {
-      $('ribbon').hidden = false;
-      $('ribbonLink').href = '/fuer-speditionen/?firma=' + encodeURIComponent(p.name) +
-        '&farbe=' + encodeURIComponent(color.slice(1)) + '#bestellen';
-      $('privacy').textContent = 'Vorschau: In der freigeschalteten Version geht diese Anfrage als E-Mail direkt an Ihre Adresse.';
+      if (!isEmbed) {
+        $('ribbon').hidden = false;
+        $('ribbonLink').href = '/fuer-speditionen/?firma=' + encodeURIComponent(p.name) +
+          '&farbe=' + encodeURIComponent(color.slice(1)) + '#bestellen';
+      }
     }
+    frame.src = appSrc(p, color, thema);
   }
 
   // ---- Ladeplan aus dem Rechner holen (gleiche Domain, daher Zugriff aufs iframe) ----
@@ -242,9 +288,9 @@ textarea{resize:vertical;min-height:64px}
       res.stats = readStats(doc);
       res.empty = !res.stats || /\b0\s*\/\s*0\b/.test(res.stats);
       if (res.empty) return res;
-      // Offizieller Haken, falls die App ihn später anbietet
+      // Offizieller Haken der App (window.containerloadShareUrl); darunter der alte Weg ueber den Dialog
       if (typeof win.containerloadShareUrl === 'function') { res.url = win.containerloadShareUrl(); return res; }
-      var find = function () { return doc.querySelector('a[href*="/share?"]'); };
+      var find = function () { return doc.querySelector('a[href*="?c="]'); };
       var link = find(), opened = false, hide = null;
       if (!link) {
         var btn = Array.prototype.find.call(doc.querySelectorAll('header button'), function (b) {
@@ -375,8 +421,9 @@ textarea{resize:vertical;min-height:64px}
   });
 
   loadPartner().then(function (p) {
-    // Unbekannter oder gekündigter Partner: Besucher landet im normalen, kostenlosen Rechner
-    if (!p) { location.replace('/app'); return; }
+    // Unbekannter oder gekündigter Partner: Besucher landet im normalen Rechner, ein
+    // geteilter Plan (?c=) bleibt dabei erhalten.
+    if (!p) { location.replace('/app' + location.search); return; }
     partner = p;
     applyPartner(p);
     count(p.demo ? 'p/_vorschau' : 'p/' + slug);

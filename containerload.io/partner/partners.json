@@ -7,6 +7,7 @@
     "logo": "",
     "active": true,
     "seit": "2026-10-11",
-    "notiz": "Beispiel-Eintrag zum Testen. Vor dem Livegang löschen oder active auf false setzen."
+    "notiz": "Beispiel-Eintrag zum Testen. Vor dem Livegang löschen oder active auf false setzen. thema: hell oder dunkel.",
+    "thema": "hell"
   }
 }
