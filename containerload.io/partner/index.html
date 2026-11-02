@@ -91,7 +91,7 @@ textarea{resize:vertical;min-height:64px}
 
 <footer class="foot">
   <span>Geometrische Schätzung · ohne Gewähr</span>
-  <a href="/fuer-speditionen/" target="_blank" rel="noopener">Rechner von ContainerLoad · Auch mit Ihrem Logo →</a>
+  <a id="footLink" href="/fuer-speditionen/" target="_blank" rel="noopener">Rechner von ContainerLoad · Auch mit Ihrem Logo →</a>
 </footer>
 
 <div id="overlay" hidden></div>
@@ -151,6 +151,7 @@ textarea{resize:vertical;min-height:64px}
   var pathSlug = (location.pathname.match(/^\/p\/([a-z0-9-]+)/i) || [])[1];
   var slug = (qs.get('p') || pathSlug || '').toLowerCase();
   var isDemo = qs.has('demo');
+  var isEmbed = qs.has('embed'); // in der Live-Demo der Verkaufsseite: ohne Band und ohne Fusszeilen-Link
   var frame = $('app');
   var partner = null;
   var plan = { url: '', stats: '', empty: true };
@@ -208,7 +209,10 @@ textarea{resize:vertical;min-height:64px}
     }
     $('sendTo').textContent = p.name;
     $('privName').textContent = p.name;
-    if (p.demo) {
+    if (p.demo && isEmbed) {
+      $('privacy').textContent = 'Vorschau: In der freigeschalteten Version geht diese Anfrage als E-Mail direkt an Ihre Adresse.';
+      $('footLink').hidden = true;
+    } else if (p.demo) {
       $('ribbon').hidden = false;
       $('ribbonLink').href = '/fuer-speditionen/?firma=' + encodeURIComponent(p.name) +
         '&farbe=' + encodeURIComponent(color.slice(1)) + '#bestellen';
