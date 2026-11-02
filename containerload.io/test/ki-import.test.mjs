@@ -342,7 +342,7 @@ test("die Brief-Sprachtexte gibt es paarweise (DE und EN)", () => {
 // ── Lade-Assistent (Stufe 4): Woerterbuch statt Willkuer ────────────────────
 
 test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () => {
-  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen", "maxzahl", "leeren"]);
+  assert.deepEqual(CHAT_AKTION_TYPEN, ["container", "stapeln", "menge", "entfernen", "neu", "drehen", "maxzahl", "empfehlen", "leeren"]);
   const item = CHAT_SCHEMA.properties.aktionen.items;
   assert.deepEqual(item.properties.typ.enum, CHAT_AKTION_TYPEN);
   assert.deepEqual(item.required.sort(), Object.keys(item.properties).sort(), "strikt: alle Felder Pflicht");
@@ -355,6 +355,34 @@ test("das Chat-Schema kennt genau die Aktionstypen, die die App ausfuehrt", () =
   assert.doesNotMatch(CHAT_SCHEMA.properties.antwort.description, /Zielsprache/, "die Antwortsprache ist die des Nutzers, nicht die UI-Sprache");
   // Die Container-Whitelist muss die ECHTEN Preset-Namen der App tragen
   for (const n of CHAT_CONTAINER) assert.ok(app.includes(`"${n}"`), `Preset ${n} gibt es in der App nicht`);
+});
+
+test("Stevie v6: empfehlen fragt den Rechner, welcher Container passt (Live-Befund 02.11.26)", () => {
+  const voll = { preset: "", position: 0, wert: "", bis_cm: 0, anzahl: 0, name: "", l: 0, b: 0, h: 0, gewicht: 0, erlaubt: true, annahme_stapeln: "wie_plan", annahme_bis_cm: 0, annahme_drehen: "wie_plan" };
+  // Position, fremde Ware (mit Menge, Standard 1) und der ganze Plan
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "empfehlen", position: 2 }]), [{ typ: "empfehlen", position: 2 }]);
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "empfehlen", name: "Maschine", l: 580, b: 250, h: 300 }]),
+    [{ typ: "empfehlen", ware: { name: "Maschine", l: 580, b: 250, h: 300, gewicht: 0, anzahl: 1 } }]);
+  assert.equal(pruefeAktionen([{ ...voll, typ: "empfehlen", l: 580, b: 250, h: 300, anzahl: 3 }])[0].ware.anzahl, 3);
+  assert.deepEqual(pruefeAktionen([{ ...voll, typ: "empfehlen" }]), [{ typ: "empfehlen" }], "ohne Position und Masse: der ganze Plan");
+  // Platform muss waehlbar sein -- der Rechner empfiehlt sie bei Ueberlaenge
+  for (const n of ["20' Platform", "40' Platform"]) assert.ok(CHAT_CONTAINER.includes(n), n + " fehlt in der Whitelist");
+  // Der Auftrag: Masse NIE selbst vergleichen, sondern den Rechner fragen
+  assert.match(CHAT_AUFTRAG, /MASSE VERGLEICHST DU NIE SELBST/);
+  assert.match(CHAT_AUFTRAG, /250 cm Breite geht in KEINEN Standardcontainer, innen sind es höchstens 235 cm/);
+  assert.match(CHAT_AUFTRAG, /'Welcher Container \/ welcher Typ \/ was empfiehlst du \/ brauche ich Special Equipment\?' = IMMER empfehlen/);
+  assert.match(CHAT_AUFTRAG, /'Passt X in Y\?' = maxzahl mit preset Y \(0 heißt: passt nicht\)/);
+  // Kontext: das beschriebene Packstueck ist gemeint, wenn er umstellen laesst -- nie nur den Container
+  assert.match(CHAT_AUFTRAG, /legst du es per neu an UND stellst den Container um, den der Rechner dafür empfohlen hat — beides in derselben Antwort, nie nur den Container/);
+  assert.match(CHAT_AUFTRAG, /'stattdessen \/ nur das \/ ersetze \/ ändere die Packstücke' = zuerst leeren/);
+  // Special Equipment + vorhandene Ware: ersetzen (sonst nimmt die uebrige Ware das Deck), Strg+Z holt sie zurueck
+  assert.match(CHAT_AUFTRAG, /Braucht das Stück laut Rechner Special Equipment \(Open Top, Flat Rack, Platform\) und steht schon andere Ware im Plan, ersetzt es bei der Umstellung die bisherige Ladung/);
+  // Gewicht nie erfinden (gemeldet: 300 kg aus einer anderen Position uebernommen)
+  assert.match(CHAT_AUFTRAG, /Hat der Nutzer kein Gewicht genannt, setzt du gewicht 0/);
+  assert.match(CHAT_AUFTRAG, /Schätze es nie und übernimm es nie von einer anderen Position/);
+  assert.match(CHAT_SCHEMA.properties.aktionen.items.properties.gewicht.description, /nie schätzen/);
+  // Was das Bild meldet, gehoert zu den Fakten -- und Stevie soll es nennen
+  assert.match(CHAT_AUFTRAG, /In fakten\.gruende steht auch, was das Bild gerade meldet/);
 });
 
 test("pruefeAktionen: nur Plausibles, Deckel, nach entfernen ist Schluss", () => {
