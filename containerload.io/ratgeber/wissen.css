@@ -159,6 +159,16 @@ b{color:var(--text);font-weight:700}
   border:1px solid var(--line-2);border-radius:var(--r-s);padding:9px 10px;width:100%;
 }
 .cbm-calc input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+/* Gewichts-Check (Zuladungs-Seiten): ein Container-Feld + ein Gewichts-Feld */
+.cbm-calc select{
+  font-family:var(--mono);font-size:14px;color:var(--text);background:var(--deep);
+  border:1px solid var(--line-2);border-radius:var(--r-s);padding:9px 10px;width:100%;
+}
+.cbm-calc select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.gw-zeile{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;align-items:end}
+.gw-zeile2{margin-top:8px;font-size:13.5px;line-height:1.5}
+.gw-ok{color:var(--good);font-weight:600}
+.gw-knapp,.gw-zuviel{color:var(--warn);font-weight:600}
 .cbm-calc-result{
   margin-top:16px;padding-top:14px;border-top:1px solid var(--line);
   font-size:15px;color:var(--dim);
