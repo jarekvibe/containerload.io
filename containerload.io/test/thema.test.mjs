@@ -34,7 +34,8 @@ test("Voreinstellung ist das System, die Wahl wird gemerkt", () => {
 });
 
 test("eingebettet bleibt es dunkel", () => {
-  assert.ok(app.includes('React.useState(EMBEDDED ? "dunkel" : themaStart())'),
+  // Der Partner-Rechner (WL) darf sein Thema selbst mitbringen; ohne WL gilt die alte Regel.
+  assert.ok(app.includes('React.useState((WL && WL.thema) || (EMBEDDED ? "dunkel" : themaStart()))'),
     "der Demo-iframe der Startseite muss dunkel starten — die Landingpage ist dunkel");
   // und der Umschalter erscheint dort gar nicht erst.
   assert.ok(/!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "flex items-center", role: "group"/.test(app),

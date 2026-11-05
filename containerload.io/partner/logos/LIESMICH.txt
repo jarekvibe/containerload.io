@@ -1,0 +1,1 @@
+# Logos der Partner-Speditionen (PNG oder SVG). Dateiname = Eintrag in partners.json.
