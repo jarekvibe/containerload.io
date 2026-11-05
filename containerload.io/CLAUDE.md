@@ -1211,6 +1211,15 @@ PageSpeed nannte für die Startseite mobil 85, größter vermeidbarer Posten: re
 - Englisch wird über ein `EN = { key: … }`-Wörterbuch im Inline-JS überlagert. Sprachwahl in `localStorage` unter `cl_lang`.
 - **Regel: Jeder neue sichtbare Text braucht einen `data-i18n`-Schlüssel und einen passenden EN-Eintrag.** Niemals nur eine Sprache hinzufügen — sonst bricht die Parität.
 
+
+### Zusammenarbeit über den Link: Fassungen und „Verladen melden" (November 2026)
+Die Auswertung zeigte als häufigsten echten Ablauf einen Plan, der zwischen zwei Firmen hin- und hergeht (derselbe Link 97-mal geöffnet, fünf Fassungen, je ein, zwei Zahlen anders) — und an der Rampe endete der Weg mit dem letzten Haken. Beides ist jetzt ohne Server gelöst:
+- **Plan-Kennung `&id=`** (8 Zeichen `[a-z0-9]`, `neuePlanId`) — ein **eigener Parameter**, die Codetabelle von `?c=` bleibt unberührt. Sie hängt am Plan, nicht an einer Person: bleibt über alle Fassungen (Entwurf, „Meine Pläne" als `pid`, geteilter Link), **„Leeren" beginnt eine neue**. Jeder verschickte Link trägt sie (`mitId(...)`: Teilen, Rampen-Link, QR im Ladevorschlag) und merkt die Fassung lokal (`fassungJetztMerken`). Der Rampen-Schlüssel `cl-rampe-v1:` hasht bewusst den Link **ohne** Kennung.
+- **Änderungs-Anzeige:** `cl-fassungen-v1` (localStorage, höchstens 20 Kennungen) hält je Kennung die zuletzt gesehene Fassung. Öffnet jemand einen Link mit bekannter Kennung und anderer Fassung, steht unter der Kopfzeile, was sich geändert hat (`fassungUnterschiede`: gepaart wird erst Gleiches, dann gleicher Name, dann der Reihe nach — eine eingefügte Position „ändert" nicht jede folgende). Nie im EMBEDDED-iframe.
+- **Verladen melden** (Rampen-Modus): je Container Container-Nr. (live geprüft nach **ISO 6346**, `containerNrPruefen` — „Prüfziffer passt nicht (erwartet N)") und Siegel-Nr., dazu eine Notiz; gespeichert im selben `cl-rampe-v1`-Eintrag (`{ t, h, vm }`), „Haken zurücksetzen" lässt die Nummern stehen. „Meldung teilen" (`navigator.share`, sonst Zwischenablage) oder „Per E-Mail" (mailto) verschickt den Plan-Link plus **`&ok=`** (base64url-JSON, `vmPacken`). Wer ihn öffnet, sieht einen grünen Streifen „Verladen gemeldet". **Der Link kommt von außen:** `vmLesen` baut alles neu auf, begrenzt Länge, Zeichen und Zahlen; angezeigt wird nur als Text.
+- Ereignisse `fassung-geaendert`, `meldung-geoeffnet`, `verladen-gemeldet`; die Datenschutzseite (Abschnitt 2) nennt beide Speicher und dass die Meldung nur im selbst verschickten Link reist. `test/zusammenarbeit.test.mjs` hält Vergleich, Prüfziffer, Bereinigung und die Verträge fest.
+- **Bewusst noch nicht:** ein Live-Link (Server, eigene Datenschutz-Abstimmung) — das wäre der nächste eigene Schritt.
+
 ---
 
 ## 5. Arbeitsweise & Guardrails

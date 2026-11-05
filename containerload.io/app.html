@@ -3704,9 +3704,40 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       rampeFertig: "Alles verladen.",
       rampeLeer: "Keine Ladung im Plan.",
       rampeReset: "Haken zur\xFCcksetzen",
-      rampeLokal: "Haken bleiben nur auf diesem Ger\xE4t.",
+      rampeLokal: "Haken bleiben auf diesem Ger\xE4t \u2014 die Meldung nur im Link, den du verschickst.",
       rampeLink: "Rampen-Link kopieren",
       rampeLinkKopiert: "Rampen-Link kopiert",
+      // Verladen melden: die Rueckmeldung von der Rampe, als Link (&ok=) -- kein Server.
+      vmBtn: "Verladen melden",
+      vmSub: "Container- und Siegel-Nr. eintragen \u2014 die Meldung geht als Link an den Absender.",
+      vmNr: "Container-Nr.",
+      vmSiegel: "Siegel-Nr.",
+      vmNotiz: "Notiz (optional)",
+      vmNotizPh: "z. B. zwei Kartons besch\xE4digt, Fotos per Mail",
+      vmPzOk: "Pr\xFCfziffer stimmt",
+      vmPzFalsch: (pz) => "Pr\xFCfziffer passt nicht (erwartet " + pz + ") \u2014 bitte mit der T\xFCr vergleichen",
+      vmSchritte: (h, n) => h + " von " + n + " Schritten abgehakt",
+      vmTeilen: "Meldung teilen",
+      vmMail: "Per E-Mail",
+      vmZurueck: "Zur\xFCck zur Liste",
+      vmBetreff: (name) => "Verladen: " + name,
+      vmMailText: (link) => "Verladen \u2014 die Meldung mit Container- und Siegel-Nr.:\n" + link,
+      vmKopiert: "Meldungs-Link kopiert",
+      vmGemeldet: (datum) => "Verladen gemeldet \xB7 " + datum,
+      vmOhneNr: "ohne Container-Nr.",
+      vmPzWarn: "Pr\xFCfziffer passt nicht",
+      vmNotizLbl: "Notiz",
+      // Was sich seit dem letzten Oeffnen geaendert hat (Fassungen derselben Plan-Kennung)
+      fassTitel: (datum) => "Ge\xE4ndert seit deinem letzten \xD6ffnen (" + datum + ")",
+      fassAlle: (n) => "alle " + n + " zeigen",
+      fassWeniger: "weniger zeigen",
+      fassContainer: (a, b) => "Container: " + a + " \u2192 " + b,
+      fassFeldName: (f) => ({ n: "Name", q: "Anzahl", l: "L\xE4nge", w: "Breite", h: "H\xF6he", wt: "Gewicht", s: "Stapeln", sh: "Stapelh\xF6he", r: "Drehen" })[f] || f,
+      fassStapel: (v) => v === 0 ? "nein" : v === 1 ? "ja" : "max. " + v + " hoch",
+      fassJaNein: (v) => v ? "ja" : "nein",
+      fassPos: (p) => "Pos. " + p,
+      fassNeu: "Neu",
+      fassWeg: "Entfernt",
       slotOffen: (n) => n === 1 ? "1 St\u00FCck passt nicht in den zugewiesenen Container" : `${n} St\u00FCcke passen nicht in den zugewiesenen Container`,
       fokusAlleTitel: "Den ganzen Plan zeigen",
       fokusEinTitel: (m) => `Nur ${m} zeigen \u2013 Ansicht, Kennzahlen und Ladungsliste`,
@@ -4131,9 +4162,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       rampeFertig: "All loaded.",
       rampeLeer: "No cargo in this plan.",
       rampeReset: "Reset checkmarks",
-      rampeLokal: "Checkmarks stay on this device only.",
+      rampeLokal: "Checkmarks stay on this device \u2014 the report only in the link you send.",
       rampeLink: "Copy ramp link",
       rampeLinkKopiert: "Ramp link copied",
+      vmBtn: "Report loaded",
+      vmSub: "Enter container and seal no. \u2014 the report goes back to the sender as a link.",
+      vmNr: "Container no.",
+      vmSiegel: "Seal no.",
+      vmNotiz: "Note (optional)",
+      vmNotizPh: "e.g. two cartons damaged, photos by email",
+      vmPzOk: "Check digit is correct",
+      vmPzFalsch: (pz) => "Check digit does not match (expected " + pz + ") \u2014 please compare with the door",
+      vmSchritte: (h, n) => h + " of " + n + " steps checked off",
+      vmTeilen: "Share report",
+      vmMail: "By email",
+      vmZurueck: "Back to the list",
+      vmBetreff: (name) => "Loaded: " + name,
+      vmMailText: (link) => "Loaded \u2014 the report with container and seal no.:\n" + link,
+      vmKopiert: "Report link copied",
+      vmGemeldet: (datum) => "Reported loaded \xB7 " + datum,
+      vmOhneNr: "no container no.",
+      vmPzWarn: "check digit does not match",
+      vmNotizLbl: "Note",
+      fassTitel: (datum) => "Changed since you last opened it (" + datum + ")",
+      fassAlle: (n) => "show all " + n,
+      fassWeniger: "show less",
+      fassContainer: (a, b) => "Container: " + a + " \u2192 " + b,
+      fassFeldName: (f) => ({ n: "Name", q: "Quantity", l: "Length", w: "Width", h: "Height", wt: "Weight", s: "Stacking", sh: "Stack height", r: "Rotation" })[f] || f,
+      fassStapel: (v) => v === 0 ? "no" : v === 1 ? "yes" : "max. " + v + " high",
+      fassJaNein: (v) => v ? "yes" : "no",
+      fassPos: (p) => "Item " + p,
+      fassNeu: "New",
+      fassWeg: "Removed",
       slotOffen: (n) => n === 1 ? "1 piece does not fit into the assigned container" : `${n} pieces do not fit into the assigned container`,
       fokusAlleTitel: "Show the whole plan",
       fokusEinTitel: (m) => `Show ${m} only \u2013 view, figures and cargo list`,
@@ -5386,6 +5446,105 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     return schritte;
   }
+  // ── Zusammenarbeit ueber den Link (November 2026) ─────────────────────────
+  // Gemessen (Rechnungen-Export, 30 Tage): eine echte Sendung, 40' HC, wurde 97-mal per Link
+  // geoeffnet -- 52-mal aus Indonesien, 45-mal aus Deutschland -- in rund fuenf Fassungen
+  // (Hoehe 212 -> 214, Breiten, Gewichte verdoppelt). Am Verladeort liefen Rampen-Modus und
+  // Ladevorschlag. Zwei Luecken daran: wer eine neue Fassung bekommt, sieht nicht, WAS sich
+  // geaendert hat; und die Rampe hat keinen Rueckweg -- abgehakt wird nur auf dem eigenen Handy.
+  //
+  // Die Plan-Kennung: acht zufaellige Zeichen, als eigener Parameter &id= am Teilen-Link (das
+  // ?c=-Format bleibt unberuehrt). Sie haengt am Plan, nicht an einer Person: dieselbe Sendung
+  // behaelt sie ueber alle Fassungen, "Leeren" beginnt eine neue.
+  var PLAN_ID_RE = /^[a-z0-9]{8}$/;
+  var neuePlanId = () => {
+    const abc = "abcdefghijklmnopqrstuvwxyz0123456789";
+    let s = "";
+    try { const a = new Uint8Array(8); crypto.getRandomValues(a); a.forEach((b) => { s += abc[b % 36]; }); }
+    catch (e) { for (let i = 0; i < 8; i++) s += abc[Math.floor(Math.random() * 36)]; }
+    return s;
+  };
+  var URL_PARAM = (k) => { try { return new URLSearchParams(window.location.search).get(k); } catch (e) { return null; } };
+  var URL_PLAN_ID = (() => { const v = URL_PARAM("id"); return v && PLAN_ID_RE.test(v) ? v : null; })();
+  var URL_PLAN_C = URL_PARAM("c");
+  // Die zuletzt gesehene Fassung je Plan-Kennung, NUR auf diesem Geraet (die Datenschutzseite
+  // nennt den Speicher). Gemerkt wird beim Oeffnen eines Links und beim eigenen Teilen.
+  var FASSUNG_KEY = "cl-fassungen-v1";
+  var fassungLesen = (id) => {
+    try { const a = JSON.parse(localStorage.getItem(FASSUNG_KEY) || "{}"); return a && a[id] && typeof a[id].c === "string" ? a[id] : null; } catch (e) { return null; }
+  };
+  var fassungMerken = (id, c) => {
+    if (!id || !PLAN_ID_RE.test(id) || typeof c !== "string" || !c) return;
+    try {
+      const a = JSON.parse(localStorage.getItem(FASSUNG_KEY) || "{}") || {};
+      a[id] = { t: Date.now(), c };
+      const ks = Object.keys(a);
+      if (ks.length > 20) ks.sort((x, y) => (a[x].t || 0) - (a[y].t || 0)).slice(0, ks.length - 20).forEach((k) => { delete a[k]; });
+      localStorage.setItem(FASSUNG_KEY, JSON.stringify(a));
+    } catch (e) {}
+  };
+  // Was hat sich zwischen zwei Fassungen geaendert? Beide kommen im ?c=-Format (compactDecode).
+  // Gepaart wird zuerst, was gleich geblieben ist (gleicher Platz vor anderem Platz), dann gleicher
+  // Name, dann der Reihe nach -- sonst wuerde eine eingefuegte Position jede folgende "aendern".
+  // Rueckgabe: Liste von { art: "container"|"feld"|"neu"|"weg", ... }; leer = nichts geaendert.
+  function fassungUnterschiede(altC, neuC) {
+    const A = compactDecode(altC), N = compactDecode(neuC);
+    if (!A || !N) return [];
+    const aus = [];
+    if (A.pr !== N.pr || (A.eq || "") !== (N.eq || "")) aus.push({ art: "container", alt: A.pr, neu: N.pr });
+    const sig = (r) => [r.n, r.l, r.w, r.h, r.wt, r.q, r.s, r.r, r.sh || 0, r.st || 0, r.sl || 0].join("|");
+    const paar = N.it.map(() => -1), belegt = new Set();
+    N.it.forEach((r, i) => { if (i < A.it.length && sig(A.it[i]) === sig(r)) { paar[i] = i; belegt.add(i); } });
+    N.it.forEach((r, i) => { if (paar[i] >= 0) return; const j = A.it.findIndex((a, k) => !belegt.has(k) && sig(a) === sig(r)); if (j >= 0) { paar[i] = j; belegt.add(j); } });
+    N.it.forEach((r, i) => {
+      if (paar[i] >= 0) return;
+      let j = r.n !== V2_DEFAULT_NAME ? A.it.findIndex((a, k) => !belegt.has(k) && a.n === r.n) : -1;
+      if (j < 0) j = A.it.findIndex((a, k) => !belegt.has(k) && (a.n === r.n || a.l === r.l || a.w === r.w || a.h === r.h));
+      if (j >= 0) { paar[i] = j; belegt.add(j); }
+    });
+    const FELDER = ["n", "q", "l", "w", "h", "wt", "s", "sh", "r"];
+    N.it.forEach((r, i) => {
+      const j = paar[i];
+      if (j < 0) { aus.push({ art: "neu", p: i + 1, it: r }); return; }
+      const a = A.it[j];
+      FELDER.forEach((f) => { const x = f === "sh" ? a.sh || 0 : a[f], y = f === "sh" ? r.sh || 0 : r[f]; if (x !== y) aus.push({ art: "feld", p: i + 1, name: r.n, feld: f, alt: x, neu: y }); });
+    });
+    A.it.forEach((a, k) => { if (!belegt.has(k)) aus.push({ art: "weg", it: a }); });
+    return aus;
+  }
+  // Container-Nummer nach ISO 6346: vier Buchstaben (Eigentuemer + U/J/Z), sechs Ziffern, eine
+  // Pruefziffer. Buchstabenwerte ab A = 10, Vielfache von 11 werden uebersprungen; Summe der
+  // Werte mal 2^Stelle, mod 11, mod 10. Rueckgabe: null (noch unvollstaendig), sonst { ok, norm, pz }.
+  var ISO6346_WERT = (() => { const o = {}; let v = 10; for (let c = 65; c <= 90; c++) { if (v % 11 === 0) v++; o[String.fromCharCode(c)] = v++; } return o; })();
+  function containerNrPruefen(roh) {
+    const s = String(roh || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    if (!/^[A-Z]{4}[0-9]{7}$/.test(s)) return null;
+    let summe = 0;
+    for (let i = 0; i < 10; i++) summe += (i < 4 ? ISO6346_WERT[s[i]] : +s[i]) * Math.pow(2, i);
+    const pz = summe % 11 % 10;
+    return { ok: pz === +s[10], norm: s, pz };
+  }
+  // Die Verlade-Meldung von der Rampe reist NUR im Link (&ok=), den der Verlader selbst
+  // verschickt -- kein Server. Beim Lesen wird alles neu aufgebaut und begrenzt (Laenge,
+  // Zeichen, Zahlen): der Link kommt von aussen.
+  var vmSauber = (s, max, re) => String(s == null ? "" : s).replace(re, "").slice(0, max);
+  function vmPacken(m) {
+    const j = JSON.stringify({ v: 1, t: Math.round(+m.t || Date.now()), n: vmSauber(m.n, 300, /[\u0000-\u001f]/g),
+      c: (m.c || []).slice(0, 24).map((k) => ({ m: vmSauber(k.m, 4, /[^A-Z0-9]/g), ty: vmSauber(k.ty, 30, /[\u0000-\u001f]/g), nr: vmSauber(String(k.nr || "").toUpperCase(), 11, /[^A-Z0-9]/g), sg: vmSauber(k.sg, 30, /[^A-Za-z0-9 \-\/]/g), h: Math.max(0, Math.round(+k.h || 0)), s: Math.max(0, Math.round(+k.s || 0)) })) });
+    return btoa(unescape(encodeURIComponent(j))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function vmLesen(roh) {
+    try {
+      if (typeof roh !== "string" || !roh || roh.length > 6000) return null;
+      const d = JSON.parse(decodeURIComponent(escape(atob(roh.replace(/-/g, "+").replace(/_/g, "/")))));
+      if (!d || d.v !== 1 || !Array.isArray(d.c) || !d.c.length) return null;
+      const t = +d.t;
+      if (!(t > 1.7e12 && t < 4.1e12)) return null;
+      const c = d.c.slice(0, 24).map((k) => ({ m: vmSauber(k && k.m, 4, /[^A-Z0-9]/g), ty: vmSauber(k && k.ty, 30, /[\u0000-\u001f]/g), nr: vmSauber(String(k && k.nr || "").toUpperCase(), 11, /[^A-Z0-9]/g), sg: vmSauber(k && k.sg, 30, /[^A-Za-z0-9 \-\/]/g), h: Math.max(0, Math.min(999, Math.round(+(k && k.h) || 0))), s: Math.max(0, Math.min(999, Math.round(+(k && k.s) || 0))) }));
+      return { t, n: vmSauber(d.n, 300, /[\u0000-\u001f]/g), c };
+    } catch (e) { return null; }
+  }
+  var URL_VM = vmLesen(URL_PARAM("ok"));
   function SlotPick({ idx, name, isMain, mainPreset, overrides, onPick, domain, fokus, onFokus }) {
     const road = domain === "road";
     const TBL = road ? VEHICLES : PRESETS;
@@ -7528,20 +7687,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", disabled: !kannSenden, onClick: senden }, stand === "senden" ? T.fbSending : T.fbSend)),
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.m, lineHeight: 1.45 } }, T.fbPrivacy))));
   }
-  function PlansDialog({ plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, onClose, setToast, T, planName }) {
+  function PlansDialog({ plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, onClose, setToast, T, planName, planId }) {
     const dstr = (ts) => { try { return new Date(ts).toLocaleDateString(LANG === "en" ? "en-US" : "de-DE", { day: "2-digit", month: "short" }); } catch (e) { return ""; } };
     const defName = (planName && planName.trim()) || preset + " \xB7 " + dstr(Date.now());
     const [name, setName] = useState("");
     const [editingId, setEditingId] = useState(null);
     const [editName, setEditName] = useState("");
     const save = () => {
-      const plan = { id: uid(), name: (name.trim() || defName).slice(0, 60), savedAt: Date.now(), state: planStateFrom(preset, container, cargo, forceCentered, domain) };
+      const plan = { id: uid(), pid: planId, name: (name.trim() || defName).slice(0, 60), savedAt: Date.now(), state: planStateFrom(preset, container, cargo, forceCentered, domain) };
       setPlans(savePlanToStore(plan));
       setName("");
       setToast(T.plansSaved);
     };
-    const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d, pl.name); onClose(); setToast(T.plansLoaded); };
-    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
+    const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d, pl.name, pl.pid); onClose(); setToast(T.plansLoaded); };
+    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain) + (PLAN_ID_RE.test(pl.pid || "") ? "&id=" + pl.pid : ""); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
     const removePlan = (id) => setPlans(deletePlanFromStore(id));
     const startRename = (pl) => { setEditingId(pl.id); setEditName(pl.name); };
     const commitRename = () => {
@@ -7969,6 +8128,30 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     // Name des Plans. Leer heisst unbenannt – dann bleibt alles beim bisherigen Verhalten.
     const [planName, setPlanName] = useState(DRAFT && DRAFT.planName || "");
+    // Die Plan-Kennung (siehe neuePlanId): aus dem Link, sonst aus dem Entwurf -- ausser die
+    // Ladung kam per ?q= (dann ist es ein neuer Plan, nicht der Entwurf).
+    const [planId, setPlanId] = useState(() => SHARED ? URL_PLAN_ID || neuePlanId() : QIMPORT ? neuePlanId() : DRAFT && PLAN_ID_RE.test(DRAFT.planId || "") ? DRAFT.planId : neuePlanId());
+    // Jeder Teilen-Weg haengt die Kennung an und merkt sich die geteilte Fassung -- damit dieses
+    // Geraet spaeter zeigen kann, was der Empfaenger in seiner Antwort-Fassung geaendert hat.
+    const mitId = (url) => url + "&id=" + planId;
+    const fassungJetztMerken = () => { try { fassungMerken(planId, compactEncode(planStateFrom(preset, container, cargo, forceCentered, domain), { presets: PRESETS, vehicles: VEHICLES })); } catch (e) {} };
+    // Oeffnet jemand einen Link mit Plan-Kennung, den DIESES Geraet schon in einer anderen
+    // Fassung gesehen (oder selbst verschickt) hat, steht oben, was sich geaendert hat.
+    // Verglichen wird nur lokal; danach gilt die neue Fassung als gesehen.
+    const [fassung, setFassung] = useState(null);
+    const [fassungAlle, setFassungAlle] = useState(false);
+    useEffect(() => {
+      if (!SHARED || !URL_PLAN_ID || !URL_PLAN_C || EMBEDDED) return;
+      const alt = fassungLesen(URL_PLAN_ID);
+      if (alt && alt.c !== URL_PLAN_C) {
+        const liste = fassungUnterschiede(alt.c, URL_PLAN_C);
+        if (liste.length) { setFassung({ liste, seit: alt.t }); zaehl("fassung-geaendert"); }
+      }
+      fassungMerken(URL_PLAN_ID, URL_PLAN_C);
+    }, []);
+    // Die Verlade-Meldung von der Rampe (&ok=): gelesen und bereinigt in vmLesen.
+    const [vmAnzeige, setVmAnzeige] = useState(() => SHARED && !EMBEDDED ? URL_VM : null);
+    useEffect(() => { if (vmAnzeige) zaehl("meldung-geoeffnet"); }, []);
     // Fuer Dateinamen: Umlaute ausschreiben, alles andere auf Bindestriche. Leer -> null,
     // damit die Aufrufer beim alten Namen bleiben koennen.
     // Speichern ohne Umweg ueber den Dialog. Gibt es bereits einen Plan mit genau diesem Namen,
@@ -7981,8 +8164,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const nm = (planName.trim() || preset + " \xB7 " + stempel).slice(0, 60);
       const state = planStateFrom(preset, container, cargo, forceCentered, domain);
       const vorhanden = loadPlans().find((p) => p.name === nm);
-      if (vorhanden) setPlans(writePlans(loadPlans().map((p) => p.id === vorhanden.id ? { ...p, state, savedAt: Date.now() } : p)));
-      else setPlans(savePlanToStore({ id: uid(), name: nm, savedAt: Date.now(), state }));
+      if (vorhanden) setPlans(writePlans(loadPlans().map((p) => p.id === vorhanden.id ? { ...p, state, pid: planId, savedAt: Date.now() } : p)));
+      else setPlans(savePlanToStore({ id: uid(), pid: planId, name: nm, savedAt: Date.now(), state }));
       if (!planName.trim()) setPlanName(nm);
       setToast(T.plansSaved);
     };
@@ -8067,6 +8250,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const [rampeOffen, setRampeOffen] = useState(RAMPE_START);
     const [rampeSlot, setRampeSlot] = useState(0);
     const [rampeHaken, setRampeHaken] = useState({});
+    // "Verladen melden": Container-Nr. und Siegel je Container (Index wie die Haken), dazu
+    // eine Notiz. Liegt im SELBEN Eintrag wie die Haken ({ t, h, vm }) -- ein Reload an der
+    // Rampe verliert die halb eingetippte Nummer nicht. Verlassen tut sie das Geraet nur im
+    // Link, den der Verlader selbst verschickt (&ok=, siehe vmPacken).
+    const VM_LEER = { nr: {}, sg: {}, n: "" };
+    const [rampeVm, setRampeVm] = useState(VM_LEER);
+    const [rampeMelden, setRampeMelden] = useState(false);
+    const rampeHakenRef = useRef({});
+    rampeHakenRef.current = rampeHaken;
+    const rampeVmRef = useRef(VM_LEER);
+    rampeVmRef.current = rampeVm;
+    const vmAusSpeicher = (v) => {
+      const sauber = (o, max) => { const r = {}; if (o && typeof o === "object") Object.keys(o).slice(0, 24).forEach((k) => { if (/^[0-9]{1,2}$/.test(k)) r[k] = String(o[k] || "").slice(0, max); }); return r; };
+      return v && typeof v === "object" ? { nr: sauber(v.nr, 14), sg: sauber(v.sg, 30), n: String(v.n || "").slice(0, 300) } : VM_LEER;
+    };
     const rampenSchluessel = () => {
       let h = 5381;
       const s = encodePlanURL(preset, container, cargo, forceCentered, domain);
@@ -8077,14 +8275,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!rampeOffen) return;
       zaehl("rampen-modus");
       setRampeSlot(0);
+      setRampeMelden(false);
       try {
         const raw = localStorage.getItem(rampenSchluessel());
-        setRampeHaken(raw && JSON.parse(raw).h || {});
-      } catch (e) { setRampeHaken({}); }
+        const d = raw ? JSON.parse(raw) : null;
+        setRampeHaken(d && d.h || {});
+        setRampeVm(vmAusSpeicher(d && d.vm));
+      } catch (e) { setRampeHaken({}); setRampeVm(VM_LEER); }
     }, [rampeOffen]);
-    const rampeSpeichern = (haken) => {
+    const rampeSpeichern = (haken, vm = rampeVmRef.current) => {
       try {
-        localStorage.setItem(rampenSchluessel(), JSON.stringify({ t: Date.now(), h: haken }));
+        localStorage.setItem(rampenSchluessel(), JSON.stringify({ t: Date.now(), h: haken, vm }));
         // Alte Plaene aufraeumen: hoechstens 20 Abhaklisten, die aeltesten fliegen.
         const alle = Object.keys(localStorage).filter((k) => k.startsWith("cl-rampe-v1:"));
         if (alle.length > 20) {
@@ -8100,8 +8301,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       rampeSpeichern(n);
       return n;
     });
+    const rampeVmSetzen = (feld, slot, wert) => setRampeVm((v) => {
+      const n = feld === "n" ? { ...v, n: wert } : { ...v, [feld]: { ...v[feld], [slot]: wert } };
+      rampeSpeichern(rampeHakenRef.current, n);
+      return n;
+    });
+    // Zuruecksetzen nimmt nur die Haken -- eingetippte Container- und Siegel-Nummern bleiben.
     const rampeReset = () => {
-      try { localStorage.removeItem(rampenSchluessel()); } catch (e) {}
+      const vm = rampeVmRef.current;
+      const vmLeer = !vm.n && !Object.values(vm.nr).some(Boolean) && !Object.values(vm.sg).some(Boolean);
+      if (vmLeer) { try { localStorage.removeItem(rampenSchluessel()); } catch (e) {} }
+      else rampeSpeichern({}, vm);
       setRampeHaken({});
     };
     const fbUhr = useRef(null);
@@ -8300,10 +8510,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (ersterLauf.current) { ersterLauf.current = false; return; }
       const t = setTimeout(() => {
         if (!cargo.length && !planName) clearDraft();
-        else saveDraft({ preset, container, cargo, domain, forceCentered, planName });
+        else saveDraft({ preset, container, cargo, domain, forceCentered, planName, planId });
       }, 400);
       return () => clearTimeout(t);
-    }, [cargo, container, preset, domain, forceCentered, planName]);
+    }, [cargo, container, preset, domain, forceCentered, planName, planId]);
     // Strg+Z / Cmd+Z. NICHT, wenn der Fokus in einem Eingabefeld steht - dort gehoert das
     // Rueckgaengig dem Browser, und das erwartet auch jeder so. Ausnahme: das LEERE
     // Stevie-Feld. Nach dem Absenden steht der Fokus dort, und zuruecknehmen will man dann
@@ -8540,6 +8750,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Die manuell platzierten Stuecke raeumt remapPlaced von selbst ab: ohne Ladung
       // gibt es keine cargo-id mehr, auf die sie zeigen koennten.
       setChainOverride({});
+      setPlanId(neuePlanId()); // geleert = neuer Plan, nicht die naechste Fassung des alten
       sag(T.cargoCleared(n2), undo);
     };
     const enableAllRotate = () => { merk(cargo); setCargo((cs) => cs.map((c) => ({ ...c, rotatable: true }))); };
@@ -8665,7 +8876,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       zaehl("geteilt");
       teilenNudgeWeg();
       setTimeout(fbFragen, 4000); // erst, wenn der Vorgang durch ist
-      const url = encodePlanURL(preset, container, cargo, forceCentered, domain);
+      const url = mitId(encodePlanURL(preset, container, cargo, forceCentered, domain));
+      fassungJetztMerken();
       setShareURL(url);
       setShareCopied(false);
       setBriefText(null);
@@ -9081,9 +9293,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setToast(ok ? T.exportDone : LANG === "en" ? "Export failed" : "Export fehlgeschlagen");
     };
     // Plan aus einem gespeicherten State in den Rechner laden (gleiche Setter wie SHARED-Initialzustand).
-    const applyPlan = (d, name) => {
+    const applyPlan = (d, name, pid) => {
       if (!d) return;
       if (typeof name === "string") setPlanName(name);
+      setPlanId(PLAN_ID_RE.test(pid || "") ? pid : neuePlanId());
       setDomain(d.domain || "sea");
       setPreset(d.preset);
       setContainer(d.container);
@@ -9965,7 +10178,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           ? `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
           : `${p2(now.getDate())}.${p2(now.getMonth() + 1)}.${now.getFullYear()}`;
         const ref = `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-        const planURL = encodePlanURL(preset, container, cargo, forceCentered, domain);
+        const planURL = mitId(encodePlanURL(preset, container, cargo, forceCentered, domain));
+        fassungJetztMerken();
         const qr = makeQR(planURL);
         // ── Ein Blatt je Container, davor ein Deckblatt ──────────────────────────────
         //
@@ -10180,25 +10394,99 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const rZahl = rSchritte.filter((_, i) => rHat(i)).length;
     const rFertig = rSchritte.length > 0 && rZahl === rSchritte.length;
     const rAktuell = rSchritte.findIndex((_, i) => !rHat(i));
+    const rAlleFertig = rampeKette.length > 0 && rampeKette.every((k, i2) => k.schritte.every((_, si) => !!rampeHaken[i2 + ":" + si]));
     const rM = (cm) => (Math.round(cm / 10) / 10).toLocaleString(LANG === "en" ? "en-US" : "de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+    const datumZeit = (t) => { try { return new Date(t).toLocaleString(LANG === "en" ? "en-US" : "de-DE", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }); } catch (e) { return ""; } };
+    // Container-Nummer so, wie sie auf der Tuer steht: MSKU 123456 7
+    const nrFormat = (nr) => nr.length === 11 ? nr.slice(0, 4) + " " + nr.slice(4, 10) + " " + nr.slice(10) : nr;
+    const fassWert = (f, v) => f === "s" ? T.fassStapel(v) : f === "r" ? T.fassJaNein(v !== 0) : f === "n" ? (v === V2_DEFAULT_NAME ? "\u2013" : v) : f === "q" ? fmtDE(v) : f === "wt" ? cmTxt(v) + " kg" : dimDE(v) + " cm";
+    const fassStueck = (it) => fmtDE(it.q) + "\xD7 " + (it.n !== V2_DEFAULT_NAME ? it.n + " " : "") + dimDE(it.l) + "\xD7" + dimDE(it.w) + "\xD7" + dimDE(it.h) + " cm";
+    const fassungText = (e) => e.art === "container" ? T.fassContainer(e.alt, e.neu)
+      : e.art === "neu" ? T.fassNeu + ": " + T.fassPos(e.p) + " \xB7 " + fassStueck(e.it)
+      : e.art === "weg" ? T.fassWeg + ": " + fassStueck(e.it)
+      : T.fassPos(e.p) + (e.feld !== "n" && e.name !== V2_DEFAULT_NAME ? " " + e.name : "") + " \xB7 " + T.fassFeldName(e.feld) + " " + fassWert(e.feld, e.alt).replace(/ (cm|kg)$/, "") + " \u2192 " + fassWert(e.feld, e.neu);
+    const streifenX = (onClick) => /* @__PURE__ */ React.createElement("button", { onClick, "aria-label": T.close, className: "px-2 py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1, flexShrink: 0 } }, "\xD7");
+    const fassungEl = !fassung ? null : (() => {
+      const zeilen = fassung.liste.map(fassungText);
+      const sicht = fassungAlle ? zeilen : zeilen.slice(0, 3);
+      return /* @__PURE__ */ React.createElement("div", { role: "status", className: "px-4 sm:px-6 py-2 flex items-start", style: { gap: SP.m, background: hexA(C.accent, 0.08), borderBottom: `1px solid ${hexA(C.accent, 0.3)}`, fontSize: FS.label, color: C.soft, lineHeight: 1.5 } },
+        /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" },
+          /* @__PURE__ */ React.createElement("div", { style: { fontWeight: FW.semi, color: C.text } }, T.fassTitel(datumZeit(fassung.seit))),
+          sicht.map((z, i) => /* @__PURE__ */ React.createElement("div", { key: i }, z)),
+          zeilen.length > 3 && /* @__PURE__ */ React.createElement("button", { onClick: () => setFassungAlle((a) => !a), style: { background: "none", border: 0, padding: 0, color: C.accText, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, cursor: "pointer" } }, fassungAlle ? T.fassWeniger : T.fassAlle(zeilen.length))),
+        streifenX(() => setFassung(null)));
+    })();
+    const vmEl = !vmAnzeige ? null : /* @__PURE__ */ React.createElement("div", { role: "status", className: "px-4 sm:px-6 py-2 flex items-start", style: { gap: SP.m, background: hexA(C.good, 0.1), borderBottom: `1px solid ${hexA(C.good, 0.35)}`, fontSize: FS.label, color: C.soft, lineHeight: 1.5 } },
+      /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" },
+        /* @__PURE__ */ React.createElement("div", { style: { fontWeight: FW.semi, color: C.good } }, "\u2713 ", T.vmGemeldet(datumZeit(vmAnzeige.t))),
+        vmAnzeige.c.map((k, i) => {
+          const pr = containerNrPruefen(k.nr);
+          return /* @__PURE__ */ React.createElement("div", { key: i },
+            /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.semi, color: C.text } }, k.m, " \xB7 ", k.ty), " \u2014 ",
+            k.nr ? /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.semi, color: C.text, fontVariantNumeric: "tabular-nums" } }, nrFormat(k.nr)) : T.vmOhneNr,
+            pr && !pr.ok && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn, fontWeight: FW.semi } }, " (", T.vmPzWarn, ")"),
+            k.sg ? " \xB7 " + T.vmSiegel + " " + k.sg : "",
+            k.s > 0 ? " \xB7 " + T.vmSchritte(k.h, k.s) : "");
+        }),
+        vmAnzeige.n && /* @__PURE__ */ React.createElement("div", { style: { whiteSpace: "pre-wrap" } }, T.vmNotizLbl, ": ", vmAnzeige.n)),
+      streifenX(() => setVmAnzeige(null)));
+    // Die Meldung als Link: derselbe Plan (mit Kennung), dazu &ok= mit Nummern und Haken-Stand.
+    const vmLink = () => mitId(encodePlanURL(preset, container, cargo, forceCentered, domain)) + "&ok=" + vmPacken({
+      t: Date.now(), n: rampeVm.n,
+      c: rampeKette.map((k, i2) => ({ m: k.marke, ty: k.name, nr: rampeVm.nr[i2] || "", sg: rampeVm.sg[i2] || "",
+        h: k.schritte.filter((_, si) => !!rampeHaken[i2 + ":" + si]).length, s: k.schritte.length }))
+    });
+    const vmTitel = () => T.vmBetreff(planName || (rampeKette[0] ? rampeKette[0].name : preset));
+    const vmTeilen = async () => {
+      const link = vmLink();
+      zaehl("verladen-gemeldet");
+      fassungJetztMerken();
+      try { if (navigator.share) { await navigator.share({ title: vmTitel(), text: vmTitel(), url: link }); return; } }
+      catch (e) { if (e && e.name === "AbortError") return; }
+      try { await navigator.clipboard.writeText(link); } catch (e) {}
+      setToast(T.vmKopiert);
+    };
+    const vmMailen = () => {
+      zaehl("verladen-gemeldet");
+      fassungJetztMerken();
+      window.location.href = "mailto:?subject=" + encodeURIComponent(vmTitel()) + "&body=" + encodeURIComponent(T.vmMailText(vmLink()));
+    };
+    const vmFeld = { background: C.field, border: `1px solid ${C.fieldBorder}`, borderRadius: R.s, color: C.text, fontFamily: SANS, fontSize: FS.lead, outline: "none", width: "100%", padding: `${SP.s}px ${SP.m}px` };
+    const vmFormEl = /* @__PURE__ */ React.createElement("div", { style: { padding: `${SP.s}px 0 ${SP.l}px` } },
+      rampeKette.map((k, i2) => {
+        const h = k.schritte.filter((_, si) => !!rampeHaken[i2 + ":" + si]).length;
+        const pr = containerNrPruefen(rampeVm.nr[i2]);
+        return /* @__PURE__ */ React.createElement("div", { key: i2, style: { background: C.surface, borderRadius: R.l, padding: SP.l, marginBottom: SP.m } },
+          /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline flex-wrap", style: { gap: SP.s, marginBottom: SP.m } },
+            /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead, fontWeight: FW.bold } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO } }, k.marke), " \xB7 ", k.name),
+            /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.label, color: h === k.schritte.length ? C.good : C.faint, marginLeft: "auto" } }, T.vmSchritte(h, k.schritte.length))),
+          /* @__PURE__ */ React.createElement("label", { style: { display: "block", fontSize: FS.label, fontWeight: FW.semi, color: C.dim, marginBottom: SP.xs } }, T.vmNr,
+            /* @__PURE__ */ React.createElement("input", { value: rampeVm.nr[i2] || "", onChange: (e) => rampeVmSetzen("nr", i2, e.target.value.toUpperCase().slice(0, 14)), placeholder: "MSKU 123456 7", autoCapitalize: "characters", autoComplete: "off", spellCheck: false, style: { ...vmFeld, marginTop: SP.xs, fontVariantNumeric: "tabular-nums" } })),
+          pr && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, fontWeight: FW.semi, color: pr.ok ? C.good : C.warn, marginBottom: SP.s } }, pr.ok ? "\u2713 " + T.vmPzOk : T.vmPzFalsch(pr.pz)),
+          /* @__PURE__ */ React.createElement("label", { style: { display: "block", fontSize: FS.label, fontWeight: FW.semi, color: C.dim, marginTop: SP.s } }, T.vmSiegel,
+            /* @__PURE__ */ React.createElement("input", { value: rampeVm.sg[i2] || "", onChange: (e) => rampeVmSetzen("sg", i2, e.target.value.slice(0, 30)), autoComplete: "off", spellCheck: false, style: { ...vmFeld, marginTop: SP.xs } })));
+      }),
+      /* @__PURE__ */ React.createElement("label", { style: { display: "block", fontSize: FS.label, fontWeight: FW.semi, color: C.dim } }, T.vmNotiz,
+        /* @__PURE__ */ React.createElement("textarea", { value: rampeVm.n, onChange: (e) => rampeVmSetzen("n", 0, e.target.value.slice(0, 300)), rows: 3, placeholder: T.vmNotizPh, style: { ...vmFeld, marginTop: SP.xs, resize: "vertical", lineHeight: 1.5, fontSize: FS.body } })));
     const rampeEl = !rampeOffen ? null : /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex flex-col", style: { zIndex: 70, background: C.bg } },
       /* @__PURE__ */ React.createElement("div", { className: "w-full flex-1 min-h-0 flex flex-col", style: { maxWidth: 640, margin: "0 auto" } },
         /* @__PURE__ */ React.createElement("div", { className: "flex items-center", style: { gap: SP.m, padding: `${SP.l}px ${SP.l}px ${SP.s}px` } },
           /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-w-0" },
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.h2, fontWeight: FW.bold } }, T.rampeBtn),
-            /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.xs, lineHeight: 1.4 } }, planName || T.rampeSub)),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.h2, fontWeight: FW.bold } }, rampeMelden ? T.vmBtn : T.rampeBtn),
+            /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: SP.xs, lineHeight: 1.4 } }, rampeMelden ? T.vmSub : planName || T.rampeSub)),
           rSchritte.length > 0 && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: NUMS.m, fontWeight: FW.bold, fontVariantNumeric: "tabular-nums", color: rFertig ? C.good : C.text, flexShrink: 0 } }, rZahl, "/", rSchritte.length),
           /* @__PURE__ */ React.createElement("button", { onClick: () => setRampeOffen(false), "aria-label": T.close, className: "rounded-lg flex items-center justify-center transition hover:brightness-125", style: { width: SP.xxl, height: SP.xxl, flexShrink: 0, background: C.surface, border: `1px solid ${C.lineHi}`, color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")),
-        rampeKette.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap", style: { gap: SP.s, padding: `0 ${SP.l}px ${SP.s}px` } },
+        !rampeMelden && rampeKette.length > 1 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap", style: { gap: SP.s, padding: `0 ${SP.l}px ${SP.s}px` } },
           rampeKette.map((k, i2) => {
             const fertig = k.schritte.every((_, si) => !!rampeHaken[i2 + ":" + si]);
             return /* @__PURE__ */ React.createElement("button", { key: i2, onClick: () => setRampeSlot(i2), className: "rounded-lg transition", style: { padding: `${SP.s}px ${SP.m}px`, background: i2 === rSlot ? C.raised : C.surface, boxShadow: i2 === rSlot ? `inset 0 0 0 1px ${C.accent}` : "none", border: 0, cursor: "pointer", fontSize: FS.small, fontWeight: FW.semi, color: fertig ? C.good : i2 === rSlot ? C.text : C.dim } },
               /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontWeight: FW.bold } }, k.marke), " \xB7 ", k.name);
           })),
-        rSchritte.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: `0 ${SP.l}px ${SP.s}px`, height: SP.xs, borderRadius: R.s, background: C.field, overflow: "hidden" } },
+        !rampeMelden && rSchritte.length > 0 && /* @__PURE__ */ React.createElement("div", { style: { margin: `0 ${SP.l}px ${SP.s}px`, height: SP.xs, borderRadius: R.s, background: C.field, overflow: "hidden" } },
           /* @__PURE__ */ React.createElement("div", { style: { height: "100%", width: `${Math.round(rZahl / rSchritte.length * 100)}%`, background: rFertig ? C.good : C.accent, transition: "width .2s" } })),
-        stoppWerte(cargo) && /* @__PURE__ */ React.createElement("div", { style: { padding: `0 ${SP.l}px ${SP.s}px`, fontSize: FS.label, color: C.faint } }, domain === "road" ? T.stopPillRoad : T.stopPill),
-        /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-h-0 overflow-y-auto", style: { padding: `0 ${SP.l}px` } },
+        !rampeMelden && stoppWerte(cargo) && /* @__PURE__ */ React.createElement("div", { style: { padding: `0 ${SP.l}px ${SP.s}px`, fontSize: FS.label, color: C.faint } }, domain === "road" ? T.stopPillRoad : T.stopPill),
+        rampeMelden && /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-h-0 overflow-y-auto", style: { padding: `0 ${SP.l}px` } }, vmFormEl),
+        !rampeMelden && /* @__PURE__ */ React.createElement("div", { className: "flex-1 min-h-0 overflow-y-auto", style: { padding: `0 ${SP.l}px` } },
           rSchritte.length === 0 && /* @__PURE__ */ React.createElement("div", { style: { padding: SP.xl, textAlign: "center", color: C.faint, fontSize: FS.body } }, T.rampeLeer),
           rSchritte.map((sc, i) => {
             const it = cargo[sc.ti] || {};
@@ -10214,9 +10502,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               it.gefahr === true && /* @__PURE__ */ React.createElement("span", { style: { flexShrink: 0, fontFamily: it.un ? MONO : SANS, fontSize: it.un ? FS.small : FS.label, fontWeight: FW.semi, padding: `${SP.xs}px ${SP.s}px`, borderRadius: 999, background: hexA(C.warn, 0.16), color: C.warn } }, it.un ? "UN " + it.un : T.gefahrLabel));
           }),
           rFertig && /* @__PURE__ */ React.createElement("div", { style: { margin: `${SP.l}px 0`, padding: SP.l, borderRadius: R.l, background: hexA(C.good, 0.12), color: C.good, fontSize: FS.lead, fontWeight: FW.semi, textAlign: "center" } }, T.rampeFertig)),
-        /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap", style: { gap: SP.m, padding: SP.l } },
+        rampeMelden && /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap", style: { gap: SP.m, padding: SP.l } },
+          /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: vmTeilen }, T.vmTeilen),
+          /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: vmMailen }, T.vmMail),
+          /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "s", onClick: () => setRampeMelden(false), style: { marginLeft: "auto" } }, T.vmZurueck)),
+        !rampeMelden && /* @__PURE__ */ React.createElement("div", { className: "flex items-center flex-wrap", style: { gap: SP.m, padding: SP.l } },
+          rampeKette.length > 0 && /* @__PURE__ */ React.createElement(Btn, { variant: rAlleFertig ? "primary" : "ghost", size: rAlleFertig ? "l" : "s", onClick: () => setRampeMelden(true) }, T.vmBtn),
           /* @__PURE__ */ React.createElement(Btn, { variant: "quiet", size: "s", onClick: rampeReset }, T.rampeReset),
-          /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "s", onClick: () => { try { navigator.clipboard.writeText(encodePlanURL(preset, container, cargo, forceCentered, domain) + "&rampe=1"); } catch (e) {} setToast(T.rampeLinkKopiert); } }, T.rampeLink),
+          /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "s", onClick: () => { try { navigator.clipboard.writeText(mitId(encodePlanURL(preset, container, cargo, forceCentered, domain)) + "&rampe=1"); } catch (e) {} fassungJetztMerken(); setToast(T.rampeLinkKopiert); } }, T.rampeLink),
           /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.label, color: C.faint, marginLeft: "auto" } }, T.rampeLokal))));
     return /* @__PURE__ */ React.createElement("div", { className: "w-full min-h-screen lg:h-screen lg:overflow-hidden flex flex-col", style: { fontFamily: SANS, color: C.text, background: C.bg } }, /* @__PURE__ */ React.createElement("style", null, `@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
         html,body,#root{font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif!important;}
@@ -10266,7 +10559,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             : /* @__PURE__ */ React.createElement("button", { key: i, onClick: e.aus ? void 0 : () => { setMenuOpen(false); e.fn(); }, disabled: !!e.aus, title: e.aus ? T.manualExportOff : void 0, className: "w-full text-left px-3 py-2 rounded-lg transition", style: { fontFamily: SANS, color: e.aus ? C.faint : C.text, background: "transparent", border: 0, cursor: e.aus ? "default" : "pointer", opacity: e.aus ? 0.45 : 1 }, onMouseOver: (ev) => { if (!e.aus) ev.currentTarget.style.background = C.raised; }, onMouseOut: (ev) => { ev.currentTarget.style.background = "transparent"; } },
               /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi } }, e.label),
               e.sub ? /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, fontWeight: 400, lineHeight: 1.35, marginTop: 4 } }, e.sub) : null))
-        ))))), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0 gap-3 p-3" }, /* Auf dem Telefon steht die 3D-Ansicht ZUERST (order-Klassen): wer einen geteilten
+        ))))), fassungEl, vmEl, /* @__PURE__ */ React.createElement("div", { className: "flex flex-col lg:flex-row flex-1 min-h-0 gap-3 p-3" }, /* Auf dem Telefon steht die 3D-Ansicht ZUERST (order-Klassen): wer einen geteilten
        Plan an der Rampe oeffnet, will den Plan sehen, nicht erst durch Container-Wahl und
        Ladungsliste scrollen. Ab lg gilt wieder die Dokument-Reihenfolge (Spalten). */
     /* @__PURE__ */ React.createElement("aside", { className: "order-2 lg:order-none w-full lg:w-[336px] lg:flex-shrink-0 lg:min-h-0 lg:overflow-y-auto", style: { background: C.surface, borderRadius: R.l, boxShadow: C.schatten } }, /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-6" }, /* @__PURE__ */ React.createElement(Seg, { items: [["sea", T.domSea], ["road", T.domRoad]], value: domain, onPick: switchDomain, accentOf: (d) => d === "road" ? C.teal : C.accent })), domain === "road" ? /* @__PURE__ */ React.createElement(VehiclePicker, { preset, applyPreset, container, setCont, T, AC, unit }) : /* @__PURE__ */ React.createElement(ContainerPicker, { preset, applyPreset, container, setCont, T, carrier, pickCarrier, unit }), domain === "sea" && (() => { const recDisabled = cargo.reduce((s, t) => s + Math.max(0, num(t.qty)), 0) === 0; return /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", wide: true, disabled: recDisabled, onClick: openRec }, /* @__PURE__ */ React.createElement("svg", { width: ICO.s, height: ICO.s, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M9 18h6M10 21h4" }), /* @__PURE__ */ React.createElement("path", { d: "M12 3a6 6 0 0 0-3.4 10.9c.7.5 1.1 1.3 1.2 2.1h4.4c.1-.8.5-1.6 1.2-2.1A6 6 0 0 0 12 3z" })), T.recBtn)); })(), /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", wide: true, disabled: !sichtPlaced.length, onClick: () => setSichOpen(true) }, /* @__PURE__ */ React.createElement("svg", { width: ICO.s, height: ICO.s, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round", "aria-hidden": "true" }, /* @__PURE__ */ React.createElement("path", { d: "M12 3l7 3v5c0 4.6-3 8.3-7 10-4-1.7-7-5.4-7-10V6l7-3z" }), /* @__PURE__ */ React.createElement("path", { d: "M9 11.5l2 2 4-4" })), T.sichBtn)), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "px-6 pt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: chatOffen ? "accent" : "primary", size: "l", wide: true, style: chatOffen ? void 0 : { background: STEVIE.gelb, color: STEVIE.tinte }, onClick: () => { if (!chatOffen) { zaehl("stevie-geoeffnet"); setChatMini(false); } setChatOffen((o) => !o); } }, /* @__PURE__ */ React.createElement(StevieKopf, { s: ICO.m }), T.chatBtn)), domain === "sea" && /* @__PURE__ */ React.createElement(ManualPanel, { manualMode, manualToggle, cargo, manualPlaced, manualArmed, manualArm, manualRot, setManualRot, manualSel, manualRemoveSel, manualRotateSel, manualNudge, manualClear, manualLoadAuto, manualUndoLast, manualUndoLen: manualUndo.length, hasAutoResult: !!(rohResult && rohResult.chain && rohResult.chain[0] && rohResult.chain[0].placed && rohResult.chain[0].placed.length), manualChain, manualAddSlot, manualDropSlot, manualAutoFill, fokus, onFokus: setFokus, T, C }), !wide && cargoEl), /* @__PURE__ */ React.createElement("main", { className: "order-1 lg:order-none flex-1 min-w-0 min-h-0 flex flex-col" }, /* @__PURE__ */ React.createElement("div", { className: "relative flex-1 min-w-0 min-h-[380px] lg:min-h-0 overflow-hidden", style: { borderRadius: R.l, boxShadow: `${C.schatten}, inset 0 0 0 1px rgba(0,0,0,0.35)` } }, /* @__PURE__ */ React.createElement(Viewport, { container, result, preset, overrides: chainOverride, onSlotType, domain, cargo, manualMode, manualPlaced, manualArmedTi: manualArmed, manualRot, manualSel, onManualPlace: manualPlace, onManualSelect: manualSelect, shotRef, fokus, onFokus: setFokus, sichZonen, zeigeNummern, setZeigeNummern, tuerKino, oogKino, achsKino, thema }), wide && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { left: 16, right: 16, bottom: 40, zIndex: 6, borderRadius: R.l, overflow: "hidden", background: hexA(C.glass, 0.85), backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)", border: `1px solid ${hexA(C.lineHi, 0.55)}`, boxShadow: C.schatten } }, leisteEl(true)), (container.kind === "flatrack" || container.kind === "platform") && /* @__PURE__ */ React.createElement("button", { onClick: () => setForceCentered((v) => !v), className: "absolute top-4 left-1/2 clrise flex items-center gap-2 rounded-lg px-3 py-2", style: { transform: "translateX(-50%)", zIndex: 7, fontFamily: SANS, fontSize: FS.label, fontWeight: FW.semi, color: forceCentered ? C.text : C.dim, background: hexA(C.chrome, 0.86), border: `1px solid ${forceCentered ? hexA(C.accent, 0.6) : C.lineHi}`, cursor: "pointer" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 11, height: 11, borderRadius: R.s, border: `1px solid ${forceCentered ? C.accent : C.faint}`, background: forceCentered ? C.accent : "transparent", display: "inline-block" } }), T.forceCenter), stevieLauncher && /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("stevie-geoeffnet"); setChatMini(false); setChatOffen(true); }, "aria-label": T.chatBtn, title: T.chatBtn, className: "absolute flex items-center justify-center clrise stevie-puls hover:brightness-110", style: { right: 16, bottom: buehneUnten + (stevieHoch ? 72 : 0), transition: "bottom .25s, filter .18s", zIndex: 8, width: 56, height: 56, borderRadius: 999, background: STEVIE.gelb, color: STEVIE.tinte, border: 0, cursor: "pointer" } }, /* @__PURE__ */ React.createElement(StevieKopf, { s: 28 })), chatOffen && !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "absolute flex flex-col clrise", style: { right: 16, bottom: buehneUnten, width: "min(400px, calc(100% - 32px))", maxHeight: "min(60%, 460px)", zIndex: 8, background: hexA(C.chrome, 0.72), backdropFilter: "blur(10px)", WebkitBackdropFilter: "blur(10px)", border: `1px solid ${hexA(STEVIE.gelb, 0.4)}`, borderRadius: R.l, boxShadow: "0 24px 70px -18px rgba(0,0,0,0.9)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-4 py-3", style: { background: hexA(STEVIE.gelb, 0.08), borderBottom: `1px solid ${hexA(STEVIE.gelb, 0.22)}`, borderRadius: `${R.l}px ${R.l}px 0 0` } }, /* @__PURE__ */ React.createElement(StevieKopf, { s: SP.xxl }), /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.lead, fontWeight: FW.bold, color: C.text, lineHeight: 1.15 } }, T.chatTitle), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.dim, lineHeight: 1.3 } }, T.chatRolle)), /* @__PURE__ */ React.createElement("span", { className: "px-2 py-1 rounded-lg", style: { fontSize: FS.label, fontWeight: FW.bold, color: STEVIE.gelb, background: hexA(STEVIE.gelb, 0.14) } }, "Beta"), /* @__PURE__ */ React.createElement("button", { onClick: () => setChatMini((m) => !m), "aria-label": chatMini ? T.chatGross : T.chatKlein, title: chatMini ? T.chatGross : T.chatKlein, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "transparent", border: 0, color: C.dim, fontSize: FS.h3, lineHeight: 1, cursor: "pointer" } }, chatMini ? "▴" : "–"), /* @__PURE__ */ React.createElement("button", { onClick: () => setChatOffen(false), "aria-label": T.close, className: "w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: "transparent", border: 0, color: C.dim, fontSize: FS.h3, lineHeight: 1, cursor: "pointer" } }, "\xD7")), !chatMini && /* @__PURE__ */ React.createElement("div", { className: "flex-1 overflow-y-auto px-4 py-3 flex flex-col gap-2", style: { minHeight: 150 } }, chatVerlauf.length === 0 && /* @__PURE__ */ React.createElement("div", { className: "flex items-end gap-2", style: { maxWidth: "88%" } }, stevieAvatar(), /* @__PURE__ */ React.createElement("div", { className: "px-3 py-2", style: { background: hexA(C.field, 0.82), border: `1px solid ${hexA(STEVIE.gelb, 0.22)}`, color: C.text, fontSize: FS.small, lineHeight: 1.5, borderRadius: "16px 16px 16px 4px" } }, T.chatIntro)), chatVerlauf.map((m, mi) => m.rolle === "nutzer" ? /* @__PURE__ */ React.createElement("div", { key: mi, className: "self-end", style: { maxWidth: "82%", alignSelf: "flex-end" } }, /* @__PURE__ */ React.createElement("div", { className: "px-3 py-2", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.semi, lineHeight: 1.5, whiteSpace: "pre-wrap", borderRadius: "16px 16px 4px 16px" } }, m.text)) : /* @__PURE__ */ React.createElement("div", { key: mi, className: "self-start flex items-end gap-2", style: { maxWidth: "88%", alignSelf: "flex-start" } }, stevieAvatar(), /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { className: "px-3 py-2", style: { background: hexA(C.field, 0.82), border: `1px solid ${hexA(STEVIE.gelb, 0.22)}`, color: C.text, fontSize: FS.small, lineHeight: 1.5, whiteSpace: "pre-wrap", borderRadius: "16px 16px 16px 4px" } }, m.text), m.chips && m.chips.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap gap-1 mt-1" }, m.chips.map((ch, ci) => /* @__PURE__ */ React.createElement("span", { key: ci, className: "px-2 py-1 rounded-lg", style: { fontSize: FS.label, fontWeight: FW.semi, color: C.good, background: hexA(C.good, 0.12) } }, "✓ " + ch)))))), chatBusy && /* @__PURE__ */ React.createElement("div", { className: "self-start flex items-end gap-2", "aria-label": T.chatDenkt, title: T.chatDenkt }, stevieAvatar(), /* @__PURE__ */ React.createElement("div", { className: "stevie-tipp px-3 py-2", style: { background: hexA(C.field, 0.82), border: `1px solid ${hexA(STEVIE.gelb, 0.22)}`, borderRadius: "16px 16px 16px 4px", lineHeight: 1 } }, /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null), /* @__PURE__ */ React.createElement("span", null))), chatFehler && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, chatFehler), /* @__PURE__ */ React.createElement("div", { ref: chatEndeRef })), /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3", style: { borderTop: `1px solid ${hexA(STEVIE.gelb, 0.18)}` } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2" }, /* @__PURE__ */ React.createElement("input", { value: chatEingabe, "data-plan-undo": "1", onChange: (e) => setChatEingabe(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") chatSenden(); }, placeholder: T.chatPh, className: "flex-1 px-4 py-2", style: { background: hexA(C.field, 0.82), border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, outline: "none", borderRadius: 999 } }), /* @__PURE__ */ React.createElement("button", { onClick: chatSenden, disabled: chatBusy || !chatEingabe.trim(), className: "transition hover:brightness-110", style: { padding: `${SP.s}px ${SP.l}px`, borderRadius: 999, background: STEVIE.gelb, color: STEVIE.tinte, border: 0, fontFamily: SANS, fontSize: FS.body, fontWeight: FW.bold, cursor: chatBusy || !chatEingabe.trim() ? "default" : "pointer", opacity: chatBusy || !chatEingabe.trim() ? 0.5 : 1 } }, T.chatSenden)), !chatMini && /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: 8, lineHeight: 1.4 } }, T.chatHinweis))), result.oog && /* @__PURE__ */ React.createElement("div", { className: "absolute clrise", style: { top: "50%", left: 16, transform: "translateY(-50%)", zIndex: 5, maxWidth: 240, pointerEvents: "none" } }, /* @__PURE__ */ React.createElement("div", { className: "rounded-2xl p-3", style: { background: hexA(C.chrome, 0.85), border: `1px solid ${hexA(C.warn, 0.45)}`, boxShadow: "0 10px 40px -12px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.warn, marginBottom: 4 } }, T.oogTitle), oogRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "flex justify-between gap-4", style: { fontFamily: SANS, fontSize: FS.label, lineHeight: 1.5 } }, /* @__PURE__ */ React.createElement("span", { style: { color: C.dim } }, r.lbl), /* @__PURE__ */ React.createElement("span", { style: { color: C.text, fontWeight: FW.bold } }, r.v + " cm"))), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: C.warnSoft, marginTop: 4, fontWeight: FW.semi } }, T.oogSlots(result.oogBlocked)), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.35, color: C.faint, marginTop: 8 } }, T.oogDisc), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("oog-ansehen"); setOogKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg transition hover:brightness-110", style: { pointerEvents: "auto", marginTop: 8, background: C.warn, color: C.onWarn, fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.oogKran))), doorFails.length > 0 && /* @__PURE__ */ React.createElement("div", { className: "absolute top-4 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 6 } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 rounded-2xl px-4 py-2", style: { background: hexA(C.warnGlas, 0.9), border: `1px solid ${hexA(C.warn, 0.55)}`, boxShadow: "0 10px 30px -10px rgba(0,0,0,0.6)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: FS.lead, fontWeight: FW.bold, color: C.warn, lineHeight: 1 } }, "!"), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, lineHeight: 1.3, color: C.warnSoft, maxWidth: 250 } }, otDach ? T.doorWarnOT(doorFails.length) : T.doorWarn(doorFails.length), " \xB7 ", otDach ? T.doorHintOT(otDach.l, otDach.w) : T.doorHint(doorOpening.w, doorOpening.h)), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("tuer-warum"); setTuerKino((k) => k + 1); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: C.onWarn, fontSize: FS.label, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.doorWhy))), !manualMode && zeigeBanner && /* @__PURE__ */ React.createElement("div", { className: "absolute left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none", bottom: buehneUnten } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(result.rotHintAll ? C.accent : empfBesser || (sug && (sug.type === "single" || sug.type === "equip")) ? C.hint : C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.h3 } }, result.rotHintAll ? "\u21BB" : "\u2192"), /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: C.soft } }, result.rotHintAll && T.recRot(preset), !result.rotHintAll && empfBesser && T.recBetter(sugLabel), !result.rotHintAll && !empfBesser && sug && sug.type === "single" && T.recSingle(sug.name), !result.rotHintAll && !empfBesser && sug && sug.type === "multi" && T.recMulti(sugLabel), !result.rotHintAll && sug && sug.type === "toobig" && T.recTooBig(sug.item), !result.rotHintAll && sug && sug.type === "tooheavy" && T.recTooHeavy(sug.item), !result.rotHintAll && sug && sug.type === "vehicles" && T.recVehicles(sug.count, sug.name), !result.rotHintAll && sug && sug.type === "equip" && T.recEquip(sug.name, sug.reason), !result.rotHintAll && !sug && T.recNoFit(offenGesamt)), result.rotHintAll && /* @__PURE__ */ React.createElement("button", { onClick: enableAllRotate, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.rotOn), !result.rotHintAll && sug && sug.type === "single" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "equip" && /* @__PURE__ */ React.createElement("button", { onClick: () => applyPreset(sug.name), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply), !result.rotHintAll && sug && sug.type === "multi" && sug.combo && sug.combo.length > 0 && /* @__PURE__ */ React.createElement("button", { onClick: () => uebernehmeKombi(sug.combo), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.hint, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.apply))), !manualMode && !zeigeBanner && !teilenAnstossAktiv && sichWarnzahl > 0 && !sichBannerWeg && !sichZeige && !sichOpen && /* @__PURE__ */ React.createElement("div", { className: "absolute left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none", bottom: buehneUnten } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: C.soft } }, T.sichBanner(sichWarnzahl)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: C.onWarn, fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.sichBtn), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichBannerWeg(true), "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×"))), !manualMode && sichZeige && /* @__PURE__ */ React.createElement("div", { className: "absolute left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none", bottom: buehneUnten } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-2", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.warn, 0.5)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("span", { style: { width: 10, height: 10, borderRadius: R.s, background: hexA(C.warn, 0.55), border: `1px solid ${C.warn}`, flexShrink: 0 } }), /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.small, color: C.soft, fontWeight: FW.semi, whiteSpace: "nowrap" } }, T.sichChip((sichZonen || []).length)), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichOpen(true), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.raised, border: `1px solid ${C.lineHi}`, color: C.text, fontSize: FS.small, fontWeight: FW.semi, cursor: "pointer" } }, T.railDetails), /* @__PURE__ */ React.createElement("button", { onClick: () => setSichZeige(false), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: "none", border: 0, color: C.faint, fontSize: FS.small, cursor: "pointer" } }, T.sichChipZu))), teilenAnstossAktiv && /* @__PURE__ */ React.createElement("div", { className: "absolute left-4 right-4 flex justify-center clrise", style: { pointerEvents: "none", bottom: buehneUnten } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-2xl px-4 py-3 max-w-[560px]", style: { pointerEvents: "auto", background: C.glass, border: `1px solid ${hexA(C.accent, 0.45)}`, boxShadow: "0 14px 40px -12px rgba(0,0,0,0.8)" } }, /* @__PURE__ */ React.createElement("div", { className: "flex-1", style: { fontSize: FS.small, lineHeight: 1.35, color: C.soft } }, T.teilenNudge), /* @__PURE__ */ React.createElement("button", { onClick: () => { zaehl("teilen-anstoss"); doShare(); }, className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.teilenNudgeBtn), /* @__PURE__ */ React.createElement("button", { onClick: teilenNudgeWeg, "aria-label": T.close, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "\xD7")))), /* @__PURE__ */ railEl), wide && /* @__PURE__ */ React.createElement("aside", { key: "cargo", className: "w-[352px] flex-shrink-0 min-h-0 overflow-y-auto", style: { background: C.surface, borderRadius: R.l, boxShadow: C.schatten } }, cargoEl)), shareBar && /* @__PURE__ */ React.createElement("div", { className: "px-6 py-2 flex items-center justify-center gap-3 flex-wrap", style: { borderTop: `1px solid ${C.hairline}`, fontFamily: SANS, fontSize: FS.label, color: C.dim } }, /* @__PURE__ */ React.createElement("span", null, T.shareBar), /* @__PURE__ */ React.createElement("a", { href: "/app" + (LANG === "en" ? "?lang=en" : ""), className: "px-2 py-2 lg:px-0 lg:py-0", style: { color: C.accent, fontWeight: FW.semi, textDecoration: "none", whiteSpace: "nowrap" } }, T.shareBarBtn), /* @__PURE__ */ React.createElement("button", { onClick: shareBarWeg, "aria-label": T.cancel, className: "px-2 py-2 lg:px-2 lg:py-1", style: { background: "none", border: 0, color: C.faint, cursor: "pointer", fontSize: FS.body, lineHeight: 1 } }, "×")), rampeEl, /* @__PURE__ */ React.createElement("footer", { className: "px-6 py-3 flex items-center justify-between gap-4", style: { borderTop: `1px solid ${C.hairline}`, fontFamily: SANS, fontSize: FS.label, fontWeight: 400, color: C.faint, letterSpacing: "0" } }, /* @__PURE__ */ React.createElement("span", null, domain === "road" ? T.footLRoad : T.footL), /* @__PURE__ */ React.createElement("span", { className: "flex items-center", style: { gap: SP.s } },
@@ -10386,7 +10679,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.45, color: C.soft } }, comboBody),
                 recData.combo.type === "equip" ? /* @__PURE__ */ React.createElement("button", { onClick: () => { applyPreset(recData.combo.name); setRecOpen(false); }, className: "mt-3 px-3 py-2 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.recApply) : null) : null,
               /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, fontFamily: SANS, fontSize: FS.label, color: C.faint, letterSpacing: "0.04em" } }, T.recFoot)))));
-    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
+    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, planId, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
         // Die Frage sitzt dort, wo sonst der Hinweis steht: unten in der Mitte, ueber der
         // Fusszeile. Sie nimmt keinen Platz weg, sie kommt einmal, und sie geht mit einem
         // Klick wieder. Wenn gerade ein Hinweis steht, wartet sie -- zwei Kaesten
