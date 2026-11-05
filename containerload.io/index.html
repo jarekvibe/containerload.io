@@ -1095,13 +1095,16 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // Fuellung + leuchtende Kante; im Hellen umgekehrt: kraeftige Fuellung + dunkle Kante,
   // wie die Kisten im Rechner. Signal-Toene (C_GOOD/C_WARN als Kante) bleiben.
   var HERO_T={
-    dunkel:{idle:0x1B2E45,warn:0x453620,good:0x1B3B31,edge:0x5AA9FF,amb:0.6},
-    hell:{idle:0x3875C9,warn:0xE2A64A,good:0x2FA876,edge:0x1D4E8F,amb:0.9}
+    // hell: weniger Umgebungslicht, damit Deckel und Seiten verschieden hell werden, und eine
+    // tiefere Kante -- sonst verschmolzen gestapelte Kartons zu einem einzigen blauen Block.
+    // schatten: der Bodenschatten ist auf hellem Grund ein grauer Fleck; dort halb so stark.
+    dunkel:{idle:0x1B2E45,warn:0x453620,good:0x1B3B31,edge:0x5AA9FF,amb:0.6,schatten:1},
+    hell:{idle:0x3875C9,warn:0xE2A64A,good:0x2FA876,edge:0x0E2C57,amb:0.62,schatten:0.5}
   };
-  var heroAmb=null,heroThemaMats=[];
+  var heroAmb=null,heroThemaMats=[],HERO_SCHATTEN=1;
   window.clHeroThema=function(t){
     var s=HERO_T[t==='hell'?'hell':'dunkel'];
-    F_IDLE=s.idle; F_WARN=s.warn; F_GOOD=s.good; C_BLUEEDGE=s.edge;
+    F_IDLE=s.idle; F_WARN=s.warn; F_GOOD=s.good; C_BLUEEDGE=s.edge; HERO_SCHATTEN=s.schatten;
     if(heroAmb) heroAmb.intensity=s.amb;
     var k=(t==='hell'?'hell':'dunkel');
     heroThemaMats.forEach(function(e){e[0].color.setHex(e[1][k]);});
@@ -1244,7 +1247,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function makeShadow(root){
     var m=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
     m.rotation.x=-Math.PI/2; m.position.y=-0.004; root.add(m);
-    return {mesh:m,place:function(L,x){m.scale.x=L*1.35;m.position.x=x;},op:function(o){m.material.opacity=0.8*o;}};
+    return {mesh:m,place:function(L,x){m.scale.x=L*1.35;m.position.x=x;},op:function(o){m.material.opacity=0.8*o*HERO_SCHATTEN;}};
   }
 
   // Messwinkel um einen Quader: acht Ecken, je drei kurze Arme. Dieselbe Formensprache
@@ -1310,7 +1313,12 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
     var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
     var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
-    var grid=new THREE.GridHelper(L0,5,0x2A3340,0x1A2029); grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    // Das Raster ist der Containerboden: GridHelper ist quadratisch (L0 x L0) und stand
+    // vorn und hinten weit ueber den Container hinaus -- im Dunkeln kaum zu sehen, im
+    // hellen Design eine eigene graue Platte. In der Tiefe auf W gestaucht; Farbe je Thema
+    // ueber material.color (die Vertexfarben bleiben weiss).
+    var grid=new THREE.GridHelper(L0,5,0xffffff,0xffffff); grid.scale.z=W/L0; grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    grid.material.color.setHex(0x222A35); heroThemaMats.push([grid.material,{dunkel:0x222A35,hell:0x9AA6B6}]);
     return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
       setLength:function(L,cx){grp.scale.x=L/L0; grp.position.x=(cx===undefined?0:cx);},
       setColor:function(hx){edgeMat.color.setHex(hx); endMat.color.setHex(hx);},
@@ -1745,10 +1753,14 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     scene=new THREE.Scene();
     camera=new THREE.PerspectiveCamera(42,1,0.1,100);
     pivot=new THREE.Object3D(); scene.add(pivot);
-    heroAmb=new THREE.AmbientLight(0x9fb6d6,0.6); scene.add(heroAmb); window.clHeroThema(document.documentElement.dataset.theme);
+    heroAmb=new THREE.AmbientLight(0x9fb6d6,0.6); scene.add(heroAmb);
     var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
     var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
     ACTS.forEach(function(a){ var g=new THREE.Group(); g.visible=false; pivot.add(g); roots.push(g); a.build(g); });
+    // ERST nach dem Bau: die Akte legen ihre themenabhaengigen Materialien (Dach, Traverse,
+    // Bodenraster) beim Bauen in heroThemaMats ab. Vorher aufgerufen blieben sie im hellen
+    // Design dunkel -- das Open-Top-Dach stand als schwarzer Balken ueber dem Container.
+    window.clHeroThema(document.documentElement.dataset.theme);
     clock=new THREE.Clock(); sizeUp();
     window.addEventListener('resize',sizeUp);
     window.addEventListener('pointermove',onMove);
