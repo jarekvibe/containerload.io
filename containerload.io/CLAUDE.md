@@ -350,6 +350,16 @@ Beim Einbau korrigiert (alle vier vom Packer widerlegt): Europaletten im 40-Fuß
 
 **Der sichtbare Name ist „Container-Wissen"** (so hieß es in der Navigation der Startseite ohnehin schon). **Die Adressen bleiben `/ratgeber/…`** — sie sind indexiert, ein Umzug kostet Rankings und bräuchte 301-Weiterleitungen. Ebenso unangetastet: die Titel der Frageseiten (das sind die gesuchten Fragen), die Meta-Beschreibungen und die Canonicals.
 
+### Die zwei Top-Seiten holen Klicks statt nur Impressionen (November 2026)
+Search Console, 28 Tage bis 05.11.26: **6.418 Impressionen** (August: 1.106), 43 Klicks. Getragen von zwei Seiten — Zuladung (2.187 Impressionen, Position 7,6, 15 Klicks) und Volumen (1.242, Position 10,2, 3 Klicks). Viele Fragen stehen auf Platz 6–10 mit **null** Klicks („wie viele Europaletten passen in einen 40 Fuß" Pos. 5,9; „wie viel Kubikmeter hat ein 20 Fuß Container" Pos. 6,8): Google zeigt die Zahl selbst an. Was die Antwortbox nicht kann, ist **die eigene Ladung prüfen** — darauf zielen jetzt Snippet und Seite.
+
+- **Gesucht wird „Container Gewicht", nicht „Zuladung"** („40 fuß container gewicht", „was wiegt ein leerer 40 fuß container", „gewicht seecontainer" — rund 180 der 270 Gewichts-Impressionen). Titel deshalb „Container-Gewicht 20/40 Fuß: leer, Zuladung, Brutto + Check", H1 „Was wiegt ein Container — und wie viel darf er laden?", und das Leergewicht steht jetzt im ersten Absatz. EN zieht mit („Container weight 20/40 ft: …").
+- **Gewichts-Check** (`data-gewicht-check`, Rechenkern `GEWICHT_CALC_START/END` auf DE und EN wörtlich gleich): Container wählen, Gewicht eintippen → Zuladung mit Anteil (passt / knapp ab 90 % / zu schwer), Brutto mit Tara (VGM-Grundlage, Paletten/Sicherung kommen dazu) und der 40-t-Zug mit 12 t Fahrzeug als Richtwert (darüber der KV-Hinweis 44 t — aber nicht, wenn schon der Container überladen ist). Zahlenquellen: Zuladung = PRESETS, Tara = `TARA` in app.html, Straße = die Tabelle der Seite (24.100 kg frei im 40′ HC). `test/gewicht-check.test.mjs` koppelt alle drei.
+- **3.880 kg sind gerundet 3,9 t** — Seite und FAQ-Schema sagten für den 40′ Standard „3,8". Korrigiert (mit kg in Klammern), die Wache verbietet die alte Zahl.
+- **Volumen-Seiten (DE/EN) tragen den CBM-Rechner** direkt unter der Antwort — derselbe Block wie auf den CBM-Seiten und der Startseite (`test/cbm-widget.test.mjs` führt jetzt fünf Seiten). Titel „Container-Volumen: 20 Fuß 33 m³, 40 Fuß 68 m³ + Rechner"; die Beschreibung nennt die 70–85 % Nutzbarkeit, die auf der Seite begründet steht.
+- Nebenbei im CBM-Rechner (alle fünf Seiten): „1 Packstück" / „1 piece" statt „1 Packstücke" / „1 pieces".
+- Alle vier Seiten stehen im Snippet-Schnitt-Test. Wirkung messen: in 3–4 Wochen Klickrate der beiden Seiten gegen die 0,7 % / 0,2 % von heute.
+
 ### Die vertieften Seiten und die zwei neuen (August 2026)
 Aus der Search Console: 1.106 Impressionen in 28 Tagen bei **Ø-Position 35,8**. Das Problem war nicht die CTR — auf Seite 4 ist 1 % normal —, sondern die Rankings, und die hingen an zwei Dingen: **elf Seiten insgesamt**, und die drei meistgesehenen davon waren **163 bis 250 Wörter** lang.
 

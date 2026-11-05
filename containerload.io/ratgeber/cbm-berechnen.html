@@ -84,7 +84,7 @@
     }
     // CBM_CALC_END
     var cbmCfg = {
-      t: function () { return { l: 'L\u00e4nge (cm)', w: 'Breite (cm)', h: 'H\u00f6he (cm)', q: 'St\u00fcck', g: 'kg/St\u00fcck \u00b7 optional', weg: 'Position entfernen', plus: '+ Position', stk: 'Packst\u00fccke', wm: 'frachtpflichtig (W/M)', leer: 'L\u00e4nge, Breite und H\u00f6he eingeben. Das Volumen erscheint sofort.', zur3d: 'Im 3D-Rechner ansehen \u2192' }; },
+      t: function () { return { l: 'L\u00e4nge (cm)', w: 'Breite (cm)', h: 'H\u00f6he (cm)', q: 'St\u00fcck', g: 'kg/St\u00fcck \u00b7 optional', weg: 'Position entfernen', plus: '+ Position', stk: 'Packst\u00fccke', stk1: 'Packst\u00fcck', wm: 'frachtpflichtig (W/M)', leer: 'L\u00e4nge, Breite und H\u00f6he eingeben. Das Volumen erscheint sofort.', zur3d: 'Im 3D-Rechner ansehen \u2192' }; },
       loc: function () { return 'de-DE'; },
       qhref: function (q) { return '/app?q=' + encodeURIComponent(q); }
     };
@@ -137,7 +137,7 @@
       if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
       var f3 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
       var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
-      var teile = ['<b>' + f3(s.vol) + ' m\u00b3</b>', s.stk + ' ' + t.stk];
+      var teile = ['<b>' + f3(s.vol) + ' m\u00b3</b>', s.stk + ' ' + (s.stk === 1 && t.stk1 ? t.stk1 : t.stk)];
       if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
       if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
       out.innerHTML = teile.join(' \u00b7 ');

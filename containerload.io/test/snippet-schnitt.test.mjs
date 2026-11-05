@@ -43,7 +43,13 @@ const SEITEN = [
   { f: "nl/gids/europallets-20ft-container.html", zahl: true },
   { f: "nl/gids/europallets-40ft-container.html", zahl: true },
   { f: "nl/gids/cbm-container.html", zahl: true },
-  { f: "nl/gids/container-afmetingen.html", zahl: true }
+  { f: "nl/gids/container-afmetingen.html", zahl: true },
+  // November 2026: die zwei meistgesehenen Seiten (Zuladung 2.187, Volumen 1.242 Impressionen
+  // in 28 Tagen, Klickrate unter 1 %) -- gesucht wird "Container Gewicht" / "was wiegt ein 40 Fuss".
+  { f: "ratgeber/container-zuladung-gewicht.html", zahl: true },
+  { f: "en/guide/container-payload-weight.html", zahl: true },
+  { f: "ratgeber/container-volumen-cbm.html", zahl: true },
+  { f: "en/guide/container-volume-cbm.html", zahl: true }
 ];
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
 const greif = (s, re, was, f) => {
