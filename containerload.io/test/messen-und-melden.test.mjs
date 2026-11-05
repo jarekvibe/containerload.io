@@ -41,7 +41,9 @@ const EREIGNISSE = [
   "manueller-modus", "geteilt", "csv-export", "ladevorschlag", "bild-export", "feedback-geoeffnet",
   "sicherung-geprueft", "nummern-3d", "rampen-modus", "tuer-warum", "oog-ansehen", "achslast-ansehen",
   "strassenlimit", "teilen-anstoss", "ki-import", "ki-import-foto", "ki-brief", "ki-chat",
-  "stevie-geoeffnet", "thema-hell", "thema-dunkel"
+  "stevie-geoeffnet", "thema-hell", "thema-dunkel",
+  // Zusammenarbeit ueber den Link: geaenderte Fassung gesehen, Verlade-Meldung geoeffnet/verschickt
+  "fassung-geaendert", "meldung-geoeffnet", "verladen-gemeldet"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {

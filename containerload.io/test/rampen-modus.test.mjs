@@ -106,7 +106,9 @@ test("das Oeffnen zaehlt, und beide Sprachen kennen den Modus", () => {
   assert.ok(roh.includes('zaehl("rampen-modus")'), "das Oeffnen wird nicht gezaehlt");
   assert.ok(roh.includes('rampeBtn: "Rampen-Modus"') && roh.includes('rampeBtn: "Ramp mode"'),
     "rampeBtn fehlt in einer Sprache");
-  assert.ok(roh.includes('rampeLokal: "Haken bleiben nur auf diesem Ger\\xE4t."')
-    && roh.includes('rampeLokal: "Checkmarks stay on this device only."'),
+  // Seit "Verladen melden": die Haken bleiben lokal, die Meldung reist nur im Link, den der
+  // Verlader selbst verschickt -- der Hinweis sagt beides.
+  assert.ok(roh.includes('rampeLokal: "Haken bleiben auf diesem Ger\\xE4t \\u2014 die Meldung nur im Link, den du verschickst."')
+    && roh.includes('rampeLokal: "Checkmarks stay on this device \\u2014 the report only in the link you send."'),
     "der Lokal-Hinweis fehlt in einer Sprache");
 });
