@@ -27,15 +27,16 @@ Langfristig soll das Projekt wachsen und auch monetarisierbare Funktionen tragen
 
 ## 2. Technische Grundregeln (nicht verhandelbar ohne Rücksprache)
 
-- **Kein Build-Schritt.** Reines statisches HTML. Kein npm, kein Bundler, kein Framework-Build, kein PostCSS. Jede Datei muss durch bloßes Öffnen im Browser funktionieren. **Führe keine Build-Toolchain ein**, ohne dass der Projektinhaber das ausdrücklich will.
+- **Kein Build-Schritt.** Reines statisches HTML. Kein Bundler, kein Framework-Build, nichts, was beim Deploy erst entstehen muss. Jede Datei muss durch bloßes Öffnen im Browser funktionieren. **Führe keine Build-Toolchain ein**, ohne dass der Projektinhaber das ausdrücklich will.
   - Die `package.json` an der Repo-Wurzel existiert **nur** für die Abhängigkeiten der Netlify Functions (`@netlify/blobs`, `@anthropic-ai/sdk`). Die Seite selbst braucht sie nicht.
-- **Bibliotheken kommen per CDN**, nicht aus node_modules:
-  - Tailwind CSS — Runtime über `cdn.tailwindcss.com` (kein kompiliertes CSS; arbitrary values funktionieren, eine eigene Config nur inline via `tailwind.config = {…}`).
-  - React **18.3.1** (UMD, production) von cdnjs.
-  - Three.js **r128** von cdnjs. **Achtung:** r128-Einschränkungen beachten (z. B. kein `THREE.CapsuleGeometry`, OrbitControls nicht im Core). Version nicht ungefragt anheben.
+  - Was generiert wird, ist **eingecheckt** (Abschnitt 7). Ein Generator in `werkzeug/` ist ein Werkzeug für den, der etwas ändert — kein Schritt, den die Seite zum Laufen braucht.
+- **Die Seite liefert alles selbst aus** (Jareks Entscheidung, 10.11.26 — vorher kamen Tailwind, React, Three.js und die Schriften von drei fremden Servern):
+  - **Tailwind CSS** als feste Datei `tailwind.css`, erzeugt von `werkzeug/tailwind/bauen.mjs`. **Nach jeder neuen Utility-Klasse in `app.html` oder `index.html` den Generator laufen lassen** — `test/tailwind-css.test.mjs` fällt sonst und nennt die Klasse. Arbitrary values funktionieren weiter. Die Zeile steht als **letztes** Stylesheet im `<head>` (dort hängte die frühere Laufzeit ihr `<style>` ein; weiter oben wäre es eine andere Kaskade).
+  - **React 18.3.1** (UMD, production) und **Three.js r128** unter `vendor/`, unverändert aus den npm-Paketen (`werkzeug/bibliotheken/holen.mjs`, mit Prüfsumme). **Achtung:** r128-Einschränkungen beachten (z. B. kein `THREE.CapsuleGeometry`, OrbitControls nicht im Core). Version nicht ungefragt anheben.
+  - **Schriften** unter `schrift/`: Archivo und JetBrains Mono für die Oberfläche, Manrope und Space Grotesk für den Ladevorschlag.
   - `qrcode-generator` ist **vendored** (MIT, K. Arase) in `app.html` als `window.__QRLIB`. Nicht durch ein npm-Paket ersetzen.
-- **Keine zusätzlichen Abhängigkeiten** ohne guten Grund und ohne Rücksprache. Jede neue externe Abhängigkeit ist Angriffsfläche und Ladezeit.
-- **Wer einen fremden Server nachlädt, trägt ihn in `containerload.io/_headers` ein** (Content-Security-Policy). Fehlt er dort, blockiert der Browser ihn stillschweigend.
+- **Kein fremder Server ohne Rücksprache.** Übrig ist genau einer: der Besucherzähler (`gc.zgo.at`). Jede weitere fremde Quelle sieht die IP-Adresse jedes Besuchers; sie gehört vorher in die Datenschutzerklärung und in `containerload.io/_headers` (Content-Security-Policy — was dort fehlt, blockiert der Browser stillschweigend). `test/eigene-dateien.test.mjs` hält die Liste fest.
+- **Keine zusätzlichen Abhängigkeiten** ohne guten Grund und ohne Rücksprache. Jede neue Abhängigkeit ist Angriffsfläche und Ladezeit.
 
 ---
 
@@ -52,10 +53,11 @@ Veröffentlicht wird der Ordner **`containerload.io/`** (Netlify, `netlify.toml`
 | `containerload.io/impressum.html`, `datenschutz.html` | Rechtsseiten. **Inhaltliche Änderungen nur mit Rücksprache.** |
 | `containerload.io/ratgeber/`, `en/guide/`, `nl/gids/` | Container-Wissen (DE, EN, NL) — statische Seiten mit gemeinsamer `ratgeber/wissen.css`. Die Zahlen darin sind an den Packer gekoppelt (Tests). |
 | `containerload.io/karte/`, `welt-karte.js` | Hafenkarte und Admin-Weltkarte. `haefen.js`, `land.js`, `welt-karte.js` sind **generiert** (`werkzeug/`) — nie von Hand ändern. |
+| `containerload.io/tailwind.css`, `vendor/`, `schrift/` | Tailwind-CSS, React + Three.js und die Schriften — selbst ausgeliefert und **generiert** bzw. unverändert übernommen (`werkzeug/`). Nie von Hand ändern. |
 | `containerload.io/_headers`, `_redirects`, `sitemap.xml`, `robots.txt` | Netlify-Header (CSP), saubere Pfade, Suchmaschinen. |
 | `containerload.io/test/` | Regressionstests (`node --test`, ohne npm), Messstand unter `test/bench/`. |
-| `netlify/functions/` | `beacon` + `statistik` (anonyme Nutzungsstatistik), `ki-import` / `ki-brief` / `ki-chat` (KI-Funktionen). Reine Logik liegt in `lib/` und ist ohne installierte Abhängigkeit testbar. |
-| `werkzeug/` | Einmal-Generatoren für die generierten Dateien. Nicht deployt. |
+| `netlify/functions/` | `beacon` + `statistik` + `aufraeumen` (anonyme Nutzungsstatistik; `aufraeumen` läuft geplant und löscht nach zwölf Monaten), `ki-import` / `ki-brief` / `ki-chat` (KI-Funktionen, mit Limit je Client). Reine Logik liegt in `lib/` und ist ohne installierte Abhängigkeit testbar. |
+| `werkzeug/` | Generatoren für die generierten Dateien (Karten, `tailwind.css`, `vendor/`, `schrift/`). Nicht deployt. |
 | `docs/entscheidungen.md` | Das Entscheidungsprotokoll (siehe Abschnitt 8). |
 
 ---
@@ -159,9 +161,10 @@ Was darüber hinaus immer gilt (Herleitung jeweils im Protokoll):
   - Neue Tests prüfen nach Möglichkeit **Verhalten** (Funktion ausführen, Ergebnis vergleichen). Ein Textvergleich am Quelltext ist die Notlösung für das, was sich ohne Browser nicht ausführen lässt.
 - **Wer an `emsSearch` oder `emsPackOnce` etwas ändert, misst vorher und nachher:** `node test/bench/fuellgrad.mjs app.html` über 300 deterministische Ladungen. Verladene Packstücke und belegtes Volumen dürfen nicht sinken.
 - **Im Browser ansehen**, wenn am Rechner gearbeitet wurde: 3D-Ansicht lädt, eine Ladung lässt sich eingeben, der Teilen-Link öffnet sie korrekt, der Ladevorschlag druckt sauber, DE↔EN schaltet um — in Hell **und** Dunkel, am Schreibtisch **und** auf dem Telefon.
-  - **Die Harness-Falle:** Wer dafür ein vorkompiliertes Tailwind-CSS benutzt (die CDN-Runtime ist nicht überall erreichbar), muss es nach jeder neuen Utility-Klasse neu bauen. Sonst kollabiert das Layout im Test, während die Live-Seite korrekt wäre.
+  - **Lokal sieht man dasselbe wie live** — auch ohne Netz, seit nichts mehr von einem CDN kommt. Wer eine Ressource hinzufügt, liefert die Seite zum Ansehen einmal **mit** der Policy aus `_headers` aus: eine blockierte Datei macht keinen Lärm, sie fehlt einfach.
+  - **Die Tailwind-Falle:** eine neue Utility-Klasse ohne Generator-Lauf hat keine Regel. Der Test meldet es; wer ihn nicht laufen lässt, sieht ein Layout, das an genau dieser Stelle bricht.
 - **Performance im Blick behalten:** keine schweren Abhängigkeiten, Bilder klein halten, schneller erster Eindruck.
-- **Generierte Dateien** (`karte/haefen.js`, `karte/land.js`, `welt-karte.js`, die Top-50-Tabellen zwischen `HK_TOP50_START/ENDE`) entstehen aus `werkzeug/` — Generator ändern und laufen lassen, nie die Ausgabe.
+- **Generierte Dateien** (`tailwind.css`, `vendor/`, `schrift/`, `karte/haefen.js`, `karte/land.js`, `welt-karte.js`, die Top-50-Tabellen zwischen `HK_TOP50_START/ENDE`) entstehen aus `werkzeug/` — Generator ändern und laufen lassen, nie die Ausgabe. Die Befehle stehen in `werkzeug/README.md`.
 - Bei Unsicherheit über eine produktbezogene Entscheidung (Feature-Verhalten, Texte, Presets) **lieber kurz nachfragen**, statt zu raten.
 
 ---
@@ -180,21 +183,21 @@ Was darüber hinaus immer gilt (Herleitung jeweils im Protokoll):
 | **Ladevorschlag, Export, Rampe** | Ladevorschlag und CSV je Container · Die Belade-Reihenfolge im Ladevorschlag · Der Rampen-Modus · Das Rampen-Blatt · Der Bildexport rahmt die ganze Reihe · Die Vorschaubilder beim Teilen |
 | **Teilen, Entwurf, Zusammenarbeit** | Der Entwurf, das Rückgängig und der leere Start · Der Teilen-Anstoß · Der Empfänger-Hinweis auf geteilten Plänen · Zusammenarbeit über den Link · Reederei-Presets |
 | **Import und KI** | Der Import-Parser rät nicht still · Maßangaben im Fließtext · Der KI-Import — Stufen 1–4 (Import, Foto, Brief, Stevie) |
-| **Messen und Rückmeldung** | Messen und melden: die zwei Rückkanäle · Anonyme Nutzungsstatistik und das Admin-Dashboard · Leere Aufrufe stehen getrennt · Die Feedback-Frage fragt Wiederkehrer |
+| **Messen und Rückmeldung** | Messen und melden: die zwei Rückkanäle · Anonyme Nutzungsstatistik und das Admin-Dashboard · Leere Aufrufe stehen getrennt · Die Feedback-Frage fragt Wiederkehrer · Limit je Client vor der KI und der Fehlerzähler · Aufbewahrung: zwölf Monate |
 | **Startseite** | Die Startseite verkauft, der Rechner bedient · Die Startseite atmet · Die Hero-Animation · Die Startseiten-Snippets · Der CBM-Rechner |
 | **Wissensseiten und Suche** | Container-Wissen (`/ratgeber/`) · Die zwei Top-Seiten · Die vertieften Seiten · Der Container Guide (`/en/guide/`) · Die Sichtbarkeits-Wellen (im Abschnitt „Gleiche Ware …") · Der Lademeter-Rechner · Die Hafenkarte · Hell und Dunkel auf Wissens-, Rechts- und Teilen-Seiten |
-| **Sprachen, Schrift, Randseiten** | Zweisprachigkeit (DE/EN) · Zwischen den Sprachen darf nichts liegenbleiben · Die Font-CSS lädt asynchron · Randseiten |
-| **Deploy und Functions** | Deploy: Lockfile, Publish-Verzeichnis, Statistik-Abruf · Anonyme Nutzungsstatistik und das Admin-Dashboard · Der KI-Import — Stufen 1–4 |
+| **Sprachen, Schrift, Randseiten** | Zweisprachigkeit (DE/EN) · Zwischen den Sprachen darf nichts liegenbleiben · Die Font-CSS lädt asynchron · Randseiten · Die Seite liefert alles selbst aus |
+| **Deploy und Functions** | Deploy: Lockfile, Publish-Verzeichnis, Statistik-Abruf · Die Seite liefert alles selbst aus · Limit je Client vor der KI und der Fehlerzähler · Aufbewahrung: zwölf Monate · Anonyme Nutzungsstatistik und das Admin-Dashboard · Der KI-Import — Stufen 1–4 |
 
 ---
 
 ## 9. Offene Punkte
 
 - **`app.html` ist eine Datei.** Die reine Logik (Packer, Parser, Link-Kodierung, Presets) in eigene Skriptdateien zu legen, wäre ohne Build-Schritt möglich und würde Tests, Caching und einen Web Worker für den Packer erlauben. Noch nicht entschieden; bis dahin gilt die Anker-Regel aus Abschnitt 7.
-- **Tailwind-Runtime-CDN.** Ein vorkompiliertes, eingechecktes CSS wäre der größte Hebel für die Ladezeit, ändert aber den Arbeitsfluss und berührt Abschnitt 2 — eine eigene Entscheidung mit Rücksprache.
+- **Die Datenschutzerklärung nennt noch die drei früheren Dienste** (Google Fonts, Tailwind-CDN, cdnjs) und kennt Limit je Client, Fehlerzähler und Aufbewahrungsfrist noch nicht. Der Text ändert sich nur mit Jareks Zusage; der Vorschlag steht im Pull Request [#158](https://github.com/jarekvibe/containerload.io/pull/158). Diesen Punkt streichen, sobald der Text steht.
 
 ---
 
 ## 10. Kurz gesagt
 
-Statisches HTML, kein Build, CDN-Bibliotheken, zweisprachig, ehrlich in der Genauigkeit. Auf einem Branch arbeiten, die Adress-Verträge respektieren, vor Änderungen den Abschnitt im Protokoll lesen — und die Vision im Kopf behalten: **die Ladeberechnung für alle einfach, schnell und vertrauenswürdig machen.**
+Statisches HTML, kein Build, alles vom eigenen Server, zweisprachig, ehrlich in der Genauigkeit. Auf einem Branch arbeiten, die Adress-Verträge respektieren, vor Änderungen den Abschnitt im Protokoll lesen — und die Vision im Kopf behalten: **die Ladeberechnung für alle einfach, schnell und vertrauenswürdig machen.**

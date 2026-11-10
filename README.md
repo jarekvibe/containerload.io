@@ -33,16 +33,16 @@ Der Kern ist eine **geometrische** Stauung. Was darüber hinausgeht — Gewichts
 
 ## Tech-Stack
 
-Bewusst schlank und ohne Build-Schritt — statisches HTML, die Bibliotheken per CDN:
+Bewusst schlank und ohne Build-Schritt — statisches HTML, und alles kommt vom eigenen Server:
 
-- **Tailwind CSS** (Runtime via `cdn.tailwindcss.com`)
-- **React 18.3.1** (UMD, production)
-- **Three.js r128** für die 3D-Ansicht
+- **Tailwind CSS** als feste Datei (`tailwind.css`)
+- **React 18.3.1** (UMD, production) und **Three.js r128** unter `vendor/`
+- **Archivo** und **JetBrains Mono** unter `schrift/`
 - **qrcode-generator** (vendored, MIT) für die QR-Codes
 
-Kein Bundler, kein Framework-Build. Eine HTML-Datei im Browser öffnen genügt.
+Kein Bundler, kein Framework-Build. Eine HTML-Datei im Browser öffnen genügt — auch ohne Internet. Der einzige fremde Server, den die Seite anspricht, ist der cookielose Besucherzähler.
 
-Dazu fünf **Netlify Functions** (`netlify/functions/`): `beacon` und `statistik` für die anonyme Nutzungsstatistik, `ki-import`, `ki-brief` und `ki-chat` für die KI-Funktionen (Claude über die Anthropic-API). Die `package.json` an der Repo-Wurzel existiert nur für deren Abhängigkeiten.
+Dazu sechs **Netlify Functions** (`netlify/functions/`): `beacon`, `statistik` und `aufraeumen` für die anonyme Nutzungsstatistik (`aufraeumen` läuft täglich und löscht Events nach zwölf Monaten), `ki-import`, `ki-brief` und `ki-chat` für die KI-Funktionen (Claude über die Anthropic-API). Die `package.json` an der Repo-Wurzel existiert nur für deren Abhängigkeiten.
 
 ## Projektstruktur
 
@@ -55,6 +55,7 @@ Dazu fünf **Netlify Functions** (`netlify/functions/`): `beacon` und `statistik
 | `containerload.io/admin.html` | Dashboard der Nutzungsstatistik (Token-Pflicht) |
 | `containerload.io/ratgeber/`, `en/guide/`, `nl/gids/` | Container-Wissen |
 | `containerload.io/karte/` | Hafenkarte |
+| `containerload.io/tailwind.css`, `vendor/`, `schrift/` | Tailwind-CSS, Bibliotheken und Schriften — generiert bzw. unverändert übernommen |
 | `containerload.io/test/` | Regressionstests (werden beim Deploy entfernt) |
 | `netlify/functions/` | Statistik- und KI-Endpunkte |
 | `werkzeug/` | Generatoren für eingecheckte, generierte Dateien (nicht deployt) |
@@ -70,7 +71,7 @@ open containerload.io/index.html      # macOS
 # oder einfach per Doppelklick
 ```
 
-Da die Bibliotheken über CDN geladen werden, ist eine Internetverbindung erforderlich. Die KI-Funktionen und die Statistik brauchen die Netlify Functions und laufen lokal nicht.
+Die KI-Funktionen und die Statistik brauchen die Netlify Functions und laufen lokal nicht. Wer in `app.html` oder `index.html` eine neue Tailwind-Klasse benutzt, lässt einmal den Generator laufen (`werkzeug/README.md`); der Test `tailwind-css` meldet es sonst.
 
 Tests (ohne npm, rund 30 Sekunden):
 
