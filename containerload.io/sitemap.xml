@@ -420,4 +420,20 @@
     <lastmod>2026-10-26</lastmod>
     <changefreq>monthly</changefreq><priority>0.7</priority>
   </url>
+  <url>
+    <loc>https://containerload.io/ratgeber/containerhaefen</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/containerhaefen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-ports"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/containerhaefen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/container-ports</loc>
+    <lastmod>2026-11-10</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/containerhaefen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-ports"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/containerhaefen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
 </urlset>
