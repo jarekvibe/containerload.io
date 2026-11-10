@@ -43,7 +43,10 @@ const EREIGNISSE = [
   "strassenlimit", "teilen-anstoss", "ki-import", "ki-import-foto", "ki-brief", "ki-chat",
   "stevie-geoeffnet", "thema-hell", "thema-dunkel",
   // Zusammenarbeit ueber den Link: geaenderte Fassung gesehen, Verlade-Meldung geoeffnet/verschickt
-  "fassung-geaendert", "meldung-geoeffnet", "verladen-gemeldet"
+  "fassung-geaendert", "meldung-geoeffnet", "verladen-gemeldet",
+  // Fehlerzaehler (Jareks Entscheidung, 10.11.26): DASS etwas bricht, nie WAS -- kein
+  // Fehlertext, keine Zeile. test/fehler-und-limit.test.mjs haelt genau das fest.
+  "fehler-anzeige", "fehler-skript", "fehler-async"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {

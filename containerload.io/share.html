@@ -29,6 +29,7 @@
 <meta name="twitter:description" content="Sieh in 3D, wie die Ladung in den Container passt · See in 3D how the cargo fits into the container." />
 <meta name="twitter:image" content="https://containerload.io/share-og.png" />
 <meta name="theme-color" content="#0E1116" />
+<script>/* Thema vor dem ersten Zeichnen: gemerkte Wahl (cl_theme) vor Systemeinstellung, sonst dunkel -- wie Startseite und Rechner. */(function(){var t="dunkel";try{var m=localStorage.getItem("cl_theme");if(m==="hell"||m==="dunkel")t=m;else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="hell"}catch(e){}document.documentElement.dataset.theme=t;if(t==="hell"){var c=document.querySelector('meta[name="theme-color"]');if(c)c.setAttribute("content","#EEF1F6")}})();</script>
 <!-- Verweist auf die Markendateien statt das Zeichen hier noch einmal einzubacken.
      Eingebackene Kopien laufen auseinander — genau das war hier passiert. -->
 <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -38,27 +39,31 @@
      Hier standen vorher ein eigener Grundton (#070a0f), ein eigener Akzent (#2f9bff),
      zwei Farbverlaeufe und Schriftgewicht 800 — vier Abweichungen auf einer Seite,
      die nur eine halbe Sekunde zu sehen ist. */
+  :root{--bg:#0E1116;--text:#E9F0F7;--dim:#9DB0C2;--faint:#7689A0;--accent:#2E8FFF;--on-accent:#04121A;--spur:rgba(46,143,255,.25)}
+  /* Hell wie der Rechner, in den diese Seite gleich weiterleitet -- sonst blitzt vor
+     einem hellen Rechner eine halbe Sekunde lang eine dunkle Seite auf. */
+  :root[data-theme="hell"]{--bg:#EEF1F6;--text:#1C2733;--dim:#46566A;--faint:#5B6B7E;--accent:#1273E6;--on-accent:#FFFFFF;--spur:rgba(18,115,230,.22)}
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:#0E1116;color:#E9F0F7;
+  body{background:var(--bg);color:var(--text);
     font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
     min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
   .wrap{text-align:center;padding:24px;max-width:440px}
   .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px}
-  .mark{width:40px;height:40px;border-radius:12px;background:#2E8FFF;display:flex;align-items:center;justify-content:center}
+  .mark{width:40px;height:40px;border-radius:12px;background:var(--accent);display:flex;align-items:center;justify-content:center}
   .word{font-size:21px;font-weight:700;letter-spacing:-.02em}
-  .word-load{color:#2E8FFF}
+  .word-load{color:var(--accent)}
   .eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;
-    text-transform:uppercase;color:#7689A0;margin-bottom:14px}
+    text-transform:uppercase;color:var(--faint);margin-bottom:14px}
   h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
-  p{color:#9DB0C2;font-size:15px;line-height:1.55;margin-bottom:26px}
-  .spin{width:26px;height:26px;border:3px solid rgba(46,143,255,.25);border-top-color:#2E8FFF;
+  p{color:var(--dim);font-size:15px;line-height:1.55;margin-bottom:26px}
+  .spin{width:26px;height:26px;border:3px solid var(--spur);border-top-color:var(--accent);
     border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 22px}
   @keyframes sp{to{transform:rotate(360deg)}}
-  .btn{display:inline-flex;align-items:center;gap:8px;background:#2E8FFF;color:#04121A;font-weight:700;
+  .btn{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:var(--on-accent);font-weight:700;
     font-size:15px;padding:13px 26px;border-radius:12px;text-decoration:none;transition:filter .15s}
   .btn:hover{filter:brightness(1.08)}
-  .btn:focus-visible{outline:2px solid #2E8FFF;outline-offset:3px}
-  .foot{margin-top:22px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#7689A0}
+  .btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+  .foot{margin-top:22px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:var(--faint)}
   @media (prefers-reduced-motion:reduce){.spin{animation:none}}
 </style>
 </head>

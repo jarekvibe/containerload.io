@@ -12,10 +12,10 @@
   # Content-Security-Policy: Sagt dem Browser, von welchen Servern er ueberhaupt
   # etwas laden darf. Alles was hier nicht steht, wird blockiert.
   #
-  #   cdn.tailwindcss.com  -> Tailwind (Gestaltung)
-  #   cdnjs.cloudflare.com -> React und Three.js (3D-Ansicht)
-  #   fonts.googleapis.com -> Schrift-Stylesheet
-  #   fonts.gstatic.com    -> die Schriftdateien selbst
+  # Seit November 2026 liefert die Seite Tailwind (tailwind.css), React und Three.js
+  # (vendor/) und die Schriften (schrift/) SELBST aus. Uebrig sind genau zwei fremde
+  # Adressen:
+  #
   #   gc.zgo.at            -> Besucherzaehler GoatCounter (das Skript)
   #   *.goatcounter.com    -> Besucherzaehler (wohin gezaehlt wird)
   #   app.netlify.com      -> NUR die Vorschau-Leiste, die Netlify in Deploy-Previews
@@ -23,13 +23,19 @@
   #                           diesen Eintrag meldet jede Vorschau einen CSP-Fehler,
   #                           und echte Fehler gehen daneben unter.
   #
+  # Vorher standen hier zusaetzlich cdn.tailwindcss.com, cdnjs.cloudflare.com,
+  # fonts.googleapis.com und fonts.gstatic.com. Wer wieder etwas von dort (oder von
+  # irgendeinem anderen fremden Server) nachlaedt, muss es hier eintragen -- und
+  # test/eigene-dateien.test.mjs anpassen, der genau das festhaelt.
+  #
   # 'unsafe-inline' ist noetig, weil das Projekt bewusst ohne Build-Schritt
   # arbeitet: der gesamte Code steht direkt in den HTML-Dateien.
   # data: und blob: bei img-src brauchen der PNG-Export und die QR-Codes.
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdnjs.cloudflare.com https://gc.zgo.at; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://containerload.goatcounter.com; connect-src 'self' https://containerload.goatcounter.com; worker-src 'self' blob:; frame-src 'self' https://app.netlify.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://gc.zgo.at; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://containerload.goatcounter.com; connect-src 'self' https://containerload.goatcounter.com; worker-src 'self' blob:; frame-src 'self' https://app.netlify.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'; object-src 'none'
 
   # Fremde Seiten duerfen ContainerLoad nicht in einen Rahmen einbetten.
-  # SAMEORIGIN statt DENY, weil die Startseite den Rechner selbst per iframe zeigt.
+  # SAMEORIGIN statt DENY: die eigene Seite darf den Rechner einbetten (der
+  # Rechner kennt den eingebetteten Zustand), fremde Seiten duerfen es nicht.
   X-Frame-Options: SAMEORIGIN
 
   # Der Browser soll Dateitypen nicht raten, sondern nehmen was der Server sagt.
@@ -58,3 +64,14 @@
 
 /*.ico
   Cache-Control: public, max-age=86400
+
+# Bibliotheken und Schriftdateien tragen ihre Version im Dateinamen
+# (react-18.3.1..., archivo-5.3.0-latin.woff2). Eine neue Version ist eine neue
+# Datei -- der Inhalt hinter einem Namen aendert sich nie. Deshalb duerfen sie
+# lange im Browser bleiben; das gilt ausdruecklich NICHT fuer schrift.css und
+# tailwind.css, deren Namen gleich bleiben.
+/vendor/*.js
+  Cache-Control: public, max-age=31536000, immutable
+
+/schrift/*.woff2
+  Cache-Control: public, max-age=31536000, immutable

@@ -27,22 +27,19 @@
 <link rel="alternate" hreflang="de" href="https://containerload.io/" />
 <link rel="alternate" hreflang="en" href="https://containerload.io/?lang=en" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<!-- cdnjs liefert Three.js fuer die Hero-Animation (lazy, nur Desktop) --
-     der fruehe Handshake spart den Verbindungsaufbau, wenn sie startet. -->
-<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
-<!-- Die Font-CSS laedt asynchron (media-Swap): display=swap zeichnet den Text
-     sofort in der Systemschrift, Archivo kommt nach. Ohne das war die CSS ein
-     Render-Blocker -- der groesste vermeidbare Posten im mobilen PageSpeed. -->
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
-<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+<!-- Schriften und Three.js (Hero-Animation, lazy, nur Desktop) liefert die Seite selbst
+     aus (schrift/, vendor/) -- es gibt keinen fremden Server mehr, zu dem eine Verbindung
+     angekuendigt werden muesste. Die Font-CSS laedt weiter asynchron (media-Swap):
+     display=swap zeichnet den Text sofort in der Systemschrift, Archivo kommt nach; das
+     preload holt die eine Datei, die jede Seite braucht, schon vorher. -->
+<link rel="preload" href="schrift/archivo-5.3.0-latin.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="schrift/schrift.css" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="schrift/schrift.css" /></noscript>
 <link rel="icon" href="/favicon.ico" sizes="any" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="manifest" href="/site.webmanifest" />
-<script src="https://cdn.tailwindcss.com"></script>
 <script>
 (function(){
   var t="dunkel";
@@ -360,6 +357,11 @@ details[open] .faq-plus{transform:rotate(45deg)}
 .imp-demo{border:0;background:none;padding:0;color:var(--dim);font-size:11.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 .imp-demo:hover{color:var(--text)}
 </style>
+<!-- Tailwind als feste Datei (werkzeug/tailwind/bauen.mjs) statt der Laufzeit vom CDN.
+     Die Zeile steht bewusst als LETZTES Stylesheet im <head>: genau dort haengte die
+     Laufzeit ihr <style> ein, und ihre Regeln gewinnen bei Gleichstand gegen das
+     <style> der Seite. Weiter oben waere es eine andere Kaskade. -->
+<link rel="stylesheet" href="tailwind.css" />
 </head>
 <body>
 <!-- Sprachhinweis: wird nur eingeblendet, wenn der Browser nicht auf Deutsch steht
@@ -1744,7 +1746,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function markDots(i){ actDots.forEach(function(d,k){ d.classList.toggle('on',k===i); d.setAttribute('aria-current',k===i?'true':'false'); }); }
 
   function ensureThree(cb){ if(window.THREE) return cb();
-    var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    var s=document.createElement('script'); s.src='vendor/three-r128.min.js';
     s.async=true; s.onload=cb; s.onerror=function(){}; document.head.appendChild(s); }
 
   function build(){

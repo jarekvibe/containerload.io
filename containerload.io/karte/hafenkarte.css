@@ -9,6 +9,17 @@
   --hk-gross:#8FA3B8;   /* grosse/mittlere Haefen: ruhig, damit die Top 50 vorn stehen */
   --hk-klein:#55667A;
 }
+/* Hell: Wasser als ruhiges Blaugrau, Land fast weiss. Das Canvas liest seine Farben
+   beim Start aus diesen Variablen (farbenLesen in hafenkarte.js) -- und das Thema
+   steht dann schon am <html>, weil das Script im <head> vor allem anderen laeuft.
+   Die Karte braucht deshalb keinen eigenen Code fuer das helle Thema. */
+:root[data-theme="hell"] [data-hafenkarte]{
+  --hk-meer:#D8E2EE;
+  --hk-land:#F8FAFC;
+  --hk-grenze:#C6D0DD;
+  --hk-gross:#6E8096;
+  --hk-klein:#9AA9BB;
+}
 .hk{
   display:grid;grid-template-columns:minmax(0,1fr) 330px;
   grid-template-areas:"karte seite";gap:16px;margin:22px 0 10px;

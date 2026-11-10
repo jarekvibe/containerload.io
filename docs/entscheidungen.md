@@ -1,72 +1,18 @@
-# CLAUDE.md
+# Entscheidungsprotokoll
 
-Diese Datei wird von Claude Code automatisch gelesen, bevor an diesem Projekt gearbeitet wird. Sie beschreibt **was ContainerLoad ist, was damit erreicht werden soll, und welche Regeln beim Arbeiten gelten.**
+Hier steht, **warum** ContainerLoad so gebaut ist, wie es ist: jede größere Entscheidung mit Auslöser, Abwägung, gemessenen Zahlen und den Tests, die sie festhalten. Bis November 2026 war das alles Teil von `CLAUDE.md`; die Datei war darüber auf 230 KB gewachsen und ließ sich nicht mehr in einem Stück einlesen — was hinter dem ersten Fünftel stand, sah eine Sitzung nur, wenn sie gezielt weiterblätterte.
 
----
+Seitdem ist geteilt:
 
-## 1. Das Ziel hinter dem Projekt
+- **`CLAUDE.md`** (Repo-Wurzel) — die Regeln, die immer gelten: Ziel, Grundregeln, Verträge, das Regelwerk der Oberfläche, Arbeitsweise. Kurz genug, um jedes Mal ganz gelesen zu werden. Dort steht auch der **Wegweiser** in dieses Protokoll.
+- **Diese Datei** — die Begründungen, je Thema ein Abschnitt. **Vor einer Änderung an einem Thema erst den zugehörigen Abschnitt lesen** (über die Überschrift suchen), nicht die ganze Datei.
 
-ContainerLoad gibt Exporteuren, Spediteuren und der Allgemeinheit ein einfaches Werkzeug, um die Beladung von Containern zu berechnen — kostenlos, ohne Account, direkt im Browser. Die Vision: der grauen, traditionellen Speditionswelt (die heute oft mit Excel und Schätzung arbeitet) ein modernes, sofort nutzbares Tool entgegensetzen, das die Ladeberechnung sichtbar, schnell und zugänglich macht.
+Wer eine Entscheidung trifft, die bleiben soll, schreibt sie hier als neuen Abschnitt dazu. Was daraus eine Regel für **jede** Sitzung wird, bekommt zusätzlich eine Zeile in `CLAUDE.md`. Die Datei liegt bewusst außerhalb von `containerload.io/` — das ist das Publish-Verzeichnis, und alles darin wäre öffentlich abrufbar.
 
-Drei Funktionen tragen das Produkt:
-1. **Interaktiver 3D-Rechner** — Packstückmaße frei eingeben, Ergebnis live in 3D danebenstehen sehen.
-2. **Teilen-Link** — eine eingegebene Ladung in einen Link kodieren und weitergeben; Empfänger sehen sie sofort, ohne Login.
-3. **Ladevorschlag-PDF mit QR-Code** — druckbares Dokument, dessen QR-Code zurück auf den interaktiven 3D-Plan führt.
-
-Langfristig soll das Projekt wachsen und auch monetarisierbare Funktionen tragen — aber der Kern bleibt: **schnell, ehrlich, ohne Hürden.**
-
-**Leitprinzip bei jeder Änderung:** Macht es das Tool für jemanden an der Rampe oder am Schreibtisch klarer, schneller oder vertrauenswürdiger? Wenn nein, ist es wahrscheinlich die falsche Änderung.
-
-**Arbeitsweise (seit 28.09.2026, von Jarek so erteilt):** Claude priorisiert selbst, was wichtig ist, und setzt es um — datengetrieben (GSC, Admin-Dashboard), im Zweifel entlang des Leitprinzips und des erklärten Ziels: ContainerLoad soll unter Spediteuren vom Geheimtipp zum Praxis-Werkzeug werden. Unverändert gilt: **Merges in main nur auf Jareks Zusage** (Push auf main deployt live), Rechtsseiten-Texte nur mit Rücksprache, und die Ehrlichkeitslinie ist nicht verhandelbar. Größere Richtungswechsel (neue Produktkapitel, Monetarisierung, Auftritt nach außen unter Jareks Namen) werden weiterhin vorgeschlagen, nicht vollzogen.
+Die URL-Verträge, die Container-Presets und die Marken-Tabelle des Regelwerks stehen in `CLAUDE.md` und nicht mehr hier.
 
 ---
 
-## 2. Technische Grundregeln (nicht verhandelbar ohne Rücksprache)
-
-- **Kein Build-Schritt.** Reines statisches HTML. Kein npm, kein Bundler, kein Framework-Build, kein PostCSS. Jede Datei muss durch bloßes Öffnen im Browser funktionieren. **Führe keine Build-Toolchain ein**, ohne dass der Projektinhaber das ausdrücklich will.
-- **Bibliotheken kommen per CDN**, nicht aus node_modules:
-  - Tailwind CSS — Runtime über `cdn.tailwindcss.com` (kein kompiliertes CSS; arbitrary values funktionieren, eine eigene Config nur inline via `tailwind.config = {…}`).
-  - React **18.3.1** (UMD, production) von cdnjs.
-  - Three.js **r128** von cdnjs. **Achtung:** r128-Einschränkungen beachten (z. B. kein `THREE.CapsuleGeometry`, OrbitControls nicht im Core). Version nicht ungefragt anheben.
-  - `qrcode-generator` ist **vendored** (MIT, K. Arase) in `app.html` als `window.__QRLIB`. Nicht durch ein npm-Paket ersetzen.
-- **Keine zusätzlichen Abhängigkeiten** ohne guten Grund und ohne Rücksprache. Jede neue externe Abhängigkeit ist Angriffsfläche und Ladezeit.
-
----
-
-## 3. Dateien & Verantwortlichkeiten
-
-| Datei | Rolle |
-|---|---|
-| `index.html` | Landingpage. Hero, Features, FAQ, CTA. Bindet `app.html` per iframe ein. Zweisprachig. |
-| `app.html` | **Herzstück.** Der React+Three.js-Rechner. Enthält Container-Presets, Pack-/Stau-Algorithmus, Teilen-Kodierung, QR-Bibliothek, Text-Import. Mit Abstand die größte Datei (~1300 Zeilen) — hier mit Bedacht arbeiten. |
-| `share.html` | Branded Zwischenseite. Liest den `?p=`-Parameter und leitet nach ~450 ms per `location.replace` auf `app.html` mit demselben Query-String weiter. |
-| `Ladevorschlag-Render.html` | Druck-/PDF-Vorlage (`@media print`, `window.print()`). Enthält den QR-Code zurück zum 3D-Plan und mehrere Haftungs-Hinweise. |
-| `impressum.html`, `datenschutz.html` | Rechtsseiten. Inhaltliche Änderungen nur mit Rücksprache. |
-| `og.png`, `share-og.png` | Social-Vorschaubilder (1200×630). |
-
----
-
-## 4. Mechanismen, die nicht brechen dürfen
-
-Diese Verträge halten das Produkt zusammen. Vor Änderungen daran erst nachfragen.
-
-### URL-Parameter (der „Vertrag" zwischen den Seiten)
-- **`?p=<base64>`** — die geteilte Ladung. Das State-Objekt (`{ pr, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }`) wird als JSON serialisiert, dann **URL-sicher base64-kodiert** (`+`→`-`, `/`→`_`, `=` entfernt). Decode macht den umgekehrten Weg. `share.html?p=…` und `app.html?p=…` müssen denselben Parameter verstehen.
-- **`?q=<text>`** — natürlichsprachiger Ladungs-Import (`parseCargoText`), z. B. „20 Europaletten 120x80x110 stapelbar".
-- **`?lang=en`** — schaltet auf Englisch.
-
-Wer das Kodierungsschema ändert, macht **alle bereits geteilten Links und gedruckten QR-Codes ungültig.** Das ist eine bewusste, schwerwiegende Entscheidung — niemals beiläufig.
-
-### Container-Presets (Maße in cm, Zuladung in kg)
-| Preset | L | B | H | Zuladung |
-|---|---|---|---|---|
-| 20' GP | 590 | 235 | 239 | 28200 |
-| 20' HC | 590 | 235 | 270 | 28150 |
-| 40' GP | 1203 | 235 | 239 | 26600 |
-| 40' HC | 1203 | 235 | 270 | 26580 |
-| 45' HC | 1355 | 235 | 270 | 27600 |
-
-Plus „Custom". Diese Werte sind real und mit den Speditionstabellen abgeglichen — nicht ohne Quelle ändern.
 
 ### Reederei-Presets (`CARRIERS` in `app.html`)
 Über der Container-Auswahl steht eine Reederei-Wahl (Maersk, CMA CGM, COSCO, Hapag-Lloyd, ONE, Evergreen, HMM, Yang Ming). Sie überschreibt **nur die Geometrie** des gewählten Typs — Innenlänge/-breite/-höhe und Türöffnung, in cm mit einer Nachkommastelle (= Millimeter, so wie veröffentlicht).
@@ -88,32 +34,7 @@ Special Equipment (Open Top, Flat Rack, Platform) und „Custom" bleiben von der
 ### Das Regelwerk (gilt für `app.html` wie für `index.html`)
 PR #57 hat die Landingpage entschlackt, PR #68 dieselben Regeln in den Rechner gezogen, und der Design-Durchgang vom August 2026 hat sie aus dem Markup in **Marken** geholt. `test/design-system.test.mjs` hält beides fest: dass die Marken die vereinbarten Werte tragen, **und** dass daneben keine Zahl im Markup steht. Wer eine Stufe wirklich braucht, trägt sie oben in `app.html` ein und passt den Test an; dann ist es eine Entscheidung und kein Versehen.
 
-Die Skala steht als erstes im Modul, noch vor `var C`:
-
-```js
-var FS   = { label: 11.5, small: 12.5, body: 13.5, lead: 15, h3: 17, h2: 20 };
-var FW   = { label: 500, body: 500, semi: 600, bold: 700 };
-var NUMS = { s: 15, m: 20, l: 26 };      // Kennzahlen, Monospace, tabular-nums
-var R    = { s: 8, l: 16 };              // ZWEI Radien, mehr nicht
-var SP   = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 };
-var ICO  = { s: 16, m: 20, sw: 1.5 };
-```
-
-| | |
-|---|---|
-| Flächen | **sechs Stufen**, Grundton `#0E1116` (identisch mit der Landingpage — sie bindet den Rechner per iframe ein) |
-| Radien | **zwei**: `R.s` (8) für alles, was man anfasst — Knopf, Feld, Pille; `R.l` (16) für Flächen, auf denen etwas steht — Karte, Dialog. Dazu `999` für die echte Pille und `"50%"` für den Kreis |
-| Schriftgrößen | nur `FS.*` / `NUMS.*`, **keine Zahl im Markup**. Nichts unter 11,5 px |
-| Gewichte | nur `FW.*`, bis **700**, nicht darüber |
-| Abstände | **4 · 8 · 12 · 16 · 24 · 32**, nichts dazwischen — als `SP.*` inline und als Tailwind-Klasse (`p-1/2/3/4/6/8`, **kein `p-5`**, das sind 20) |
-| Symbole | **eine** Linienstärke (`ICO.sw` = 1,5) und zwei Größen (16 / 20). Nichts darunter |
-| Monospace | **nur an Zahlen** (ab `FS.small`) und am Teilen-Link. Ziffern bleiben untereinander stehen — als Kleintext ist sie Kostüm |
-| Farbe | **ein** Akzent (`C.accent` = `C.hint`) · neutral = eine Zahl · grün = passt · orange = wird knapp · rot = Grenze überschritten · Akzentblau = Auswahl, **nie** eine Kennzahl |
-| Fläche | **ein Ton**, kein Verlauf. Verläufe nur dort, wo ein Bild entsteht: hinter der 3D-Bühne und als Vignette darüber |
-| Zahlen | über `nf()` / `fmtDE()`, nie `toFixed()` in der Anzeige — sonst steht in der deutschen Oberfläche „0.03 m" |
-| Emoji | keine. Linien-SVG oder das Wort |
-
-**Die Druckvorlage (`LV_ROW` … `LV_DOC`) ist ausgenommen.** Sie ist ein eigenes Dokument: A4, weißes Papier, andere Schrift. Der Test überspringt diesen Bereich; wer dort arbeitet, arbeitet in dessen eigener Ordnung.
+Die Skala (`FS` / `FW` / `NUMS` / `R` / `SP` / `ICO`) und die Tabelle dazu stehen in `CLAUDE.md`, Abschnitt „Regelwerk der Oberfläche“ — hier folgt, wie es dazu kam und was die einzelnen Umbauten festgelegt haben.
 
 ### Hell und Dunkel: zwei Farbsätze, EIN Markenname (UI-Umbau Phase 1, Jareks Go, 29.10.26)
 Jarek wählte aus drei Entwürfen die „Helle Werkbank" (B2) — Phase 1 ist der unsichtbare Unterbau dafür: **alle Farben fließen durch `C`**, und `C` ist die lebende Kopie des aktiven Satzes (`C_DUNKEL` / `C_HELL`, `Object.assign` im Render-Körper von `App()`, VOR allen Kindern). Regeln, die nicht kippen dürfen (`test/thema.test.mjs` + die Farbsatz-Wachen in `test/design-system.test.mjs`):
@@ -1201,7 +1122,7 @@ Alle drei Seiten ließen sich seitlich schieben; `test/mobil.test.mjs` hält die
 - **Die Kopfzeile des Rechners** darf umbrechen (`flex-wrap`); Planname und „Speichern" bekommen auf dem Telefon eine eigene Zeile, die Sprachwahl liegt unter `sm` im „…"-Menü.
 
 ### Die Font-CSS lädt asynchron (PageSpeed)
-PageSpeed nannte für die Startseite mobil 85, größter vermeidbarer Posten: render-blockierende Ressourcen. Die Google-Font-CSS war auf allen 28 öffentlichen Seiten eine davon — ohne Grund, denn `display=swap` zeichnet den Text ohnehin sofort in der Systemschrift. Alle Seiten binden sie jetzt per **media-Swap** ein (`media="print"` + `onload="this.media='all'"`, noscript-Fallback); `test/font-laden.test.mjs` hält das für jede öffentliche Seite fest, die Druckvorlage `LV_DOC` bleibt bewusst blockierend (ein Druckdokument wartet auf die Schrift). Dazu kündigt die Startseite die cdnjs-Verbindung an (preconnect — Three.js der Hero-Animation lädt lazy und nur ab 600 px Viewport-Kante, das war schon so). **Der verbleibende große Posten ist das Tailwind-Runtime-CDN** (synchrones Script im Head, erzeugt das CSS zur Laufzeit): der Wechsel auf ein vorkompiliertes, eingechecktes CSS wäre der Hebel Richtung 95+, ändert aber den Arbeitsfluss (jede neue Utility-Klasse braucht ein Neu-Generieren) — das ist eine eigene Entscheidung mit Rücksprache, kein Quick-Win.
+PageSpeed nannte für die Startseite mobil 85, größter vermeidbarer Posten: render-blockierende Ressourcen. Die Google-Font-CSS war auf allen 28 öffentlichen Seiten eine davon — ohne Grund, denn `display=swap` zeichnet den Text ohnehin sofort in der Systemschrift. Alle Seiten binden sie jetzt per **media-Swap** ein (`media="print"` + `onload="this.media='all'"`, noscript-Fallback); `test/font-laden.test.mjs` hält das für jede öffentliche Seite fest, die Druckvorlage `LV_DOC` bleibt bewusst blockierend (ein Druckdokument wartet auf die Schrift). Dazu kündigt die Startseite die cdnjs-Verbindung an (preconnect — Three.js der Hero-Animation lädt lazy und nur ab 600 px Viewport-Kante, das war schon so). **Der verbleibende große Posten ist das Tailwind-Runtime-CDN** (synchrones Script im Head, erzeugt das CSS zur Laufzeit): der Wechsel auf ein vorkompiliertes, eingechecktes CSS wäre der Hebel Richtung 95+, ändert aber den Arbeitsfluss (jede neue Utility-Klasse braucht ein Neu-Generieren) — das ist eine eigene Entscheidung mit Rücksprache, kein Quick-Win. **(Entschieden am 10.11.26 — siehe „Die Seite liefert alles selbst aus".)**
 
 ### Randseiten
 `impressum.html`, `datenschutz.html` und `share.html` waren die letzten Seiten mit eigenen Werten — eigener Grundton, eigene Stufen, Inter statt Archivo (und zwar **ohne die Schrift zu laden**), Gewicht 800, Radius 14, ein Türkis aus der Zeit davor. Selten besuchte Seiten driften am weitesten, weil niemand hinsieht. `test/randseiten.test.mjs` liest Grundton und Akzent **aus `app.html`** und prüft beide Seiten plus `site.webmanifest` dagegen. **Am Rechtstext ändert dort niemand etwas ohne Rücksprache** — der Test fasst ihn auch nicht an.
@@ -1221,6 +1142,67 @@ Die Auswertung zeigte als häufigsten echten Ablauf einen Plan, der zwischen zwe
 - **Bewusst noch nicht:** ein Live-Link (Server, eigene Datenschutz-Abstimmung) — das wäre der nächste eigene Schritt.
 
 
+### Der Fehlerschirm (November 2026)
+Wirft eine Komponente beim Zeichnen, hängt React 18 den **ganzen** Baum ab — die Seite war dann leer, ohne ein Wort. `Fehlerschirm` (Klasse, ganz unten in `app.html`, umschließt `App`) zeigt stattdessen eine Meldung mit zwei Wegen heraus:
+- **„Neu laden"** verspricht nichts Falsches. Beim Start gewinnt die Ladung aus der Adresse vor dem Entwurf (`SHARED` / `QIMPORT` vor `DRAFT`); wer einen geteilten Plan bearbeitet hat, bekäme mit einem schlichten `reload()` das **Original** zurück. Mit einem Entwurf aus **diesem** Seitenaufruf (`entwurfFrisch`, gesetzt in `saveDraft`) lädt der Knopf deshalb ohne die Ladung in der Adresse; ohne frischen Entwurf bleibt die Adresse stehen — ein Entwurf von gestern sagt nichts über den Plan, der gerade offen war. Der Text nennt den Entwurf nur im ersten Fall.
+- **„Leer starten"** verwirft Entwurf und Ladung aus der Adresse. Ohne diesen Knopf wäre der Schirm eine Sackgasse, wenn genau dieser Stand der Auslöser ist.
+
+Die Verzögerung des Entwurfs (400 ms) hilft hier: die Änderung, die den Absturz auslöst, ist in aller Regel noch nicht gespeichert — zurück kommt der letzte Stand **davor**. Im Browser durchgespielt (Menge 20 → 21, erzwungener Absturz, Neu laden bringt die 21). `test/fehlerschirm.test.mjs` führt die Klasse gegen eine React-Attrappe aus.
+
+**Der Zähler dazu** kam im selben Zug, nach Jareks Zusage — siehe „Limit je Client vor der KI und der Fehlerzähler".
+
+**Zoom, im selben Zug:** `maximum-scale=1` stand fest im viewport und sperrte auf Android das Zoomen mit zwei Fingern. Die Klemme gilt jetzt nur noch auf iOS (dort verhindert sie den Sprung beim Antippen eines Zahlenfelds unter 16 px; zoomen lässt iOS trotzdem) und wird vom frühen Head-Script nachgereicht. iOS verhält sich exakt wie vorher.
+
+### Hell und Dunkel auf Wissens-, Rechts- und Teilen-Seiten (November 2026)
+Startseite und Rechner folgten der Wahl (`cl_theme`) bzw. dem System, die 49 Wissensseiten, Impressum, Datenschutz und `share.html` blieben dunkel — mit hellem System führte der Weg Startseite → Wissensseite → Rechner durch einen dunklen Raum.
+- **Der helle Satz steht in `ratgeber/wissen.css`** und trägt wörtlich die Werte von `C_HELL` (testgekoppelt). `--deep` ist `field`, `--line-2` ist `fieldBorder`.
+- **Links im Fließtext haben im Hellen einen eigenen Ton** (`--link` = `C_HELL.info`). Sie stehen auf dem Seitengrund, nicht auf einer Karte, und dort kommt der helle Akzent nur auf **4,0:1**. Flächen und Knöpfe behalten `--accent`.
+- **Die Zeichnungen werden übersetzt, nicht umgeschrieben.** Die SVGs tragen ihre Farben als Attribute (sie kommen fertig aus dem Packer). Der helle Satz fängt die vier Töne per Attribut-Selektor ab (`[fill="#2FD8A0" i]` …) und setzt die dunkleren Geschwister. Kommt ein neuer Ton in eine Zeichnung, fällt der Test.
+- **Die Hafenkarte brauchte keinen Code:** das Canvas liest seine Farben aus Variablen. Die Falle dabei: sie stehen am Element (`[data-hafenkarte]`), nicht an `:root` — ein heller Satz an `:root` verliert gegen die Angabe am Element. Deshalb `:root[data-theme="hell"] [data-hafenkarte]`.
+- **Kein Build, keine Vorlage — also steht das Thema-Script in jeder der 52 Seiten** (eine Zeile im `<head>`, vor dem Stylesheet). `test/wissen-thema.test.mjs` hält fest, dass es überall dasselbe ist, und **führt es aus** (Wahl vor System, Privatmodus, `theme-color`).
+- **Die Seiten lesen `cl_theme` nur.** Einen eigenen Umschalter haben sie nicht — gewählt wird auf der Startseite oder im Rechner. Würden sie schreiben, bräuchte die Datenschutzseite ein Wort dazu.
+- **Rechtsseiten: kein Wort am Text**, nur `<head>`. Dabei flog ein verirrtes „GOOD" am Ende beider `<style>`-Blöcke auf (ein Überbleibsel, vom CSS-Parser stillschweigend verworfen).
+
+### Deploy: Lockfile, Publish-Verzeichnis, Statistik-Abruf (November 2026)
+Drei Dinge aus einer Durchsicht des ganzen Projekts, alle außerhalb der Seite selbst:
+- **`package-lock.json` ist eingecheckt, der Build läuft mit `npm ci`.** Vorher zog `npm install` bei jedem Deploy die jeweils neueste passende Version der Function-Abhängigkeiten — zwei Deploys desselben Commits waren nicht dasselbe.
+- **Im Publish-Verzeichnis liegt nur noch, was öffentlich sein soll.** `CLAUDE.md` und `README.md` lagen in `containerload.io/` und waren damit abrufbar, ebenso `test/` und fünf unbenutzte Alt-Dateien (zwei alte Kopien des Rechners, ein Hero-Prototyp, die frühere Druckvorlage, `_hdr.html`). Doku und README liegen jetzt an der Repo-Wurzel bzw. unter `docs/`, die Alt-Dateien sind gelöscht (Git-Historie), und `test/` nimmt der Build-Befehl heraus (`rm -rf containerload.io/test`). Die Tests bleiben **bewusst** neben `app.html` liegen: über hundert Dateien schneiden mit relativen Pfaden daraus.
+- **`/api/statistik` listet je Tag des Zeitraums** (`tagesPraefixe` / `schluesselImZeitraum` in `lib/nutzung.mjs`), nicht mehr den ganzen Store. Vorher wuchs die Liste mit jedem Tag seit dem Start. Das parallele **Lesen** der Events ist unverändert — eine Drosselung ohne Messung gegen den echten Store wäre ein Blindflug Richtung Zeitlimit. Gelöscht wird inzwischen nach zwölf Monaten — siehe „Aufbewahrung: zwölf Monate".
+
+### Die Seite liefert alles selbst aus (November 2026, Jareks Entscheidung)
+Drei Grundregeln aus `CLAUDE.md` Abschnitt 2 sind geändert — vorgelegt als Frage, von Jarek am 10.11.26 so entschieden. Vorher gab jeder Seitenaufruf die IP-Adresse an `cdn.tailwindcss.com`, `cdnjs.cloudflare.com` und Google Fonts; hinter einer Firmen-Firewall, die einen davon sperrt, blieb der Rechner auf „lädt…" stehen (im Browser nachgestellt); und Google Fonts von Googles Servern gilt in Deutschland seit dem Urteil des LG München von 2022 als Abmahnrisiko. Übrig ist **ein** fremder Server: der Besucherzähler.
+
+- **Bibliotheken (`vendor/`)**: React, ReactDOM, Three.js r128 — byte-gleich mit den npm-Paketen, die cdnjs spiegelt. `werkzeug/bibliotheken/holen.mjs` holt das Tarball, prüft sha512 gegen den **eingetragenen** Wert und kopiert nur Dateien; Paket-Code läuft nie. Der Dateiname trägt die Version. **Relativ** eingebunden (`vendor/…`, nicht `/vendor/…`): `app.html` muss weiter durch bloßes Öffnen laufen.
+- **Schriften (`schrift/`)**: aus den Fontsource-Paketen (dieselben Google-Fonts-Schriften, SIL OFL), als **variable** woff2 — eine Datei je Schriftsystem trägt alle Gewichte. Nur `latin` und `latin-ext`; `latin-ext` lädt der Browser erst, wenn ein Zeichen daraus vorkommt. Das Lademuster ist geblieben (asynchrone CSS, `noscript`), neu ist ein `preload` der einen Datei, die jede Seite braucht. `share.html` lädt weiter bewusst keine Schrift.
+- **Die Falle beim Ladevorschlag:** das Dokument entsteht per `document.write` in einem leeren Fenster; eine relative Adresse hängt dort an einer geerbten Basis. `LV_SCHRIFT` löst die Font-CSS deshalb einmal absolut auf — auch bei `file://`. Im Browser geprüft: das Fenster lädt `druck.css` und alle drei Schriften, unter der Policy.
+- **Tailwind (`tailwind.css`)**: 23 KB festes CSS statt 470 KB Laufzeit. **Was der Laufzeit nachgebaut ist, ist aus ihrem Quelltext gelesen, nicht geraten:** dieselben drei Schichten, Autoprefixer mit `remove:false` — und die **Stelle**. Die Laufzeit baute erst, sobald `document.body` existierte, und hängte ihr `<style>` dann ans **Ende des `<head>`**. Ihre Regeln (auch das Preflight) standen also **nach** dem `<style>` der Seite und gewannen bei Gleichstand. Die feste Datei steht deshalb als letztes Stylesheet im `<head>`; weiter oben wäre es eine andere Kaskade als die, mit der die Seiten gebaut und angesehen wurden. Bewusst **nicht minifiziert**: gzip macht aus 23 KB rund 6, und eine lesbare Datei zeigt im Diff, welche Regel dazukam.
+- **Der Preis, und sein Wächter:** eine neue Utility-Klasse braucht einen Generator-Lauf (`werkzeug/tailwind/bauen.mjs`). `test/tailwind-css.test.mjs` liest alle Klassen aus beiden Seiten und verlangt für jede eine Regel — in `tailwind.css` oder im eigenen `<style>`. Beim Einführen: 376 Klassen, keine ohne Regel; sechs reine JavaScript-Marken stehen in einer Ausnahmeliste, die der Test auf tote Einträge prüft.
+- **Content-Security-Policy:** die vier CDN-Adressen sind gestrichen; `script-src`, `style-src`, `font-src` erlauben nur noch die eigene Seite (plus `gc.zgo.at`). `test/eigene-dateien.test.mjs` hält beide Hälften fest: keine Seite lädt fremd, und die Policy erlaubt genau das.
+- **Geprüft** wurde ausgeliefert **mit** der Policy aus `_headers` (Rechner hell/dunkel/Telefon samt Dialogen, Startseite samt nachgeladenem Three.js, Wissensseiten, Karte, Rechtsseiten, Admin, Ladevorschlag): keine blockierte, keine fremde Anfrage. **Nicht vergleichbar war** die Live-Darstellung mit der CDN-Laufzeit — die CDNs waren aus der Arbeitsumgebung nicht erreichbar.
+- **Cache:** `vendor/*.js` und `schrift/*.woff2` tragen die Version im Namen und dürfen lange im Browser bleiben; `tailwind.css` und `schrift.css` nicht (gleicher Name, wechselnder Inhalt).
+
+### Limit je Client vor der KI und der Fehlerzähler (November 2026, Jareks Entscheidung)
+Zwei Dinge, die beide einen Satz der Datenschutzerklärung berühren und deshalb als Frage vorgelegt wurden.
+
+**Limit je Client.** Die drei KI-Endpunkte teilen sich einen Tagesdeckel (400). Ein Skript konnte ihn in Sekunden leeren und Stevie und den Import für alle bis zum nächsten Tag abschalten. Davor steht jetzt `rateLimit` in der Konfiguration jeder KI-Function: Netlify zählt **am Rand des Netzes** je IP-Adresse und antwortet ab der Grenze selbst mit 429 (Chat 30, Import und Brief je 10 pro Minute). Die Function läuft dann nicht, der Deckel wird nicht angefasst, es entsteht kein KI-Aufruf — und der Code liest die IP weiterhin nie.
+- **Ehrlich gerechnet: es bremst, es verhindert nicht.** Wer jedes Fenster ausschöpft, braucht für den Tagesdeckel rund acht Minuten statt Sekunden. Der Deckel bleibt die harte Grenze fürs Guthaben. Mehr ginge nur mit einem Tageskontingent je Client — und dafür müsste der eigene Code IP-Adressen über den Tag verfolgen.
+- **Stevie braucht mehr Luft** als Import und Brief: je Nachricht bis zu drei Anfragen (Antwort plus zwei Nachzüge).
+- **Zwei 429, zwei Texte.** Das der Function trägt `{"fehler":"limit"}` („morgen wieder"), das von Netlify nicht („einen Moment warten", `kiTempo`). `kiLimitText` unterscheidet; vorher hätte jedes 429 „Tages-Kontingent aufgebraucht" gemeldet.
+- **Die Konfiguration muss ein Literal sein** — Netlify liest sie, ohne den Code auszuführen. Der Test wertet sie genau so aus.
+- **Offen beim Einführen:** ob der Tarif drei Regeln zulässt (in der Vorschau zu sehen). Falls nicht, lassen sich die drei Endpunkte hinter eine Function mit drei Pfaden und einer Regel legen.
+
+**Fehlerzähler.** Drei Ereignisse über den vorhandenen Zähler: `fehler-anzeige` (der Fehlerschirm ist erschienen), `fehler-skript` (Fehler im eigenen Code außerhalb des Zeichnens), `fehler-async`. Wie jedes andere Ereignis: **nur der Name**, je Seitenaufruf höchstens einmal. Kein Fehlertext, keine Zeile, kein Stack — in einer Meldung kann ein Positionsname stehen. Fremde Skripte (Browser-Erweiterungen, der Besucherzähler) zählen nicht mit: gezählt wird nur, was einen Dateinamen der eigenen Herkunft trägt. Der Zähler sagt, **dass** etwas bricht und wie oft; **was**, findet man danach selbst.
+
+`test/fehler-und-limit.test.mjs` führt Horcher, `kiLimitText` und die Konfigurationen aus.
+
+### Aufbewahrung: zwölf Monate (November 2026, Jareks Entscheidung)
+Die Events der Nutzungsstatistik wurden nie gelöscht. Jetzt löscht `aufraeumen` (geplante Function, täglich 03:17 UTC) alles, was älter als **365 Tage** ist. Zwölf Monate und nicht die 90 Tage, die das Dashboard zeigt: ein Jahr Verlauf soll für spätere Vergleiche bleiben.
+- **Kein Pfad.** Eine geplante Function ist von außen nicht aufrufbar, und Netlify startet sie nur auf der veröffentlichten Seite — nie in einer Vorschau. Das zählt hier: der Store ist für alle Deploys **derselbe**, eine Vorschau, die löscht, löschte die echten Daten.
+- **Gelöscht wird nur unter `e/<abgelaufener Tag>/`.** Der Präfix kommt aus `abgelaufeneTage`, nie aus einer Eingabe; was nicht wie ein Tages-Ordner aussieht, wird übergangen. Der Grenztag bleibt.
+- **Untergrenze 90 Tage, fest im Code.** Ein Tippfehler in einem Aufruf kann keine Daten löschen, die das Dashboard noch zeigt.
+- **Höchstens 2.000 je Lauf**, älteste zuerst (eine geplante Function hat 30 Sekunden); den Rest nimmt der nächste Lauf.
+- Tests an einer Store-Attrappe, die jede Löschung mitschreibt (`test/nutzungsstatistik.test.mjs`).
+
 ### Die Hafenkarte (`/ratgeber/containerhaefen`, `/en/guide/container-ports`, November 2026)
 Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containerschiffe anlaufen — die Reedereien schlugen nur Ostküste vor, Google Maps kennzeichnet Häfen nicht. **Stufe 1** ist eine Weltkarte mit Suche (Name, UN/LOCODE, Land) und Küstenfilter; **Stufe 2** (Jareks Wunsch: Abgangsland wählen, Routen zum Zielhafen vergleichen, schnellste zuerst) braucht Fahrplandaten der Reedereien und ist ein eigener Schritt.
 - **Kein Kartendienst.** Gezeichnet wird auf ein Canvas (`karte/hafenkarte.js`, ohne Bibliothek); Küste und Grenzen kommen aus `karte/land.js` (Natural Earth 1:50 Mio., vereinfacht, ~90 KB gzip), die Häfen aus `karte/haefen.js`. Beim Aufruf geht keine IP an einen Dritten; OpenStreetMap ist nur ein Link im Detail (neuer Tab, auf Klick). `test/hafenkarte.test.mjs` lässt nur die drei eigenen Skripte zu.
@@ -1229,28 +1211,3 @@ Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containe
 - **Küsten:** die NGA-Region („United States W Coast" → Westküste, „US Gulf Coast" → Golfküste; „… Continued"/„Cont" zusammengelegt). Hat ein Land so nur eine Region (Deutschland), unterscheidet das erste Gewässer (Nordsee/Ostsee). Deutsche Namen über Regeln + Tabellen in `haefen-bauen.mjs`; der Lauf meldet Lücken.
 - **Anzeige:** ohne Suchwort große/mittlere Becken + Top 50 (554), „Auch kleine Häfen" zeigt alle 3.794; eine Namenssuche findet immer jeden Hafen. Adresse teilbar: `?q=`, `?land=US`, `?kueste=<Index>`, `?alle=1`, `?hafen=<UN/LOCODE>`.
 - **Neu bauen:** `werkzeug/haefen/land-bauen.mjs` (Küste) und `haefen-bauen.mjs` (Häfen + die Top-50-Tabelle zwischen `<!-- HK_TOP50_START/ENDE -->` auf BEIDEN Seiten — nie von Hand ändern). Nach einer neuen WSC-Liste: CSV ersetzen, `ZUORDNUNG` prüfen, Generator laufen lassen; der Test koppelt Karte, Quelle und Seitentabellen Zahl für Zahl.
-
----
-
-## 5. Arbeitsweise & Guardrails
-
-- **Auf einem Branch arbeiten, niemals direkt auf `main` committen.** Änderungen als Branch/Pull-Request anlegen, damit der Projektinhaber sie über die Netlify-Vorschau prüfen kann, bevor sie live gehen.
-- **Kleine, nachvollziehbare Commits** mit klaren Beschreibungen — auf Deutsch ist völlig in Ordnung.
-- **Ehrlichkeit in allen Texten wahren.** Die Berechnung ist **rein geometrisch**. Schwerpunkt, Achslast und Ladungssicherung sind *nicht* enthalten. UI-Texte, Marketing und PDF dürfen **niemals** mehr Genauigkeit oder rechtliche Verbindlichkeit suggerieren, als das Tool liefert. Die bestehenden „unverbindlich"-Hinweise nicht entfernen oder abschwächen.
-- **Testen ohne Server:** Datei im Browser öffnen. Wichtig zu prüfen, wenn am Rechner gearbeitet wurde: 3D-Ansicht lädt, eine Ladung lässt sich eingeben, Teilen-Link öffnet die Ladung korrekt, PDF/Druck sieht sauber aus, DE↔EN-Umschaltung funktioniert.
-- **Das responsive Verhalten nicht kaputtmachen.** Desktop ist der Komfort-Fall, aber das Tool muss im mobilen Browser nutzbar bleiben.
-- **Performance im Blick behalten:** keine schweren Abhängigkeiten, Bilder klein halten, schneller erster Eindruck.
-- Bei Unsicherheit über eine produktbezogene Entscheidung (Feature-Verhalten, Texte, Presets) **lieber kurz nachfragen**, statt zu raten.
-
----
-
-## 6. Bekannte Punkte / Backlog
-
-- **OG-Image in `share.html`:** Vorschaubild und Referenz sind auf `share-og.png` (mit Bindestrich) vereinheitlicht; `share.html` (`og:image`/`twitter:image`) zeigt korrekt auf die tatsächlich im Repo vorhandene Datei `share-og.png`. (Frühere Doku nannte die Datei fälschlich `shareog.png` ohne Bindestrich — korrigiert.)
-- **Netlify-Auto-Deploy:** Soll künftig aus diesem Repo deployen (statt manuellem Upload). Ggf. eine `netlify.toml` und/oder `_redirects` ergänzen — aber erst nach Rücksprache, da sich dadurch ändert, *wie* die Live-Seite gebaut wird.
-
----
-
-## 7. Kurz gesagt
-
-Statisches HTML, kein Build, CDN-Bibliotheken, zweisprachig, ehrlich in der Genauigkeit. Auf einem Branch arbeiten, die URL-Verträge respektieren, die Vision im Kopf behalten: **die Ladeberechnung für alle einfach, schnell und vertrauenswürdig machen.**

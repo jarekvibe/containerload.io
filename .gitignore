@@ -3,3 +3,6 @@
 
 # npm-Abhaengigkeiten der Einmal-Generatoren in werkzeug/ (npm install --no-save)
 werkzeug/**/node_modules/
+
+# Abhaengigkeiten der Netlify Functions (npm ci); das Lockfile ist eingecheckt
+node_modules/

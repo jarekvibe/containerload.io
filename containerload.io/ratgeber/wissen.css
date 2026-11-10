@@ -33,6 +33,49 @@
   --sans:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
   --r-s:8px; --r-m:12px; --r-l:16px;
+  /* Zwei Toene, die bis zum hellen Satz als feste Werte im Markup der Regeln standen:
+     der Glasgrund der Kopfzeile und das helle Blau der "Verwandte Fragen"-Links. */
+  --nav:rgba(14,17,22,.82);
+  --link-soft:#bcd9ff;
+  --link:var(--accent);
+  --seg:var(--deep);
+}
+
+/* ── Hell ──────────────────────────────────────────────────
+ * Die Wissensseiten folgen demselben Schalter wie Startseite und Rechner: gemerkte
+ * Wahl (cl_theme) vor Systemeinstellung. Vorher blieben sie als einzige dunkel -- wer
+ * mit hellem System von der hellen Startseite auf eine Wissensseite ging und von dort
+ * in den hellen Rechner, lief durch einen dunklen Raum.
+ *
+ * Das data-theme setzt ein kleines Script im <head> JEDER Seite, vor dieser Datei
+ * (test/wissen-thema.test.mjs haelt fest, dass es ueberall dasselbe ist). Einen eigenen
+ * Umschalter haben die Seiten bewusst nicht: gewaehlt wird auf der Startseite oder im
+ * Rechner, hier wird nur gelesen.
+ *
+ * Die Werte sind woertlich C_HELL aus app.html -- derselbe Test koppelt sie. */
+:root[data-theme="hell"]{
+  --bg:#EEF1F6;
+  --card:#FFFFFF;
+  --deep:#F6F8FB;
+  --line:#E3E8F0;
+  --line-2:#D7DEE9;
+  --line-3:#C6D0DD;
+  --text:#1C2733;
+  --dim:#46566A;
+  --faint:#5B6B7E;
+  --accent:#1273E6;
+  --on-accent:#FFFFFF;
+  --good:#177A4C;
+  --warn:#A94E08;
+  --nav:rgba(255,255,255,.9);
+  --link-soft:#0B4FA8;
+  /* Links im Fliesstext stehen auf dem GRUND, nicht auf einer Karte. Dort kommt der
+     helle Akzent nur auf 4,0:1 -- unter der Lesbarkeitsgrenze. Deshalb ein eigener,
+     etwas tieferer Linkton (C_HELL.info, 4,96:1). Flaechen und Knoepfe behalten --accent. */
+  --link:#0F62D6;
+  /* Die Spur des Sprach-Umschalters: im Hellen eine Stufe DUNKLER als der Grund, damit
+     der aktive, weisse Knopf darauf zu sehen ist (auf --deep waere es Weiss auf Fastweiss). */
+  --seg:#E3E8F0;
 }
 
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -42,7 +85,7 @@ body{
   font-family:var(--sans);font-size:15px;line-height:1.65;
   overflow-x:hidden;-webkit-font-smoothing:antialiased;
 }
-a{color:var(--accent);text-decoration:none}
+a{color:var(--link);text-decoration:none}
 a:hover{text-decoration:underline}
 a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 .mono{font-family:var(--mono)}
@@ -51,7 +94,7 @@ a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-off
 /* ── Kopfzeile ─────────────────────────────────────────── */
 header.nav{
   position:sticky;top:0;z-index:20;
-  background:rgba(14,17,22,.82);border-bottom:1px solid var(--line);
+  background:var(--nav);border-bottom:1px solid var(--line);
   backdrop-filter:blur(14px);
 }
 .nav-in{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:12px}
@@ -74,7 +117,7 @@ header.nav{
    wer die Frage auf Deutsch liest, will sie auf Englisch lesen und nicht von vorn
    anfangen. Aktiv wird über die Fläche markiert, nicht über einen Rahmen — dieselbe
    Regel wie beim Umschalter im Rechner. */
-.lang{display:inline-flex;gap:2px;margin-left:auto;background:var(--deep);border-radius:var(--r-s);padding:3px}
+.lang{display:inline-flex;gap:2px;margin-left:auto;background:var(--seg);border-radius:var(--r-s);padding:3px}
 .lang a{
   font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;
   padding:5px 9px;border-radius:var(--r-s);color:var(--faint);line-height:1;
@@ -208,7 +251,7 @@ td.num{
 .related{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0 0}
 .related a{
   font-size:13px;background:var(--card);border:1px solid var(--line-2);
-  border-radius:var(--r-s);padding:8px 12px;color:#bcd9ff;
+  border-radius:var(--r-s);padding:8px 12px;color:var(--link-soft);
 }
 .related a:hover{border-color:var(--line-3);text-decoration:none}
 .related b{color:var(--text)}
@@ -225,6 +268,19 @@ footer a{color:var(--dim)}
 .stau svg{display:block;width:100%;height:auto}
 .stau figcaption{margin-top:8px;font-size:13px;color:var(--faint);line-height:1.5}
 .stau .leg{display:inline-block;width:10px;height:10px;border-radius:4px;margin-right:4px;vertical-align:-1px}
+/* Die Zeichnungen tragen ihre Farben als Attribute im SVG (sie kommen fertig aus dem
+   Packer). Im Hellen waeren genau diese Toene zu blass: das Gruen kaeme auf Weiss auf
+   1,8:1. Statt 49 Seiten umzuschreiben, uebersetzt der helle Satz die vier Toene hier
+   -- auf dieselben dunkleren Geschwister, die der Rechner im Hellen benutzt. */
+:root[data-theme="hell"] .stau [fill="#2E8FFF" i]{fill:var(--accent)}
+:root[data-theme="hell"] .stau [stroke="#2E8FFF" i]{stroke:var(--accent)}
+:root[data-theme="hell"] .stau [fill="#2FD8A0" i]{fill:var(--good)}
+:root[data-theme="hell"] .stau [stroke="#2FD8A0" i]{stroke:var(--good)}
+:root[data-theme="hell"] .stau [stroke="#F5A524" i]{stroke:var(--warn)}
+:root[data-theme="hell"] .stau [stroke="#3d4b5c" i]{stroke:#8FA0B4}
+:root[data-theme="hell"] .stau .leg[style*="#2E8FFF" i]{background:var(--accent)!important}
+:root[data-theme="hell"] .stau .leg[style*="#2FD8A0" i]{background:var(--good)!important}
+:root[data-theme="hell"] .stau .leg[style*="#F5A524" i]{background:var(--warn)!important}
 
 @media (prefers-reduced-motion:reduce){
   html{scroll-behavior:auto}
