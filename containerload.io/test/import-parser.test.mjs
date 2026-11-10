@@ -104,6 +104,11 @@ test("Palette mit zwei Massen bekommt die Standardhoehe statt des Papierkorbs", 
 
 test("Fuellwoerter bleiben nicht im Namen haengen", () => {
   assert.strictEqual(parseCargoText("3 Kisten 1,2x0,8x1,1 m je 250 kg")[0].name, "Kisten");
+  // "not stackable" (so schreiben es die englischen Ratgeber-Knoepfe): vorher blieb
+  // "not" stehen -- "Big bags not".
+  const bb = parseCargoText("12 Big bags 90x90x110 not stackable 1000kg")[0];
+  assert.strictEqual(bb.name, "Big bags");
+  assert.strictEqual(bb.stackable, false);
 });
 
 test("die Menge kommt nicht aus den Nachkommastellen der Masskette", () => {
