@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>ContainerLoad — Rechner</title>
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://containerload.io/app" />
@@ -48,6 +48,20 @@
       }
     } catch (e) {}
     document.documentElement.dataset.theme = t;
+  })();
+  // Zoom: maximum-scale=1 stand frueher fest im viewport und gilt jetzt NUR noch auf iOS.
+  // Dort verhindert es, dass Safari beim Antippen eines Zahlenfelds (Schrift unter 16 px)
+  // in die Seite hineinspringt -- mit zwei Fingern zoomen laesst iOS trotzdem. Auf Android
+  // sperrte derselbe Wert das Zoomen ganz, und den Feld-Sprung gibt es dort nicht: wer an
+  // der Rampe eine Zahl nicht lesen konnte, konnte sie nicht groesser ziehen. iOS behaelt
+  // also exakt das bisherige Verhalten, alle anderen duerfen zoomen.
+  (function () {
+    try {
+      var ua = navigator.userAgent || "";
+      var ios = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+      var v = ios && document.querySelector('meta[name="viewport"]');
+      if (v) v.setAttribute("content", v.getAttribute("content") + ", maximum-scale=1");
+    } catch (e) {}
   })();
 </script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -3399,6 +3413,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var I18N = {
     de: {
       sub: "3D-Ladungsrechner",
+      // Fehlerschirm (Fehlerschirm-Komponente ganz unten): steht nur da, wenn der Rechner
+      // beim Zeichnen gestolpert ist.
+      fsTitel: "Da ist etwas schiefgegangen.",
+      fsText: "Der Rechner konnte diese Ansicht nicht aufbauen. Dein zuletzt gespeicherter Stand liegt als Entwurf auf diesem Gerät — „Neu laden“ holt ihn zurück.",
+      fsTextOhne: "Der Rechner konnte diese Ansicht nicht aufbauen. „Neu laden“ öffnet ihn wieder.",
+      fsNeu: "Neu laden", fsLeer: "Leer starten",
+      fsLeerHinweis: "„Leer starten“ beginnt ohne Ladung und verwirft den Entwurf. Nur nötig, wenn das Neuladen wieder hier endet.",
       container: "Container",
       len: "L\xE4nge",
       wid: "Breite",
@@ -3860,6 +3881,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     },
     en: {
       sub: "3D load calculator",
+      fsTitel: "Something went wrong.",
+      fsText: "The calculator could not render this view. Your last saved state is kept as a draft on this device — “Reload” brings it back.",
+      fsTextOhne: "The calculator could not render this view. “Reload” opens it again.",
+      fsNeu: "Reload", fsLeer: "Start empty",
+      fsLeerHinweis: "“Start empty” begins without cargo and discards the draft. Only needed if reloading ends up here again.",
       container: "Container",
       len: "Length",
       wid: "Width",
@@ -4615,9 +4641,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Speicher des Browsers sprengen und dabei auch die Plaene gefaehrden.
       if (roh.length > 400000) return;
       window.localStorage.setItem(DRAFT_KEY, roh);
+      entwurfFrisch = true;
     } catch (e) { }
   };
-  var clearDraft = () => { try { window.localStorage.removeItem(DRAFT_KEY); } catch (e) { } };
+  var clearDraft = () => { entwurfFrisch = false; try { window.localStorage.removeItem(DRAFT_KEY); } catch (e) { } };
+  // Hat DIESER Seitenaufruf schon einen Entwurf geschrieben? Der Fehlerschirm braucht genau
+  // diese Unterscheidung: ein Entwurf von gestern sagt nichts ueber den Plan, der gerade
+  // offen war (etwa aus einem geteilten Link) -- einer von eben ist der Arbeitsstand.
+  var entwurfFrisch = false;
   var PLANS_KEY = "containerload.plans.v1";
   var loadPlans = () => {
     try {
@@ -11151,8 +11182,57 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   }
   var SectionTitle = ({ children, noMargin }) => /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.h3, fontWeight: FW.bold, letterSpacing: "-0.01em", color: C.text, marginBottom: noMargin ? 0 : SP.m } }, children);
   var Stat = ({ label, value, sub, accent }) => /* @__PURE__ */ React.createElement("div", { className: "px-4 py-3 relative", style: { borderRight: `1px solid ${C.line}` } }, /* @__PURE__ */ React.createElement("span", { className: "absolute top-0 left-4 right-4", style: { height: 1, background: `linear-gradient(90deg, ${accent}, transparent)`, opacity: 0.5 } }), /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, fontWeight: FW.label, letterSpacing: "0", textTransform: "none", color: C.faint, marginBottom: 8 } }, label), /* @__PURE__ */ React.createElement("div", { className: "flex items-baseline gap-2" }, /* @__PURE__ */ React.createElement("span", { style: { fontFamily: MONO, fontSize: NUMS.l, fontWeight: FW.bold, color: accent, textShadow: `0 0 18px ${hexA(accent, 0.35)}` } }, value), sub && /* @__PURE__ */ React.createElement("span", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint } }, sub)));
+  // ── Fehlerschirm ─────────────────────────────────────────────────────────
+  // Wirft irgendeine Komponente beim Zeichnen, haengt React 18 den GANZEN Baum ab: die
+  // Seite wird leer, ohne ein Wort. Wer gerade vierzig Positionen eingetippt hat, steht
+  // vor einer leeren Flaeche und weiss nicht, ob seine Arbeit weg ist. Sie ist es nicht --
+  // der Entwurf liegt unter DRAFT_KEY -- und genau das sagt dieser Schirm.
+  //
+  // Zwei Wege heraus, in dieser Reihenfolge: "Neu laden" laesst den Entwurf stehen (der
+  // Normalfall). "Leer starten" verwirft ihn und die Ladung aus der Adresse -- nur fuer den
+  // Fall, dass genau DIESER Stand der Ausloeser ist und das Neuladen wieder hier landet.
+  // Ohne den zweiten Knopf waere das eine Sackgasse.
+  //
+  // Bewusst eine Klasse: Fehlergrenzen gibt es in React nur als Klassen-Komponente.
+  // Was sie NICHT faengt: Fehler in Klick-Handlern und in asynchronem Code -- die reissen
+  // den Baum aber auch nicht ab.
+  class Fehlerschirm extends React.Component {
+    constructor(props) {
+      super(props);
+      this.state = { kaputt: false };
+    }
+    static getDerivedStateFromError() {
+      return { kaputt: true };
+    }
+    componentDidCatch(fehler, info) {
+      try { console.error("ContainerLoad: Fehler beim Zeichnen", fehler, info && info.componentStack); } catch (e) { }
+    }
+    render() {
+      if (!this.state.kaputt) return this.props.children;
+      const ohneLadung = window.location.pathname + (LANG === "en" ? "?lang=en" : "");
+      // Mit frischem Entwurf OHNE die Ladung in der Adresse neu laden: beim Start gewinnt
+      // sonst der Link (SHARED / QIMPORT vor DRAFT), und wer einen geteilten Plan bearbeitet
+      // hat, saehe nach dem Neuladen wieder das Original statt seines Stands.
+      const neuLaden = () => {
+        if (entwurfFrisch) window.location.replace(ohneLadung);
+        else window.location.reload();
+      };
+      const leerStarten = () => {
+        clearDraft();
+        window.location.replace(ohneLadung);
+      };
+      return /* @__PURE__ */ React.createElement("div", { role: "alert", className: "min-h-screen flex items-center justify-center p-6", style: { background: C.bg, color: C.text, fontFamily: SANS } },
+        /* @__PURE__ */ React.createElement("div", { style: { maxWidth: 480, background: C.surface, borderRadius: R.l, boxShadow: C.schatten, padding: SP.xl } },
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.h2, fontWeight: FW.bold, letterSpacing: "-0.01em", marginBottom: SP.s } }, T.fsTitel),
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, lineHeight: 1.55, color: C.dim, marginBottom: SP.l } }, entwurfFrisch ? T.fsText : T.fsTextOhne),
+          /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap", style: { gap: SP.s, marginBottom: SP.m } },
+            /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: neuLaden }, T.fsNeu),
+            /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: leerStarten }, T.fsLeer)),
+          /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.5, color: C.faint } }, T.fsLeerHinweis)));
+    }
+  }
   var _root = ReactDOM.createRoot(document.getElementById("root"));
-  _root.render(React.createElement(App));
+  _root.render(React.createElement(Fehlerschirm, null, React.createElement(App)));
 })();
       } catch (e) {
         document.getElementById("root").innerHTML =
