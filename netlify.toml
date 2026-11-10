@@ -2,13 +2,21 @@
 # Verzeichnis containerload.io/); seit den Functions steht es hier im Repo,
 # damit die Einrichtung versioniert ist und ein neuer Rechner sie mitbringt.
 #
-# Kein Build-Schritt: die Seite ist statisches HTML (bewusst, siehe
-# containerload.io/CLAUDE.md). Der command installiert nur die Function-
-# Abhaengigkeit (@netlify/blobs); ohne package.json braeuchte es ihn nicht.
+# Kein Build-Schritt: die Seite ist statisches HTML (bewusst, siehe CLAUDE.md
+# an der Repo-Wurzel). Der command tut zwei Dinge, beide ausserhalb der Seite:
+#
+#   npm ci          installiert die Abhaengigkeiten der Functions -- exakt die
+#                   Versionen aus package-lock.json. "npm install" haette bei
+#                   jedem Deploy die jeweils neueste passende Version gezogen;
+#                   zwei Deploys desselben Commits waeren nicht dasselbe gewesen.
+#   rm -rf .../test nimmt die Regressionstests aus dem Publish-Verzeichnis. Sie
+#                   liegen neben app.html, weil sie daraus schneiden, gehoeren
+#                   aber nicht auf die Live-Seite (sonst waere jede Testdatei
+#                   unter containerload.io/test/... abrufbar).
 
 [build]
   publish = "containerload.io"
-  command = "npm install"
+  command = "npm ci && rm -rf containerload.io/test"
 
 [functions]
   directory = "netlify/functions"
