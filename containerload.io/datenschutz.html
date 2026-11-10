@@ -6,6 +6,7 @@
 <title>Datenschutz — ContainerLoad</title>
 <meta name="robots" content="noindex" />
 <meta name="theme-color" content="#0E1116" />
+<script>/* Thema vor dem ersten Zeichnen: gemerkte Wahl (cl_theme) vor Systemeinstellung, sonst dunkel -- wie Startseite und Rechner. */(function(){var t="dunkel";try{var m=localStorage.getItem("cl_theme");if(m==="hell"||m==="dunkel")t=m;else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="hell"}catch(e){}document.documentElement.dataset.theme=t;if(t==="hell"){var c=document.querySelector('meta[name="theme-color"]');if(c)c.setAttribute("content","#EEF1F6")}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
@@ -26,12 +27,20 @@
   --text:#E9F0F7; --dim:#9DB0C2; --faint:#7689A0; --accent:#2E8FFF;
   --sans:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
   --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+  --ph:rgba(46,143,255,.12); --link:var(--accent);
+}
+/* Hell: dieselben Werte wie C_HELL im Rechner, geschaltet vom Script im <head>
+   (gemerkte Wahl cl_theme vor Systemeinstellung). */
+:root[data-theme="hell"]{
+  --bg:#EEF1F6; --card:#FFFFFF; --line:#E3E8F0; --line-2:#D7DEE9;
+  --text:#1C2733; --dim:#46566A; --faint:#5B6B7E; --accent:#1273E6;
+  --ph:rgba(18,115,230,.10); --link:#0F62D6;
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
   font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
 .wrap{max-width:720px;margin:0 auto;padding:48px 22px 80px}
-a{color:var(--accent);text-decoration:none}
+a{color:var(--link);text-decoration:none}
 a:hover{text-decoration:underline}
 a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 /* Markenzeichen wie ueberall sonst: isometrischer Wuerfel auf Akzentgrund, daneben der
@@ -51,8 +60,8 @@ p{margin:0 0 12px;color:var(--dim)}
 .back{display:inline-block;margin-top:40px;font-size:13.5px}
 /* Platzhalter im Rechtstext. Trug den Markenton als Flaeche in einem Tuerkis, das es
    nicht mehr gibt — jetzt derselbe Akzent wie alles andere. */
-.ph{color:var(--accent);background:rgba(46,143,255,.12);padding:1px 6px;border-radius:8px;font-size:14px}
-GOOD</style>
+.ph{color:var(--accent);background:var(--ph);padding:1px 6px;border-radius:8px;font-size:14px}
+</style>
 </head>
 <body>
 <div class="wrap">
