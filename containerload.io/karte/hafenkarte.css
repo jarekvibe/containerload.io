@@ -6,6 +6,8 @@
   --hk-meer:#10161E;
   --hk-land:#1D2733;
   --hk-grenze:#33404F;
+  --hk-gross:#8FA3B8;   /* grosse/mittlere Haefen: ruhig, damit die Top 50 vorn stehen */
+  --hk-klein:#55667A;
 }
 .hk{
   display:grid;grid-template-columns:minmax(0,1fr) 330px;
@@ -70,7 +72,8 @@
   font-size:13.5px;font-weight:600;cursor:pointer;
 }
 .hk-listekopf{display:flex;align-items:baseline;justify-content:space-between;padding:0 2px}
-.hk-zahl{font-family:var(--mono);font-size:12.5px;color:var(--faint)}
+.hk-zahl{font-family:var(--mono);font-size:12.5px;color:var(--faint);white-space:nowrap}
+.hk-listekopf{gap:10px}
 .hk-liste{
   background:var(--card);border:1px solid var(--line-2);border-radius:var(--r-m);
   max-height:420px;overflow-y:auto;-webkit-overflow-scrolling:touch;
@@ -82,16 +85,22 @@
 .hk-eintrag:last-child{border-bottom:0}
 .hk-eintrag:hover{background:var(--deep)}
 .hk-eintrag.an{box-shadow:inset 2px 0 0 var(--accent);background:var(--deep)}
-.hk-eintrag.ohne .hk-n{color:var(--dim)}
+.hk-eintrag.klein .hk-n{color:var(--dim)}
+.hk-eintrag.top .hk-n::before{
+  content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);margin-right:7px;vertical-align:1px;
+}
+.hk-top{margin:0 0 10px;font-size:13.5px;color:var(--dim)}
+.hk-top b{font-family:var(--mono);color:var(--text)}
+.hk-std{color:var(--faint);font-size:12.5px}
 .hk-n{display:block;font-size:14px;font-weight:600;line-height:1.3}
 .hk-m{display:block;font-size:12.5px;color:var(--faint);margin-top:2px}
 .hk-leer{padding:12px;font-size:13px;color:var(--faint);margin:0}
 .hk-legende{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--faint);margin:0 0 6px}
 .hk-legende span::before{
-  content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0;
+  content:"";display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:-1px;
   background:var(--accent);
 }
-.hk-legende .hk-l-ohne::before{background:var(--faint);width:6px;height:6px}
+.hk-legende .hk-l-gross::before{background:var(--hk-gross);width:6px;height:6px;vertical-align:1px}
 /* Ohne JavaScript bleibt die Werkzeugfläche leer — dann gilt der Hinweis darin */
 [data-hafenkarte]:not(.bereit) .hk-seite > *:not(.hk-ohnejs){display:none}
 [data-hafenkarte].bereit .hk-ohnejs{display:none}

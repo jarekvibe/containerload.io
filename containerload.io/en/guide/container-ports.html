@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Container ports of the world: map, search by country and coast</title>
-<meta name="description" content="HK_ZAHL_EN ports with container handling on a world map — search by name or UN/LOCODE, filter by country and coast. Data: World Port Index." />
+<title>Container ports &amp; seaports of the world: map, coast filter</title>
+<meta name="description" content="The 50 largest container ports and 3,794 seaports on a world map — search by name or UN/LOCODE, filter by country and coast, e.g. the US West Coast." />
 <link rel="canonical" href="https://containerload.io/en/guide/container-ports" />
 <link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/containerhaefen" />
 <link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-ports" />
@@ -12,14 +12,14 @@
 <meta name="robots" content="index,follow" />
 <meta property="og:type" content="website" />
 <meta property="og:locale" content="en_GB" />
-<meta property="og:title" content="Container ports of the world: map, search by country and coast" />
-<meta property="og:description" content="HK_ZAHL_EN ports with container handling on a world map — search by name or UN/LOCODE, filter by country and coast. Data: World Port Index." />
+<meta property="og:title" content="Container ports &amp; seaports of the world: map, coast filter" />
+<meta property="og:description" content="The 50 largest container ports and 3,794 seaports on a world map — search by name or UN/LOCODE, filter by country and coast, e.g. the US West Coast." />
 <meta property="og:url" content="https://containerload.io/en/guide/container-ports" />
 <meta property="og:site_name" content="ContainerLoad" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="Container ports of the world: map, search by country and coast" />
-<meta name="twitter:description" content="HK_ZAHL_EN ports with container handling on a world map — search by name or UN/LOCODE, filter by country and coast. Data: World Port Index." />
+<meta name="twitter:title" content="Container ports &amp; seaports of the world: map, coast filter" />
+<meta name="twitter:description" content="The 50 largest container ports and 3,794 seaports on a world map — search by name or UN/LOCODE, filter by country and coast, e.g. the US West Coast." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#0E1116" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -45,8 +45,8 @@
 <main>
 <section class="wrap wrap-breit">
   <div class="eyebrow">Container Guide · Port map</div>
-  <h1>Container ports of the world: map and search</h1>
-  <p class="lead">Where do container ships call? The map shows <b>HK_ZAHL_EN ports with container handling</b>. Search by name or UN/LOCODE, or pick a country and a coast — for example <a href="/en/guide/container-ports?land=US&amp;gew=HK_GEW_PAZIFIK">USA, North Pacific</a> for the West Coast.</p>
+  <h1>Container ports and seaports of the world: map and search</h1>
+  <p class="lead">The map shows the <b>50 largest container ports in the world</b> and <b>3,794 seaports</b> from the World Port Index. Search by name or UN/LOCODE, or pick a country and a coast — for example <a href="/en/guide/container-ports?land=US&amp;kueste=1">USA, West Coast</a>.</p>
 
   <div class="hk" data-hafenkarte data-sprache="en">
     <div class="hk-karte" data-hk-karte>
@@ -56,7 +56,7 @@
         <button type="button" data-hk-minus>−</button>
         <button type="button" data-hk-welt><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" /></svg></button>
       </div>
-      <div class="hk-quelle">Ports: World Port Index (NGA), as of HK_STAND_EN · Map: Natural Earth</div>
+      <div class="hk-quelle">Ports: World Port Index (NGA, April 2025) · Container throughput: World Shipping Council · Map: Natural Earth</div>
     </div>
     <div class="hk-seite">
       <p class="hk-ohnejs">The map needs JavaScript. The main ports are also listed further down.</p>
@@ -64,10 +64,10 @@
         <label>Search<input type="search" data-hk-q autocomplete="off" spellcheck="false" /></label>
         <label>Country<select data-hk-land></select></label>
         <div class="hk-chips" data-hk-chips hidden></div>
-        <label class="hk-check"><input type="checkbox" data-hk-alle />Also ports without container handling</label>
+        <label class="hk-check"><input type="checkbox" data-hk-alle />Also small ports</label>
       </div>
       <div class="hk-detail" data-hk-detail hidden></div>
-      <div class="hk-listekopf"><span class="hk-legende"><span>container handling</span><span class="hk-l-ohne">none</span></span><span class="hk-zahl" data-hk-zahl></span></div>
+      <div class="hk-listekopf"><span class="hk-legende"><span class="hk-l-top">Top 50 container port</span><span class="hk-l-gross">large port</span></span><span class="hk-zahl" data-hk-zahl></span></div>
       <div class="hk-liste" data-hk-liste></div>
     </div>
   </div>
@@ -75,12 +75,69 @@
 
 <article class="wrap">
   <h2>How to use the map</h2>
-  <p><b>Drag</b> to pan, use the <b>mouse wheel</b> or <b>two fingers</b> to zoom, and <b>click</b> a dot to see the port details. The search finds ports by name, by code (e.g. <span class="mono">USLGB</span> for Long Beach) or by country. Once you pick a country, the <b>coasts and water bodies</b> its ports lie on appear below — that is how you separate, say, the US West Coast (Pacific) from the East Coast (Atlantic) and the Gulf of Mexico.</p>
-  <p>Every selection is stored in the address bar. Share the link and the recipient sees the same selection.</p>
+  <p><b>Drag</b> to pan, use the <b>mouse wheel</b> or <b>two fingers</b> to zoom, and <b>click</b> a dot to see the port details. The search finds every port by name, by code (e.g. <span class="mono">USLGB</span> for Long Beach) or by country. Once you pick a country, its <b>coasts</b> appear below — for the USA the West Coast, East Coast and Gulf Coast, for Germany the North Sea and the Baltic.</p>
+  <p>Without a search term the map shows the large and medium ports; "Also small ports" adds the rest. Every selection is stored in the address bar — share the link and the recipient sees the same.</p>
+
+  <h2>The 50 largest container ports in the world</h2>
+  <p>Container throughput 2025 in million TEU, according to the World Shipping Council. Click a name to see the port on the map. For port areas with several locations, the dot marks the container location (in brackets).</p>
+<!-- HK_TOP50_START -->
+<div class="tabelle"><table><thead><tr><th>#</th><th>Port</th><th>Country</th><th>Million TEU 2025</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><a href="/en/guide/container-ports?hafen=CNSGH">Shanghai</a></td><td>China</td><td class="num">55.06</td></tr>
+<tr><td class="num">2</td><td><a href="/en/guide/container-ports?hafen=SGKEP">Singapore</a> <span class="hk-std">(Keppel)</span></td><td>Singapore</td><td class="num">44.66</td></tr>
+<tr><td class="num">3</td><td><a href="/en/guide/container-ports?hafen=CNNBO">Ningbo-Zhoushan</a> <span class="hk-std">(Ningbo)</span></td><td>China</td><td class="num">43.87</td></tr>
+<tr><td class="num">4</td><td><a href="/en/guide/container-ports?hafen=CNYTN">Shenzhen</a> <span class="hk-std">(Yantian)</span></td><td>China</td><td class="num">35.41</td></tr>
+<tr><td class="num">5</td><td><a href="/en/guide/container-ports?hafen=CNQIN">Qingdao</a></td><td>China</td><td class="num">32.89</td></tr>
+<tr><td class="num">6</td><td><a href="/en/guide/container-ports?hafen=CNGGZ">Guangzhou</a></td><td>China</td><td class="num">27.68</td></tr>
+<tr><td class="num">7</td><td><a href="/en/guide/container-ports?hafen=KRPUS">Busan</a></td><td>South Korea</td><td class="num">24.88</td></tr>
+<tr><td class="num">8</td><td><a href="/en/guide/container-ports?hafen=CNTXG">Tianjin</a> <span class="hk-std">(Xingang)</span></td><td>China</td><td class="num">24.03</td></tr>
+<tr><td class="num">9</td><td><a href="/en/guide/container-ports?hafen=AEJEA">Jebel Ali (Dubai)</a></td><td>United Arab Emirates</td><td class="num">15.55</td></tr>
+<tr><td class="num">10</td><td><a href="/en/guide/container-ports?hafen=MYPKG">Port Klang</a></td><td>Malaysia</td><td class="num">15.14</td></tr>
+<tr><td class="num">11</td><td><a href="/en/guide/container-ports?hafen=NLRTM">Rotterdam</a></td><td>Netherlands</td><td class="num">14.25</td></tr>
+<tr><td class="num">12</td><td><a href="/en/guide/container-ports?hafen=MYTPP">Tanjung Pelepas</a></td><td>Malaysia</td><td class="num">14.03</td></tr>
+<tr><td class="num">13</td><td><a href="/en/guide/container-ports?hafen=BEANR">Antwerp</a></td><td>Belgium</td><td class="num">13.63</td></tr>
+<tr><td class="num">14</td><td><a href="/en/guide/container-ports?hafen=HKHKG">Hong Kong</a></td><td>Hong Kong SAR China</td><td class="num">12.99</td></tr>
+<tr><td class="num">15</td><td><a href="/en/guide/container-ports?hafen=CNXMG">Xiamen</a></td><td>China</td><td class="num">12.51</td></tr>
+<tr><td class="num">16</td><td><a href="/en/guide/container-ports?hafen=MAPTM">Tanger Med</a></td><td>Morocco</td><td class="num">11.11</td></tr>
+<tr><td class="num">17</td><td><a href="/en/guide/container-ports?hafen=THLCH">Laem Chabang</a></td><td>Thailand</td><td class="num">10.45</td></tr>
+<tr><td class="num">18</td><td><a href="/en/guide/container-ports?hafen=USLAX">Los Angeles</a></td><td>United States</td><td class="num">10.24</td></tr>
+<tr><td class="num">19</td><td><a href="/en/guide/container-ports?hafen=CNTAC">Suzhou</a> <span class="hk-std">(Taicang)</span></td><td>China</td><td class="num">10.21</td></tr>
+<tr><td class="num">20</td><td><a href="/en/guide/container-ports?hafen=USLGB">Long Beach</a></td><td>United States</td><td class="num">9.88</td></tr>
+<tr><td class="num">21</td><td><a href="/en/guide/container-ports?hafen=CNQZH">Guangxi Beibu</a> <span class="hk-std">(Qinzhou)</span></td><td>China</td><td class="num">9.55</td></tr>
+<tr><td class="num">22</td><td><a href="/en/guide/container-ports?hafen=VNSGN">Ho Chi Minh City</a></td><td>Vietnam</td><td class="num">8.92</td></tr>
+<tr><td class="num">23</td><td><a href="/en/guide/container-ports?hafen=USEWR">New York-New Jersey</a> <span class="hk-std">(Newark)</span></td><td>United States</td><td class="num">8.90</td></tr>
+<tr><td class="num">24</td><td><a href="/en/guide/container-ports?hafen=TWKHH">Kaohsiung</a></td><td>Taiwan</td><td class="num">8.89</td></tr>
+<tr><td class="num">25</td><td><a href="/en/guide/container-ports?hafen=DEHAM">Hamburg</a></td><td>Germany</td><td class="num">8.37</td></tr>
+<tr><td class="num">26</td><td><a href="/en/guide/container-ports?hafen=INMUN">Mundra</a></td><td>India</td><td class="num">8.36</td></tr>
+<tr><td class="num">27</td><td><a href="/en/guide/container-ports?hafen=VNHPH">Hai Phong</a></td><td>Vietnam</td><td class="num">8.32</td></tr>
+<tr><td class="num">28</td><td><a href="/en/guide/container-ports?hafen=IDJKT">Tanjung Priok (Jakarta)</a></td><td>Indonesia</td><td class="num">8.30</td></tr>
+<tr><td class="num">29</td><td><a href="/en/guide/container-ports?hafen=INNSA">Jawaharlal Nehru Port (Nhava Sheva)</a></td><td>India</td><td class="num">7.94</td></tr>
+<tr><td class="num">30</td><td><a href="/en/guide/container-ports?hafen=VNVUT">Cai Mep</a> <span class="hk-std">(Vũng Tàu)</span></td><td>Vietnam</td><td class="num">7.61</td></tr>
+<tr><td class="num">31</td><td><a href="/en/guide/container-ports?hafen=CNRZH">Rizhao</a></td><td>China</td><td class="num">7.37</td></tr>
+<tr><td class="num">32</td><td><a href="/en/guide/container-ports?hafen=LKCMB">Colombo</a></td><td>Sri Lanka</td><td class="num">7.15</td></tr>
+<tr><td class="num">33</td><td><a href="/en/guide/container-ports?hafen=CNLYG">Lianyungang</a></td><td>China</td><td class="num">7.13</td></tr>
+<tr><td class="num">34</td><td><a href="/en/guide/container-ports?hafen=AEAUH">Abu Dhabi</a></td><td>United Arab Emirates</td><td class="num">6.59</td></tr>
+<tr><td class="num">35</td><td><a href="/en/guide/container-ports?hafen=PHMNL">Manila</a></td><td>Philippines</td><td class="num">6.03</td></tr>
+<tr><td class="num">36</td><td><a href="/en/guide/container-ports?hafen=BRSSZ">Santos</a></td><td>Brazil</td><td class="num">5.91</td></tr>
+<tr><td class="num">37</td><td><a href="/en/guide/container-ports?hafen=CNYIK">Yingkou</a></td><td>China</td><td class="num">5.85</td></tr>
+<tr><td class="num">38</td><td><a href="/en/guide/container-ports?hafen=PAONX">Colón</a></td><td>Panama</td><td class="num">5.80</td></tr>
+<tr><td class="num">39</td><td><a href="/en/guide/container-ports?hafen=USSAV">Savannah</a></td><td>United States</td><td class="num">5.69</td></tr>
+<tr><td class="num">40</td><td><a href="/en/guide/container-ports?hafen=ESVLC">Valencia</a></td><td>Spain</td><td class="num">5.66</td></tr>
+<tr><td class="num">41</td><td><a href="/en/guide/container-ports?hafen=EGPSD">Port Said</a></td><td>Egypt</td><td class="num">5.57</td></tr>
+<tr><td class="num">42</td><td><a href="/en/guide/container-ports?hafen=CNYTG">Yantai</a></td><td>China</td><td class="num">5.56</td></tr>
+<tr><td class="num">43</td><td><a href="/en/guide/container-ports?hafen=CNDAL">Dalian</a></td><td>China</td><td class="num">5.48</td></tr>
+<tr><td class="num">44</td><td><a href="/en/guide/container-ports?hafen=DEBRV">Bremen/Bremerhaven</a></td><td>Germany</td><td class="num">4.90</td></tr>
+<tr><td class="num">45</td><td><a href="/en/guide/container-ports?hafen=JPTYO">Tokyo</a></td><td>Japan</td><td class="num">4.86</td></tr>
+<tr><td class="num">46</td><td><a href="/en/guide/container-ports?hafen=ESALG">Algeciras</a></td><td>Spain</td><td class="num">4.74</td></tr>
+<tr><td class="num">47</td><td><a href="/en/guide/container-ports?hafen=GRPIR">Piraeus</a></td><td>Greece</td><td class="num">4.64</td></tr>
+<tr><td class="num">48</td><td><a href="/en/guide/container-ports?hafen=ITGIT">Gioia Tauro</a></td><td>Italy</td><td class="num">4.49</td></tr>
+<tr><td class="num">49</td><td><a href="/en/guide/container-ports?hafen=IDSUB">Tanjung Perak</a> <span class="hk-std">(Surabaya)</span></td><td>Indonesia</td><td class="num">4.49</td></tr>
+<tr><td class="num">50</td><td><a href="/en/guide/container-ports?hafen=OMSLL">Salalah</a></td><td>Oman</td><td class="num">4.32</td></tr>
+</tbody></table></div>
+<!-- HK_TOP50_ENDE -->
 
   <h2>Where the data comes from</h2>
-  <p>The ports come from the <b>World Port Index</b> (Pub.&nbsp;150) of the US National Geospatial-Intelligence Agency, as of HK_STAND_EN. A <b>port with container handling</b> is one for which the index lists container facilities or container cranes. Harbour size, vessel length and depth are the index's figures; they are guide values and not complete for every port.</p>
-  <p><b>What the map does not show (yet):</b> which carrier calls at which port, and how often. That schedule data is not freely and reliably available; we will only show it once it is right.</p>
+  <p><b>Seaports:</b> the <b>World Port Index</b> (Pub.&nbsp;150) of the US National Geospatial-Intelligence Agency, April 2025 edition — public domain. Because the agency's site was unreachable when the map was built, the file comes from the compilation <a href="https://www.npmjs.com/package/seaport-data-js" rel="noopener">seaport-data-js</a> by Aashish Vivekanand (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>); we use name, code, location, region, water body, basin size, depths and facilities.</p>
+  <p><b>Container ports:</b> the World Shipping Council's top 50 list with 2025 throughput. Only these 50 are called "container port" on the map — for a reason: in the World Port Index the container-facilities field is empty precisely for the large ports (Hamburg, Rotterdam and Los Angeles read "not recorded"), and <b>harbour size</b> means the basin, not the throughput (Felixstowe, the UK's largest container port, is "very small" there). Which of the other ports container lines call at is not shown yet; check with your forwarder or the carrier.</p>
 
   <div class="cta">
     <a class="btn btn-primary" href="/app?lang=en">➜ Plan the load for the container</a>
@@ -90,7 +147,7 @@
   <h2>Related pages</h2>
   <div class="related"><a href="/en/guide/container-internal-dimensions">Container internal dimensions</a><a href="/en/guide/container-payload-weight">Payload & weight</a><a href="/en/guide/container-road-weight-limits">Road weight limits</a><a href="/en/guide/container-stowage-plan">Stowage plan</a></div>
 
-  <div class="note"><b style="color:var(--dim)">No warranty:</b> The port data comes from the World Port Index and may be outdated or incomplete. Whether and how often a carrier calls at a port is something to confirm with your forwarder or the carrier.</div>
+  <div class="note"><b style="color:var(--dim)">No warranty:</b> The port data comes from the World Port Index and may be outdated or incomplete; throughput figures are the World Shipping Council's. Whether and how often a carrier calls at a port is something to confirm with your forwarder or the carrier.</div>
 </article>
 </main>
 <footer>

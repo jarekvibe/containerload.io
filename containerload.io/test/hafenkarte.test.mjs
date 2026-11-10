@@ -2,15 +2,18 @@
 //
 // Gewuenscht (Jarek, 10.11.26): ein Kollege suchte einen Hafen an der Westkueste, den
 // Containerschiffe anlaufen; die Reedereien schlugen nur Ostkueste vor, und Google Maps
-// kennzeichnet Haefen nicht. Stufe 1: eine Weltkarte der Containerhaefen mit Suche und
-// Filter nach Land und Kueste. Stufe 2 (Routen ab einem Abgangsland vergleichen) kommt
-// erst mit sauberen Fahrplandaten.
+// kennzeichnet Haefen nicht. Stufe 1: eine Weltkarte mit Suche und Filter nach Land und
+// Kueste. Stufe 2 (Routen ab einem Abgangsland vergleichen) folgt mit Fahrplandaten.
 //
-// Was hier festgehalten wird:
-//   * die Daten: woher, wie viele, und dass die Zahlen auf der Seite dieselben sind
+// Die Ehrlichkeitsfrage dieser Karte: Was ist ein "Containerhafen"? Der World Port Index
+// kann es nicht beantworten -- sein Containerfeld ist bei Hamburg, Rotterdam und Los
+// Angeles leer, und seine "Hafengroesse" meint das Becken (Felixstowe: "sehr klein").
+// "Containerhafen" heissen deshalb NUR die 50 Haefen mit belegtem Umschlag (World
+// Shipping Council). Dieser Test haelt fest:
 //   * die Filter: dieselbe Funktion wie in der Seite (HK_START..HK_ENDE), nachgerechnet
-//   * der Datenschutz: kein Kartendienst, keine fremden Skripte -- die Karte laedt nur
-//     Dateien von containerload.io
+//   * die Daten: stimmig, die Top 50 = die Quelldatei, Zahl fuer Zahl
+//   * die Seiten: Zahlen, Tabelle und Quellenangaben aus denselben Daten
+//   * der Datenschutz: kein Kartendienst, keine fremden Skripte
 //
 // node --test test/hafenkarte.test.mjs
 import fs from "node:fs";
@@ -27,79 +30,142 @@ const LAND = laden("karte/land.js", "CL_LAND");
 const D = laden("karte/haefen.js", "CL_HAEFEN");
 const karte = lies("karte/hafenkarte.js");
 const DE = lies("ratgeber/containerhaefen.html"), EN = lies("en/guide/container-ports.html");
+const TOP = fs.readFileSync(path.join(wurzel, "..", "werkzeug", "haefen", "quelle", "top50-wsc.csv"), "utf8")
+  .trim().split("\n").slice(1).map((z) => z.split(";"));
 
 const kern = karte.slice(karte.indexOf("// HK_START"), karte.indexOf("// HK_ENDE"));
 const { hkFiltern, hkNorm, HK_BIT } = new Function(kern + "\nreturn { hkFiltern, hkNorm, HK_BIT };")();
 
 // ── Die Filter ──────────────────────────────────────────────────────
+// name, locode, iso2, x, y, bits, groesse, tiefe, laenge, kueste, lat, lon, alias, teu, standort
 const probe = [
-  // name, locode, iso2, x, y, bits, groesse, tiefe, laenge, gew, lat, lon, alias
-  ["Long Beach", "USLGB", "US", 0, 0, 3, 4, 15, 400, 0, 33.75, -118.2, ""],
-  ["Oakland", "USOAK", "US", 0, 0, 1, 3, 15, 366, 0, 37.8, -122.3, ""],
-  ["Savannah", "USSAV", "US", 0, 0, 1, 4, 14, 366, 1, 32.1, -81.1, ""],
-  ["São Francisco do Sul", "BRSFS", "BR", 0, 0, 1, 3, 12, 300, 2, -26.2, -48.6, ""],
-  ["Hamburg", "DEHAM", "DE", 0, 0, 3, 4, 15, 400, 3, 53.5, 9.97, ""],
-  ["Husum", "DEHUS", "DE", 0, 0, 0, 2, 4, 90, 3, 54.5, 9.04, ""],
-  ["Bremerhaven", "DEBRV", "DE", 0, 0, 3, 4, 16, 400, 3, 53.6, 8.55, "Bremen-Bremerhaven"]
+  ["Long Beach", "USLGB", "US", 0, 0, 1, 3, 17, 0, 0, 33.8, -118.2, "", 9.88, ""],
+  ["Los Angeles", "USLAX", "US", 0, 0, 1, 4, 17, 0, 0, 33.7, -118.3, "", 10.24, ""],
+  ["Tacoma", "USTIW", "US", 0, 0, 0, 3, 14, 0, 0, 47.3, -122.4, "", 0, ""],
+  ["Empire", "", "US", 0, 0, 0, 3, 0, 0, 0, 43.4, -124.3, "", 0, ""],
+  ["Savannah", "USSAV", "US", 0, 0, 1, 3, 9, 0, 1, 32.1, -81.1, "", 5.69, ""],
+  ["São Francisco do Sul", "BRSFS", "BR", 0, 0, 0, 3, 12, 300, 2, -26.2, -48.6, "", 0, ""],
+  ["Hamburg", "DEHAM", "DE", 0, 0, 1, 4, 6, 0, 3, 53.5, 9.97, "", 8.37, ""],
+  ["Husum", "DEHUS", "DE", 0, 0, 0, 1, 3, 0, 3, 54.5, 9.04, "", 0, ""],
+  ["Bremen/Bremerhaven", "DEBRV", "DE", 0, 0, 1, 4, 5, 0, 3, 53.6, 8.55, "Bremerhaven", 4.9, ""]
 ];
 const namen = (idx) => idx.map((i) => probe[i][0]);
 const landName = (c) => ({ US: "United States", DE: "Germany", BR: "Brazil" })[c] || c;
+const F = (x) => Object.assign({ q: "", land: "", kue: "", alle: false }, x);
 
-test("ohne Filter: nur Haefen mit Containerumschlag, groesste zuerst", () => {
-  const r = namen(hkFiltern(probe, { q: "", land: "", gew: "", alle: false }, landName));
-  assert.ok(!r.includes("Husum"), "Husum hat keinen Containerumschlag");
-  assert.deepStrictEqual(r.slice(0, 4), ["Bremerhaven", "Hamburg", "Long Beach", "Savannah"], "Hafengroesse 4 vor 3, dann Name");
-  assert.ok(namen(hkFiltern(probe, { q: "", land: "", gew: "", alle: true }, landName)).includes("Husum"), "mit 'alle' auch Husum");
+test("ohne Suchwort: grosse/mittlere Haefen und die Top 50, Umschlag zuerst", () => {
+  const r = namen(hkFiltern(probe, F({}), landName));
+  assert.ok(!r.includes("Husum"), "kleine Haefen erst mit 'alle'");
+  assert.deepStrictEqual(r.slice(0, 5), ["Los Angeles", "Long Beach", "Hamburg", "Savannah", "Bremen/Bremerhaven"], "nach Umschlag");
+  assert.ok(namen(hkFiltern(probe, F({ alle: true }), landName)).includes("Husum"));
 });
 
 test("Land und Kueste trennen West- von Ostkueste", () => {
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "", land: "US", gew: 0, alle: false }, landName)), ["Long Beach", "Oakland"]);
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "", land: "US", gew: 1, alle: false }, landName)), ["Savannah"]);
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "", land: "US", gew: "", alle: false }, landName)).sort(), ["Long Beach", "Oakland", "Savannah"]);
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ land: "US", kue: 0 }), landName)), ["Los Angeles", "Long Beach", "Empire", "Tacoma"]);
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ land: "US", kue: 1 }), landName)), ["Savannah"]);
 });
 
-test("Suche: Name ohne Akzente, UN/LOCODE mit und ohne Leerzeichen, Alias, Land", () => {
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "sao francisco", land: "", gew: "", alle: false }, landName)), ["São Francisco do Sul"]);
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "DE HAM", land: "", gew: "", alle: false }, landName)), ["Hamburg"]);
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "uslgb", land: "", gew: "", alle: false }, landName)), ["Long Beach"]);
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "bremen", land: "", gew: "", alle: false }, landName)), ["Bremerhaven"], "ueber den Alias");
-  assert.deepStrictEqual(namen(hkFiltern(probe, { q: "germ", land: "", gew: "", alle: false }, landName)), ["Bremerhaven", "Hamburg"]);
+test("Suche: findet jeden Hafen, auch kleine -- Name ohne Akzente, UN/LOCODE, Alias, Land", () => {
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ q: "husum" }), landName)), ["Husum"], "kleiner Hafen per Name");
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ q: "sao francisco" }), landName)), ["São Francisco do Sul"]);
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ q: "DE HAM" }), landName)), ["Hamburg"]);
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ q: "uslgb" }), landName)), ["Long Beach"]);
+  assert.deepStrictEqual(namen(hkFiltern(probe, F({ q: "bremerhaven" }), landName)), ["Bremen/Bremerhaven"], "ueber den Alias");
   assert.equal(hkNorm("Straße Ä"), "strassea");
 });
 
 // ── Die Daten ───────────────────────────────────────────────────────
 test("die Daten sind in sich stimmig", () => {
-  assert.ok(Array.isArray(D.h) && D.h.length > 10, "keine Haefen");
-  assert.deepStrictEqual(D.rahmen || LAND.rahmen, LAND.rahmen, "Haefen und Kueste mit verschiedenem Rahmen");
-  const lcs = new Set();
+  assert.ok(D.h.length > 3500, "zu wenige Haefen: " + D.h.length);
+  assert.deepStrictEqual(D.rahmen, LAND.rahmen, "Haefen und Kueste mit verschiedenem Rahmen");
+  const abweichend = [];
   for (const h of D.h) {
-    assert.equal(h.length, 13, `${h[0]}: Feldzahl`);
-    assert.ok(h[0] && typeof h[0] === "string", "Name fehlt");
-    if (h[1]) {
-      assert.match(h[1], /^[A-Z]{2}[A-Z0-9]{3}$/, `${h[0]}: UN/LOCODE`);
-      assert.equal(h[1].slice(0, 2), h[2], `${h[0]}: Land passt nicht zum UN/LOCODE`);
-      lcs.add(h[1]);
-    }
-    assert.ok(h[3] >= 0 && h[3] <= LAND.w && h[4] >= 0 && h[4] <= LAND.h, `${h[0]}: liegt ausserhalb der Karte`);
+    assert.equal(h.length, 15, `${h[0]}: Feldzahl`);
+    assert.ok(h[0] && /^[A-Z]{2}$/.test(h[2]), `${h[0]}: Name/Land`);
+    if (h[1]) { assert.match(h[1], /^[A-Z]{2}[A-Z0-9]{3}$/, `${h[0]}: UN/LOCODE`); if (h[1].slice(0, 2) !== h[2]) abweichend.push(h[0]); }
+    assert.ok(h[3] >= 0 && h[3] <= LAND.w && h[4] >= 0 && h[4] <= LAND.h, `${h[0]}: ausserhalb der Karte`);
     assert.ok(h[10] >= -58 && h[10] <= 84 && h[11] >= -180 && h[11] <= 180, `${h[0]}: Koordinaten`);
-    assert.ok(h[9] === -1 || (h[9] >= 0 && h[9] < D.gew.length), `${h[0]}: Gewaesser-Index`);
+    assert.ok(h[9] === -1 || (h[9] >= 0 && h[9] < D.kue.length), `${h[0]}: Kuesten-Index`);
     assert.ok(h[6] >= 0 && h[6] <= 4, `${h[0]}: Hafengroesse`);
+    assert.equal(!!(h[5] & HK_BIT.top), h[13] > 0, `${h[0]}: Top-Merkmal und Umschlag gehoeren zusammen`);
   }
-  for (const g of D.gew) assert.ok(g[0], "Gewaesser ohne Namen");
+  // Ein paar Ueberseegebiete fuehren den Code des Mutterlands -- mehr als eine Handvoll waere ein Fehler
+  assert.ok(abweichend.length < 25, "UN/LOCODE und Land passen oft nicht: " + abweichend.slice(0, 10).join(", "));
+  for (const k of D.kue) assert.ok(k[0] && k[1], "Kuesteneintrag ohne Namen");
+});
+
+test("Containerhafen heisst nur, was in der Top-50-Quelle steht -- Zahl fuer Zahl", () => {
+  const top = D.h.filter((h) => h[5] & HK_BIT.top);
+  assert.equal(top.length, 50);
+  assert.equal(TOP.length, 50);
+  const nachTeu = TOP.map((z) => +z[3]).sort((a, b) => b - a);
+  assert.deepStrictEqual(top.map((h) => h[13]), nachTeu, "Umschlag 2025 wie in quelle/top50-wsc.csv");
+  // Stichproben gegen die Quelle: Name/Land/Zahl
+  const q = (name) => TOP.find((z) => z[1] === name);
+  const d = (name) => top.find((h) => h[0] === name);
+  for (const [qn, dn, iso] of [["Shanghai", "Shanghai", "CN"], ["Hamburg", "Hamburg", "DE"], ["Los Angeles", "Los Angeles", "US"],
+    ["Breman/Bremerhaven", "Bremen/Bremerhaven", "DE"], ["Long Beach", "Long Beach", "US"]]) {
+    assert.ok(d(dn), `${dn} fehlt in den Top 50`);
+    assert.equal(d(dn)[13], +q(qn)[3], `${dn}: Umschlag`);
+    assert.equal(d(dn)[2], iso, `${dn}: Land`);
+  }
+  assert.equal(D.topJahr, 2025);
 });
 
 test("Kueste und Haefen haben dieselbe Projektion (Stichprobe: Lage zueinander)", () => {
   const p = (lc) => D.h.find((h) => h[1] === lc);
   const ham = p("DEHAM"), brv = p("DEBRV"), lax = p("USLAX"), sea = p("USSEA");
-  if (!ham || !brv || !lax || !sea) return; // Probedaten ohne diese Haefen
+  assert.ok(ham && brv && lax && sea, "Stichproben-Haefen fehlen");
   assert.ok(ham[3] > brv[3], "Hamburg liegt oestlich von Bremerhaven");
   assert.ok(lax[4] > sea[4], "Los Angeles liegt suedlich von Seattle");
-  // Die Projektion bildet die Breite monoton ab: wer suedlicher liegt, hat das groessere y
   const sortiert = D.h.slice().sort((a, b) => b[10] - a[10]);
   for (let i = 1; i < sortiert.length; i++) assert.ok(sortiert[i][4] >= sortiert[i - 1][4] - 0.2, `${sortiert[i][0]}: y passt nicht zur Breite`);
 });
 
-// ── Datenschutz und Seite ───────────────────────────────────────────
+test("der Fall, um den es ging: die US-Westkueste", () => {
+  const wk = D.kue.findIndex((k) => k[0] === "West Coast" && k[1] === "Westküste");
+  assert.ok(wk >= 0, "keine Westkueste");
+  const r = hkFiltern(D.h, { q: "", land: "US", kue: wk, alle: false }, null).map((i) => D.h[i][0]);
+  for (const n of ["Los Angeles", "Long Beach", "Oakland", "Seattle", "Tacoma"]) assert.ok(r.includes(n), `${n} fehlt an der Westkueste`);
+  for (const n of ["Savannah", "New York-New Jersey", "Houston"]) assert.ok(!r.includes(n), `${n} steht faelschlich an der Westkueste`);
+  assert.deepStrictEqual(r.slice(0, 2), ["Los Angeles", "Long Beach"], "die beiden Top-50-Haefen zuerst");
+  // Der Beispiel-Link der Einleitung zeigt genau darauf
+  assert.ok(DE.includes(`/ratgeber/containerhaefen?land=US&amp;kueste=${wk}"`), "DE-Beispiellink");
+  assert.ok(EN.includes(`/en/guide/container-ports?land=US&amp;kueste=${wk}"`), "EN-Beispiellink");
+});
+
+// ── Seiten, Quellen, Datenschutz ────────────────────────────────────
+test("die Seiten nennen die echten Zahlen, und die Tabelle kommt aus denselben Daten", () => {
+  for (const platzhalter of ["HK_ZAHL", "HK_STAND", "HK_GEW"]) {
+    assert.ok(!DE.includes(platzhalter) && !EN.includes(platzhalter), `Platzhalter ${platzhalter} steht noch auf der Seite`);
+  }
+  assert.ok(DE.includes(`<b>${D.h.length.toLocaleString("de-DE")} Seehäfen</b>`), "DE: Zahl der Seehaefen");
+  assert.ok(EN.includes(`<b>${D.h.length.toLocaleString("en-US")} seaports</b>`), "EN: Zahl der Seehaefen");
+  const top = D.h.filter((h) => h[5] & HK_BIT.top);
+  for (const [s, loc] of [[DE, "de-DE"], [EN, "en-US"]]) {
+    const tab = s.slice(s.indexOf("<!-- HK_TOP50_START -->"), s.indexOf("<!-- HK_TOP50_ENDE -->"));
+    const zeilen = [...tab.matchAll(/<tr><td class="num">(\d+)<\/td><td><a href="[^"]*\?hafen=([A-Z0-9]*)">([^<]+)<\/a>.*?<td class="num">([\d.,]+)<\/td><\/tr>/g)];
+    assert.equal(zeilen.length, 50, "Tabelle hat nicht 50 Zeilen");
+    zeilen.forEach((z, i) => {
+      assert.equal(z[2], top[i][1], `Zeile ${i + 1}: Link`);
+      assert.equal(z[3].replace(/&amp;/g, "&"), top[i][0], `Zeile ${i + 1}: Name`);
+      assert.equal(z[4], top[i][13].toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), `Zeile ${i + 1}: TEU`);
+    });
+  }
+});
+
+test("Quellen und Lizenz stehen auf beiden Seiten", () => {
+  for (const s of [DE, EN]) {
+    assert.ok(s.includes("World Port Index") && s.includes("World Shipping Council") && s.includes("Natural Earth"));
+    assert.ok(s.includes('href="https://www.npmjs.com/package/seaport-data-js"'), "Aufbereitung nicht genannt");
+    assert.ok(/creativecommons\.org\/licenses\/by\/4\.0/.test(s), "CC-BY-Lizenz nicht verlinkt");
+    assert.ok(s.includes("Aashish Vivekanand"), "Urheber der Aufbereitung fehlt");
+  }
+  // "Containerhafen" sagt die Karte nur bei der Top-50-Markierung
+  const detail = karte.slice(karte.indexOf("function detailZeichnen"), karte.indexOf("// ── Karte: Groesse"));
+  assert.match(detail, /if \(h\[5\] & HK_BIT\.top\) \{[\s\S]*?TX\.top/, "der Top-Satz steht nur unter der Top-Bedingung");
+});
+
 test("kein Kartendienst: die Karte laedt nur Dateien von containerload.io", () => {
   for (const [name, s] of [["DE", DE], ["EN", EN]]) {
     const skripte = [...s.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
@@ -107,26 +173,5 @@ test("kein Kartendienst: die Karte laedt nur Dateien von containerload.io", () =
     assert.ok(!/tile|mapbox|leaflet|maps\.google|googleapis\.com\/maps/i.test(s), `${name}: Kartendienst eingebunden`);
   }
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|new Image\(/.test(karte), "die Karte laedt nichts nach");
-  // Der OSM-Link ist ein Link (neuer Tab, auf Klick), kein eingebettetes Kartenbild
-  assert.match(karte, /osm\.target = "_blank"; osm\.rel = "noopener noreferrer"/);
-});
-
-test("die Seiten nennen die echte Zahl und den Stand der Daten", () => {
-  const mitC = D.h.filter((h) => h[5] & HK_BIT.container).length;
-  const de = mitC.toLocaleString("de-DE"), en = mitC.toLocaleString("en-US");
-  for (const platzhalter of ["HK_ZAHL", "HK_STAND", "HK_GEW"]) {
-    assert.ok(!DE.includes(platzhalter) && !EN.includes(platzhalter), `Platzhalter ${platzhalter} steht noch auf der Seite`);
-  }
-  assert.ok(DE.includes(`<b>${de} Häfen mit Containerumschlag</b>`), `DE nennt nicht ${de}`);
-  assert.ok(EN.includes(`<b>${en} ports with container handling</b>`), `EN nennt nicht ${en}`);
-  assert.ok(D.stand && DE.includes(D.stand.split("-").reverse().join(".")), "DE nennt den Stand nicht");
-});
-
-test("der Westkuesten-Link der Einleitung zeigt wirklich auf den Pazifik", () => {
-  for (const s of [DE, EN]) {
-    const m = s.match(/containerhaefen\?land=US&amp;gew=(\d+)|container-ports\?land=US&amp;gew=(\d+)/);
-    assert.ok(m, "Beispiel-Link fehlt");
-    const g = D.gew[+(m[1] || m[2])];
-    assert.ok(g && /Pacific/.test(g[0]), `gew zeigt auf ${g && g[0]}`);
-  }
+  assert.match(karte, /osm\.target = "_blank"; osm\.rel = "noopener noreferrer"/, "OSM nur als Link auf Klick");
 });

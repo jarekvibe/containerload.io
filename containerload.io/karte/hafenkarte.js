@@ -1,4 +1,5 @@
-// Hafenkarte: Weltkarte der Containerhaefen mit Suche und Filtern (Land, Gewaesser).
+// Hafenkarte: Weltkarte der Seehaefen mit den 50 groessten Containerhaefen, Suche und
+// Filtern (Land, Kueste/Gewaesser, Hafengroesse).
 //
 // Liest window.CL_LAND (Kuesten + Grenzen, erzeugt von werkzeug/haefen/land-bauen.mjs)
 // und window.CL_HAEFEN (Haefen aus dem World Port Index, erzeugt von
@@ -7,16 +8,20 @@
 // IP-Adresse an einen Dritten. Gezeichnet wird auf ein Canvas.
 //
 // Datenformat CL_HAEFEN.h: [name, locode, iso2, x, y, merkmale, groesse, tiefe_m,
-//   laenge_m, gewaesser, lat, lon, alias]
-//   merkmale: Bits (HK_BIT unten), groesse: 0 unbekannt .. 4 gross,
-//   gewaesser: Index in CL_HAEFEN.gew (je Eintrag [englisch, deutsch]).
+//   laenge_m, kueste, lat, lon, alias, teu_mio, standort]
+//   merkmale: Bits (HK_BIT unten), groesse: 0 unbekannt .. 4 gross (das BECKEN laut
+//   Index, nicht der Umschlag), kueste: Index in CL_HAEFEN.kue ([englisch, deutsch]),
+//   teu_mio: Containerumschlag des Top-50-Jahres (0 = nicht in der Top 50).
 (function () {
   "use strict";
   var wurzel = document.querySelector("[data-hafenkarte]");
   if (!wurzel || !window.CL_LAND || !window.CL_HAEFEN) return;
 
   // HK_START
-  var HK_BIT = { container: 1, kraene: 2, roro: 4, bahn: 8, stueckgut: 16 };
+  // top = unter den 50 groessten Containerhaefen (World Shipping Council) -- das ist die
+  // EINZIGE Stelle, an der die Karte "Containerhafen" sagt. container = der Index
+  // verzeichnet Container-Anlagen (bei den grossen Haefen meist leer, daher nur Zusatz).
+  var HK_BIT = { top: 1, container: 2, roro: 4, bahn: 8, stueckgut: 16 };
   var HK_GROESSE = { de: ["–", "sehr klein", "klein", "mittel", "groß"], en: ["–", "very small", "small", "medium", "large"] };
   // Suchtext normalisieren: Kleinschreibung, ohne Akzente, ohne Leer- und Satzzeichen.
   // "São Paulo" findet man mit "sao paulo", "DE HAM" mit "deham".
@@ -29,9 +34,11 @@
     var q = hkNorm(f.q), aus = [];
     for (var i = 0; i < haefen.length; i++) {
       var h = haefen[i];
-      if (!f.alle && !(h[5] & HK_BIT.container)) continue;
+      // Ohne Suchwort: grosse und mittlere Haefen plus die Top 50; "alle" zeigt auch die
+      // kleinen. Wer nach einem Namen sucht, findet ihn immer -- auch einen kleinen Hafen.
+      if (!q && !f.alle && !(h[5] & HK_BIT.top) && h[6] < 3) continue;
       if (f.land && h[2] !== f.land) continue;
-      if (f.gew != null && f.gew !== "" && h[9] !== +f.gew) continue;
+      if (f.kue != null && f.kue !== "" && h[9] !== +f.kue) continue;
       if (q) {
         var treffer = hkNorm(h[0]).indexOf(q) >= 0 || hkNorm(h[12]).indexOf(q) >= 0 ||
           (h[1] && hkNorm(h[1]).indexOf(q) === 0) ||
@@ -40,10 +47,11 @@
       }
       aus.push(i);
     }
-    // Groesste zuerst, dann nach Name -- wer "USA" filtert, will Los Angeles vor Kleinhaefen sehen
+    // Containerumschlag zuerst, dann Hafengroesse, dann Name -- wer "USA" filtert, will
+    // Los Angeles vor den Kleinhaefen sehen
     aus.sort(function (a, b) {
       var ha = haefen[a], hb = haefen[b];
-      return (hb[6] - ha[6]) || ((hb[5] & 1) - (ha[5] & 1)) || (ha[0] < hb[0] ? -1 : ha[0] > hb[0] ? 1 : 0);
+      return (hb[13] - ha[13]) || (hb[6] - ha[6]) || (ha[0] < hb[0] ? -1 : ha[0] > hb[0] ? 1 : 0);
     });
     return aus;
   }
@@ -53,11 +61,13 @@
   var TX = {
     de: {
       suche: "Hafen, UN/LOCODE oder Land", land: "Land", alleLaender: "Alle Länder", gew: "Küste / Gewässer",
-      alleGew: "alle", auchOhne: "Auch Häfen ohne Containerumschlag", treffer: function (n) { return n === 1 ? "1 Hafen" : n.toLocaleString("de-DE") + " Häfen"; },
+      alleGew: "alle", treffer: function (n) { return n === 1 ? "1 Hafen" : n.toLocaleString("de-DE") + " Häfen"; },
       mehr: function (n) { return "… und " + n.toLocaleString("de-DE") + " weitere — Suche oder Filter eingrenzen."; },
-      keine: "Kein Hafen passt zu dieser Suche.", groesse: "Hafengröße", laenge: "Max. Schiffslänge", tiefe: "Wassertiefe am Kai",
-      gewaesser: "Gewässer", ausstattung: "Ausstattung", container: "Containerumschlag", kraene: "Containerkräne", roro: "Ro-Ro",
-      bahn: "Bahnanschluss", stueckgut: "Stückgut", keinContainer: "kein Containerumschlag gemeldet", koord: "Koordinaten",
+      keine: "Kein Hafen passt zu dieser Suche.", groesse: "Hafenbecken", laenge: "Max. Schiffslänge", tiefe: "Wassertiefe am Kai",
+      gewaesser: "Küste / Gewässer", ausstattung: "Ausstattung laut Index", container: "Container-Anlagen", roro: "Ro-Ro",
+      bahn: "Bahnanschluss", stueckgut: "Stückgut", koord: "Koordinaten",
+      umschlag: function (j) { return "Containerumschlag " + j; }, teu: function (t) { return t.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " Mio. TEU"; },
+      top: "einer der 50 größten Containerhäfen der Welt", standort: "Punkt auf der Karte", mioKurz: function (t) { return t.toLocaleString("de-DE", { maximumFractionDigits: 1 }) + " Mio. TEU"; },
       osm: "In OpenStreetMap ansehen", planen: "Ladung im 3D-Rechner planen", kopieren: "Link zu diesem Hafen kopieren",
       kopiert: "Link kopiert", zu: "Schließen", plus: "Hineinzoomen", minus: "Herauszoomen", welt: "Ganze Welt",
       karte: "Weltkarte der Häfen. Ziehen verschiebt, Mausrad oder zwei Finger zoomen.", unbekannt: "keine Angabe", m: " m",
@@ -65,11 +75,13 @@
     },
     en: {
       suche: "Port, UN/LOCODE or country", land: "Country", alleLaender: "All countries", gew: "Coast / water body",
-      alleGew: "all", auchOhne: "Also ports without container handling", treffer: function (n) { return n === 1 ? "1 port" : n.toLocaleString("en-US") + " ports"; },
+      alleGew: "all", treffer: function (n) { return n === 1 ? "1 port" : n.toLocaleString("en-US") + " ports"; },
       mehr: function (n) { return "… and " + n.toLocaleString("en-US") + " more — narrow the search or filters."; },
-      keine: "No port matches this search.", groesse: "Harbour size", laenge: "Max. vessel length", tiefe: "Depth at the quay",
-      gewaesser: "Water body", ausstattung: "Facilities", container: "Container handling", kraene: "Container cranes", roro: "Ro-Ro",
-      bahn: "Rail connection", stueckgut: "Break bulk", keinContainer: "no container handling reported", koord: "Coordinates",
+      keine: "No port matches this search.", groesse: "Harbour basin", laenge: "Max. vessel length", tiefe: "Depth at the quay",
+      gewaesser: "Coast / water body", ausstattung: "Facilities per index", container: "Container facilities", roro: "Ro-Ro",
+      bahn: "Rail connection", stueckgut: "Break bulk", koord: "Coordinates",
+      umschlag: function (j) { return "Container throughput " + j; }, teu: function (t) { return t.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + " million TEU"; },
+      top: "one of the 50 largest container ports in the world", standort: "Point on the map", mioKurz: function (t) { return t.toLocaleString("en-US", { maximumFractionDigits: 1 }) + "m TEU"; },
       osm: "View in OpenStreetMap", planen: "Plan the load in the 3D calculator", kopieren: "Copy link to this port",
       kopiert: "Link copied", zu: "Close", plus: "Zoom in", minus: "Zoom out", welt: "Whole world",
       karte: "World map of ports. Drag to pan, mouse wheel or two fingers to zoom.", unbekannt: "not stated", m: " m",
@@ -90,7 +102,8 @@
       return (cache[c] = n);
     };
   })();
-  var gewName = function (i) { var g = D.gew[i]; return g ? (SPR === "de" ? g[1] || g[0] : g[0]) : ""; };
+  var gewName = function (i) { var g = D.kue[i]; return g ? (SPR === "de" ? g[1] || g[0] : g[0]) : ""; };
+  var sichtbarNachGroesse = function (h) { return f.alle || (h[5] & HK_BIT.top) || h[6] >= 3; };
   var css = function (v, d) { var s = getComputedStyle(wurzel).getPropertyValue(v).trim(); return s || d; };
 
   // ── DOM ─────────────────────────────────────────────────────────────
@@ -107,7 +120,7 @@
   var REDUZIERT = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ── Zustand ─────────────────────────────────────────────────────────
-  var f = { q: "", land: "", gew: "", alle: false };
+  var f = { q: "", land: "", kue: "", alle: false };
   var sichtbar = [], gewaehlt = -1;
   var ansicht = { k: 1, tx: 0, ty: 0 }, cssB = 1, cssH = 1, dpr = 1;
   // Die Welt ohne Antarktis: 84 Grad Nord bis 58 Grad Sued, vom Generator mitgegeben
@@ -117,7 +130,7 @@
   // ── Laender- und Gewaesser-Auswahl ─────────────────────────────────
   function zaehlen(pruef) { var z = {}; for (var i = 0; i < H.length; i++) if (pruef(H[i])) z[H[i][2]] = (z[H[i][2]] || 0) + 1; return z; }
   function laenderFuellen() {
-    var z = zaehlen(function (h) { return f.alle || (h[5] & HK_BIT.container); });
+    var z = zaehlen(sichtbarNachGroesse);
     var codes = Object.keys(z).filter(Boolean).sort(function (a, b) { return landName(a).localeCompare(landName(b), TX.loc); });
     var alt = f.land;
     feldLand.innerHTML = "";
@@ -133,22 +146,22 @@
     var z = {};
     for (var i = 0; i < H.length; i++) {
       var h = H[i];
-      if (h[2] !== f.land || (!f.alle && !(h[5] & HK_BIT.container)) || h[9] < 0) continue;
+      if (h[2] !== f.land || !sichtbarNachGroesse(h) || h[9] < 0) continue;
       z[h[9]] = (z[h[9]] || 0) + 1;
     }
     var idx = Object.keys(z).map(Number).sort(function (a, b) { return z[b] - z[a]; });
-    if (idx.length < 2) { chips.hidden = true; if (f.gew !== "" && !z[f.gew]) f.gew = ""; return; }
+    if (idx.length < 2) { chips.hidden = true; if (f.kue !== "" && !z[f.kue]) f.kue = ""; return; }
     chips.hidden = false;
     var knopf = function (wert, text) {
       var b = document.createElement("button");
       b.type = "button"; b.textContent = text;
-      b.setAttribute("aria-pressed", String(String(f.gew) === String(wert)));
-      b.addEventListener("click", function () { f.gew = wert; aktualisieren(true); });
+      b.setAttribute("aria-pressed", String(String(f.kue) === String(wert)));
+      b.addEventListener("click", function () { f.kue = wert; aktualisieren(true); });
       chips.appendChild(b);
     };
     knopf("", TX.alleGew);
     idx.forEach(function (g) { knopf(g, gewName(g) + " · " + z[g]); });
-    if (f.gew !== "" && !z[f.gew]) f.gew = "";
+    if (f.kue !== "" && !z[f.kue]) f.kue = "";
   }
 
   // ── Liste ───────────────────────────────────────────────────────────
@@ -163,8 +176,8 @@
       b.type = "button"; b.className = "hk-eintrag" + (i === gewaehlt ? " an" : "");
       b.innerHTML = '<span class="hk-n"></span><span class="hk-m"></span>';
       b.firstChild.textContent = h[0];
-      b.lastChild.textContent = [h[1] ? h[1].slice(0, 2) + " " + h[1].slice(2) : "", landName(h[2]), gewName(h[9])].filter(Boolean).join(" · ");
-      if (!(h[5] & HK_BIT.container)) b.classList.add("ohne");
+      b.lastChild.textContent = [h[1] ? h[1].slice(0, 2) + " " + h[1].slice(2) : "", landName(h[2]), gewName(h[9]), h[13] ? TX.mioKurz(h[13]) : ""].filter(Boolean).join(" · ");
+      if (h[5] & HK_BIT.top) b.classList.add("top"); else if (h[6] < 3) b.classList.add("klein");
       b.addEventListener("click", function () { waehlen(i, true); });
       frag.appendChild(b);
     });
@@ -192,19 +205,25 @@
     var sub = document.createElement("p"); sub.className = "hk-dsub";
     sub.textContent = [h[1] ? h[1].slice(0, 2) + " " + h[1].slice(2) : "", landName(h[2])].filter(Boolean).join(" · ");
     detail.appendChild(sub);
+    if (h[5] & HK_BIT.top) {
+      var top = document.createElement("p"); top.className = "hk-top";
+      top.innerHTML = "<b></b><span></span>";
+      top.firstChild.textContent = TX.teu(h[13]);
+      top.lastChild.textContent = " · " + TX.umschlag(D.topJahr) + " · " + TX.top;
+      detail.appendChild(top);
+    }
     var dl = document.createElement("dl");
+    if (h[14]) zeile(dl, TX.standort, h[14]);
     if (h[9] >= 0) zeile(dl, TX.gewaesser, gewName(h[9]));
     zeile(dl, TX.groesse, HK_GROESSE[SPR][h[6]] || TX.unbekannt);
     zeile(dl, TX.laenge, zahlM(h[8]));
     zeile(dl, TX.tiefe, zahlM(h[7]));
     var aus = [];
     if (h[5] & HK_BIT.container) aus.push(TX.container);
-    if (h[5] & HK_BIT.kraene) aus.push(TX.kraene);
     if (h[5] & HK_BIT.roro) aus.push(TX.roro);
     if (h[5] & HK_BIT.stueckgut) aus.push(TX.stueckgut);
     if (h[5] & HK_BIT.bahn) aus.push(TX.bahn);
     zeile(dl, TX.ausstattung, aus.length ? aus.join(", ") : TX.unbekannt);
-    if (!(h[5] & HK_BIT.container)) dl.lastChild.textContent += " — " + TX.keinContainer;
     zeile(dl, TX.koord, koordText(h[10], h[11]));
     detail.appendChild(dl);
     var links = document.createElement("div"); links.className = "hk-links";
@@ -278,7 +297,7 @@
   function farbenLesen() {
     FARBE = {
       meer: css("--hk-meer", "#121821"), land: css("--hk-land", "#1E2834"), grenze: css("--hk-grenze", "#2E3A49"),
-      hafen: css("--accent", "#2E8FFF"), ohne: css("--faint", "#7689A0"), text: css("--dim", "#9DB0C2"),
+      hafen: css("--accent", "#2E8FFF"), gross: css("--hk-gross", "#8FA3B8"), ohne: css("--hk-klein", "#55667A"), text: css("--dim", "#9DB0C2"),
       halo: css("--hk-meer", "#121821"), wahl: css("--text", "#E9F0F7")
     };
   }
@@ -287,39 +306,51 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = FARBE.meer; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.setTransform(dpr * k, 0, 0, dpr * k, dpr * ansicht.tx, dpr * ansicht.ty);
+    // Unterhalb des Rahmens (58 Grad Sued) liegt nur die Antarktis -- kein Hafen, also kein Land
+    ctx.save(); ctx.beginPath(); ctx.rect(-L.w, -L.h, 3 * L.w, WELT.y1 + L.h + 6); ctx.clip();
     ctx.fillStyle = FARBE.land; ctx.fill(landPfad);
     ctx.strokeStyle = FARBE.grenze; ctx.lineWidth = 0.8 / k; ctx.stroke(grenzPfad);
+    ctx.restore();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // Punkte: erst die ohne Containerumschlag (darunter), dann die Containerhaefen
-    var zoom = k / kMin, rBasis = zoom < 3 ? 2 : zoom < 10 ? 3 : 4;
+    // Punkte in drei Lagen: kleine Haefen, grosse/mittlere, oben die Top-50-Containerhaefen
+    var zoom = k / kMin, rBasis = zoom < 3 ? 2 : zoom < 10 ? 2.6 : 3.2;
     var sx = function (h) { return h[3] * k + ansicht.tx; }, sy = function (h) { return h[4] * k + ansicht.ty; };
-    for (var durchgang = 0; durchgang < 2; durchgang++) {
-      ctx.fillStyle = durchgang ? FARBE.hafen : FARBE.ohne;
+    var klasse = function (h) { return h[5] & HK_BIT.top ? 2 : h[6] >= 3 ? 1 : 0; };
+    for (var lage = 0; lage < 3; lage++) {
+      ctx.fillStyle = lage === 2 ? FARBE.hafen : lage === 1 ? FARBE.gross : FARBE.ohne;
       ctx.beginPath();
       for (var j = sichtbar.length - 1; j >= 0; j--) {
-        var h = H[sichtbar[j]], c = h[5] & HK_BIT.container ? 1 : 0;
-        if (c !== durchgang) continue;
+        var h = H[sichtbar[j]];
+        if (klasse(h) !== lage) continue;
         var x = sx(h), y = sy(h);
         if (x < -10 || y < -10 || x > cssB + 10 || y > cssH + 10) continue;
-        var r = c ? rBasis + (h[6] >= 4 ? 1.5 : h[6] === 3 ? 0.7 : 0) : Math.max(1.5, rBasis - 0.5);
+        var r = lage === 2 ? rBasis + 2 + Math.min(2, h[13] / 20) : lage === 1 ? rBasis : Math.max(1.4, rBasis - 0.8);
         ctx.moveTo(x + r, y); ctx.arc(x, y, r, 0, Math.PI * 2);
       }
       ctx.fill();
     }
-    // Beschriftungen, sobald man nah genug ist -- groesste zuerst, ohne Ueberlappung
-    if (zoom >= 5) {
+    // Beschriftungen: die Top 50 schon aus der Ferne, die uebrigen erst von nahem --
+    // in Listen-Reihenfolge (Umschlag, dann Groesse), ohne Ueberlappung
+    if (zoom >= 1.6) {
       ctx.font = "500 11.5px Archivo, ui-sans-serif, system-ui, sans-serif";
       ctx.textBaseline = "middle"; ctx.lineJoin = "round";
       var belegt = [], gesetzt = 0;
       for (var n = 0; n < sichtbar.length && gesetzt < 140; n++) {
-        var hh = H[sichtbar[n]], lx = sx(hh) + 7, ly = sy(hh);
-        if (lx < -100 || ly < -10 || lx > cssB || ly > cssH + 10) continue;
-        var w = ctx.measureText(hh[0]).width, box = [lx - 2, ly - 8, lx + w + 2, ly + 8], frei = true;
-        for (var b = 0; b < belegt.length; b++) { var o = belegt[b]; if (box[0] < o[2] && box[2] > o[0] && box[1] < o[3] && box[3] > o[1]) { frei = false; break; } }
-        if (!frei) continue;
-        belegt.push(box); gesetzt++;
-        ctx.strokeStyle = FARBE.halo; ctx.lineWidth = 3; ctx.strokeText(hh[0], lx, ly);
-        ctx.fillStyle = FARBE.text; ctx.fillText(hh[0], lx, ly);
+        var hh = H[sichtbar[n]], px = sx(hh), py = sy(hh);
+        if (!(hh[5] & HK_BIT.top) && zoom < 6) continue;
+        if (px < -100 || py < -10 || px > cssB + 100 || py > cssH + 10) continue;
+        var w = ctx.measureText(hh[0]).width, platz = null;
+        // Rechts vom Punkt, sonst links, oben, unten -- der erste freie Platz gewinnt
+        var orte = [[px + 8, py], [px - 8 - w, py], [px - w / 2, py - 14], [px - w / 2, py + 14]];
+        for (var oi = 0; oi < orte.length && !platz; oi++) {
+          var lx = orte[oi][0], ly = orte[oi][1], box = [lx - 2, ly - 8, lx + w + 2, ly + 8], frei = true;
+          for (var b = 0; b < belegt.length; b++) { var o = belegt[b]; if (box[0] < o[2] && box[2] > o[0] && box[1] < o[3] && box[3] > o[1]) { frei = false; break; } }
+          if (frei) platz = [lx, ly, box];
+        }
+        if (!platz) continue;
+        belegt.push(platz[2]); gesetzt++;
+        ctx.strokeStyle = FARBE.halo; ctx.lineWidth = 3; ctx.strokeText(hh[0], platz[0], platz[1]);
+        ctx.fillStyle = (hh[5] & HK_BIT.top) ? FARBE.wahl : FARBE.text; ctx.fillText(hh[0], platz[0], platz[1]);
       }
     }
     if (gewaehlt >= 0) {
@@ -423,7 +454,7 @@
     tippUhr = setTimeout(function () { aktualisieren(true); }, 220);
   });
   feldQ.addEventListener("keydown", function (e) { if (e.key === "Enter" && sichtbar.length) { e.preventDefault(); waehlen(sichtbar[0], true); } });
-  feldLand.addEventListener("change", function () { f.land = feldLand.value; f.gew = ""; aktualisieren(true); });
+  feldLand.addEventListener("change", function () { f.land = feldLand.value; f.kue = ""; aktualisieren(true); });
   feldAlle.addEventListener("change", function () { f.alle = feldAlle.checked; laenderFuellen(); aktualisieren(false); });
 
   // ── Adresse: ?q= ?land= ?gew= ?alle=1 ?hafen= (teilbar, wie der Rechner) ──
@@ -432,7 +463,7 @@
       var p = new URLSearchParams();
       if (f.q) p.set("q", f.q);
       if (f.land) p.set("land", f.land);
-      if (f.gew !== "") p.set("gew", String(f.gew));
+      if (f.kue !== "") p.set("kueste", String(f.kue));
       if (f.alle) p.set("alle", "1");
       if (gewaehlt >= 0) p.set("hafen", H[gewaehlt][1] || String(gewaehlt));
       var s = p.toString();
@@ -445,7 +476,7 @@
     f.alle = p.get("alle") === "1"; feldAlle.checked = f.alle;
     var land = (p.get("land") || "").toUpperCase();
     f.land = /^[A-Z]{2}$/.test(land) ? land : "";
-    var gew = p.get("gew"); f.gew = gew != null && /^\d{1,3}$/.test(gew) ? +gew : "";
+    var kue = p.get("kueste"); f.kue = kue != null && /^\d{1,3}$/.test(kue) ? +kue : "";
     var hafen = (p.get("hafen") || "").toUpperCase().replace(/\s+/g, ""), idx = -1;
     if (hafen) for (var i = 0; i < H.length; i++) if (H[i][1] === hafen) { idx = i; break; }
     return idx;
