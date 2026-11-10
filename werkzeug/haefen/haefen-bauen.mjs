@@ -14,7 +14,7 @@
 // Datenblock (Base64 + gzip) SELBST aus -- der Code des Pakets laeuft nie.
 //
 // QUELLE 2 -- quelle/top50-wsc.csv: die Top-50-Tabelle des World Shipping Council
-// (von Jarek am 10.11.26 aus der WSC-Tabelle uebernommen). Welcher WPI-Eintrag zu
+// (https://www.worldshipping.org/top-50-container-ports, von Jarek am 10.11.26 uebernommen). Welcher WPI-Eintrag zu
 // welchem Rang gehoert, steht unten in ZUORDNUNG -- bei Hafengebieten mit mehreren
 // Standorten der Containerstandort (Shenzhen -> Yantian usw.).
 //

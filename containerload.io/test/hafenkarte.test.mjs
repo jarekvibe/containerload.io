@@ -160,6 +160,7 @@ test("Quellen und Lizenz stehen auf beiden Seiten", () => {
     assert.ok(s.includes('href="https://www.npmjs.com/package/seaport-data-js"'), "Aufbereitung nicht genannt");
     assert.ok(/creativecommons\.org\/licenses\/by\/4\.0/.test(s), "CC-BY-Lizenz nicht verlinkt");
     assert.ok(s.includes("Aashish Vivekanand"), "Urheber der Aufbereitung fehlt");
+    assert.ok(s.includes('href="https://www.worldshipping.org/top-50-container-ports"'), "WSC-Quelle nicht verlinkt");
   }
   // "Containerhafen" sagt die Karte nur bei der Top-50-Markierung
   const detail = karte.slice(karte.indexOf("function detailZeichnen"), karte.indexOf("// ── Karte: Groesse"));
