@@ -50,4 +50,12 @@ export default async (req) => {
   }
 };
 
-export const config = { path: "/api/ki-brief" };
+// Limit je Client, VOR der Function: Netlify zaehlt die Anfragen je IP-Adresse und
+// antwortet ab der Grenze selbst mit 429 -- diese Function laeuft dann gar nicht, der
+// Tagesdeckel wird nicht angefasst, es entsteht kein KI-Aufruf. Der Code hier liest die
+// IP weiterhin nie; gezaehlt wird am Rand des Netzes und nur fuer das Zeitfenster.
+// Die Werte muessen Literale sein (Netlify liest die Konfiguration, ohne den Code auszufuehren).
+export const config = {
+  path: "/api/ki-brief",
+  rateLimit: { action: "rate_limit", aggregateBy: ["ip", "domain"], windowSize: 60, windowLimit: 10 },
+};

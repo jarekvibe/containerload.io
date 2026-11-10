@@ -34,6 +34,7 @@ const T = { fsTitel: "TITEL", fsText: "MIT-ENTWURF", fsTextOhne: "OHNE-ENTWURF",
 // Baut eine frische Umgebung: React-Attrappe, Fenster-Attrappe, Zaehler.
 function umgebung({ lang = "de", pfad = "/app" } = {}) {
   const protokoll = { reload: 0, replace: [], geleert: 0 };
+  const gezaehlt = [];
   const fenster = { location: { pathname: pfad, reload: () => { protokoll.reload++; }, replace: (u) => { protokoll.replace.push(u); } } };
   const React = {
     Component: class { constructor(props) { this.props = props; } },
@@ -42,11 +43,11 @@ function umgebung({ lang = "de", pfad = "/app" } = {}) {
   const marke = new Proxy({}, { get: (_, k) => String(k) });   // C.bg -> "bg", SP.xl -> "xl" ...
   const Btn = "Btn";
   const { Fehlerschirm, setFrisch } = new Function(
-    "React", "C", "SANS", "R", "SP", "FS", "FW", "T", "Btn", "LANG", "clearDraft", "window",
+    "React", "C", "SANS", "R", "SP", "FS", "FW", "T", "Btn", "LANG", "clearDraft", "window", "zaehl", "console",
     "var entwurfFrisch = false;\n" + L.slice(von, bis).join("\n") +
     "\nreturn { Fehlerschirm, setFrisch: (v) => { entwurfFrisch = v; } };"
-  )(React, marke, "sans", marke, marke, marke, marke, T, Btn, lang, () => { protokoll.geleert++; }, fenster);
-  return { Fehlerschirm, setFrisch, protokoll };
+  )(React, marke, "sans", marke, marke, marke, marke, T, Btn, lang, () => { protokoll.geleert++; }, fenster, (...a) => gezaehlt.push(a), { error() {} });
+  return { Fehlerschirm, setFrisch, protokoll, gezaehlt };
 }
 
 // Alle Knoten eines Attrappen-Baums, flach.
@@ -113,6 +114,13 @@ test("die Sprache ueberlebt beide Wege (Englisch haengt an der Adresse)", () => 
   knopf(gestuerzt(u).render(), "NEU").props.onClick();
   knopf(gestuerzt(u).render(), "LEER").props.onClick();
   assert.deepStrictEqual(u.protokoll.replace, ["/app?lang=en", "/app?lang=en"]);
+});
+
+test("der Schirm zaehlt sein Erscheinen -- nur mit dem Namen, nie mit dem Fehler", () => {
+  const u = umgebung();
+  const s = gestuerzt(u);
+  s.componentDidCatch(new Error("Position „Mueller GmbH“ kaputt"), { componentStack: "in App" });
+  assert.deepStrictEqual(u.gezaehlt, [["fehler-anzeige"]], "es geht genau der feste Name mit, nichts aus dem Fehler");
 });
 
 test("der Schirm ist eingehaengt, und der Entwurf meldet sich als frisch", () => {

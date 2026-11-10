@@ -3579,6 +3579,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       kiHinweis: "Von der KI gelesen — Werte bitte pr\xFCfen, gerechnet wird erst nach „Hinzuf\xFCgen“.",
       kiFehler: "Die KI ist gerade nicht erreichbar.",
       kiLimit: "Das Tages-Kontingent der KI ist aufgebraucht — morgen geht es wieder.",
+      kiTempo: "Das waren viele Anfragen in kurzer Zeit — bitte einen Moment warten und noch einmal versuchen.",
       kiLang: "Zu lang f\xFCr die KI (max. 6.000 Zeichen).",
       kiOhne: "Die Liste wurde deshalb ohne KI gelesen — bitte besonders genau pr\xFCfen.",
       kiTipp: "Tipp: Foto oder Screenshot kopieren und hier mit {V} einf\xFCgen \u2014 die KI liest die Packliste daraus.",
@@ -4042,6 +4043,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       kiHinweis: "Read by AI — please check the values; nothing is calculated before “Add”.",
       kiFehler: "The AI is not reachable right now.",
       kiLimit: "Today's AI quota is used up — back tomorrow.",
+      kiTempo: "That was a lot of requests in a short time — please wait a moment and try again.",
       kiLang: "Too long for the AI (max 6,000 characters).",
       kiOhne: "So the list was read without AI — please check it extra carefully.",
       kiTipp: "Tip: copy a photo or screenshot and paste it here with {V} \u2014 the AI reads the packing list from it.",
@@ -4387,6 +4389,32 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (evAbsenden() || ++versuche > 20) { clearInterval(EV_TIMER); EV_TIMER = null; }
     }, 500);
   }
+  // ── Fehler zaehlen ──────────────────────────────────────────────────────
+  // Bis hierher erfuhr niemand von einem Absturz, solange nicht jemand ein Bild schickte.
+  // Gezaehlt wird wie alles andere: NUR DER NAME, je Seitenaufruf hoechstens einmal. Kein
+  // Fehlertext, keine Zeilennummer, kein Stack -- in einer Meldung kann ein Positionsname
+  // stehen, und der geht uns nichts an. Der Zaehler sagt, DASS etwas bricht und wie oft;
+  // was, findet man danach selbst.
+  //   fehler-anzeige  der Fehlerschirm ist erschienen (Fehler beim Zeichnen, s. Fehlerschirm)
+  //   fehler-skript   ein Fehler im eigenen Code ausserhalb des Zeichnens (Klick, Timer)
+  //   fehler-async    ein Versprechen ist unbehandelt gescheitert
+  // Fremde Skripte zaehlen nicht mit: Browser-Erweiterungen und der Besucherzaehler melden
+  // sich mit fremdem oder leerem Dateinamen.
+  try {
+    window.addEventListener("error", (ev) => {
+      const datei = ev && ev.filename || "";
+      if (datei && datei.indexOf(window.location.origin) === 0) zaehl("fehler-skript");
+    });
+    window.addEventListener("unhandledrejection", () => { zaehl("fehler-async"); });
+  } catch (e) { }
+  // Ein 429 der KI-Endpunkte hat zwei Absender. Die Function selbst meldet den gemeinsamen
+  // Tagesdeckel (mit {"fehler":"limit"}); Netlify davor bremst einen einzelnen Client, der in
+  // kurzer Zeit sehr viel fragt (rateLimit in der Function-Konfiguration, ohne unseren Text).
+  // Das eine heisst "morgen wieder", das andere "einen Moment" -- nicht dasselbe sagen.
+  var kiLimitText = async (antwort) => {
+    try { const j = await antwort.clone().json(); if (j && j.fehler === "limit") return T.kiLimit; } catch (e) { }
+    return T.kiTempo;
+  };
   // ── Anonyme Nutzungsstatistik (/api/beacon) ──────────────────────────────
   // GoatCounter zaehlt, WIE OFT etwas passiert; hier geht zusaetzlich einmal
   // je Besuch, WAS gerechnet wurde: Masse, Gewichte, Stueckzahlen, Container,
@@ -8813,7 +8841,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const scheitern = (msg) => { if (ersatz) ersatz(msg); else setKiFehler(msg); return false; };
       try {
         const r = await fetch("/api/ki-import", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload) });
-        if (r.status === 429) return scheitern(T.kiLimit);
+        if (r.status === 429) return scheitern(await kiLimitText(r));
         if (!r.ok) return scheitern(T.kiFehler);
         const d = await r.json();
         const rows = (Array.isArray(d && d.positionen) ? d.positionen : []).slice(0, 60);
@@ -9799,7 +9827,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setBriefBusy(T.briefSchreibt);
       try {
         const r = await fetch("/api/ki-brief", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ fakten: briefFakten() }) });
-        if (r.status === 429) { setBriefFehler(T.kiLimit); return; }
+        if (r.status === 429) { setBriefFehler(await kiLimitText(r)); return; }
         if (!r.ok) { setBriefFehler(T.kiFehler); return; }
         const d = await r.json();
         const betreff = String(d && d.betreff || "").slice(0, 120);
@@ -9945,7 +9973,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const chatRunde = async (frage, verlauf, befund, tiefe) => {
       const fakten = { ...planFakten(), ...(befund && befund.length ? { befund } : {}) };
       const r = await fetch("/api/ki-chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ sprache: LANG === "en" ? "en" : "de", fakten, verlauf, frage, nachzug: tiefe > 0 }) });
-      if (r.status === 429) { setChatFehler(T.kiLimit); return false; }
+      if (r.status === 429) { setChatFehler(await kiLimitText(r)); return false; }
       if (!r.ok) { setChatFehler(T.kiFehler); return false; }
       const d = await r.json();
       const antwort = String(d && d.antwort || "").slice(0, 2000);
@@ -11213,6 +11241,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     componentDidCatch(fehler, info) {
       try { console.error("ContainerLoad: Fehler beim Zeichnen", fehler, info && info.componentStack); } catch (e) { }
+      // Nur der Name -- siehe den Abschnitt "Fehler zaehlen" beim Ereigniszaehler.
+      try { zaehl("fehler-anzeige"); } catch (e) { }
     }
     render() {
       if (!this.state.kaputt) return this.props.children;

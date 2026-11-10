@@ -3,6 +3,11 @@
 // nicht die Statistik. Faellt der Speicher aus, laeuft der Import weiter
 // (fail-open): die harten Deckel (Origin, Groessen, Guthaben-Obergrenze in
 // der Anthropic-Konsole) stehen unabhaengig davon. Keine IP wird gelesen.
+//
+// Der Deckel ist GEMEINSAM: wer ihn allein leerfragt, schaltet die KI fuer alle bis zum
+// naechsten Tag ab. Dagegen steht seit November 2026 ein Limit je Client davor (rateLimit
+// in der Konfiguration der drei KI-Functions) -- es bremst, es verhindert nicht: ein
+// einzelner Client braucht fuer 400 Aufrufe jetzt eine gute Viertelstunde statt Sekunden.
 export const TAGESLIMIT = Math.max(1, parseInt(process.env.KI_TAGESLIMIT, 10) || 400);
 
 export async function tagesdeckel() {
