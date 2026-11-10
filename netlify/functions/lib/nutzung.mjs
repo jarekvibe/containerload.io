@@ -54,6 +54,32 @@ export function pruefeEvent(roh) {
   return { v: 1, modus: roh.modus, sprache: roh.sprache, geteilt: !!roh.geteilt, dauerS, positionen, funktionen, container, kette };
 }
 
+// Die Tage eines Auswertungszeitraums als Schluessel-Praefixe ("e/YYYY-MM-DD/",
+// UTC, juengster zuerst). Die Events liegen unter e/<tag>/<uhrzeit>-<zufall>;
+// wer den Zeitraum als Praefix-Liste kennt, muss nie den ganzen Store listen.
+export function tagesPraefixe(tage, jetzt = Date.now()) {
+  const n = Math.min(90, Math.max(1, Math.round(+tage) || 30));
+  return Array.from({ length: n }, (_, i) =>
+    "e/" + new Date(jetzt - i * 86400000).toISOString().slice(0, 10) + "/");
+}
+
+// Die Blob-Schluessel der juengsten EVENTS_MAX Events im Zeitraum, sortiert.
+//
+// Vorher listete die Auswertung bei JEDEM Dashboard-Aufruf den gesamten Store
+// (prefix "e/") und filterte danach -- die Liste wuchs mit jedem Tag seit dem
+// Start, in Seiten zu 1.000 Schluesseln hintereinander, bis die Function eines
+// Tages an ihrer Laufzeit gescheitert waere. Jetzt wird je Tag gelistet: die
+// Arbeit haengt am gewaehlten Zeitraum, nicht am Alter des Projekts.
+//
+// store ist ein Netlify-Blobs-Store (oder im Test eine Attrappe mit list()).
+export async function schluesselImZeitraum(store, tage, jetzt = Date.now()) {
+  const seiten = await Promise.all(tagesPraefixe(tage, jetzt).map((prefix) => store.list({ prefix })));
+  return seiten
+    .flatMap((s) => ((s && s.blobs) || []).map((b) => b.key))
+    .sort()
+    .slice(-EVENTS_MAX);
+}
+
 // Netlify-Forms-Submissions (Formular "feedback") -> schlanke Liste fuers
 // Dashboard. Feedback ist FREITEXT VON FREMDEN: hier wird gekappt und
 // gefiltert, und die Anzeige (admin.html) escapet zusaetzlich jedes Feld --

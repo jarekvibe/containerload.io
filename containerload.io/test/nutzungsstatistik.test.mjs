@@ -10,7 +10,7 @@ import assert from "node:assert";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { pruefeEvent, aggregiere, POS_MAX } from "../../netlify/functions/lib/nutzung.mjs";
+import { pruefeEvent, aggregiere, POS_MAX, EVENTS_MAX, tagesPraefixe, schluesselImZeitraum } from "../../netlify/functions/lib/nutzung.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const app = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
@@ -280,4 +280,67 @@ test("der Funnel liest nur feste Ereignisnamen, das Wann-Panel nur die Auswertun
     && funnel.includes('f["plan-per-link-geoeffnet"]'), "die Funnel-Stufen fehlen");
   // Stunden werden vom UTC-Speicher in die Ortszeit des Betrachters gedreht.
   assert.ok(admin.includes("(u + off + 24) % 24"), "die Stunden bleiben in UTC stehen");
+});
+
+// Der Abruf listet je Tag des Zeitraums, nie den ganzen Store. Geprueft wird
+// das VERHALTEN an einer Store-Attrappe: welche Praefixe gefragt werden und
+// welche Schluessel herauskommen -- nicht der Wortlaut der Function.
+const MITTAG = Date.UTC(2026, 10, 10, 12, 0, 0); // 10.11.2026, 12:00 UTC
+const attrappe = (keys) => {
+  const gefragt = [];
+  return {
+    gefragt,
+    list: async (opts) => {
+      const prefix = opts && opts.prefix;
+      gefragt.push(prefix);
+      return { blobs: keys.filter((k) => k.startsWith(prefix || "")).map((key) => ({ key, etag: "x" })) };
+    },
+  };
+};
+
+test("tagesPraefixe: die Tage des Zeitraums in UTC, juengster zuerst, gedeckelt auf 90", () => {
+  assert.deepStrictEqual(tagesPraefixe(3, MITTAG), ["e/2026-11-10/", "e/2026-11-09/", "e/2026-11-08/"]);
+  assert.strictEqual(tagesPraefixe(1, MITTAG).length, 1);
+  assert.strictEqual(tagesPraefixe(500, MITTAG).length, 90, "mehr als 90 Tage gibt es nicht");
+  assert.strictEqual(tagesPraefixe("quatsch", MITTAG).length, 30, "Unsinn faellt auf 30 Tage zurueck");
+  // Ueber den Monatswechsel hinweg, ohne Luecke und ohne Doppelten.
+  const p = tagesPraefixe(12, MITTAG);
+  assert.strictEqual(new Set(p).size, 12);
+  assert.strictEqual(p[11], "e/2026-10-30/");
+});
+
+test("der Abruf listet nur die Tage des Zeitraums -- nie den ganzen Store", async () => {
+  const store = attrappe([
+    "e/2026-01-15/120000-aaaaaa",   // weit vor dem Zeitraum
+    "e/2026-11-07/235959-bbbbbb",   // einen Tag zu alt
+    "e/2026-11-08/000001-cccccc",
+    "e/2026-11-10/113000-dddddd",
+    "e/2026-11-09/080000-eeeeee",
+    "z/2026-11-10",                 // fremder Schluessel
+  ]);
+  const keys = await schluesselImZeitraum(store, 3, MITTAG);
+  assert.deepStrictEqual(keys,
+    ["e/2026-11-08/000001-cccccc", "e/2026-11-09/080000-eeeeee", "e/2026-11-10/113000-dddddd"],
+    "genau die Events des Zeitraums, zeitlich sortiert");
+  assert.strictEqual(store.gefragt.length, 3, "eine Liste je Tag");
+  for (const prefix of store.gefragt) {
+    assert.match(String(prefix), /^e\/\d{4}-\d{2}-\d{2}\/$/, "gelistet wird nur mit Tages-Praefix, gefragt war: " + prefix);
+  }
+});
+
+test("der Abruf behaelt die JUENGSTEN Events, wenn es mehr als EVENTS_MAX sind", async () => {
+  const keys = [];
+  for (let i = 0; i < EVENTS_MAX + 25; i++) {
+    const tag = i < 30 ? "2026-11-09" : "2026-11-10";
+    keys.push("e/" + tag + "/" + String(100000 + i) + "-zzzzzz");
+  }
+  const r = await schluesselImZeitraum(attrappe(keys), 2, MITTAG);
+  assert.strictEqual(r.length, EVENTS_MAX);
+  assert.strictEqual(r[r.length - 1], keys[keys.length - 1], "das juengste Event muss dabei sein");
+  assert.ok(!r.includes(keys[0]), "gestrichen werden die aeltesten, nicht die juengsten");
+});
+
+test("ein leerer oder stummer Store bricht den Abruf nicht", async () => {
+  assert.deepStrictEqual(await schluesselImZeitraum({ list: async () => ({ blobs: [] }) }, 30, MITTAG), []);
+  assert.deepStrictEqual(await schluesselImZeitraum({ list: async () => null }, 30, MITTAG), []);
 });
