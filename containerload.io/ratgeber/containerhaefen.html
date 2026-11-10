@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Containerhäfen &amp; Seehäfen weltweit: Karte mit Küstenfilter</title>
+<meta name="description" content="Die 50 größten Containerhäfen und 3.794 Seehäfen auf einer Weltkarte — Suche nach Name oder UN/LOCODE, Filter nach Land und Küste, z. B. US-Westküste." />
+<link rel="canonical" href="https://containerload.io/ratgeber/containerhaefen" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/containerhaefen" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-ports" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/containerhaefen" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="website" />
+<meta property="og:locale" content="de_DE" />
+<meta property="og:title" content="Containerhäfen &amp; Seehäfen weltweit: Karte mit Küstenfilter" />
+<meta property="og:description" content="Die 50 größten Containerhäfen und 3.794 Seehäfen auf einer Weltkarte — Suche nach Name oder UN/LOCODE, Filter nach Land und Küste, z. B. US-Westküste." />
+<meta property="og:url" content="https://containerload.io/ratgeber/containerhaefen" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Containerhäfen &amp; Seehäfen weltweit: Karte mit Küstenfilter" />
+<meta name="twitter:description" content="Die 50 größten Containerhäfen und 3.794 Seehäfen auf einer Weltkarte — Suche nach Name oder UN/LOCODE, Filter nach Land und Küste, z. B. US-Westküste." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<link rel="stylesheet" href="/karte/hafenkarte.css" />
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <div class="lang" role="group" aria-label="Sprache"><a class="on" href="/ratgeber/containerhaefen" hreflang="de" title="Deutsch">DE</a><a href="/en/guide/container-ports" hreflang="en" title="English">EN</a></div><a class="btn btn-primary" href="/app">3D-Rechner öffnen</a>
+  </div>
+</header>
+<main>
+<section class="wrap wrap-breit">
+  <div class="eyebrow">Container-Wissen · Hafenkarte</div>
+  <h1>Containerhäfen und Seehäfen weltweit: Karte mit Suche</h1>
+  <p class="lead">Die Karte zeigt die <b>50 größten Containerhäfen der Welt</b> und <b>3.794 Seehäfen</b> aus dem World Port Index. Suchen Sie nach Name oder UN/LOCODE, oder wählen Sie Land und Küste — zum Beispiel <a href="/ratgeber/containerhaefen?land=US&amp;kueste=1">USA, Westküste</a>.</p>
+
+  <div class="hk" data-hafenkarte data-sprache="de">
+    <div class="hk-karte" data-hk-karte>
+      <canvas></canvas>
+      <div class="hk-zoom">
+        <button type="button" data-hk-plus>+</button>
+        <button type="button" data-hk-minus>−</button>
+        <button type="button" data-hk-welt><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z" /></svg></button>
+      </div>
+      <div class="hk-quelle">Häfen: World Port Index (NGA, April 2025) · Containerumschlag: World Shipping Council · Karte: Natural Earth</div>
+    </div>
+    <div class="hk-seite">
+      <p class="hk-ohnejs">Die Karte braucht JavaScript. Die wichtigsten Häfen stehen weiter unten auch als Liste.</p>
+      <div class="hk-filter">
+        <label>Suche<input type="search" data-hk-q autocomplete="off" spellcheck="false" /></label>
+        <label>Land<select data-hk-land></select></label>
+        <div class="hk-chips" data-hk-chips hidden></div>
+        <label class="hk-check"><input type="checkbox" data-hk-alle />Auch kleine Häfen</label>
+      </div>
+      <div class="hk-detail" data-hk-detail hidden></div>
+      <div class="hk-listekopf"><span class="hk-legende"><span class="hk-l-top">Top-50-Containerhafen</span><span class="hk-l-gross">großer Hafen</span></span><span class="hk-zahl" data-hk-zahl></span></div>
+      <div class="hk-liste" data-hk-liste></div>
+    </div>
+  </div>
+</section>
+
+<article class="wrap">
+  <h2>So nutzen Sie die Karte</h2>
+  <p><b>Ziehen</b> verschiebt die Karte, <b>Mausrad</b> oder <b>zwei Finger</b> zoomen, ein <b>Klick</b> auf einen Punkt zeigt die Angaben zum Hafen. Die Suche findet jeden Hafen über seinen Namen, seinen Code (z.&nbsp;B. <span class="mono">DEHAM</span> für Hamburg) oder das Land. Wählen Sie ein Land, erscheinen darunter seine <b>Küsten</b> — bei den USA etwa Westküste, Ostküste und Golfküste, bei Deutschland Nordsee und Ostsee.</p>
+  <p>Ohne Suchwort zeigt die Karte die großen und mittleren Häfen; „Auch kleine Häfen" blendet die übrigen dazu. Jede Auswahl steht in der Adresszeile — den Link können Sie weitergeben.</p>
+
+  <h2>Die 50 größten Containerhäfen der Welt</h2>
+  <p>Containerumschlag 2025 in Millionen TEU, laut <a href="https://www.worldshipping.org/top-50-container-ports" rel="noopener">World Shipping Council</a>. Ein Klick auf den Namen zeigt den Hafen auf der Karte. Bei Hafengebieten mit mehreren Standorten steht der Punkt am Containerstandort (in Klammern).</p>
+<!-- HK_TOP50_START -->
+<div class="tabelle"><table><thead><tr><th>#</th><th>Hafen</th><th>Land</th><th>Mio. TEU 2025</th></tr></thead><tbody>
+<tr><td class="num">1</td><td><a href="/ratgeber/containerhaefen?hafen=CNSGH">Shanghai</a></td><td>China</td><td class="num">55,06</td></tr>
+<tr><td class="num">2</td><td><a href="/ratgeber/containerhaefen?hafen=SGKEP">Singapore</a> <span class="hk-std">(Keppel)</span></td><td>Singapur</td><td class="num">44,66</td></tr>
+<tr><td class="num">3</td><td><a href="/ratgeber/containerhaefen?hafen=CNNBO">Ningbo-Zhoushan</a> <span class="hk-std">(Ningbo)</span></td><td>China</td><td class="num">43,87</td></tr>
+<tr><td class="num">4</td><td><a href="/ratgeber/containerhaefen?hafen=CNYTN">Shenzhen</a> <span class="hk-std">(Yantian)</span></td><td>China</td><td class="num">35,41</td></tr>
+<tr><td class="num">5</td><td><a href="/ratgeber/containerhaefen?hafen=CNQIN">Qingdao</a></td><td>China</td><td class="num">32,89</td></tr>
+<tr><td class="num">6</td><td><a href="/ratgeber/containerhaefen?hafen=CNGGZ">Guangzhou</a></td><td>China</td><td class="num">27,68</td></tr>
+<tr><td class="num">7</td><td><a href="/ratgeber/containerhaefen?hafen=KRPUS">Busan</a></td><td>Südkorea</td><td class="num">24,88</td></tr>
+<tr><td class="num">8</td><td><a href="/ratgeber/containerhaefen?hafen=CNTXG">Tianjin</a> <span class="hk-std">(Xingang)</span></td><td>China</td><td class="num">24,03</td></tr>
+<tr><td class="num">9</td><td><a href="/ratgeber/containerhaefen?hafen=AEJEA">Jebel Ali (Dubai)</a></td><td>Vereinigte Arabische Emirate</td><td class="num">15,55</td></tr>
+<tr><td class="num">10</td><td><a href="/ratgeber/containerhaefen?hafen=MYPKG">Port Klang</a></td><td>Malaysia</td><td class="num">15,14</td></tr>
+<tr><td class="num">11</td><td><a href="/ratgeber/containerhaefen?hafen=NLRTM">Rotterdam</a></td><td>Niederlande</td><td class="num">14,25</td></tr>
+<tr><td class="num">12</td><td><a href="/ratgeber/containerhaefen?hafen=MYTPP">Tanjung Pelepas</a></td><td>Malaysia</td><td class="num">14,03</td></tr>
+<tr><td class="num">13</td><td><a href="/ratgeber/containerhaefen?hafen=BEANR">Antwerp</a></td><td>Belgien</td><td class="num">13,63</td></tr>
+<tr><td class="num">14</td><td><a href="/ratgeber/containerhaefen?hafen=HKHKG">Hong Kong</a></td><td>Sonderverwaltungsregion Hongkong</td><td class="num">12,99</td></tr>
+<tr><td class="num">15</td><td><a href="/ratgeber/containerhaefen?hafen=CNXMG">Xiamen</a></td><td>China</td><td class="num">12,51</td></tr>
+<tr><td class="num">16</td><td><a href="/ratgeber/containerhaefen?hafen=MAPTM">Tanger Med</a></td><td>Marokko</td><td class="num">11,11</td></tr>
+<tr><td class="num">17</td><td><a href="/ratgeber/containerhaefen?hafen=THLCH">Laem Chabang</a></td><td>Thailand</td><td class="num">10,45</td></tr>
+<tr><td class="num">18</td><td><a href="/ratgeber/containerhaefen?hafen=USLAX">Los Angeles</a></td><td>Vereinigte Staaten</td><td class="num">10,24</td></tr>
+<tr><td class="num">19</td><td><a href="/ratgeber/containerhaefen?hafen=CNTAC">Suzhou</a> <span class="hk-std">(Taicang)</span></td><td>China</td><td class="num">10,21</td></tr>
+<tr><td class="num">20</td><td><a href="/ratgeber/containerhaefen?hafen=USLGB">Long Beach</a></td><td>Vereinigte Staaten</td><td class="num">9,88</td></tr>
+<tr><td class="num">21</td><td><a href="/ratgeber/containerhaefen?hafen=CNQZH">Guangxi Beibu</a> <span class="hk-std">(Qinzhou)</span></td><td>China</td><td class="num">9,55</td></tr>
+<tr><td class="num">22</td><td><a href="/ratgeber/containerhaefen?hafen=VNSGN">Ho Chi Minh City</a></td><td>Vietnam</td><td class="num">8,92</td></tr>
+<tr><td class="num">23</td><td><a href="/ratgeber/containerhaefen?hafen=USEWR">New York-New Jersey</a> <span class="hk-std">(Newark)</span></td><td>Vereinigte Staaten</td><td class="num">8,90</td></tr>
+<tr><td class="num">24</td><td><a href="/ratgeber/containerhaefen?hafen=TWKHH">Kaohsiung</a></td><td>Taiwan</td><td class="num">8,89</td></tr>
+<tr><td class="num">25</td><td><a href="/ratgeber/containerhaefen?hafen=DEHAM">Hamburg</a></td><td>Deutschland</td><td class="num">8,37</td></tr>
+<tr><td class="num">26</td><td><a href="/ratgeber/containerhaefen?hafen=INMUN">Mundra</a></td><td>Indien</td><td class="num">8,36</td></tr>
+<tr><td class="num">27</td><td><a href="/ratgeber/containerhaefen?hafen=VNHPH">Hai Phong</a></td><td>Vietnam</td><td class="num">8,32</td></tr>
+<tr><td class="num">28</td><td><a href="/ratgeber/containerhaefen?hafen=IDJKT">Tanjung Priok (Jakarta)</a></td><td>Indonesien</td><td class="num">8,30</td></tr>
+<tr><td class="num">29</td><td><a href="/ratgeber/containerhaefen?hafen=INNSA">Jawaharlal Nehru Port (Nhava Sheva)</a></td><td>Indien</td><td class="num">7,94</td></tr>
+<tr><td class="num">30</td><td><a href="/ratgeber/containerhaefen?hafen=VNVUT">Cai Mep</a> <span class="hk-std">(Vũng Tàu)</span></td><td>Vietnam</td><td class="num">7,61</td></tr>
+<tr><td class="num">31</td><td><a href="/ratgeber/containerhaefen?hafen=CNRZH">Rizhao</a></td><td>China</td><td class="num">7,37</td></tr>
+<tr><td class="num">32</td><td><a href="/ratgeber/containerhaefen?hafen=LKCMB">Colombo</a></td><td>Sri Lanka</td><td class="num">7,15</td></tr>
+<tr><td class="num">33</td><td><a href="/ratgeber/containerhaefen?hafen=CNLYG">Lianyungang</a></td><td>China</td><td class="num">7,13</td></tr>
+<tr><td class="num">34</td><td><a href="/ratgeber/containerhaefen?hafen=AEAUH">Abu Dhabi</a></td><td>Vereinigte Arabische Emirate</td><td class="num">6,59</td></tr>
+<tr><td class="num">35</td><td><a href="/ratgeber/containerhaefen?hafen=PHMNL">Manila</a></td><td>Philippinen</td><td class="num">6,03</td></tr>
+<tr><td class="num">36</td><td><a href="/ratgeber/containerhaefen?hafen=BRSSZ">Santos</a></td><td>Brasilien</td><td class="num">5,91</td></tr>
+<tr><td class="num">37</td><td><a href="/ratgeber/containerhaefen?hafen=CNYIK">Yingkou</a></td><td>China</td><td class="num">5,85</td></tr>
+<tr><td class="num">38</td><td><a href="/ratgeber/containerhaefen?hafen=PAONX">Colón</a></td><td>Panama</td><td class="num">5,80</td></tr>
+<tr><td class="num">39</td><td><a href="/ratgeber/containerhaefen?hafen=USSAV">Savannah</a></td><td>Vereinigte Staaten</td><td class="num">5,69</td></tr>
+<tr><td class="num">40</td><td><a href="/ratgeber/containerhaefen?hafen=ESVLC">Valencia</a></td><td>Spanien</td><td class="num">5,66</td></tr>
+<tr><td class="num">41</td><td><a href="/ratgeber/containerhaefen?hafen=EGPSD">Port Said</a></td><td>Ägypten</td><td class="num">5,57</td></tr>
+<tr><td class="num">42</td><td><a href="/ratgeber/containerhaefen?hafen=CNYTG">Yantai</a></td><td>China</td><td class="num">5,56</td></tr>
+<tr><td class="num">43</td><td><a href="/ratgeber/containerhaefen?hafen=CNDAL">Dalian</a></td><td>China</td><td class="num">5,48</td></tr>
+<tr><td class="num">44</td><td><a href="/ratgeber/containerhaefen?hafen=DEBRV">Bremen/Bremerhaven</a></td><td>Deutschland</td><td class="num">4,90</td></tr>
+<tr><td class="num">45</td><td><a href="/ratgeber/containerhaefen?hafen=JPTYO">Tokyo</a></td><td>Japan</td><td class="num">4,86</td></tr>
+<tr><td class="num">46</td><td><a href="/ratgeber/containerhaefen?hafen=ESALG">Algeciras</a></td><td>Spanien</td><td class="num">4,74</td></tr>
+<tr><td class="num">47</td><td><a href="/ratgeber/containerhaefen?hafen=GRPIR">Piraeus</a></td><td>Griechenland</td><td class="num">4,64</td></tr>
+<tr><td class="num">48</td><td><a href="/ratgeber/containerhaefen?hafen=ITGIT">Gioia Tauro</a></td><td>Italien</td><td class="num">4,49</td></tr>
+<tr><td class="num">49</td><td><a href="/ratgeber/containerhaefen?hafen=IDSUB">Tanjung Perak</a> <span class="hk-std">(Surabaya)</span></td><td>Indonesien</td><td class="num">4,49</td></tr>
+<tr><td class="num">50</td><td><a href="/ratgeber/containerhaefen?hafen=OMSLL">Salalah</a></td><td>Oman</td><td class="num">4,32</td></tr>
+</tbody></table></div>
+<!-- HK_TOP50_ENDE -->
+
+  <h2>Woher die Angaben kommen</h2>
+  <p><b>Seehäfen:</b> der <b>World Port Index</b> (Pub.&nbsp;150) der US-amerikanischen National Geospatial-Intelligence Agency, Ausgabe April 2025 — gemeinfrei. Weil die Seite der Behörde beim Erstellen nicht erreichbar war, stammt die Datei aus der Aufbereitung <a href="https://www.npmjs.com/package/seaport-data-js" rel="noopener">seaport-data-js</a> von Aashish Vivekanand (<a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>); übernommen sind Name, Code, Lage, Region, Gewässer, Beckengröße, Tiefen und Ausstattung.</p>
+  <p><b>Containerhäfen:</b> die <a href="https://www.worldshipping.org/top-50-container-ports" rel="noopener">Top-50-Liste des World Shipping Council</a> mit dem Umschlag 2025. Nur diese 50 nennt die Karte „Containerhafen" — aus gutem Grund: Im World Port Index ist das Feld für Container-Anlagen gerade bei den großen Häfen leer (Hamburg, Rotterdam und Los Angeles stehen auf „nicht erfasst"), und die <b>Hafengröße</b> meint das Hafenbecken, nicht den Umschlag (Felixstowe, der größte Containerhafen Großbritanniens, ist dort „sehr klein"). Welche der übrigen Häfen Containerlinien anlaufen, zeigt die Karte noch nicht; das klären Sie mit Ihrer Spedition oder der Reederei.</p>
+
+  <div class="cta">
+    <a class="btn btn-primary" href="/app">➜ Ladung für den Container planen</a>
+    <a class="btn btn-ghost" href="/ratgeber/container-masse-innenmasse">Container-Maße</a>
+  </div>
+
+  <h2>Verwandte Seiten</h2>
+  <div class="related"><a href="/ratgeber/container-masse-innenmasse">Container-Innenmaße</a><a href="/ratgeber/container-zuladung-gewicht">Zuladung & Gewicht</a><a href="/ratgeber/container-gewicht-strasse">Gewichtsgrenzen auf der Straße</a><a href="/ratgeber/stauplan-container">Stauplan</a></div>
+
+  <div class="note"><b style="color:var(--dim)">Ohne Gewähr:</b> Die Hafenangaben stammen aus dem World Port Index und können veraltet oder unvollständig sein; die Umschlagszahlen sind die des World Shipping Council. Ob und wie oft eine Reederei einen Hafen anläuft, klären Sie mit Ihrer Spedition oder der Reederei.</div>
+</article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen</span>
+    <span><a href="/">Rechner</a> · <a href="/ratgeber/">Container-Wissen</a> · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span>
+  </div>
+</footer>
+<script src="/karte/land.js" defer></script>
+<script src="/karte/haefen.js" defer></script>
+<script src="/karte/hafenkarte.js" defer></script>
+</body>
+</html>

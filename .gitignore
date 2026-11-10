@@ -1,2 +1,5 @@
 # Arbeitsverzeichnisse des Claude-Code-Harness (Subagent-Worktrees u. ae.)
 .claude/
+
+# npm-Abhaengigkeiten der Einmal-Generatoren in werkzeug/ (npm install --no-save)
+werkzeug/**/node_modules/
