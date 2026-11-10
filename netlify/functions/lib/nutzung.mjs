@@ -80,6 +80,50 @@ export async function schluesselImZeitraum(store, tage, jetzt = Date.now()) {
     .slice(-EVENTS_MAX);
 }
 
+// ── Aufbewahrung ────────────────────────────────────────────────────────────
+// Events bleiben zwoelf Monate (Jareks Entscheidung, 10.11.26). Vorher wurde nie etwas
+// geloescht: der Store wuchs unbegrenzt, und "wie lange" hatte keine Antwort.
+//
+// Zwoelf Monate und nicht die 90 Tage, die das Dashboard zeigt: ein Jahr Verlauf soll fuer
+// spaetere Vergleiche bleiben. Die Untergrenze unten ist die Sicherung dagegen, dass ein
+// Tippfehler in einem Aufruf Daten loescht, die das Dashboard noch anzeigt.
+export const AUFBEWAHRUNG_TAGE = 365;
+const AUFBEWAHRUNG_MIN = 90;
+
+// Aus den Tages-Ordnern des Stores ("e/2025-11-09") die Tage, deren Frist abgelaufen ist --
+// aelteste zuerst. Der Tag GENAU an der Grenze bleibt noch. Alles, was nicht wie ein
+// Tages-Ordner aussieht, wird uebergangen und damit nie geloescht.
+export function abgelaufeneTage(verzeichnisse, jetzt = Date.now(), tage = AUFBEWAHRUNG_TAGE) {
+  const frist = Math.max(AUFBEWAHRUNG_MIN, Math.round(+tage) || AUFBEWAHRUNG_TAGE);
+  const grenze = new Date(jetzt - frist * 86400000).toISOString().slice(0, 10);
+  return (Array.isArray(verzeichnisse) ? verzeichnisse : [])
+    .map((v) => /^(?:e\/)?(\d{4}-\d{2}-\d{2})\/?$/.exec(String(v)))
+    .filter(Boolean)
+    .map((m) => m[1])
+    .filter((tag) => tag < grenze)
+    .sort();
+}
+
+// Loescht die Events abgelaufener Tage, aelteste zuerst, hoechstens maxLoeschen je Lauf
+// (eine geplante Function hat 30 Sekunden; was uebrig bleibt, nimmt der naechste Lauf).
+// Geloescht wird ausschliesslich unter e/<abgelaufener Tag>/ -- der Praefix kommt aus
+// abgelaufeneTage, nie aus einer Eingabe.
+export async function alteEventsLoeschen(store, jetzt = Date.now(), { tage = AUFBEWAHRUNG_TAGE, maxLoeschen = 2000 } = {}) {
+  const liste = await store.list({ prefix: "e/", directories: true });
+  const faellig = abgelaufeneTage(liste && liste.directories, jetzt, tage);
+  let geloescht = 0;
+  const erledigt = [];
+  for (const tag of faellig) {
+    if (geloescht >= maxLoeschen) break;
+    const seite = await store.list({ prefix: "e/" + tag + "/" });
+    const keys = ((seite && seite.blobs) || []).map((b) => b.key).slice(0, maxLoeschen - geloescht);
+    for (let i = 0; i < keys.length; i += 50) await Promise.all(keys.slice(i, i + 50).map((k) => store.delete(k)));
+    geloescht += keys.length;
+    erledigt.push(tag);
+  }
+  return { geloescht, tage: erledigt, offen: faellig.length - erledigt.length };
+}
+
 // Netlify-Forms-Submissions (Formular "feedback") -> schlanke Liste fuers
 // Dashboard. Feedback ist FREITEXT VON FREMDEN: hier wird gekappt und
 // gefiltert, und die Anzeige (admin.html) escapet zusaetzlich jedes Feld --

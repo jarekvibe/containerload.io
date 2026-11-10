@@ -10,7 +10,7 @@ import assert from "node:assert";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { pruefeEvent, aggregiere, POS_MAX, EVENTS_MAX, tagesPraefixe, schluesselImZeitraum } from "../../netlify/functions/lib/nutzung.mjs";
+import { pruefeEvent, aggregiere, POS_MAX, EVENTS_MAX, tagesPraefixe, schluesselImZeitraum, AUFBEWAHRUNG_TAGE, abgelaufeneTage, alteEventsLoeschen } from "../../netlify/functions/lib/nutzung.mjs";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const app = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
@@ -343,4 +343,102 @@ test("der Abruf behaelt die JUENGSTEN Events, wenn es mehr als EVENTS_MAX sind",
 test("ein leerer oder stummer Store bricht den Abruf nicht", async () => {
   assert.deepStrictEqual(await schluesselImZeitraum({ list: async () => ({ blobs: [] }) }, 30, MITTAG), []);
   assert.deepStrictEqual(await schluesselImZeitraum({ list: async () => null }, 30, MITTAG), []);
+});
+
+// ── Aufbewahrung: zwoelf Monate, dann wird geloescht ─────────────────────────
+// Loeschen ist nicht rueckgaengig zu machen. Deshalb an einer Attrappe, die jede
+// Loeschung mitschreibt: WAS geht, und vor allem, was auf keinen Fall gehen darf.
+const speicher = (keys) => {
+  let bestand = [...keys];
+  const geloescht = [];
+  return {
+    geloescht,
+    bestand: () => bestand,
+    list: async ({ prefix = "", directories = false } = {}) => {
+      const treffer = bestand.filter((k) => k.startsWith(prefix));
+      if (!directories) return { blobs: treffer.map((key) => ({ key, etag: "x" })), directories: [] };
+      // wie Netlify Blobs: Ordner eine Ebene unter dem Praefix, als ganzer Pfad
+      const ordner = new Set(), blobs = [];
+      for (const k of treffer) {
+        const rest = k.slice(prefix.length), i = rest.indexOf("/");
+        if (i < 0) blobs.push({ key: k, etag: "x" }); else ordner.add(prefix + rest.slice(0, i));
+      }
+      return { blobs, directories: [...ordner] };
+    },
+    delete: async (k) => { geloescht.push(k); bestand = bestand.filter((x) => x !== k); },
+  };
+};
+
+test("die Frist ist zwoelf Monate", () => {
+  assert.strictEqual(AUFBEWAHRUNG_TAGE, 365);
+});
+
+test("abgelaufeneTage: nur Tage VOR der Grenze, der Grenztag selbst bleibt", () => {
+  // MITTAG ist der 10.11.2026. 365 Tage davor: der 10.11.2025.
+  const ordner = ["e/2025-11-08", "e/2025-11-09", "e/2025-11-10", "e/2025-11-11", "e/2026-11-10"];
+  assert.deepStrictEqual(abgelaufeneTage(ordner, MITTAG), ["2025-11-08", "2025-11-09"]);
+  assert.deepStrictEqual(abgelaufeneTage(["e/2025-11-09/"], MITTAG), ["2025-11-09"], "mit oder ohne Schraegstrich am Ende");
+  assert.deepStrictEqual(abgelaufeneTage([], MITTAG), []);
+  assert.deepStrictEqual(abgelaufeneTage(null, MITTAG), []);
+});
+
+test("abgelaufeneTage uebergeht alles, was kein Tages-Ordner ist", () => {
+  const fremd = ["z", "e/quatsch", "e/2025-1-1", "e/2025-11-09/120000-abc", "../e/2020-01-01", "e/2020-01-01/../..", "2020-01-01x", ""];
+  assert.deepStrictEqual(abgelaufeneTage(fremd, MITTAG), [], "etwas, das kein Tages-Ordner ist, wurde zum Loeschen vorgemerkt");
+});
+
+test("die Frist laesst sich nicht unter 90 Tage druecken -- das Dashboard zeigt so weit", () => {
+  const vor60 = "e/" + new Date(MITTAG - 60 * 86400000).toISOString().slice(0, 10);
+  const vor120 = "e/" + new Date(MITTAG - 120 * 86400000).toISOString().slice(0, 10);
+  for (const unsinn of [0, 1, 30, -5, "quatsch"]) {
+    assert.ok(!abgelaufeneTage([vor60], MITTAG, unsinn).length, `mit tage=${unsinn} wuerden 60 Tage alte Events geloescht`);
+  }
+  assert.strictEqual(abgelaufeneTage([vor120], MITTAG, 1).length, 1, "die Untergrenze ist 90 Tage, nicht die volle Frist");
+  assert.strictEqual(abgelaufeneTage([vor120], MITTAG).length, 0, "ohne Angabe gelten die zwoelf Monate");
+});
+
+test("geloescht werden genau die Events abgelaufener Tage -- und sonst nichts", async () => {
+  const s = speicher([
+    "e/2025-10-01/080000-aaaaaa", "e/2025-10-01/090000-bbbbbb",   // abgelaufen
+    "e/2025-11-09/235959-cccccc",                                  // abgelaufen (ein Tag vor der Grenze)
+    "e/2025-11-10/000001-dddddd",                                  // Grenztag: bleibt
+    "e/2026-11-10/113000-eeeeee",                                  // heute: bleibt
+    "z/2025-10-01", "sonstwas",                                    // fremde Schluessel: bleiben
+  ]);
+  const r = await alteEventsLoeschen(s, MITTAG);
+  assert.deepStrictEqual(s.geloescht.slice().sort(), ["e/2025-10-01/080000-aaaaaa", "e/2025-10-01/090000-bbbbbb", "e/2025-11-09/235959-cccccc"]);
+  assert.deepStrictEqual(s.bestand().slice().sort(), ["e/2025-11-10/000001-dddddd", "e/2026-11-10/113000-eeeeee", "sonstwas", "z/2025-10-01"]);
+  assert.deepStrictEqual(r, { geloescht: 3, tage: ["2025-10-01", "2025-11-09"], offen: 0 });
+  // Ein zweiter Lauf findet nichts mehr.
+  assert.strictEqual((await alteEventsLoeschen(s, MITTAG)).geloescht, 0);
+});
+
+test("ein Lauf loescht hoechstens maxLoeschen, aelteste zuerst -- der Rest wartet", async () => {
+  const keys = [];
+  for (let i = 0; i < 30; i++) keys.push("e/2025-09-01/" + String(100000 + i) + "-aaaaaa");
+  for (let i = 0; i < 30; i++) keys.push("e/2025-09-02/" + String(100000 + i) + "-bbbbbb");
+  const s = speicher(keys);
+  const r = await alteEventsLoeschen(s, MITTAG, { maxLoeschen: 40 });
+  assert.strictEqual(r.geloescht, 40);
+  assert.strictEqual(s.geloescht.filter((k) => k.startsWith("e/2025-09-01/")).length, 30, "der aelteste Tag geht zuerst und ganz");
+  assert.strictEqual(s.bestand().length, 20);
+  const r2 = await alteEventsLoeschen(s, MITTAG, { maxLoeschen: 40 });
+  assert.strictEqual(r2.geloescht, 20, "der naechste Lauf nimmt den Rest");
+  assert.strictEqual(s.bestand().length, 0);
+});
+
+test("ein leerer oder stummer Store bricht das Aufraeumen nicht", async () => {
+  assert.deepStrictEqual(await alteEventsLoeschen({ list: async () => null, delete: async () => { throw new Error("darf nicht"); } }, MITTAG), { geloescht: 0, tage: [], offen: 0 });
+});
+
+test("das Aufraeumen laeuft geplant, einmal am Tag, und ist von aussen nicht aufrufbar", () => {
+  const quelle = fs.readFileSync(path.join(dir, "..", "..", "netlify", "functions", "aufraeumen.mjs"), "utf8");
+  // Netlify liest config als Literal -- genau so wird es hier ausgewertet.
+  const c = new Function("return " + /export const config = (\{[\s\S]*?\n\});/.exec(quelle)[1])();
+  assert.ok(!("path" in c), "eine geplante Function hat keinen Pfad -- mit Pfad waere das Loeschen von aussen ausloesbar");
+  const felder = c.schedule.split(" ");
+  assert.strictEqual(felder.length, 5, "kein Cron-Ausdruck mit fuenf Feldern: " + c.schedule);
+  assert.ok(/^\d+$/.test(felder[0]) && /^\d+$/.test(felder[1]), "Minute und Stunde muessen fest sein: einmal am Tag");
+  assert.deepStrictEqual(felder.slice(2), ["*", "*", "*"], "nicht taeglich");
+  assert.ok(quelle.includes('alteEventsLoeschen(getStore("nutzung"))'), "aufgeraeumt wird nicht der Statistik-Store");
 });
