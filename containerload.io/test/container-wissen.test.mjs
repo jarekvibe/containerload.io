@@ -43,7 +43,9 @@ test("keine Farbverlaeufe — das Regelwerk kennt einen Markenton", () => {
 test("die Schrift ist die des Produkts, nicht Inter", () => {
   const falsch = seiten.filter((f) => /family=Inter|'Inter'/.test(lies(f)));
   assert.deepStrictEqual(falsch, [], `laedt noch Inter: ${falsch.join(", ")}`);
-  assert.ok(/family=Archivo/.test(lies(seiten[0])), "Archivo wird nicht geladen");
+  // Archivo kommt seit November 2026 vom eigenen Server (schrift/schrift.css), nicht mehr von Google Fonts.
+  assert.ok(lies(seiten[0]).includes('href="/schrift/schrift.css"'), "Archivo wird nicht geladen");
+  assert.ok(fs.readFileSync(path.join(dir, "..", "schrift", "schrift.css"), "utf8").includes("font-family:'Archivo'"), "schrift.css bringt Archivo nicht mit");
   assert.ok(css.includes("'Archivo'"), "wissen.css setzt Archivo nicht");
 });
 

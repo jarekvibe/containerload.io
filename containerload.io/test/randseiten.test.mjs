@@ -64,7 +64,7 @@ test("jede Randseite laedt dieselbe Schrift wie der Rest der Seite", () => {
   // share.html laedt bewusst keine Schrift nach: die Seite ist 450 ms zu sehen und
   // soll dafuer keinen Netzabruf blockieren. Die Angabe im Stapel genuegt.
   for (const f of ["impressum.html", "datenschutz.html"])
-    assert.ok(lies(f).includes("fonts.googleapis.com"), `${f}: laedt Archivo nicht wirklich`);
+    assert.ok(lies(f).includes('href="schrift/schrift.css"'), `${f}: laedt Archivo nicht wirklich`);
 });
 
 test("theme-color ist ueberall derselbe Ton — auch im Manifest", () => {
