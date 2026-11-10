@@ -156,6 +156,144 @@ test("Zoll und Pfund werden exakt umgerechnet, das Woertchen 'in' nicht", () => 
   assert.strictEqual(`${h.l}x${h.w}x${h.h}`, "120x80x100");
 });
 
+test("mehrere Positionen in einer Zeile werden geteilt statt still verschluckt", () => {
+  // Bisher trennten nur Zeilenumbruch und Semikolon: die zweite Position landete im
+  // Namen der ersten ("[Europaletten , 6 Kiste]"), die 6 Kisten fehlten in der Ladung.
+  const zwei = "20x 120x80x110 400kg | 6x 200x110x150 900kg";
+  for (const z of [
+    "20 Europaletten 120x80x110 400kg stapelbar, 6 Kisten 200x110x150 900kg",
+    "20 Europaletten 120x80x110 400kg stapelbar und 6 Kisten 200x110x150 900kg",
+    "20 Europaletten 120x80x110 400kg stapelbar & 6 Kisten 200x110x150 900kg",
+    "20 Europaletten 120x80x110 400kg stapelbar; 6 Kisten 200x110x150 900kg",
+    "20 Europaletten 120x80x110 400kg stapelbar\n6 Kisten 200x110x150 900kg"
+  ]) {
+    const r = parseCargoText(z);
+    assert.strictEqual(kurz(r), zwei, z);
+    assert.deepStrictEqual(r.map((x) => x.name), ["Europaletten", "Kisten"], z);
+    assert.strictEqual(parseCargoText.hinweis, null, "eine saubere Trennung ist kein Verdacht: " + z);
+  }
+  const en = parseCargoText("10 pallets 120x80x100 250 kg + 4 crates 200x100x120 800 kg");
+  assert.strictEqual(kurz(en), "10x 120x80x100 250kg | 4x 200x100x120 800kg");
+  assert.deepStrictEqual(en.map((x) => x.name), ["Pallets", "Crates"]);
+  // "und" direkt hinter der Kette, Vier-Zahlen-Ketten, drei Positionen.
+  assert.strictEqual(kurz(parseCargoText("2x 120x80x100 und 3x 60x40x30 und 5x 50x50x50")), "2x 120x80x100 0kg | 3x 60x40x30 0kg | 5x 50x50x50 0kg");
+  assert.strictEqual(kurz(parseCargoText("10 Europaletten 120x80x110 400kg, 6 Kisten 200x110x150 900kg und 4 Fässer 60x60x90 180kg")), "10x 120x80x110 400kg | 6x 200x110x150 900kg | 4x 60x60x90 180kg");
+  // Gegenprobe: EINE Kette mit Komma-Anhang bleibt EINE Position.
+  assert.strictEqual(parseCargoText("3 Maschinen 2,40 x 1,60 x 1,90 m, 2,8 t pro Stück, nicht stapelbar").length, 1);
+  assert.strictEqual(parseCargoText("4 Paletten 120x80, 400kg").length, 1);
+});
+
+test("ein Dezimalkomma trennt nie", () => {
+  // Das Komma zwischen zwei Ziffern ist Teil der Zahl -- in der Kette wie im Gewicht.
+  assert.strictEqual(kurz(parseCargoText("1,2 x 0,8 x 1,0 m")), "1x 120x80x100 0kg");
+  assert.strictEqual(kurz(parseCargoText("1,2 x 0,8 x 1,0 m, 0,6 x 0,4 x 0,4 m")), "1x 120x80x100 0kg | 1x 60x40x40 0kg");
+  assert.strictEqual(kurz(parseCargoText("3 Kisten 1,2x0,8x1,1 m je 250,5 kg, 2 Kisten 0,6x0,4x0,4 m 20 kg")), "3x 120x80x110 251kg | 2x 60x40x40 20kg");
+  assert.strictEqual(kurz(parseCargoText("2 Kisten 120x80x100 1,5 t, 4 Kisten 60x40x40 30kg")), "2x 120x80x100 1500kg | 4x 60x40x40 30kg");
+});
+
+test("bei mehreren Kommas gehoert, was hinter der Kette steht, zu ihr", () => {
+  // Menge und Name stehen vor der Kette, Gewicht und "nicht stapelbar" dahinter -- also
+  // wird vor "6 Kisten" geteilt, nicht vor "nicht stapelbar".
+  const a = parseCargoText("20 Europaletten 120x80x110, 400 kg, nicht stapelbar, 6 Kisten 200x110x150, 900 kg");
+  assert.strictEqual(kurz(a), "20x 120x80x110 400kg | 6x 200x110x150 900kg");
+  assert.deepStrictEqual(a.map((x) => x.stackable), [false, true]);
+  assert.strictEqual(parseCargoText.hinweis, null);
+  // Steht die Menge HINTER der Kette, macht es die naechste Position genauso.
+  const b = parseCargoText("Europaletten 120x80x110, 400kg, 20 Stk, Kisten 200x110x150, 900kg, 6 Stk");
+  assert.strictEqual(kurz(b), "20x 120x80x110 400kg | 6x 200x110x150 900kg");
+  assert.deepStrictEqual(b.map((x) => x.name), ["Europaletten", "Kisten"]);
+  const c = parseCargoText("120x80x110, 20 Europaletten, 400kg, 200x110x150, 6 Kisten, 900kg");
+  assert.strictEqual(kurz(c), "20x 120x80x110 400kg | 6x 200x110x150 900kg");
+});
+
+test("was sich nicht sicher teilen laesst, wird gemeldet statt geraten", () => {
+  // Zwei Ketten ohne Trenner: wo die erste Position endet, ist geraten.
+  const ohne = parseCargoText("2x 120x80x100 3x 60x40x30");
+  assert.strictEqual(ohne.length, 1);
+  assert.deepStrictEqual(parseCargoText.hinweis, { trennungUnsicher: true });
+  // "innen"/"aussen": zwei Masse EINES Stuecks, keine zweite Position.
+  for (const z of ["Kiste 120x80x100, innen 110x70x90", "Außenmaß 120x80x100 cm, Innenmaß 110x70x90 cm"]) {
+    const r = parseCargoText(z);
+    assert.strictEqual(kurz(r), "1x 120x80x100 0kg", z);
+    assert.deepStrictEqual(parseCargoText.hinweis, { trennungUnsicher: true }, z);
+  }
+  // Gegenprobe: eine Zeile mit EINER Kette meldet nichts.
+  parseCargoText("20 Europaletten 120x80x110 400kg stapelbar");
+  assert.strictEqual(parseCargoText.hinweis, null);
+});
+
+test("'in' und \" hinter den Massen sind Zoll, die Praeposition 'in' nicht", () => {
+  // Der gemeldete Fall: Gewicht aus lbs umgerechnet, Masse als cm stehen gelassen,
+  // und "In" als Name.
+  const r = parseCargoText("3 Stk 48x40x50 in 500 lbs")[0];
+  assert.strictEqual(kurz([r]), "3x 122x102x127 227kg");
+  assert.strictEqual(r.name, "Position");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  for (const z of [
+    "3 Stk 48x40x50 in",            // am Ende
+    "3 Stk 48x40x50 in, 500 kg",     // vor einem Satzzeichen
+    "3 Stk 48x40x50in 500 kg",       // angehaengt
+    "3 Stk 48 in x 40 in x 50 in",   // zwischen den Massen
+    "3 Stk 48x40x50\" 220 kg",       // Zollzeichen
+    "3 Stk 48\"x40\"x50\" 220 kg",
+    "3 Stk 48x40x50″ 220 kg",        // typografisches Zollzeichen
+    "3 crates 48x40x50 in wooden boxes 500 lbs" // Pfund-Zeile: imperial
+  ]) assert.strictEqual(`${parseCargoText(z)[0].l}x${parseCargoText(z)[0].w}x${parseCargoText(z)[0].h}`, "122x102x127", z);
+  // "in mm" / "in cm" nennt nur die Einheit nach.
+  assert.strictEqual(kurz(parseCargoText("Maße 1200x800x950 in mm, 4 Stk 310 kg")), "4x 120x80x95 310kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  assert.strictEqual(kurz(parseCargoText("4 Stk 120x80x100 in cm 300 kg")), "4x 120x80x100 300kg");
+  // Gegenproben: die Praeposition bleibt Praeposition.
+  for (const z of ["4x 120x80x100 in Hamburg 300kg", "6 Paletten 120x80x100 in 2 Lagen 300kg", "3 crates 120x80x100 in wooden boxes 230 kg"]) {
+    const g = parseCargoText(z)[0];
+    assert.strictEqual(`${g.l}x${g.w}x${g.h}`, "120x80x100", z);
+  }
+  // ... und ein schliessendes Anfuehrungszeichen ist kein Zollzeichen.
+  const zitat = parseCargoText('"Motor 120x80x100", "Getriebe 60x40x30"');
+  assert.strictEqual(kurz(zitat), "1x 120x80x100 0kg | 1x 60x40x30 0kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+});
+
+test("Masse ohne Einheit neben Pfund: Zoll-Verdacht statt stiller Lesart", () => {
+  const z = "3 Stk 48x40x50 500 lbs";
+  // Ohne Bestaetigung bleibt cm stehen -- mit Verdacht.
+  assert.strictEqual(kurz(parseCargoText(z)), "3x 48x40x50 227kg");
+  assert.deepStrictEqual(parseCargoText.hinweis, { zollVerdacht: true });
+  // Bestaetigt rechnet er um, und der Verdacht ist erledigt.
+  assert.strictEqual(kurz(parseCargoText(z, { einheit: "in" })), "3x 122x102x127 227kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  // Ein Zollzeichen, das auf einer Zeile mit Zitat nicht eindeutig ist, ebenso.
+  assert.strictEqual(kurz(parseCargoText('"Motor" 48x40x50" 300kg')), "1x 48x40x50 300kg");
+  assert.deepStrictEqual(parseCargoText.hinweis, { zollVerdacht: true });
+  // Gegenproben: genannte Einheit, Kilogramm, oder eine gemischte Liste -- kein Verdacht.
+  parseCargoText("2 crates 48x40x36 inch, 900 lbs each");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  parseCargoText("3 Stk 48x40x50 220 kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  parseCargoText("3 Stk 48x40x50 500 lbs\n4 Kisten 120x80x100 300 kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+});
+
+test("eine Einheit muss als Wort enden: 'mit' ist kein Meter", () => {
+  // Das "m" von "mit"/"Maschine"/"mehrteilig" machte aus 120 cm 120 m.
+  assert.strictEqual(kurz(parseCargoText("4 Kisten 120x80x100 mit Deckel 300kg")), "4x 120x80x100 300kg");
+  assert.strictEqual(parseCargoText.hinweis, null);
+  assert.strictEqual(kurz(parseCargoText("120x80x100 Maschine")), "1x 120x80x100 0kg");
+  assert.strictEqual(kurz(parseCargoText("5 Stk 60x40x30 mehrteilig")), "5x 60x40x30 0kg");
+  assert.strictEqual(kurz(parseCargoText("4 Paletten 120x80 mit 400kg")), "4x 120x80x110 400kg");
+  // Gegenproben: echte Einheiten bleiben Einheiten.
+  assert.strictEqual(kurz(parseCargoText("2 Kisten 1,2x0,8x1,1 m 250 kg")), "2x 120x80x110 250kg");
+  assert.strictEqual(kurz(parseCargoText("2 Kisten 1200x800x1100mm 250 kg")), "2x 120x80x110 250kg");
+});
+
+test("der Import-Dialog zeigt Zoll-Verdacht und unsichere Trennung an", () => {
+  assert.ok(roh.includes("parseCargoText.hinweis && parseCargoText.hinweis.zollVerdacht &&"), "Zoll-Banner fehlt");
+  assert.ok(roh.includes('setImportRows(parseCargoText(importText, { einheit: "in" }))'), "Zoll-Bestaetigung fehlt");
+  assert.ok(roh.includes("parseCargoText.hinweis && parseCargoText.hinweis.trennungUnsicher &&"), "Trenn-Hinweis fehlt");
+  assert.ok(roh.includes('impZoll: "Die Maße sehen nach Zoll aus."'), "deutscher Zoll-Text fehlt");
+  assert.ok(roh.includes('impZoll: "These dimensions look like inches."'), "englischer Zoll-Text fehlt");
+});
+
 test("der Import-Dialog bietet den mm-Verdacht als Vorschlag an", () => {
   // Vertraege im Quelltext: das Banner haengt am Hinweis, der Knopf bestaetigt mit
   // opts.einheit, und beide Sprachen tragen die Texte.

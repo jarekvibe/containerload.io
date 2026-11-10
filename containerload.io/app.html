@@ -878,9 +878,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // hoch oder >1400 cm lang), und keine Kante unter 100 -- das Muster einer mm-Liste,
     // die als cm gelesen wurde. Es wird NICHT still umgerechnet: der Dialog schlaegt es
     // vor, und erst opts.einheit="mm" rechnet um. Vorschlagen statt raten.
+    // Weitere Verdachte (jeder ein eigener Schluessel, mehrere koennen zugleich gelten):
+    // zollVerdacht -- Masse ohne Einheit auf Zeilen, die in Pfund wiegen (oder hinter der
+    // Kette ein Zollzeichen tragen, das auch ein Anfuehrungszeichen sein koennte); erst
+    // opts.einheit="in" rechnet um. trennungUnsicher -- eine Zeile mit mehreren Massketten
+    // liess sich nicht sicher in Positionen teilen.
     parseCargoText.hinweis = null;
+    const melde = (k) => { parseCargoText.hinweis = Object.assign(parseCargoText.hinweis || {}, { [k]: true }); };
     const fertig = (rows) => {
-      if (!opts.einheit && rows.length && rows.every((r) => (r.w > 320 || r.h > 320 || r.l > 1400) && Math.min(r.l, r.w, r.h) >= 100)) parseCargoText.hinweis = { mmVerdacht: true };
+      if (!opts.einheit && rows.length && rows.every((r) => (r.w > 320 || r.h > 320 || r.l > 1400) && Math.min(r.l, r.w, r.h) >= 100)) melde("mmVerdacht");
       return rows;
     };
     if (!text) return [];
@@ -898,52 +904,66 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     LAST_TSV_MAP = null;
     const out = [];
     const toNum = toNumDE;
-    const lines = text.split(/[\n;]+/).map((x) => x.trim()).filter(Boolean);
-    for (const line of lines) {
+    // Bestaetigte Grundeinheit aus dem Import-Dialog ("Als mm lesen" / "Als Zoll lesen"):
+    // gilt nur fuer Masse OHNE eigene Einheit.
+    const grund = opts.einheit === "mm" || opts.einheit === "in" ? opts.einheit : "";
+    // Die Einheit hinter einer Masszahl muss als WORT enden: vorher las "120x80x100 mit
+    // Deckel" das "m" von "mit" als Meter (12.000 cm), "Maschine" und "mehrteilig" ebenso.
+    // "in" ist im Deutschen meist die Praeposition ("in Hamburg", "in 2 Lagen", "in cm").
+    // Als Zoll zaehlt es nur, wo sie keinen Sinn ergibt: zwischen zwei Massen ("48 in x
+    // 40 in"), am Ende oder vor einem Satzzeichen ("48x40x50 in, ..."), direkt vor einem
+    // Gewicht ("48x40x50 in 500 lbs") -- oder auf einer Zeile, die in Pfund wiegt, dann ist
+    // sie ohnehin imperial. "in mm" / "in cm" nennt nur die Einheit nach. Das Zollzeichen
+    // (48x40x50") zaehlt nur, wenn die Zeile keine echten Anfuehrungszeichen hat --
+    // '"Motor 120x80x100"' ist ein Zitat; das typografische Zeichen ″ ist immer Zoll.
+    const WE = "(?![a-zäöüß])";
+    const ZAHL = "(\\d+(?:[.,]\\d+)?)";
+    const GEW = /(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i;
+    const muster = (line) => {
+      const pfund = /\d\s*(?:lbs?|pounds?)\b/i.test(line);
+      const zitat = /[„“]|(?:^|\D)["”]/.test(line);
+      const zz = zitat ? "″" : "[\"”″]";
+      const E = "mm|cm|m|zoll|inch(?:es)?";
+      const mitte = `((?:${E}|in)${WE}|${zz})?`;
+      const inEnde = pfund ? "" : `(?=\\s*(?:$|[,.;:!?)\\]/+&]|\\d+(?:[.,]\\d+)?\\s*(?:kg|kilo|tonnen?|to|t|lbs?|pounds?)${WE}))`;
+      const ende = `(in\\s+(?:${E})${WE}|(?:${E})${WE}|in${WE}${inEnde}|${zz})?`;
+      const sep = "\\s*[x×\\*\\/]\\s*";
+      const kette = `${ZAHL}\\s*${mitte}${sep}${ZAHL}\\s*${mitte}${sep}${ZAHL}\\s*${ende}`;
+      return {
+        // Vier-Zahlen-Kette "N x L x B x H": erste Zahl ist die Anzahl (uebliche
+        // Anfrage-Schreibweise "5x 120x80x100"). Muss VOR dem 3er-Match laufen,
+        // sonst frisst der sich die ersten drei Zahlen. Erster Trenner bewusst
+        // NUR [x×*] ohne "/" – sonst wuerde "120/80/100" als 3er-Kette mit Anzahl gelesen.
+        d4: new RegExp(`(\\d+)\\s*[x×\\*]\\s*${kette}`, "i"),
+        d3: new RegExp(kette, "i"),
+        d2: new RegExp(`${ZAHL}\\s*${mitte}\\s*[x×\\*]\\s*${ZAHL}\\s*${ende}(?!\\s*[x×\\*\\/])`, "i"),
+        // Alle Ketten der Zeile, je mit oder ohne vorangestellte Anzahl -- fuers Teilen.
+        alle: new RegExp(`(?:(\\d+)\\s*[x×\\*]\\s*)?${kette}`, "gi"),
+        zitat
+      };
+    };
+    const einheit = (u) => String(u || "").toLowerCase().replace(/^in\s+/, "");
+    // cm bleibt, m und mm sind dezimal, alles andere (Zoll, inch, in, ") ist Zoll.
+    const umrechnen = (v, u) => u === "m" ? v * 100 : u === "mm" ? v / 10 : u && u !== "cm" ? v * 2.54 : v;
+    const MENGE = /(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i;
+    const lies = (line, RX) => {
       const low = line.toLowerCase();
       let l = null, w = null, h = null;
-      // Vier-Zahlen-Kette "N x L x B x H": erste Zahl ist die Anzahl (uebliche
-      // Anfrage-Schreibweise "5x 120x80x100"). Muss VOR dem 3er-Match laufen,
-      // sonst frisst der sich die ersten drei Zahlen. Erster Trenner bewusst
-      // NUR [x×*] ohne "/" – sonst wuerde "120/80/100" als 3er-Kette mit Anzahl gelesen.
-      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
-      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
-      if (dim4) {
-        l = toNum(dim4[2]);
-        w = toNum(dim4[4]);
-        h = toNum(dim4[6]);
-        const u = (dim4[7] || dim4[5] || dim4[3] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
-        if (u === "m") {
-          l *= 100;
-          w *= 100;
-          h *= 100;
-        } else if (u === "mm") {
-          l /= 10;
-          w /= 10;
-          h /= 10;
-        } else if (u && u !== "cm") {
-          l *= 2.54;
-          w *= 2.54;
-          h *= 2.54;
-        }
-      } else if (dim) {
-        l = toNum(dim[1]);
-        w = toNum(dim[3]);
-        h = toNum(dim[5]);
-        const u = (dim[6] || dim[4] || dim[2] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
-        if (u === "m") {
-          l *= 100;
-          w *= 100;
-          h *= 100;
-        } else if (u === "mm") {
-          l /= 10;
-          w /= 10;
-          h /= 10;
-        } else if (u && u !== "cm") {
-          l *= 2.54;
-          w *= 2.54;
-          h *= 2.54;
-        }
+      // frei: die Masse tragen keine eigene Einheit (cm angenommen). zitatZoll: hinter der
+      // Kette steht ein " -- auf einer Zeile mit Anfuehrungszeichen aber nicht sicher Zoll.
+      // Schliesst es ein offenes Zitat ('"Motor 120x80x100"'), ist es eindeutig keins.
+      let frei = false, zitatZoll = false;
+      const dim4 = line.match(RX.d4);
+      const dim = dim4 ? null : line.match(RX.d3);
+      const kette = dim4 || dim, o = dim4 ? 1 : 0;
+      if (kette) {
+        const u = einheit(kette[6 + o] || kette[4 + o] || kette[2 + o]);
+        frei = !u;
+        const hinten = kette.index + kette[0].length;
+        zitatZoll = frei && RX.zitat && /^\s*["”]/.test(line.slice(hinten)) && (line.slice(0, hinten).match(/["“”„]/g) || []).length % 2 === 0;
+        l = umrechnen(toNum(kette[1 + o]), u || grund);
+        w = umrechnen(toNum(kette[3 + o]), u || grund);
+        h = umrechnen(toNum(kette[5 + o]), u || grund);
       }
       let pal = null;
       for (const p of PALLET_PRESETS) {
@@ -960,7 +980,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // geraten, die Presets bringen ihres dagegen selbst mit.
       let dim2 = null;
       if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b/i.test(low))) {
-        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?(?!\s*[x×\*\/])/i);
+        dim2 = line.match(RX.d2);
       }
       // Beschriftete Masse ("Länge 320 Breite 145 Höhe 168"): die Prosa-Form ohne
       // x-Kette. Nur wenn alle drei Angaben da sind -- zwei plus Raten waere erfunden.
@@ -977,15 +997,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const H2 = teil(/h(?:öhe|oehe|eight)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
         if (L2 > 0 && B2 > 0 && H2 > 0) { lbl = true; l = L2; w = B2; h = H2; }
       }
-      if (!dim4 && !dim && !pal && !dim2 && !lbl) continue;
+      if (!dim4 && !dim && !pal && !dim2 && !lbl) return null;
       if (!dim4 && !dim && !lbl) {
         if (dim2) {
           l = toNum(dim2[1]);
           w = toNum(dim2[3]);
-          const u2 = (dim2[4] || dim2[2] || "").toLowerCase() || (opts.einheit === "mm" ? "mm" : "");
-          if (u2 === "m") { l *= 100; w *= 100; }
-          else if (u2 === "mm") { l /= 10; w /= 10; }
-          else if (u2 && u2 !== "cm") { l *= 2.54; w *= 2.54; }
+          const u2 = einheit(dim2[4] || dim2[2]);
+          frei = !u2;
+          l = umrechnen(l, u2 || grund);
+          w = umrechnen(w, u2 || grund);
         } else {
           l = pal.l;
           w = pal.w;
@@ -1008,7 +1028,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Menge NICHT in der Masskette suchen: "2,40 x 1,60" gab sonst die
         // Nachkommastellen als Stueckzahl her ("40 x" -> 40 Stueck).
         const rest = dim ? line.replace(dim[0], " ") : dim2 ? line.replace(dim2[0], " ") : line;
-        const qm = rest.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
+        const qm = rest.match(MENGE);
         if (qm) qty = parseInt(qm[1], 10);
         else {
           const lead = rest.match(/^\s*(\d+)\b/);
@@ -1017,7 +1037,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       if (!Number.isFinite(qty) || qty < 1) qty = 1;
       let weight = 0;
-      const wm = line.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i);
+      const wm = line.match(GEW);
       if (wm) {
         weight = toNum(wm[1]);
         if (/^(t|to|tonn)/i.test(wm[2])) weight *= 1e3;
@@ -1037,7 +1057,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       let rotatable = true;
       if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?)/i, "").replace(/(\d+)\s*(paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?)/i, "$2").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (kette ? line.replace(kette[0], "") : line).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?)/i, "").replace(/(\d+)\s*(paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?)/i, "$2").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (dim2) name = name.replace(dim2[0], "").trim();
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
@@ -1045,8 +1065,75 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : dim2 ? "Palette" : "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
-      out.push({ qty, l: Math.max(1, Math.round(l)), w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), weight: Math.max(0, Math.round(weight)), stackable, stackH, rotatable, name });
+      const row = { qty, l: Math.max(1, Math.round(l)), w: Math.max(1, Math.round(w)), h: Math.max(1, Math.round(h)), weight: Math.max(0, Math.round(weight)), stackable, stackH, rotatable, name };
+      return { row, frei, zollig: frei && (zitatZoll || (!!wm && /^(lb|pound)/i.test(wm[2]))) };
+    };
+    // Eine Zeile, mehrere Positionen ("20 Europaletten 120x80x110 400kg, 6 Kisten
+    // 200x110x150 900kg"): bisher blieb nur die erste uebrig, der Rest landete still im
+    // Namen. Geteilt wird nur, wo mehr als EINE vollstaendige Masskette steht, und nur an
+    // Komma, "und"/"and", "+" oder "&" ZWISCHEN zwei Ketten. Ein Komma zwischen zwei
+    // Ziffern ist ein Dezimalkomma ("1,2 x 0,8 x 1,0 m", "250,5 kg") und trennt nie.
+    // Stehen mehrere Trenner zur Wahl, gewinnt die Lesart, die jede Position so baut wie
+    // die erste: Menge und Name vor der Kette (oder dahinter, wenn die erste es so macht),
+    // Gewicht und "stapelbar" hinter ihr. Was sich nicht sicher teilen laesst, meldet
+    // trennungUnsicher statt zu raten: kein Trenner zwischen den Ketten, "innen"/"aussen"
+    // (dann sind es zwei Masse EINES Stuecks) oder zwei gleich gute Trenner mit
+    // verschiedenem Ergebnis.
+    const mengeIn = (s) => MENGE.test(s) || /^[\s,+&]*(?:(?:und|and)\s+)?\d+(?![.,]?\d)(?!\s*(?:kg|kilo|tonn|to\b|t\b|lbs?|pounds?|mm|cm|m\b|zoll|inch|in\b|["”″]))/i.test(s);
+    const merkmalIn = (s) => GEW.test(s) || /stapel|stack|drehbar|rotat|(?:\bbis|\bmax\.?|maximal|up\s*to)\s*\d/i.test(s);
+    const sauber = (s) => s.replace(/^[\s,+&]+|[\s,+&]+$/g, "").replace(/^(?:und|and)\s+/i, "").trim();
+    const teile = (line, RX) => {
+      const k = [...line.matchAll(RX.alle)];
+      if (k.length < 2) return [line];
+      const stuecke = [];
+      let ab = 0;
+      for (let i = 0; i + 1 < k.length; i++) {
+        // Das Ketten-Muster schluckt den Leerraum hinter sich -- die Luecke beginnt davor,
+        // sonst sieht der Trenner " und " sein erstes Leerzeichen nicht.
+        const von = k[i].index + k[i][0].trimEnd().length, bis = k[i + 1].index;
+        const kand = [];
+        for (const t of line.slice(von, bis).matchAll(/\s*,\s*|\s+(?:und|and)\s+|\s*[+&]\s*/gi)) {
+          const s = von + t.index, c = s + t[0].indexOf(",");
+          if (c >= s && /\d/.test(line[c - 1] || "") && /\d/.test(line[c + 1] || "")) continue;
+          kand.push({ s, e: s + t[0].length });
+        }
+        if (!kand.length || /\b(?:innen|inner|inside|internal|au(?:ß|ss)en|outer|outside|external)/i.test(line.slice(ab, bis))) {
+          melde("trennungUnsicher");
+          continue;
+        }
+        // Menge vor der Kette (oder in ihr, "20x 120x80x110") -- dann auch beim Naechsten.
+        const vorn = !!k[i][1] || mengeIn(line.slice(ab, k[i].index));
+        const will = !k[i + 1][1] && vorn;
+        for (const c of kand) {
+          const kopf = line.slice(c.e, bis);
+          c.wert = (merkmalIn(kopf) ? -2 : 0) + (mengeIn(kopf) !== will ? -1 : 0) + (vorn && mengeIn(line.slice(von, c.s)) ? -1 : 0);
+        }
+        const best = kand.reduce((a, c) => (c.wert >= a.wert ? c : a));
+        const bild = (c) => JSON.stringify([line.slice(ab, c.s), line.slice(c.e, k[i + 1].index + k[i + 1][0].length)].map((s) => {
+          const z = lies(sauber(s), RX);
+          return z && Object.assign({}, z.row, { name: "" });
+        }));
+        if (kand.some((c) => c !== best && c.wert === best.wert && bild(c) !== bild(best))) melde("trennungUnsicher");
+        stuecke.push(sauber(line.slice(ab, best.s)));
+        ab = best.e;
+      }
+      stuecke.push(sauber(line.slice(ab)));
+      return stuecke.filter(Boolean);
+    };
+    const lines = text.split(/[\n;]+/).map((x) => x.trim()).filter(Boolean);
+    let frei = 0, zollig = 0;
+    for (const line of lines) {
+      const RX = muster(line);
+      for (const teil of teile(line, RX)) {
+        const z = lies(teil, RX);
+        if (!z) continue;
+        out.push(z.row);
+        if (z.frei) { frei++; if (z.zollig) zollig++; }
+      }
     }
+    // Zoll-Verdacht wie beim mm-Verdacht: JEDE Zeile ohne Masseinheit wiegt in Pfund (oder
+    // traegt ein unsicheres Zollzeichen). Vorgeschlagen, nicht still umgerechnet.
+    if (!opts.einheit && frei && zollig === frei) melde("zollVerdacht");
     fertig(out); // setzt nur den mm-Verdacht; das Ergebnis bleibt unangeruehrt
     return out;
   }
@@ -3544,6 +3631,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impTsvNoHead: "keine Kopfzeile — Zuordnung geraten, bitte prüfen",
       impMm: "Die Maße sehen nach Millimetern aus.",
       impMmBtn: "Als mm lesen",
+      impZoll: "Die Maße sehen nach Zoll aus.",
+      impZollBtn: "Als Zoll lesen",
+      impTrennung: "Eine Zeile nennt mehrere Maße, ließ sich aber nicht sicher in Positionen teilen \u2014 bitte prüfen, am besten eine Position je Zeile.",
       impTsvSkipped: (n) => `${n} Zeile${n === 1 ? "" : "n"} übersprungen (keine Maße)`,
       impDetect: "Erkennen",
       impName: "Name",
@@ -4002,6 +4092,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impTsvNoHead: "no header row — mapping guessed, please check",
       impMm: "These dimensions look like millimetres.",
       impMmBtn: "Read as mm",
+      impZoll: "These dimensions look like inches.",
+      impZollBtn: "Read as inches",
+      impTrennung: "A line lists several sets of dimensions but couldn\u2019t be split into items reliably \u2014 please check; one item per line works best.",
       impTsvSkipped: (n) => `${n} row${n === 1 ? "" : "s"} skipped (no dimensions)`,
       impDetect: "Detect",
       impName: "Name",
@@ -10586,7 +10679,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }, className: "px-4 py-3 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontWeight: FW.bold, fontSize: FS.body, whiteSpace: "nowrap" } }, shareCopied ? T.shareCopied : T.shareCopy)), /* @__PURE__ */ React.createElement("a", { href: shareURL, target: "_blank", rel: "noopener", className: "inline-block mt-3 transition hover:brightness-125", style: { fontFamily: SANS, fontSize: FS.label, color: C.accent } }, T.shareOpen), domain === "sea" && /* @__PURE__ */ React.createElement("button", { onClick: () => {
       setShareOpen(false);
       buildLadevorschlag();
-    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)"), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "mt-4 pt-4", style: { borderTop: `1px solid ${C.hairline}` } }, briefText === null ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.briefTitle), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: 4, lineHeight: 1.4 } }, T.briefSub)), /* @__PURE__ */ React.createElement(Seg, { size: "s", value: briefSprache, onPick: setBriefSprache, items: [["de", "DE"], ["en", "EN"], ["nl", "NL"]] })), /* @__PURE__ */ React.createElement("div", { className: "mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!briefBusy, onClick: briefSchreiben }, T.briefBtn)), (briefBusy || briefFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: briefBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, briefBusy || briefFehler)) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } }, T.briefHinweis), /* @__PURE__ */ React.createElement("input", { value: briefBetreff, onChange: (e) => setBriefBetreff(e.target.value), className: "w-full rounded-lg px-3 py-2 mb-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontWeight: FW.semi, outline: "none" } }), /* @__PURE__ */ React.createElement("textarea", { value: briefText, onChange: (e) => setBriefText(e.target.value), rows: 10, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: SANS, lineHeight: 1.5, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: briefKopieren }, briefKopiert ? T.shareCopied : T.briefKopierenBtn), /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", onClick: () => { window.location.href = "mailto:?subject=" + encodeURIComponent(briefBetreff) + "&body=" + encodeURIComponent(briefText || ""); } }, T.briefMail), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => { setBriefText(null); setBriefFehler(""); } }, T.briefNeu))))))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: C.scrim }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: C.surface, borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: C.schattenTief } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: `1px solid ${C.hairline}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: C.surface, border: `1px solid ${C.lineHi}`, color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), onPaste: (e) => { const its = (e.clipboardData && e.clipboardData.items) || []; for (let pi = 0; pi < its.length; pi++) { if (its[pi].type && its[pi].type.indexOf("image/") === 0) { e.preventDefault(); kiFoto(its[pi].getAsFile()); return; } } }, placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), !EMBEDDED && /* @__PURE__ */ React.createElement(KiTipp, null), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2 mt-3" }, EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => lokalLesen("") }, T.impDetect), !EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim() || !!kiBusy, onClick: kiErkennen }, T.kiBtn), !EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!kiBusy, onClick: () => kiFotoRef.current && kiFotoRef.current.click() }, T.kiFotoBtn), /* @__PURE__ */ React.createElement("input", { ref: kiFotoRef, type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) kiFoto(f); } }), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel)), (kiBusy || kiFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: kiBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiBusy || kiFehler)) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!kiBusy, onClick: kiErkennen }, T.kiBtn)), (kiBusy || kiFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: kiBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiBusy || kiFehler), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: C.surface, border: `1px solid ${C.lineHi}`, color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, !kiQuelle && kiFehler && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiFehler), !kiQuelle && parseCargoText.hinweis && parseCargoText.hinweis.mmVerdacht && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, /* @__PURE__ */ React.createElement("span", { className: "flex-1" }, T.impMm), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(parseCargoText(importText, { einheit: "mm" })), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: C.onWarn, fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.impMmBtn)), !kiQuelle && LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, kiQuelle && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } }, T.kiHinweis), /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", title: num(r.stackH) > 0 ? T.stackHSum(dimDE(num(r.stackH)) + " cm") : void 0, style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : C.raised, border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : C.lineHi}`, color: r.stackable ? C.good : C.faint, fontSize: num(r.stackH) > 0 ? FS.label : FS.small, fontWeight: FW.bold } }, r.stackable ? (num(r.stackH) > 0 ? dimDE(num(r.stackH)) : "\u2713") : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: C.raised, border: `1px solid ${C.lineHi}`, color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), sichOpen && (() => {
+    }, className: "w-full mt-4 px-4 py-3 rounded-lg transition hover:brightness-110 flex items-center justify-center gap-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontWeight: FW.semi, fontSize: FS.body } }, /* @__PURE__ */ React.createElement("svg", { width: "16", height: "16", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: ICO.sw, strokeLinecap: "round", strokeLinejoin: "round" }, /* @__PURE__ */ React.createElement("path", { d: "M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" }), /* @__PURE__ */ React.createElement("path", { d: "M14 2v6h6" })), T.pdfBtn, " (PDF)"), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "mt-4 pt-4", style: { borderTop: `1px solid ${C.hairline}` } }, briefText === null ? /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "flex items-center justify-between gap-2 flex-wrap" }, /* @__PURE__ */ React.createElement("div", { style: { minWidth: 0 } }, /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.body, fontWeight: FW.semi, color: C.text } }, T.briefTitle), /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.label, color: C.faint, marginTop: 4, lineHeight: 1.4 } }, T.briefSub)), /* @__PURE__ */ React.createElement(Seg, { size: "s", value: briefSprache, onPick: setBriefSprache, items: [["de", "DE"], ["en", "EN"], ["nl", "NL"]] })), /* @__PURE__ */ React.createElement("div", { className: "mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!briefBusy, onClick: briefSchreiben }, T.briefBtn)), (briefBusy || briefFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: briefBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, briefBusy || briefFehler)) : /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } }, T.briefHinweis), /* @__PURE__ */ React.createElement("input", { value: briefBetreff, onChange: (e) => setBriefBetreff(e.target.value), className: "w-full rounded-lg px-3 py-2 mb-2", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontWeight: FW.semi, outline: "none" } }), /* @__PURE__ */ React.createElement("textarea", { value: briefText, onChange: (e) => setBriefText(e.target.value), rows: 10, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: SANS, lineHeight: 1.5, resize: "vertical", outline: "none" } }), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2 mt-3" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: briefKopieren }, briefKopiert ? T.shareCopied : T.briefKopierenBtn), /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", onClick: () => { window.location.href = "mailto:?subject=" + encodeURIComponent(briefBetreff) + "&body=" + encodeURIComponent(briefText || ""); } }, T.briefMail), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => { setBriefText(null); setBriefFehler(""); } }, T.briefNeu))))))), importOpen && /* @__PURE__ */ React.createElement("div", { className: "fixed inset-0 flex items-center justify-center p-4", style: { zIndex: 60, background: C.scrim }, onClick: () => setImportOpen(false) }, /* @__PURE__ */ React.createElement("div", { onClick: (e) => e.stopPropagation(), role: "dialog", "aria-modal": "true", className: "w-full clrise", style: { maxWidth: 560, background: C.surface, borderRadius: R.l, border: `1px solid ${C.fieldBorder}`, boxShadow: C.schattenTief } }, /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 px-6 py-4", style: { borderBottom: `1px solid ${C.hairline}` } }, /* @__PURE__ */ React.createElement("span", { style: { fontSize: FS.lead } }, "\u26A1"), /* @__PURE__ */ React.createElement("span", { style: { fontWeight: FW.bold, fontSize: FS.lead } }, T.impTitle), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportOpen(false), "aria-label": T.close, className: "ml-auto w-7 h-7 rounded-lg flex items-center justify-center transition hover:brightness-125", style: { background: C.surface, border: `1px solid ${C.lineHi}`, color: C.dim, fontSize: FS.h3, lineHeight: 1 } }, "\xD7")), /* @__PURE__ */ React.createElement("div", { className: "p-6" }, importRows === null ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("textarea", { value: importText, onChange: (e) => setImportText(e.target.value), onPaste: (e) => { const its = (e.clipboardData && e.clipboardData.items) || []; for (let pi = 0; pi < its.length; pi++) { if (its[pi].type && its[pi].type.indexOf("image/") === 0) { e.preventDefault(); kiFoto(its[pi].getAsFile()); return; } } }, placeholder: T.impPh, rows: 6, className: "w-full rounded-2xl p-3", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.body, fontFamily: MONO, resize: "vertical", outline: "none" } }), !EMBEDDED && /* @__PURE__ */ React.createElement(KiTipp, null), /* @__PURE__ */ React.createElement("div", { className: "flex flex-wrap items-center gap-2 mt-3" }, EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim(), onClick: () => lokalLesen("") }, T.impDetect), !EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: importText.trim() ? "primary" : "ghost", size: "l", disabled: !importText.trim() || !!kiBusy, onClick: kiErkennen }, T.kiBtn), !EMBEDDED && /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!kiBusy, onClick: () => kiFotoRef.current && kiFotoRef.current.click() }, T.kiFotoBtn), /* @__PURE__ */ React.createElement("input", { ref: kiFotoRef, type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) kiFoto(f); } }), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => setImportOpen(false) }, T.impCancel)), (kiBusy || kiFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: kiBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiBusy || kiFehler)) : importRows.length === 0 ? /* @__PURE__ */ React.createElement("div", null, /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5 } }, T.impNone), !EMBEDDED && /* @__PURE__ */ React.createElement("div", { className: "mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "accent", size: "l", disabled: !!kiBusy, onClick: kiErkennen }, T.kiBtn)), (kiBusy || kiFehler) && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2 mt-3", style: kiBusy ? { background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } : { background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiBusy || kiFehler), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "mt-4 px-4 py-2 rounded-lg", style: { background: C.surface, border: `1px solid ${C.lineHi}`, color: C.dim, fontWeight: FW.semi, fontSize: FS.body } }, T.impBack)) : /* @__PURE__ */ React.createElement("div", null, !kiQuelle && kiFehler && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, kiFehler), !kiQuelle && parseCargoText.hinweis && parseCargoText.hinweis.mmVerdacht && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, /* @__PURE__ */ React.createElement("span", { className: "flex-1" }, T.impMm), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(parseCargoText(importText, { einheit: "mm" })), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: C.onWarn, fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.impMmBtn)), !kiQuelle && parseCargoText.hinweis && parseCargoText.hinweis.zollVerdacht && /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-3 rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, /* @__PURE__ */ React.createElement("span", { className: "flex-1" }, T.impZoll), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(parseCargoText(importText, { einheit: "in" })), className: "px-3 py-2 rounded-lg whitespace-nowrap transition hover:brightness-110", style: { background: C.warn, color: C.onWarn, fontSize: FS.small, fontWeight: FW.bold, border: 0, cursor: "pointer" } }, T.impZollBtn)), !kiQuelle && parseCargoText.hinweis && parseCargoText.hinweis.trennungUnsicher && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.warn, 0.12), border: `1px solid ${hexA(C.warn, 0.4)}`, color: C.warn, fontSize: FS.small, fontWeight: FW.semi } }, T.impTrennung), !kiQuelle && LAST_TSV_MAP ? /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 8 } }, T.impTsv(LAST_TSV_MAP.cols.map((k) => ({ qty: T.qty, l: T.len, w: T.wid, h: T.hei, weight: "kg", stackable: T.stack, name: "Name" })[k] || k).join(" \xB7 ")), !LAST_TSV_MAP.header && /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, " \xB7 ", T.impTsvNoHead), LAST_TSV_MAP.skipped > 0 && /* @__PURE__ */ React.createElement("span", { style: { color: C.faint } }, " \xB7 ", T.impTsvSkipped(LAST_TSV_MAP.skipped))) : null, kiQuelle && /* @__PURE__ */ React.createElement("div", { className: "rounded-lg px-3 py-2", style: { marginBottom: 8, background: hexA(C.accent, 0.1), border: `1px solid ${hexA(C.accent, 0.35)}`, color: C.accent, fontSize: FS.small, fontWeight: FW.semi } }, T.kiHinweis), /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.small, marginBottom: 12 } }, T.impDetected(importRows.length), " \xB7 ", /* @__PURE__ */ React.createElement("span", { style: { color: C.warn } }, T.impHint)), /* @__PURE__ */ React.createElement("div", { className: "grid items-center gap-2 px-1", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px", fontFamily: SANS, fontSize: FS.label, letterSpacing: "0.1em", color: C.faint, textTransform: "none", marginBottom: 4 } }, /* @__PURE__ */ React.createElement("span", null, T.impName), /* @__PURE__ */ React.createElement("span", null, T.qty), /* @__PURE__ */ React.createElement("span", null, T.len[0]), /* @__PURE__ */ React.createElement("span", null, T.wid[0]), /* @__PURE__ */ React.createElement("span", null, T.hei[0]), /* @__PURE__ */ React.createElement("span", null, "kg"), /* @__PURE__ */ React.createElement("span", null, "\u21C5"), /* @__PURE__ */ React.createElement("span", null)), /* @__PURE__ */ React.createElement("div", { className: "flex flex-col gap-2", style: { maxHeight: 300, overflowY: "auto" } }, importRows.map((r, i) => /* @__PURE__ */ React.createElement("div", { key: i, className: "grid items-center gap-2", style: { gridTemplateColumns: "1.5fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr 34px 28px" } }, /* @__PURE__ */ React.createElement("input", { value: r.name || "", onChange: (e) => updImportRow(i, "name", e.target.value), className: "w-full rounded-lg", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, padding: "4px 8px", outline: "none" } }), ["qty", "l", "w", "h", "weight"].map((k) => /* @__PURE__ */ React.createElement("input", { key: k, value: r[k], onChange: (e) => updImportRow(i, k, e.target.value), className: "w-full rounded-lg text-center", style: { background: C.field, border: `1px solid ${C.fieldBorder}`, color: C.text, fontSize: FS.small, fontFamily: SANS, padding: "4px 4px", outline: "none" } })), /* @__PURE__ */ React.createElement("button", { onClick: () => updImportRow(i, "stackable", !r.stackable), className: "rounded-lg transition", title: num(r.stackH) > 0 ? T.stackHSum(dimDE(num(r.stackH)) + " cm") : void 0, style: { height: 28, background: r.stackable ? hexA(C.good, 0.16) : C.raised, border: `1px solid ${r.stackable ? hexA(C.good, 0.4) : C.lineHi}`, color: r.stackable ? C.good : C.faint, fontSize: num(r.stackH) > 0 ? FS.label : FS.small, fontWeight: FW.bold } }, r.stackable ? (num(r.stackH) > 0 ? dimDE(num(r.stackH)) : "\u2713") : "\u2715"), /* @__PURE__ */ React.createElement("button", { onClick: () => delImportRow(i), className: "rounded-lg transition hover:brightness-125", style: { height: 28, background: C.raised, border: `1px solid ${C.lineHi}`, color: C.faint, fontSize: FS.lead } }, "\xD7")))), /* @__PURE__ */ React.createElement("div", { className: "flex items-center gap-2 mt-4" }, /* @__PURE__ */ React.createElement(Btn, { variant: "primary", size: "l", onClick: () => applyImport(false) }, T.impAdd), /* @__PURE__ */ React.createElement(Btn, { variant: "ghost", size: "l", onClick: () => applyImport(true) }, T.impReplace), /* @__PURE__ */ React.createElement("button", { onClick: () => setImportRows(null), className: "ml-auto px-3 py-2 rounded-lg", style: { color: C.faint, fontSize: FS.body } }, T.impBack)))))), sichOpen && (() => {
       // Ladungssicherungs-Check: liest die Sicht (fokussierter Container, sonst C1),
       // genau wie Schwerpunkt und Achslast. Reine Anzeige -- veraendert nichts am Plan.
       // Die Befunde kommen aus sichBefunde (eine Quelle fuer Dialog, Hinweis, 3D),
