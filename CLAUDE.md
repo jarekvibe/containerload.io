@@ -140,7 +140,7 @@ var ICO  = { s: 16, m: 20, sw: 1.5 };
 
 Was darüber hinaus immer gilt (Herleitung jeweils im Protokoll):
 
-- **Alle Farben fließen durch `C`** (Oberfläche) und `B` (3D-Bühne), je ein dunkler und ein heller Satz mit denselben Schlüsseln. Voreinstellung ist die Systemeinstellung, die Hand-Wahl liegt unter `cl_theme` und gilt für Startseite und Rechner gemeinsam. Die Kontrast-Wache rechnet WCAG 4,5:1 für beide Sätze nach.
+- **Alle Farben fließen durch `C`** (Oberfläche) und `B` (3D-Bühne), je ein dunkler und ein heller Satz mit denselben Schlüsseln. Voreinstellung ist die Systemeinstellung, die Hand-Wahl liegt unter `cl_theme` und gilt für Startseite, Rechner, Wissens- und Randseiten gemeinsam (die letzten beiden lesen sie nur). Die Kontrast-Wache rechnet WCAG 4,5:1 für beide Sätze nach.
 - **Die Falle dabei: Modul-Ebene friert ein.** Eine Modul-Konstante, die `C.*` als *Wert* liest (Objekt-Literal), behält den Satz vom Laden. Komponenten und Getter sind sicher.
 - **Wiederkehrende Muster sind Komponenten mit festen Varianten:** `Btn` (primary / accent / ghost / quiet), `Card`, `Seg`, `Kpi`, `Lbl`. Auswahlreihen sind Raster (`segGrid`), keine umbrechenden Reihen.
 - **Getrennt wird über die Fläche, nicht über eine Linie.** Ein Rahmen bleibt dem vorbehalten, was ausgewählt ist oder warnt.
@@ -175,15 +175,16 @@ Was darüber hinaus immer gilt (Herleitung jeweils im Protokoll):
 | **Packer, Stapeln, Stauen** | Füllreihenfolge im Einzeltyp-Pfad · Kein Überstand · Stufe 3: ordentlich stauen · `makeFloorPacker` · Was `stackMax` bedeutet · Die zweite Stapelgrenze (`stackH`) · „Nicht stapelbar" heißt beides · Übermaß ohne Drehen-Erlaubnis · Der Ladeweg je Bauart · Karton auf Palette |
 | **mehreren Containern** | Zwei Ziele, zwei Stufen · Gleiche Ware in denselben Container · Die Container-Kette · Mehr als ein Container ist ein Entschluss · Weiterpacken auf einer Vorbelegung · Die Zuweisung je Position · Der manuelle Modus je Container · Der Fokus · Volumen und Gewicht je Container |
 | **Gewicht, Straße, Sicherung** | Straßenlimit je Land · Achslasten für den Sattelzug · Die Gewichtsanzeige und die Überladung · Der Ladungssicherungs-Check · VGM-Vorbereitung und Gefahrgut-Kennzeichnung · Multi-Stopp |
-| **Oberfläche des Rechners** | Layout des Rechners · Das Regelwerk · Hell und Dunkel (Phasen 1–3, Bühnen-Palette, Startseite) · Die Ergebnisleiste zeigt vier Zahlen · Das Empfehlungsbanner · Die Empfehlung rechnet auch rückwärts · Auf dem Telefon |
+| **Oberfläche des Rechners** | Layout des Rechners · Das Regelwerk · Hell und Dunkel (Phasen 1–3, Bühnen-Palette, Startseite) · Die Ergebnisleiste zeigt vier Zahlen · Das Empfehlungsbanner · Die Empfehlung rechnet auch rückwärts · Auf dem Telefon · Der Fehlerschirm |
 | **3D-Ansicht** | Die 3D-Ansicht steht still · Die Kamera darf ihren Mittelpunkt verlassen · Die „Warum?"-Animation der Türprüfung · Die 3D-Ansicht zeigt kein Türblatt mehr · Positionsnummern in 3D |
 | **Ladevorschlag, Export, Rampe** | Ladevorschlag und CSV je Container · Die Belade-Reihenfolge im Ladevorschlag · Der Rampen-Modus · Das Rampen-Blatt · Der Bildexport rahmt die ganze Reihe · Die Vorschaubilder beim Teilen |
 | **Teilen, Entwurf, Zusammenarbeit** | Der Entwurf, das Rückgängig und der leere Start · Der Teilen-Anstoß · Der Empfänger-Hinweis auf geteilten Plänen · Zusammenarbeit über den Link · Reederei-Presets |
 | **Import und KI** | Der Import-Parser rät nicht still · Maßangaben im Fließtext · Der KI-Import — Stufen 1–4 (Import, Foto, Brief, Stevie) |
 | **Messen und Rückmeldung** | Messen und melden: die zwei Rückkanäle · Anonyme Nutzungsstatistik und das Admin-Dashboard · Leere Aufrufe stehen getrennt · Die Feedback-Frage fragt Wiederkehrer |
 | **Startseite** | Die Startseite verkauft, der Rechner bedient · Die Startseite atmet · Die Hero-Animation · Die Startseiten-Snippets · Der CBM-Rechner |
-| **Wissensseiten und Suche** | Container-Wissen (`/ratgeber/`) · Die zwei Top-Seiten · Die vertieften Seiten · Der Container Guide (`/en/guide/`) · Die Sichtbarkeits-Wellen (im Abschnitt „Gleiche Ware …") · Der Lademeter-Rechner · Die Hafenkarte |
+| **Wissensseiten und Suche** | Container-Wissen (`/ratgeber/`) · Die zwei Top-Seiten · Die vertieften Seiten · Der Container Guide (`/en/guide/`) · Die Sichtbarkeits-Wellen (im Abschnitt „Gleiche Ware …") · Der Lademeter-Rechner · Die Hafenkarte · Hell und Dunkel auf Wissens-, Rechts- und Teilen-Seiten |
 | **Sprachen, Schrift, Randseiten** | Zweisprachigkeit (DE/EN) · Zwischen den Sprachen darf nichts liegenbleiben · Die Font-CSS lädt asynchron · Randseiten |
+| **Deploy und Functions** | Deploy: Lockfile, Publish-Verzeichnis, Statistik-Abruf · Anonyme Nutzungsstatistik und das Admin-Dashboard · Der KI-Import — Stufen 1–4 |
 
 ---
 

@@ -1142,6 +1142,33 @@ Die Auswertung zeigte als häufigsten echten Ablauf einen Plan, der zwischen zwe
 - **Bewusst noch nicht:** ein Live-Link (Server, eigene Datenschutz-Abstimmung) — das wäre der nächste eigene Schritt.
 
 
+### Der Fehlerschirm (November 2026)
+Wirft eine Komponente beim Zeichnen, hängt React 18 den **ganzen** Baum ab — die Seite war dann leer, ohne ein Wort. `Fehlerschirm` (Klasse, ganz unten in `app.html`, umschließt `App`) zeigt stattdessen eine Meldung mit zwei Wegen heraus:
+- **„Neu laden"** verspricht nichts Falsches. Beim Start gewinnt die Ladung aus der Adresse vor dem Entwurf (`SHARED` / `QIMPORT` vor `DRAFT`); wer einen geteilten Plan bearbeitet hat, bekäme mit einem schlichten `reload()` das **Original** zurück. Mit einem Entwurf aus **diesem** Seitenaufruf (`entwurfFrisch`, gesetzt in `saveDraft`) lädt der Knopf deshalb ohne die Ladung in der Adresse; ohne frischen Entwurf bleibt die Adresse stehen — ein Entwurf von gestern sagt nichts über den Plan, der gerade offen war. Der Text nennt den Entwurf nur im ersten Fall.
+- **„Leer starten"** verwirft Entwurf und Ladung aus der Adresse. Ohne diesen Knopf wäre der Schirm eine Sackgasse, wenn genau dieser Stand der Auslöser ist.
+
+Die Verzögerung des Entwurfs (400 ms) hilft hier: die Änderung, die den Absturz auslöst, ist in aller Regel noch nicht gespeichert — zurück kommt der letzte Stand **davor**. Im Browser durchgespielt (Menge 20 → 21, erzwungener Absturz, Neu laden bringt die 21). `test/fehlerschirm.test.mjs` führt die Klasse gegen eine React-Attrappe aus.
+
+**Bewusst nicht dabei: ein Zähler für solche Fehler.** Er wäre die eigentliche Fehlersicht (heute erfährt man von einem Absturz nur, wenn jemand ein Bild schickt), berührt aber den Zweck-Satz der Datenschutzerklärung („ausschließlich zu erkennen, welche Funktionen genutzt werden") — Jareks Entscheidung.
+
+**Zoom, im selben Zug:** `maximum-scale=1` stand fest im viewport und sperrte auf Android das Zoomen mit zwei Fingern. Die Klemme gilt jetzt nur noch auf iOS (dort verhindert sie den Sprung beim Antippen eines Zahlenfelds unter 16 px; zoomen lässt iOS trotzdem) und wird vom frühen Head-Script nachgereicht. iOS verhält sich exakt wie vorher.
+
+### Hell und Dunkel auf Wissens-, Rechts- und Teilen-Seiten (November 2026)
+Startseite und Rechner folgten der Wahl (`cl_theme`) bzw. dem System, die 49 Wissensseiten, Impressum, Datenschutz und `share.html` blieben dunkel — mit hellem System führte der Weg Startseite → Wissensseite → Rechner durch einen dunklen Raum.
+- **Der helle Satz steht in `ratgeber/wissen.css`** und trägt wörtlich die Werte von `C_HELL` (testgekoppelt). `--deep` ist `field`, `--line-2` ist `fieldBorder`.
+- **Links im Fließtext haben im Hellen einen eigenen Ton** (`--link` = `C_HELL.info`). Sie stehen auf dem Seitengrund, nicht auf einer Karte, und dort kommt der helle Akzent nur auf **4,0:1**. Flächen und Knöpfe behalten `--accent`.
+- **Die Zeichnungen werden übersetzt, nicht umgeschrieben.** Die SVGs tragen ihre Farben als Attribute (sie kommen fertig aus dem Packer). Der helle Satz fängt die vier Töne per Attribut-Selektor ab (`[fill="#2FD8A0" i]` …) und setzt die dunkleren Geschwister. Kommt ein neuer Ton in eine Zeichnung, fällt der Test.
+- **Die Hafenkarte brauchte keinen Code:** das Canvas liest seine Farben aus Variablen. Die Falle dabei: sie stehen am Element (`[data-hafenkarte]`), nicht an `:root` — ein heller Satz an `:root` verliert gegen die Angabe am Element. Deshalb `:root[data-theme="hell"] [data-hafenkarte]`.
+- **Kein Build, keine Vorlage — also steht das Thema-Script in jeder der 52 Seiten** (eine Zeile im `<head>`, vor dem Stylesheet). `test/wissen-thema.test.mjs` hält fest, dass es überall dasselbe ist, und **führt es aus** (Wahl vor System, Privatmodus, `theme-color`).
+- **Die Seiten lesen `cl_theme` nur.** Einen eigenen Umschalter haben sie nicht — gewählt wird auf der Startseite oder im Rechner. Würden sie schreiben, bräuchte die Datenschutzseite ein Wort dazu.
+- **Rechtsseiten: kein Wort am Text**, nur `<head>`. Dabei flog ein verirrtes „GOOD" am Ende beider `<style>`-Blöcke auf (ein Überbleibsel, vom CSS-Parser stillschweigend verworfen).
+
+### Deploy: Lockfile, Publish-Verzeichnis, Statistik-Abruf (November 2026)
+Drei Dinge aus einer Durchsicht des ganzen Projekts, alle außerhalb der Seite selbst:
+- **`package-lock.json` ist eingecheckt, der Build läuft mit `npm ci`.** Vorher zog `npm install` bei jedem Deploy die jeweils neueste passende Version der Function-Abhängigkeiten — zwei Deploys desselben Commits waren nicht dasselbe.
+- **Im Publish-Verzeichnis liegt nur noch, was öffentlich sein soll.** `CLAUDE.md` und `README.md` lagen in `containerload.io/` und waren damit abrufbar, ebenso `test/` und fünf unbenutzte Alt-Dateien (zwei alte Kopien des Rechners, ein Hero-Prototyp, die frühere Druckvorlage, `_hdr.html`). Doku und README liegen jetzt an der Repo-Wurzel bzw. unter `docs/`, die Alt-Dateien sind gelöscht (Git-Historie), und `test/` nimmt der Build-Befehl heraus (`rm -rf containerload.io/test`). Die Tests bleiben **bewusst** neben `app.html` liegen: über hundert Dateien schneiden mit relativen Pfaden daraus.
+- **`/api/statistik` listet je Tag des Zeitraums** (`tagesPraefixe` / `schluesselImZeitraum` in `lib/nutzung.mjs`), nicht mehr den ganzen Store. Vorher wuchs die Liste mit jedem Tag seit dem Start. Das parallele **Lesen** der Events ist unverändert — eine Drosselung ohne Messung gegen den echten Store wäre ein Blindflug Richtung Zeitlimit. **Offen:** Events werden nie gelöscht; eine Aufbewahrungsfrist ist Jareks Entscheidung (und gehört dann in die Datenschutzerklärung).
+
 ### Die Hafenkarte (`/ratgeber/containerhaefen`, `/en/guide/container-ports`, November 2026)
 Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containerschiffe anlaufen — die Reedereien schlugen nur Ostküste vor, Google Maps kennzeichnet Häfen nicht. **Stufe 1** ist eine Weltkarte mit Suche (Name, UN/LOCODE, Land) und Küstenfilter; **Stufe 2** (Jareks Wunsch: Abgangsland wählen, Routen zum Zielhafen vergleichen, schnellste zuerst) braucht Fahrplandaten der Reedereien und ist ein eigener Schritt.
 - **Kein Kartendienst.** Gezeichnet wird auf ein Canvas (`karte/hafenkarte.js`, ohne Bibliothek); Küste und Grenzen kommen aus `karte/land.js` (Natural Earth 1:50 Mio., vereinfacht, ~90 KB gzip), die Häfen aus `karte/haefen.js`. Beim Aufruf geht keine IP an einen Dritten; OpenStreetMap ist nur ein Link im Detail (neuer Tab, auf Klick). `test/hafenkarte.test.mjs` lässt nur die drei eigenen Skripte zu.
