@@ -45,6 +45,8 @@ const T = new Proxy({ undone: "R\xFCckg\xE4ngig gemacht", undoneWas: deZeile("un
   { get: (o, k) => k in o ? o[k] : (...a) => `${String(k)}(${a.join(",")})` });
 
 const QUELLE = [
+  // Stevie kappt die Menge wie jede andere Tuer (MENGEN-GRENZE) — die Grenze gehoert dazu.
+  zeilen("// MENGEN-GRENZE-BEGIN", "// MENGEN-GRENZE-END"),
   zeilen("const setzePreset = (p) => {", "const pickCarrier = (cn) => {"),
   zeilen("const pickCarrier = (cn) => {", "const openRec = () =>"),
   zeilen("const switchDomain = (d) => {", "// Manuelle Container-Wahl"),
@@ -55,7 +57,7 @@ const QUELLE = [
 ].join("\n");
 
 const SETTER = ["setDomain", "setPreset", "setContainer", "setCarrier", "setCargo", "setChainOverride", "setHist",
-  "setToast", "setToastAct", "setForceCentered", "setManualMode", "setManualArmed", "setManualSel"];
+  "setToast", "setToastAct", "setForceCentered", "setManualMode", "setManualArmed", "setManualSel", "setKappung"];
 const bauen = new Function("S", "stevieTx", "PRESETS", "VEHICLES", "CARRIERS", "applyCarrier", "T", "window",
   `const { domain, preset, container, carrier, cargo, chainOverride } = S.state;
    const CARRIER_KEY = "containerload.carrier.v1";

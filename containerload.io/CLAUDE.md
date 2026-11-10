@@ -57,6 +57,8 @@ Diese Verträge halten das Produkt zusammen. Vor Änderungen daran erst nachfrag
 
 Wer das Kodierungsschema ändert, macht **alle bereits geteilten Links und gedruckten QR-Codes ungültig.** Das ist eine bewusste, schwerwiegende Entscheidung — niemals beiläufig.
 
+Beim **Lesen** wird die Menge begrenzt (5.000 je Position und je Plan, siehe „Robuster Start“ unten) — das Schema selbst bleibt unberührt, ein Link darunter öffnet Byte für Byte wie zuvor.
+
 ### Container-Presets (Maße in cm, Zuladung in kg)
 | Preset | L | B | H | Zuladung |
 |---|---|---|---|---|
@@ -1230,6 +1232,16 @@ Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containe
 - **Anzeige:** ohne Suchwort große/mittlere Becken + Top 50 (554), „Auch kleine Häfen" zeigt alle 3.794; eine Namenssuche findet immer jeden Hafen. Adresse teilbar: `?q=`, `?land=US`, `?kueste=<Index>`, `?alle=1`, `?hafen=<UN/LOCODE>`.
 - **Neu bauen:** `werkzeug/haefen/land-bauen.mjs` (Küste) und `haefen-bauen.mjs` (Häfen + die Top-50-Tabelle zwischen `<!-- HK_TOP50_START/ENDE -->` auf BEIDEN Seiten — nie von Hand ändern). Nach einer neuen WSC-Liste: CSV ersetzen, `ZUORDNUNG` prüfen, Generator laufen lassen; der Test koppelt Karte, Quelle und Seitentabellen Zahl für Zahl.
 
+### Robuster Start: CDN-Ausfall und Mengen-Grenze (November 2026)
+Zwei Wege, auf denen der Rechner beim Öffnen hängen blieb, ohne etwas zu sagen:
+- **CDN fehlt.** `start()` pollte, solange `React`/`ReactDOM`/`THREE` fehlten — bei einem blockierten cdnjs für immer, „ContainerLoad lädt…“ blieb stehen. Jetzt meldet `onerror` an den drei Script-Tags im Kopf den Fehlschlag (`window.__clCdnFehler`) und die Meldung kommt sofort; ohne Meldung (Proxy liefert HTML statt JS) endet das Warten nach `CDN_FRIST_MS` (10 s) ab Navigationsbeginn (`performance.now()` — hing der Kopf schon länger, wird nicht doppelt gewartet). Die Meldung (`cdnMeldung`, zwischen `CDN-WACHE-BEGIN/END`) nennt die fehlende Bibliothek und `cdnjs.cloudflare.com`, verweist auf Firewall/Proxy/Netz, hat „Neu laden“ und spricht die Sprache des Ladehinweises (der merkt sie als `window.__clBootSprache`, `?lang=` vor `cl_lang`). Farben nur aus den CSS-Variablen des Kopfes, Text in `--text` (`--boot` liegt dunkel unter 4,5:1). `test/start-robustheit.test.mjs`.
+- **Zu große Menge.** Der Packer rechnet synchron im Hauptthread, schon im ersten Render. Ein `?p=`-Link mit 50.000 Kartons (40 × 30 × 30, 40′ HC) war nach 25 s nicht fertig. Gemessen (headless Chromium, bis Hauptthread frei; leere Seite ~2,2 s): eine Sorte 2.000 → 5,1 s, 5.000 → 7–9 s, 10.000 → 14,6 s, 20.000 → 25,8 s; drei Sorten gemischt 3.000 → 18,8 s, 5.000 → 39,5 s. Die Zeit steckt in Kette und Empfehlung (`suggestContainer`/`kombi`), nicht im Zeichnen. Deshalb **`MENGE_MAX` = 5.000 je Position und `MENGE_GESAMT_MAX` = 5.000 je Plan** (`mengenKappen`, zwischen `MENGEN-GRENZE-BEGIN/END`): eine Sorte bleibt unter zehn Sekunden (Firefox' Langsam-Skript-Warnung), ein voller 40′ HC kleiner Kartons und 24 Container Paletten gehen noch.
+  - **An jeder Tür:** `decodePlanState` (damit `?p=`, `?c=` und „Meine Pläne“), `?q=` (`QIMPORT_KAPPUNG`), `loadDraft` (sonst brächte ein Entwurf mit 50.000 jeden Reload zum Stehen), Import-Dialog (angehängt zählt die bestehende Ladung mit), Stevie (je Position ≤ 999, die Summe kann trotzdem drüber) und das Mengenfeld (`updMenge`: Tippen, +/−, `max`; kappt auf den Rest des Plan-Budgets, mit Hinweis).
+  - **In Listenreihenfolge, nichts verschwindet:** Positionen hinter dem Budget bleiben mit 0 stehen. Alles andere an der Position bleibt unverändert.
+  - **Nie still:** der orange Streifen `kappEl` unter der Kopfzeile nennt Quelle, alte und neue Zahl je Position; das Mengenfeld sagt es per Hinweis.
+  - **Das Kodierungsschema bleibt:** kein neues Tag, kein neues Feld; alte Links und QR-Codes öffnen wie bisher, nur eine Menge über der Grenze kommt gekürzt an.
+  - Wer die Zahl ändert, misst neu: `node test/bench/mengen-zeit.mjs app.html` (Packer, Kette, Empfehlung ohne Browser, ~1 min, nicht in der CI). `test/mengen-grenze.test.mjs` fährt den echten Lesepfad (`SHARED`) für `?p=` und `?c=`.
+
 ---
 
 ## 5. Arbeitsweise & Guardrails
@@ -1247,6 +1259,7 @@ Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containe
 ## 6. Bekannte Punkte / Backlog
 
 - **OG-Image in `share.html`:** Vorschaubild und Referenz sind auf `share-og.png` (mit Bindestrich) vereinheitlicht; `share.html` (`og:image`/`twitter:image`) zeigt korrekt auf die tatsächlich im Repo vorhandene Datei `share-og.png`. (Frühere Doku nannte die Datei fälschlich `shareog.png` ohne Bindestrich — korrigiert.)
+- **Gemischte Ladungen rechnen lange — auch unter der Mengen-Grenze.** Gemessen (Nov. 2026): drei Sorten Kartons, zusammen 3.000 Stück → 18,8 s bis zur fertigen Seite; 100 verschiedene Positionen à 3 Stück (300 Stück) brauchen schon im ersten Pack (`emsSearch`) ~23 s, 75 Positionen ~10 s. Das betrifft auch ganz normal eingetippte Listen und lässt sich mit einer Mengengrenze nicht lösen, ohne echte Ladungen abzuschneiden. Ansatz: Zeitbudget in `emsSearch`/Kette/`suggestContainer` oder Rechnen in einem Worker.
 - **Netlify-Auto-Deploy:** Soll künftig aus diesem Repo deployen (statt manuellem Upload). Ggf. eine `netlify.toml` und/oder `_redirects` ergänzen — aber erst nach Rücksprache, da sich dadurch ändert, *wie* die Live-Seite gebaut wird.
 
 ---

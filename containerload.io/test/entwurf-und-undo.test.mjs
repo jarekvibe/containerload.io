@@ -42,6 +42,7 @@ const { loadDraft, saveDraft, clearDraft, DRAFT_KEY } = new Function(
    window.localStorage.getItem = (k) => (k in arguments[0] ? arguments[0][k] : null);
    window.localStorage.setItem = (k, v) => { arguments[0][k] = String(v); };
    window.localStorage.removeItem = (k) => { delete arguments[0][k]; };
+   ${cut("// MENGEN-GRENZE-BEGIN", (l) => l.includes("// MENGEN-GRENZE-END"))}
    ${cut("var DRAFT_KEY", (l) => l.includes("var PLANS_KEY"))}
    return { loadDraft, saveDraft, clearDraft, DRAFT_KEY };`
 )(speicher);
