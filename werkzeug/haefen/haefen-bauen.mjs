@@ -24,8 +24,8 @@
 // steht deshalb nur dort, wo eine Umschlagszahl es belegt.
 import fs from 'node:fs';
 import zlib from 'node:zlib';
-import crypto from 'node:crypto';
 import { PROJ, RAHMEN } from './land-bauen.mjs';
+import { paketLaden, tarDatei } from './npm-paket.mjs';
 
 const PAKET = 'https://registry.npmjs.org/seaport-data-js/-/seaport-data-js-1.0.1.tgz';
 const PAKET_SHA512 = 'AAEueI9tJeAfaOZ/QLU7eyMveig8xYD9cUAr0EAogu1epB5BzeRd1FKPG3w5PCQssQ7Glrjk+LW9afZlhPiQ4A==';
@@ -51,22 +51,8 @@ export const ZUORDNUNG = {
   49: { wpi: 51130, standort: 'Surabaya' }, 50: { wpi: 48230 }
 };
 
-// ── npm-Tarball lesen (gzip + ustar, ohne Abhaengigkeit) ───────────────
-function tarDatei(tgz, gesucht) {
-  const tar = zlib.gunzipSync(tgz);
-  for (let o = 0; o + 512 <= tar.length;) {
-    const name = tar.toString('utf8', o, o + 100).replace(/\0.*$/s, '');
-    if (!name) break;
-    const groesse = parseInt(tar.toString('utf8', o + 124, o + 136).replace(/\0.*$/s, '').trim(), 8) || 0;
-    if (name === gesucht) return tar.subarray(o + 512, o + 512 + groesse);
-    o += 512 + Math.ceil(groesse / 512) * 512;
-  }
-  throw new Error('nicht im Paket: ' + gesucht);
-}
 export async function wpiLaden() {
-  const tgz = Buffer.from(await (await fetch(PAKET)).arrayBuffer());
-  const ist = crypto.createHash('sha512').update(tgz).digest('base64');
-  if (ist !== PAKET_SHA512) throw new Error('Pruefsumme des Pakets stimmt nicht: ' + ist);
+  const tgz = await paketLaden(PAKET, PAKET_SHA512);
   const js = tarDatei(tgz, 'package/lib/index.js').toString('utf8');
   const bloecke = js.match(/["'`][A-Za-z0-9+/=]{20000,}["'`]/g) || [];
   if (bloecke.length !== 1) throw new Error('erwartet genau einen Datenblock, gefunden: ' + bloecke.length);

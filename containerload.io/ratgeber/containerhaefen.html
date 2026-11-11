@@ -73,6 +73,7 @@
 <article class="wrap">
   <h2>So nutzen Sie die Karte</h2>
   <p><b>Ziehen</b> verschiebt die Karte, <b>Mausrad</b> oder <b>zwei Finger</b> zoomen, ein <b>Klick</b> auf einen Punkt zeigt die Angaben zum Hafen. Die Suche findet jeden Hafen über seinen Namen, seinen Code (z.&nbsp;B. <span class="mono">DEHAM</span> für Hamburg) oder das Land. Wählen Sie ein Land, erscheinen darunter seine <b>Küsten</b> — bei den USA etwa Westküste, Ostküste und Golfküste, bei Deutschland Nordsee und Ostsee.</p>
+  <p><b>Seeweg hierher:</b> Im Hafen-Detail wählen Sie ein Abgangsland, zum Beispiel Deutschland. Die Karte zeichnet dann den kürzesten Seeweg von dessen Containerhäfen zum gewählten Hafen und nennt Entfernung, reine Fahrzeit bei 16&nbsp;Knoten und die Kanäle unterwegs. Führt der Weg durch das Rote Meer, steht der Umweg ums Kap direkt darunter. Das ist der Seeweg, kein Fahrplan: Hafenaufenthalte, Umschlag und Abfahrtstage kommen dazu — echte Laufzeiten der Reedereien folgen.</p>
   <p>Ohne Suchwort zeigt die Karte die großen und mittleren Häfen; „Auch kleine Häfen" blendet die übrigen dazu. Jede Auswahl steht in der Adresszeile — den Link können Sie weitergeben.</p>
 
   <h2>Die 50 größten Containerhäfen der Welt</h2>
@@ -134,6 +135,7 @@
 
   <h2>Woher die Angaben kommen</h2>
   <p><b>Seehäfen:</b> der <b>World Port Index</b> (Pub.&nbsp;150) der US-amerikanischen National Geospatial-Intelligence Agency, Ausgabe April 2025 — gemeinfrei. Weil die Seite der Behörde beim Erstellen nicht erreichbar war, stammt die Datei aus der Aufbereitung <a href="https://www.npmjs.com/package/seaport-data-js" rel="noopener">seaport-data-js</a> von Aashish Vivekanand (<a href="https://creativecommons.org/licenses/by/4.0/deed.de" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>); übernommen sind Name, Code, Lage, Region, Gewässer, Beckengröße, Tiefen und Ausstattung.</p>
+  <p><b>Seewege:</b> das Schifffahrtsnetz von <b>Eurostat SeaRoute</b> (<a href="https://github.com/eurostat/searoute" rel="noopener">EUPL-1.2</a>), wie es das Paket <a href="https://www.npmjs.com/package/searoute-ts" rel="noopener">searoute-ts</a> mitliefert; gerechnet wird in Ihrem Browser.</p>
   <p><b>Containerhäfen:</b> die <a href="https://www.worldshipping.org/top-50-container-ports" rel="noopener">Top-50-Liste des World Shipping Council</a> mit dem Umschlag 2025. Nur diese 50 nennt die Karte „Containerhafen" — aus gutem Grund: Im World Port Index ist das Feld für Container-Anlagen gerade bei den großen Häfen leer (Hamburg, Rotterdam und Los Angeles stehen auf „nicht erfasst"), und die <b>Hafengröße</b> meint das Hafenbecken, nicht den Umschlag (Felixstowe, der größte Containerhafen Großbritanniens, ist dort „sehr klein"). Welche der übrigen Häfen Containerlinien anlaufen, zeigt die Karte noch nicht; das klären Sie mit Ihrer Spedition oder der Reederei.</p>
 
   <div class="cta">
