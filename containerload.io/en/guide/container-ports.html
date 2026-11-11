@@ -76,6 +76,7 @@
 <article class="wrap">
   <h2>How to use the map</h2>
   <p><b>Drag</b> to pan, use the <b>mouse wheel</b> or <b>two fingers</b> to zoom, and <b>click</b> a dot to see the port details. The search finds every port by name, by code (e.g. <span class="mono">USLGB</span> for Long Beach) or by country. Once you pick a country, its <b>coasts</b> appear below — for the USA the West Coast, East Coast and Gulf Coast, for Germany the North Sea and the Baltic.</p>
+  <p><b>Sea route to here:</b> in the port details, pick a country of departure, for example Germany. The map then draws the shortest sea route from that country's container ports to the selected port, with distance, pure sailing time at 16&nbsp;knots and the canals on the way. If the route passes through the Red Sea, the detour via the Cape is listed right below. This is the sea route, not a schedule: port stays, transshipment and departure days come on top — real carrier transit times will follow.</p>
   <p>Without a search term the map shows the large and medium ports; "Also small ports" adds the rest. Every selection is stored in the address bar — share the link and the recipient sees the same.</p>
 
   <h2>The 50 largest container ports in the world</h2>
@@ -137,6 +138,7 @@
 
   <h2>Where the data comes from</h2>
   <p><b>Seaports:</b> the <b>World Port Index</b> (Pub.&nbsp;150) of the US National Geospatial-Intelligence Agency, April 2025 edition — public domain. Because the agency's site was unreachable when the map was built, the file comes from the compilation <a href="https://www.npmjs.com/package/seaport-data-js" rel="noopener">seaport-data-js</a> by Aashish Vivekanand (<a href="https://creativecommons.org/licenses/by/4.0/" rel="noopener">CC&nbsp;BY&nbsp;4.0</a>); we use name, code, location, region, water body, basin size, depths and facilities.</p>
+  <p><b>Sea routes:</b> the shipping network of <b>Eurostat SeaRoute</b> (<a href="https://github.com/eurostat/searoute" rel="noopener">EUPL-1.2</a>), as shipped with the <a href="https://www.npmjs.com/package/searoute-ts" rel="noopener">searoute-ts</a> package; the calculation runs in your browser.</p>
   <p><b>Container ports:</b> the <a href="https://www.worldshipping.org/top-50-container-ports" rel="noopener">World Shipping Council's top 50 list</a> with 2025 throughput. Only these 50 are called "container port" on the map — for a reason: in the World Port Index the container-facilities field is empty precisely for the large ports (Hamburg, Rotterdam and Los Angeles read "not recorded"), and <b>harbour size</b> means the basin, not the throughput (Felixstowe, the UK's largest container port, is "very small" there). Which of the other ports container lines call at is not shown yet; check with your forwarder or the carrier.</p>
 
   <div class="cta">

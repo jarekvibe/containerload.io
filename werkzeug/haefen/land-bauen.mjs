@@ -50,6 +50,9 @@ export function pfadRelativ(geo) {
 // dort liegt kein Containerhafen). Natural Earth I: y haengt nur von der Breite ab.
 const r1 = (v) => Math.round(v * 10) / 10;
 export const RAHMEN = [0, r1(PROJ([0, 84])[1]), BREITE, r1(PROJ([0, -58])[1])];
+// Massstab und Verschiebung der Projektion -- die Karte rechnet damit Seewege (Laenge/
+// Breite) in Bildpunkte um, mit derselben Formel wie d3 (geoNaturalEarth1Raw).
+export const PROJ_PARAM = [PROJ.scale(), ...PROJ.translate()].map((v) => Math.round(v * 1e6) / 1e6);
 
 function vereinfacht(topo) {
   const pre = simp.presimplify(topo);
@@ -65,7 +68,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   const g = pfadRelativ(topojson.mesh(laender, laender.objects.countries, (a, b) => a !== b)).replace(/z/g, '');
   const js = '// Hafenkarte: Land und Laendergrenzen (Natural Earth 1:50 Mio., gemeinfrei),\n' +
     '// Projektion Natural Earth I auf ' + BREITE + ' x ' + HOEHE + '. Erzeugt von werkzeug/haefen/land-bauen.mjs -- nicht von Hand aendern.\n' +
-    'window.CL_LAND = ' + JSON.stringify({ w: BREITE, h: HOEHE, rahmen: RAHMEN, land: d, grenzen: g }) + ';\n';
+    'window.CL_LAND = ' + JSON.stringify({ w: BREITE, h: HOEHE, rahmen: RAHMEN, proj: PROJ_PARAM, land: d, grenzen: g }) + ';\n';
   const ziel = new URL('../../containerload.io/karte/land.js', import.meta.url);
   fs.mkdirSync(new URL('.', ziel), { recursive: true });
   fs.writeFileSync(ziel, js);

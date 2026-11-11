@@ -57,6 +57,119 @@
   }
   // HK_ENDE
 
+  // HK_SEEWEG_START
+  // Stufe 2a: der kuerzeste Seeweg im Eurostat-Netz (window.CL_SEEWEG, wird erst bei der
+  // ersten Route nachgeladen) -- Entfernung in Seemeilen, eigene Dijkstra-Suche. Rein,
+  // ohne DOM; test/hafenkarte.test.mjs rechnet mit dem echten Netz nach.
+  var HK_SM = 3440.065;                        // Erdradius in Seemeilen
+  var HK_EIS = { northwest: 1, northeast: 1 }; // Eispassagen: keine Containerlinie faehrt dort
+  function hkHav(lo1, la1, lo2, la2) {
+    var r = Math.PI / 180, dp = (la2 - la1) * r, dl = (lo2 - lo1) * r;
+    var h = Math.sin(dp / 2) * Math.sin(dp / 2) + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dl / 2) * Math.sin(dl / 2);
+    return 2 * HK_SM * Math.asin(Math.min(1, Math.sqrt(h)));
+  }
+  // Natural Earth I wie d3 (geoNaturalEarth1Raw); Massstab und Verschiebung aus land.js
+  function hkProj(lon, lat, P) {
+    var la = lat * Math.PI / 180, lo = lon * Math.PI / 180, p2 = la * la, p4 = p2 * p2;
+    var x = lo * (0.8707 - 0.131979 * p2 + p4 * (-0.013791 + p4 * (0.003971 * p2 - 0.001529 * p4)));
+    var y = la * (1.007226 + p2 * (0.015085 + p4 * (-0.044475 + 0.028874 * p2 - 0.005916 * p4)));
+    return [P[1] + x * P[0], P[2] - y * P[0]];
+  }
+  function hkGraph(S) {
+    var n = S.n.length / 2, adj = [];
+    for (var i = 0; i < n; i++) adj.push([]);
+    for (var j = 0; j < S.e.length / 2; j++) {
+      var a = S.e[2 * j], b = S.e[2 * j + 1], pass = S.p[j] || "";
+      var d = hkHav(S.n[2 * a] / 100, S.n[2 * a + 1] / 100, S.n[2 * b] / 100, S.n[2 * b + 1] / 100);
+      adj[a].push(b, d, pass); adj[b].push(a, d, pass); // Tripel: Nachbar, Seemeilen, Passage
+    }
+    return { n: n, lo: function (i) { return S.n[2 * i] / 100; }, la: function (i) { return S.n[2 * i + 1] / 100; }, adj: adj };
+  }
+  function hkNaechste(G, lon, lat, k) {
+    var best = [];
+    for (var i = 0; i < G.n; i++) {
+      var d = hkHav(lon, lat, G.lo(i), G.la(i));
+      if (best.length < k || d < best[best.length - 1][1]) {
+        best.push([i, d]); best.sort(function (a, b) { return a[1] - b[1]; });
+        if (best.length > k) best.pop();
+      }
+    }
+    return best;
+  }
+  // von/nach = [Laenge, Breite]. Jeder Hafen haengt an seinen drei naechsten Netzknoten --
+  // so landet ein Hafen hinter einer Landzunge nicht auf der falschen Seite.
+  function hkSeeweg(G, von, nach, meiden) {
+    var m = meiden || {}, N = G.n, dist = new Float64Array(N), vor = new Int32Array(N), fertig = new Uint8Array(N), heap = [];
+    for (var z = 0; z < N; z++) { dist[z] = Infinity; vor[z] = -1; }
+    var rein = function (d, i) {
+      heap.push([d, i]);
+      for (var c = heap.length - 1; c > 0;) { var p = (c - 1) >> 1; if (heap[p][0] <= heap[c][0]) break; var t = heap[p]; heap[p] = heap[c]; heap[c] = t; c = p; }
+    };
+    var raus = function () {
+      var top = heap[0], l = heap.pop();
+      if (heap.length) {
+        heap[0] = l;
+        for (var c = 0; ;) {
+          var a = 2 * c + 1, b = a + 1, s = c;
+          if (a < heap.length && heap[a][0] < heap[s][0]) s = a;
+          if (b < heap.length && heap[b][0] < heap[s][0]) s = b;
+          if (s === c) break;
+          var t = heap[s]; heap[s] = heap[c]; heap[c] = t; c = s;
+        }
+      }
+      return top;
+    };
+    hkNaechste(G, von[0], von[1], 3).forEach(function (q) { if (q[1] < dist[q[0]]) { dist[q[0]] = q[1]; rein(q[1], q[0]); } });
+    var zielD = {};
+    hkNaechste(G, nach[0], nach[1], 3).forEach(function (q) { zielD[q[0]] = q[1]; });
+    var best = Infinity, bestK = -1;
+    while (heap.length) {
+      var oben = raus(), d = oben[0], i = oben[1];
+      if (fertig[i] || d > dist[i]) continue;
+      if (d >= best) break;
+      fertig[i] = 1;
+      if (zielD[i] !== undefined && d + zielD[i] < best) { best = d + zielD[i]; bestK = i; }
+      var adj = G.adj[i];
+      for (var j = 0; j < adj.length; j += 3) {
+        var ps = adj[j + 2];
+        if (ps && (m[ps] || HK_EIS[ps])) continue;
+        var nd = d + adj[j + 1];
+        if (nd < dist[adj[j]]) { dist[adj[j]] = nd; vor[adj[j]] = i; rein(nd, adj[j]); }
+      }
+    }
+    if (bestK < 0) return null;
+    var pfad = [], passagen = {};
+    for (var k = bestK; k >= 0; k = vor[k]) pfad.push(k);
+    pfad.reverse();
+    for (var q = 1; q < pfad.length; q++) {
+      var aa = G.adj[pfad[q - 1]];
+      for (var r = 0; r < aa.length; r += 3) if (aa[r] === pfad[q]) { if (aa[r + 2]) passagen[aa[r + 2]] = 1; break; }
+    }
+    var punkte = [von];
+    pfad.forEach(function (i) { punkte.push([G.lo(i), G.la(i)]); });
+    punkte.push(nach);
+    // Die beiden grossen Kaps tragen im Netz keine Marke -- erkannt an der Lage des Weges
+    punkte.forEach(function (pt) {
+      if (pt[1] < -33 && pt[0] > 12 && pt[0] < 30) passagen.kap = 1;
+      if (pt[1] < -55 && pt[0] > -72 && pt[0] < -62) passagen.horn = 1;
+    });
+    return { sm: best, punkte: punkte, passagen: Object.keys(passagen) };
+  }
+  // Abgangshaefen eines Landes: seine Top-50-Containerhaefen (nach Umschlag); hat es keinen,
+  // die vier groessten Seehaefen. Der Zielhafen selbst faellt heraus.
+  function hkStartHaefen(haefen, iso, ziel) {
+    var top = [], rest = [];
+    for (var i = 0; i < haefen.length; i++) {
+      var h = haefen[i];
+      if (h[2] !== iso || i === ziel) continue;
+      if (h[5] & 1) top.push(i); else if (h[6] >= 3) rest.push(i);
+    }
+    top.sort(function (a, b) { return haefen[b][13] - haefen[a][13]; });
+    rest.sort(function (a, b) { return (haefen[b][6] - haefen[a][6]) || (haefen[a][0] < haefen[b][0] ? -1 : 1); });
+    return top.length ? top.slice(0, 6) : rest.slice(0, 4);
+  }
+  // HK_SEEWEG_ENDE
+
   var SPR = wurzel.getAttribute("data-sprache") === "en" ? "en" : "de";
   var TX = {
     de: {
@@ -71,6 +184,12 @@
       osm: "In OpenStreetMap ansehen", planen: "Ladung im 3D-Rechner planen", kopieren: "Link zu diesem Hafen kopieren",
       kopiert: "Link kopiert", zu: "Schließen", plus: "Hineinzoomen", minus: "Herauszoomen", welt: "Ganze Welt",
       karte: "Weltkarte der Häfen. Ziehen verschiebt, Mausrad oder zwei Finger zoomen.", unbekannt: "keine Angabe", m: " m",
+      route: "Seeweg hierher", routeVon: "Ab Land", routeWaehlen: "Abgangsland wählen", routeLaedt: "Seewege werden berechnet …",
+      routeFehler: "Das Seeweg-Netz konnte nicht geladen werden.", routeKeine: "Kein Hafen in diesem Land, von dem ein Seeweg hierher führt.",
+      sm: function (v) { return Math.round(v).toLocaleString("de-DE") + " sm"; }, tage: function (v) { return "≈ " + Math.round(v) + " Tage"; },
+      ueber: function (l) { return "über " + l; }, ohneSuez: function (n) { return n + ": ohne Suez und Rotes Meer"; },
+      pass: { suez: "Suezkanal", panama: "Panamakanal", kiel: "Nord-Ostsee-Kanal", corinth: "Kanal von Korinth", magellan: "Magellanstraße", bering: "Beringstraße", kap: "Kap der Guten Hoffnung", horn: "Kap Hoorn" },
+      routeHinweis: "Kürzester Seeweg und reine Fahrzeit bei 16 Knoten — ohne Hafenaufenthalte, Umschlag und Fahrplan. Echte Abfahrten und Laufzeiten der Reedereien folgen.",
       loc: "de-DE"
     },
     en: {
@@ -85,6 +204,12 @@
       osm: "View in OpenStreetMap", planen: "Plan the load in the 3D calculator", kopieren: "Copy link to this port",
       kopiert: "Link copied", zu: "Close", plus: "Zoom in", minus: "Zoom out", welt: "Whole world",
       karte: "World map of ports. Drag to pan, mouse wheel or two fingers to zoom.", unbekannt: "not stated", m: " m",
+      route: "Sea route to here", routeVon: "From country", routeWaehlen: "Choose a country of departure", routeLaedt: "Calculating sea routes …",
+      routeFehler: "The sea route network could not be loaded.", routeKeine: "No port in this country with a sea route to here.",
+      sm: function (v) { return Math.round(v).toLocaleString("en-US") + " nm"; }, tage: function (v) { return "≈ " + Math.round(v) + " days"; },
+      ueber: function (l) { return "via " + l; }, ohneSuez: function (n) { return n + ": avoiding Suez and the Red Sea"; },
+      pass: { suez: "Suez Canal", panama: "Panama Canal", kiel: "Kiel Canal", corinth: "Corinth Canal", magellan: "Strait of Magellan", bering: "Bering Strait", kap: "Cape of Good Hope", horn: "Cape Horn" },
+      routeHinweis: "Shortest sea route and pure sailing time at 16 knots — without port stays, transshipment or schedules. Real carrier departures and transit times will follow.",
       loc: "en-US"
     }
   }[SPR];
@@ -120,8 +245,9 @@
   var REDUZIERT = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ── Zustand ─────────────────────────────────────────────────────────
-  var f = { q: "", land: "", kue: "", alle: false };
+  var f = { q: "", land: "", kue: "", alle: false, von: "" };
   var sichtbar = [], gewaehlt = -1;
+  var NETZ = null, netzStatus = "", routen = [], routeWahl = 0, KNOTEN_KN = 16;
   var ansicht = { k: 1, tx: 0, ty: 0 }, cssB = 1, cssH = 1, dpr = 1;
   // Die Welt ohne Antarktis: 84 Grad Nord bis 58 Grad Sued, vom Generator mitgegeben
   var WELT = { x0: L.rahmen[0], y0: L.rahmen[1], x1: L.rahmen[2], y1: L.rahmen[3] };
@@ -226,6 +352,7 @@
     zeile(dl, TX.ausstattung, aus.length ? aus.join(", ") : TX.unbekannt);
     zeile(dl, TX.koord, koordText(h[10], h[11]));
     detail.appendChild(dl);
+    detail.appendChild(routeTeil(h));
     var links = document.createElement("div"); links.className = "hk-links";
     var osm = document.createElement("a");
     osm.href = "https://www.openstreetmap.org/?mlat=" + h[10] + "&mlon=" + h[11] + "#map=13/" + h[10] + "/" + h[11];
@@ -238,6 +365,100 @@
     });
     links.appendChild(osm); links.appendChild(plan); links.appendChild(kop);
     detail.appendChild(links);
+  }
+
+  // ── Seewege (Stufe 2a) ──────────────────────────────────────────────
+  var ROUTE_LAENDER = (function () {
+    var z = {};
+    for (var i = 0; i < H.length; i++) if ((H[i][5] & HK_BIT.top) || H[i][6] >= 3) z[H[i][2]] = 1;
+    return Object.keys(z).sort(function (a, b) { return landName(a).localeCompare(landName(b), TX.loc); });
+  })();
+  function netzLaden() {
+    if (NETZ || netzStatus) return;
+    if (window.CL_SEEWEG) { NETZ = hkGraph(window.CL_SEEWEG); return; }
+    netzStatus = "laedt";
+    var s = document.createElement("script");
+    s.src = "/karte/seeweg.js"; s.async = true;
+    s.onload = function () {
+      netzStatus = window.CL_SEEWEG ? "" : "fehler";
+      if (window.CL_SEEWEG) { NETZ = hkGraph(window.CL_SEEWEG); routenRechnen(); detailZeichnen(); routeZeigen(); }
+      else detailZeichnen();
+    };
+    s.onerror = function () { netzStatus = "fehler"; detailZeichnen(); };
+    document.head.appendChild(s);
+  }
+  function routenRechnen() {
+    routen = []; routeWahl = 0;
+    if (gewaehlt < 0 || !f.von || !NETZ) return;
+    var z = H[gewaehlt], ziel = [z[11], z[10]];
+    hkStartHaefen(H, f.von, gewaehlt).forEach(function (i) {
+      var r = hkSeeweg(NETZ, [H[i][11], H[i][10]], ziel);
+      if (r) routen.push({ i: i, r: r, kap: false });
+    });
+    routen.sort(function (a, b) { return a.r.sm - b.r.sm; });
+    // Fuehrt der kuerzeste Weg durchs Rote Meer, steht der Umweg direkt darunter -- welchen
+    // die Reedereien gerade fahren, sagt erst ein Fahrplan. Panama ist dabei ebenfalls
+    // gesperrt: die grossen Asien-Europa-Schiffe passen nicht hindurch, der echte Umweg
+    // geht ums Kap der Guten Hoffnung (rechnerisch waere Panama manchmal kuerzer).
+    var b0 = routen[0];
+    if (b0 && (b0.r.passagen.indexOf("suez") >= 0 || b0.r.passagen.indexOf("babelmandeb") >= 0)) {
+      var kap = hkSeeweg(NETZ, [H[b0.i][11], H[b0.i][10]], ziel, { suez: 1, babelmandeb: 1, panama: 1 });
+      if (kap) routen.splice(1, 0, { i: b0.i, r: kap, kap: true });
+    }
+    routen.forEach(function (rt) {
+      // In Bildpunkte; an der Datumsgrenze (Sprung > halbe Karte) beginnt ein neues Stueck
+      var stuecke = [], akt = [], alt = null;
+      rt.r.punkte.forEach(function (pt) {
+        var xy = hkProj(pt[0], pt[1], L.proj);
+        if (alt && Math.abs(xy[0] - alt[0]) > L.w / 2) { stuecke.push(akt); akt = []; }
+        akt.push(xy); alt = xy;
+      });
+      stuecke.push(akt);
+      rt.xy = stuecke;
+    });
+  }
+  function routeZeigen() {
+    var rt = routen[routeWahl];
+    if (!rt) { zeichnen(); return; }
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    rt.xy.forEach(function (st) { st.forEach(function (p) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }); });
+    fliegen(ansichtFuer(x0, y0, x1, y1, kMin * 20));
+  }
+  function routeTeil(h) {
+    var box = document.createElement("div"); box.className = "hk-route";
+    var t = document.createElement("h4"); t.textContent = TX.route; box.appendChild(t);
+    var lab = document.createElement("label"); lab.textContent = TX.routeVon;
+    var sel = document.createElement("select");
+    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = TX.routeWaehlen; sel.appendChild(o0);
+    ROUTE_LAENDER.forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = landName(c); sel.appendChild(o); });
+    sel.value = f.von;
+    sel.addEventListener("change", function () {
+      f.von = sel.value; urlSchreiben();
+      if (f.von && !NETZ) { netzLaden(); detailZeichnen(); return; }
+      routenRechnen(); detailZeichnen(); routeZeigen();
+    });
+    lab.appendChild(sel); box.appendChild(lab);
+    if (!f.von) return box;
+    var p = function (text, cls) { var e = document.createElement("p"); e.className = cls || "hk-rhinweis"; e.textContent = text; box.appendChild(e); };
+    if (netzStatus === "fehler") { p(TX.routeFehler); return box; }
+    if (!NETZ) { p(TX.routeLaedt); netzLaden(); return box; }
+    if (!routen.length) { p(TX.routeKeine); return box; }
+    var liste = document.createElement("div"); liste.className = "hk-rliste";
+    routen.forEach(function (rt, n) {
+      var b = document.createElement("button"); b.type = "button";
+      b.className = "hk-rzeile" + (n === routeWahl ? " an" : "") + (rt.kap ? " kap" : "");
+      var weg = rt.r.passagen.map(function (k) { return TX.pass[k]; }).filter(Boolean);
+      b.innerHTML = '<span class="hk-rn"></span><span class="hk-rw"><b></b> · <span></span></span><span class="hk-rp"></span>';
+      b.children[0].textContent = rt.kap ? TX.ohneSuez(H[rt.i][0]) : H[rt.i][0] + " → " + h[0];
+      b.children[1].children[0].textContent = TX.sm(rt.r.sm);
+      b.children[1].children[1].textContent = TX.tage(rt.r.sm / (KNOTEN_KN * 24));
+      b.children[2].textContent = weg.length ? TX.ueber(weg.join(", ")) : "";
+      b.addEventListener("click", function () { routeWahl = n; detailZeichnen(); routeZeigen(); });
+      liste.appendChild(b);
+    });
+    box.appendChild(liste);
+    p(TX.routeHinweis);
+    return box;
   }
 
   // ── Karte: Groesse, Ansicht, Zeichnen ───────────────────────────────
@@ -312,6 +533,16 @@
     ctx.strokeStyle = FARBE.grenze; ctx.lineWidth = 0.8 / k; ctx.stroke(grenzPfad);
     ctx.restore();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // Seewege: die uebrigen leise, der gewaehlte im Akzent; Abgangshaefen als Ring
+    if (routen.length) {
+      ctx.lineJoin = "round"; ctx.lineCap = "round";
+      for (var rr = routen.length - 1; rr >= 0; rr--) {
+        if (rr === routeWahl) continue;
+        routeStrich(routen[rr], FARBE.gross, 1.5, 0.55, k);
+      }
+      routeStrich(routen[routeWahl], FARBE.hafen, 2.6, 1, k);
+      ctx.globalAlpha = 1;
+    }
     // Punkte in drei Lagen: kleine Haefen, grosse/mittlere, oben die Top-50-Containerhaefen
     var zoom = k / kMin, rBasis = zoom < 3 ? 2 : zoom < 10 ? 2.6 : 3.2;
     var sx = function (h) { return h[3] * k + ansicht.tx; }, sy = function (h) { return h[4] * k + ansicht.ty; };
@@ -364,10 +595,25 @@
     }
   }
 
+  function routeStrich(rt, farbe, breite, alpha, k) {
+    if (!rt) return;
+    ctx.globalAlpha = alpha; ctx.strokeStyle = farbe; ctx.lineWidth = breite;
+    ctx.beginPath();
+    rt.xy.forEach(function (st) {
+      st.forEach(function (p, j) { var x = p[0] * k + ansicht.tx, y = p[1] * k + ansicht.ty; if (j) ctx.lineTo(x, y); else ctx.moveTo(x, y); });
+    });
+    ctx.stroke();
+    var s = H[rt.i], sx0 = s[3] * k + ansicht.tx, sy0 = s[4] * k + ansicht.ty;
+    ctx.beginPath(); ctx.arc(sx0, sy0, 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
   // ── Auswahl ─────────────────────────────────────────────────────────
   function waehlen(i, hinfliegen) {
     gewaehlt = i;
+    routenRechnen();
     detailZeichnen(); listeZeichnen(); urlSchreiben(); zeichnen();
+    if (i >= 0 && f.von && routen.length && hinfliegen !== "nah") { routeZeigen(); return; }
     if (i >= 0 && hinfliegen) {
       var h = H[i], k = Math.max(ansicht.k, kMin * 14);
       fliegen({ k: k, tx: cssB / 2 - h[3] * k, ty: cssH / 2 - h[4] * k });
@@ -466,6 +712,7 @@
       if (f.kue !== "") p.set("kueste", String(f.kue));
       if (f.alle) p.set("alle", "1");
       if (gewaehlt >= 0) p.set("hafen", H[gewaehlt][1] || String(gewaehlt));
+      if (f.von) p.set("von", f.von);
       var s = p.toString();
       history.replaceState(null, "", location.pathname + (s ? "?" + s : "") + location.hash);
     } catch (e) {}
@@ -477,6 +724,7 @@
     var land = (p.get("land") || "").toUpperCase();
     f.land = /^[A-Z]{2}$/.test(land) ? land : "";
     var kue = p.get("kueste"); f.kue = kue != null && /^\d{1,3}$/.test(kue) ? +kue : "";
+    var von = (p.get("von") || "").toUpperCase(); f.von = ROUTE_LAENDER.indexOf(von) >= 0 ? von : "";
     var hafen = (p.get("hafen") || "").toUpperCase().replace(/\s+/g, ""), idx = -1;
     if (hafen) for (var i = 0; i < H.length; i++) if (H[i][1] === hafen) { idx = i; break; }
     return idx;
@@ -494,6 +742,7 @@
   listeZeichnen();
   if (startHafen >= 0) {
     gewaehlt = startHafen; detailZeichnen();
+    if (f.von) netzLaden();
     var sh = H[startHafen], sk = kMin * 14;
     ansicht = { k: sk, tx: cssB / 2 - sh[3] * sk, ty: cssH / 2 - sh[4] * sk }; klemmen();
   } else if (f.q || f.land) {

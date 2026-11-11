@@ -13,3 +13,5 @@ ausserhalb von `containerload.io/`, werden also nie ausgeliefert.
   `haefen/quelle/top50-wsc.csv`) und schreibt die Top-50-Tabelle in beide Seiten.
   Im Ordner `haefen`: `npm install --no-save d3-geo@3 world-atlas@2 topojson-client@3
   topojson-simplify@3 && node land-bauen.mjs && node haefen-bauen.mjs`.
+- `haefen/seeweg-bauen.mjs` erzeugt `containerload.io/karte/seeweg.js` (Seeweg-Netz,
+  Eurostat SeaRoute, EUPL-1.2) -- braucht nur Node: `node seeweg-bauen.mjs`.
