@@ -35,6 +35,12 @@ const TOP = fs.readFileSync(path.join(wurzel, "..", "werkzeug", "haefen", "quell
 
 const kern = karte.slice(karte.indexOf("// HK_START"), karte.indexOf("// HK_ENDE"));
 const { hkFiltern, hkNorm, HK_BIT } = new Function(kern + "\nreturn { hkFiltern, hkNorm, HK_BIT };")();
+const seewegKern = karte.slice(karte.indexOf("// HK_SEEWEG_START"), karte.indexOf("// HK_SEEWEG_ENDE"));
+const { hkGraph, hkSeeweg, hkStartHaefen, hkProj } = new Function(seewegKern + "\nreturn { hkGraph, hkSeeweg, hkStartHaefen, hkProj };")();
+const NETZ = laden("karte/seeweg.js", "CL_SEEWEG");
+const G = hkGraph(NETZ);
+const hafen = (lc) => { const h = D.h.find((x) => x[1] === lc); assert.ok(h, lc + " fehlt"); return [h[11], h[10]]; };
+const weg = (a, b, m) => hkSeeweg(G, hafen(a), hafen(b), m);
 
 // ── Die Filter ──────────────────────────────────────────────────────
 // name, locode, iso2, x, y, bits, groesse, tiefe, laenge, kueste, lat, lon, alias, teu, standort
@@ -134,6 +140,52 @@ test("der Fall, um den es ging: die US-Westkueste", () => {
   assert.ok(EN.includes(`/en/guide/container-ports?land=US&amp;kueste=${wk}"`), "EN-Beispiellink");
 });
 
+// ── Seewege (Stufe 2a) ──────────────────────────────────────────────
+// Gegen bekannte Groessenordnungen: Seemeilen aus der Praxis, +-5 %. Wer das Netz, die
+// Haversine oder die Dijkstra-Suche umbaut, faellt hier auf.
+test("Seewege: Entfernungen und Passagen wie in der Praxis", () => {
+  const nahe = (r, soll, text) => assert.ok(r && Math.abs(r.sm - soll) / soll < 0.05, `${text}: ${r && Math.round(r.sm)} sm statt ~${soll}`);
+  const lax = weg("DEHAM", "USLAX");
+  nahe(lax, 8150, "Hamburg -> Los Angeles");
+  assert.ok(lax.passagen.includes("panama"), "Hamburg -> Los Angeles fuehrt durch den Panamakanal");
+  const sha = weg("NLRTM", "CNSGH");
+  nahe(sha, 10550, "Rotterdam -> Shanghai");
+  assert.ok(sha.passagen.includes("suez"), "Rotterdam -> Shanghai fuehrt durch den Suezkanal");
+  const kap = weg("NLRTM", "CNSGH", { suez: 1, babelmandeb: 1, panama: 1 });
+  nahe(kap, 13900, "Rotterdam -> Shanghai ohne Suez");
+  assert.ok(kap.passagen.includes("kap") && !kap.passagen.includes("suez"), "der Umweg geht ums Kap der Guten Hoffnung");
+  nahe(weg("DEHAM", "USNYC"), 3550, "Hamburg -> New York");
+  nahe(weg("CNSGH", "USLAX"), 5900, "Shanghai -> Los Angeles (ueber den Pazifik)");
+  assert.ok(weg("DEHAM", "PLGDN").passagen.includes("kiel"), "Hamburg -> Danzig durch den Nord-Ostsee-Kanal");
+});
+
+test("Seewege: Eispassagen nie, Datumsgrenze verbunden, Projektion wie die Karte", () => {
+  for (const [a, b] of [["CNSGH", "DEHAM"], ["JPTYO", "NLRTM"], ["KRPUS", "USNYC"]]) {
+    const r = weg(a, b);
+    assert.ok(r && !r.passagen.includes("northwest") && !r.passagen.includes("northeast"), `${a} -> ${b}: Eispassage`);
+  }
+  // Ueber die Datumsgrenze: das Netz hat Kanten ueber +-180 Grad, und Busan -> Vancouver
+  // darf nicht um die halbe Welt laufen (ueber den Nordpazifik ~4.600 sm)
+  let ueber = 0;
+  for (let j = 0; j < NETZ.e.length / 2; j++) if (Math.abs(NETZ.n[2 * NETZ.e[2 * j]] - NETZ.n[2 * NETZ.e[2 * j + 1]]) > 18000) ueber++;
+  assert.ok(ueber > 10, "keine Kanten ueber die Datumsgrenze");
+  const van = weg("KRPUS", "CAVAN");
+  assert.ok(van.sm > 4200 && van.sm < 5200, "Busan -> Vancouver: " + Math.round(van.sm));
+  assert.ok(van.punkte.some((p, i) => i > 0 && Math.abs(p[0] - van.punkte[i - 1][0]) > 180), "der Weg kreuzt die Datumsgrenze");
+  // Die Formel der Karte trifft die Hafen-Punkte des Generators (d3)
+  let max = 0;
+  for (const h of D.h) { const [x, y] = hkProj(h[11], h[10], LAND.proj); max = Math.max(max, Math.abs(x - h[3]), Math.abs(y - h[4])); }
+  assert.ok(max < 0.06, "Projektion weicht ab: " + max);
+});
+
+test("Abgangshaefen: die Containerhaefen des Landes, sonst die groessten", () => {
+  const z = D.h.findIndex((h) => h[1] === "USLAX");
+  assert.deepStrictEqual(hkStartHaefen(D.h, "DE", z).map((i) => D.h[i][0]), ["Hamburg", "Bremen/Bremerhaven"]);
+  const pl = hkStartHaefen(D.h, "PL", -1).map((i) => D.h[i]);
+  assert.ok(pl.length >= 1 && pl.length <= 4 && pl.every((h) => h[6] >= 3), "Polen: die groessten Seehaefen");
+  assert.ok(!hkStartHaefen(D.h, "US", z).includes(z), "der Zielhafen ist kein Abgangshafen");
+});
+
 // ── Seiten, Quellen, Datenschutz ────────────────────────────────────
 test("die Seiten nennen die echten Zahlen, und die Tabelle kommt aus denselben Daten", () => {
   for (const platzhalter of ["HK_ZAHL", "HK_STAND", "HK_GEW"]) {
@@ -160,6 +212,7 @@ test("Quellen und Lizenz stehen auf beiden Seiten", () => {
     assert.ok(s.includes('href="https://www.npmjs.com/package/seaport-data-js"'), "Aufbereitung nicht genannt");
     assert.ok(/creativecommons\.org\/licenses\/by\/4\.0/.test(s), "CC-BY-Lizenz nicht verlinkt");
     assert.ok(s.includes("Aashish Vivekanand"), "Urheber der Aufbereitung fehlt");
+    assert.ok(s.includes("Eurostat") && s.includes("EUPL"), "Quelle des Seeweg-Netzes fehlt");
     assert.ok(s.includes('href="https://www.worldshipping.org/top-50-container-ports"'), "WSC-Quelle nicht verlinkt");
   }
   // "Containerhafen" sagt die Karte nur bei der Top-50-Markierung
@@ -174,5 +227,8 @@ test("kein Kartendienst: die Karte laedt nur Dateien von containerload.io", () =
     assert.ok(!/tile|mapbox|leaflet|maps\.google|googleapis\.com\/maps/i.test(s), `${name}: Kartendienst eingebunden`);
   }
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|new Image\(/.test(karte), "die Karte laedt nichts nach");
+  // Nachgeladen wird genau EINE eigene Datei: das Seeweg-Netz, erst bei der ersten Route
+  const nach = [...karte.matchAll(/\.src = "([^"]+)"/g)].map((m) => m[1]);
+  assert.deepStrictEqual(nach, ["/karte/seeweg.js"], "fremde oder weitere nachgeladene Skripte");
   assert.match(karte, /osm\.target = "_blank"; osm\.rel = "noopener noreferrer"/, "OSM nur als Link auf Klick");
 });
