@@ -3,3 +3,5 @@
 
 # npm-Abhaengigkeiten der Einmal-Generatoren in werkzeug/ (npm install --no-save)
 werkzeug/**/node_modules/
+# ... die npm allerdings im Wurzelordner anlegt (dort liegt die package.json der Functions)
+/node_modules/

@@ -3,7 +3,9 @@
 // Gewuenscht (Jarek, 10.11.26): ein Kollege suchte einen Hafen an der Westkueste, den
 // Containerschiffe anlaufen; die Reedereien schlugen nur Ostkueste vor, und Google Maps
 // kennzeichnet Haefen nicht. Stufe 1: eine Weltkarte mit Suche und Filter nach Land und
-// Kueste. Stufe 2 (Routen ab einem Abgangsland vergleichen) folgt mit Fahrplandaten.
+// Kueste. Stufe 2: Seewege ab einem Abgangsland oder -hafen vergleichen (2a), mit Haefen in
+// der Naehe, Sperren fuer Rotes Meer und Panama und waehlbarem Tempo (2c). Fahrplaene der
+// Reedereien gibt es nicht (keine Zugaenge) -- die Seite verspricht sie deshalb auch nicht.
 //
 // Die Ehrlichkeitsfrage dieser Karte: Was ist ein "Containerhafen"? Der World Port Index
 // kann es nicht beantworten -- sein Containerfeld ist bei Hamburg, Rotterdam und Los
@@ -36,7 +38,10 @@ const TOP = fs.readFileSync(path.join(wurzel, "..", "werkzeug", "haefen", "quell
 const kern = karte.slice(karte.indexOf("// HK_START"), karte.indexOf("// HK_ENDE"));
 const { hkFiltern, hkNorm, HK_BIT } = new Function(kern + "\nreturn { hkFiltern, hkNorm, HK_BIT };")();
 const seewegKern = karte.slice(karte.indexOf("// HK_SEEWEG_START"), karte.indexOf("// HK_SEEWEG_ENDE"));
-const { hkGraph, hkSeeweg, hkStartHaefen, hkProj } = new Function(seewegKern + "\nreturn { hkGraph, hkSeeweg, hkStartHaefen, hkProj };")();
+const { hkGraph, hkSeeweg, hkStartHaefen, hkProj, hkWeg, hkLocode, hkTage, HK_TEMPI, HK_TEMPO } = new Function(seewegKern +
+  "\nreturn { hkGraph, hkSeeweg, hkStartHaefen, hkProj, hkWeg, hkLocode, hkTage, HK_TEMPI, HK_TEMPO };")();
+const { abstandKm, NAH_KUESTE_KM, NAH_KUESTE_MAX, NAH_EIGENE_TOP_MAX, NAH_BINNEN_MAX } =
+  await import(new URL("../../werkzeug/haefen/nah.mjs", import.meta.url));
 const NETZ = laden("karte/seeweg.js", "CL_SEEWEG");
 const G = hkGraph(NETZ);
 const hafen = (lc) => { const h = D.h.find((x) => x[1] === lc); assert.ok(h, lc + " fehlt"); return [h[11], h[10]]; };
@@ -178,12 +183,85 @@ test("Seewege: Eispassagen nie, Datumsgrenze verbunden, Projektion wie die Karte
   assert.ok(max < 0.06, "Projektion weicht ab: " + max);
 });
 
-test("Abgangshaefen: die Containerhaefen des Landes, sonst die groessten", () => {
+test("Abgangshaefen: die Containerhaefen des Landes, sonst die groessten -- dazu die in der Naehe", () => {
   const z = D.h.findIndex((h) => h[1] === "USLAX");
-  assert.deepStrictEqual(hkStartHaefen(D.h, "DE", z).map((i) => D.h[i][0]), ["Hamburg", "Bremen/Bremerhaven"]);
+  const namen = (iso, nah) => hkStartHaefen(D.h, iso, z, nah).map((i) => D.h[i][0]);
+  assert.deepStrictEqual(namen("DE"), ["Hamburg", "Bremen/Bremerhaven"], "ohne Tabelle: nur die eigenen");
+  // Jareks Fall: ab Deutschland auch Rotterdam und Antwerpen -- dort geht viel deutsche Ware hin
+  assert.deepStrictEqual(namen("DE", D.nah), ["Hamburg", "Bremen/Bremerhaven", "Rotterdam", "Antwerp"]);
+  // Ohne eigenen Seehafen: nur die Nachbarn, naechster zuerst
+  assert.deepStrictEqual(namen("CH", D.nah), ["Antwerp", "Rotterdam", "Bremen/Bremerhaven", "Hamburg"]);
   const pl = hkStartHaefen(D.h, "PL", -1).map((i) => D.h[i]);
   assert.ok(pl.length >= 1 && pl.length <= 4 && pl.every((h) => h[6] >= 3), "Polen: die groessten Seehaefen");
-  assert.ok(!hkStartHaefen(D.h, "US", z).includes(z), "der Zielhafen ist kein Abgangshafen");
+  // Ein Land nur mit kleinen Haefen ist trotzdem ein Abgangsland (Ecuador: Guayaquil)
+  assert.ok(namen("EC", D.nah).includes("Guayaquil"), "Ecuador: Guayaquil fehlt");
+  assert.ok(!hkStartHaefen(D.h, "US", z, D.nah).includes(z), "der Zielhafen ist kein Abgangshafen");
+  // China hat genug eigene Top-50-Haefen -- keine Nachbarn dazu
+  assert.ok(hkStartHaefen(D.h, "CN", z, D.nah).every((i) => D.h[i][2] === "CN"), "China: fremde Haefen dazu");
+});
+
+test("Haefen in der Naehe: die Tabelle haelt ihre Regeln", () => {
+  const top = {}, mitHafen = new Set(D.h.map((h) => h[2]));
+  for (const h of D.h) if (h[5] & HK_BIT.top) top[h[2]] = (top[h[2]] || 0) + 1;
+  assert.ok(Object.keys(D.nah).length > 40, "Tabelle fast leer");
+  for (const [iso, liste] of Object.entries(D.nah)) {
+    assert.match(iso, /^[A-Z]{2}$/);
+    const binnen = !mitHafen.has(iso);
+    assert.ok(liste.length >= 1 && liste.length <= (binnen ? NAH_BINNEN_MAX : NAH_KUESTE_MAX), iso + ": " + liste.length + " Haefen");
+    if (!binnen) assert.ok((top[iso] || 0) < NAH_EIGENE_TOP_MAX, iso + " hat eigene Top-50-Haefen genug");
+    assert.equal(new Set(liste).size, liste.length, iso + ": doppelt");
+    for (const lo of liste) {
+      // Der UN/LOCODE zeigt mit seinem ERSTEN Eintrag auf einen Top-50-Hafen eines ANDEREN Landes
+      const i = hkLocode(D.h, lo);
+      assert.ok(i >= 0 && (D.h[i][5] & HK_BIT.top), iso + ": " + lo + " ist kein Top-50-Hafen");
+      assert.notEqual(D.h[i][2], iso, iso + ": " + lo + " liegt im eigenen Land");
+    }
+  }
+  assert.deepStrictEqual(D.nah.DE, ["NLRTM", "BEANR"]);
+  assert.ok(!D.nah.CN && !D.nah.US, "China und die USA brauchen keine Nachbarn");
+  assert.ok(NAH_KUESTE_KM === 500, "die Seite nennt 500 km");
+});
+
+test("Haefen in der Naehe: der Abstand laeuft nicht einmal um die Erde", () => {
+  // Gefunden beim Bau: eine Kante kurz vor der Datumsgrenze (von Cai Mep aus gesehen) lief
+  // ungewickelt um den ganzen Globus und "streifte" den Hafen -- Venezuela lag 1 km neben Vietnam.
+  const ring = [[-73, 10], [-60, 10], [-60, 0], [-73, 0], [-73, 10]];
+  assert.ok(abstandKm(107.07, 10.35, [ring]) > 15000, "Kante ueber die Gegenseite der Erde");
+  // Und eine echte Kante ueber die Datumsgrenze bleibt kurz
+  assert.ok(abstandKm(179.5, 0, [[[179, 1], [-179, 1]]]) < 120, "Kante ueber +-180 Grad");
+});
+
+test("Sperren: Rotes Meer meiden geht ums Kap, Panama meiden um Suedamerika", () => {
+  const w = (a, b, r) => hkWeg(G, hafen(a), hafen(b), r);
+  const nahe = (r, soll, text) => assert.ok(r && Math.abs(r.sm - soll) / soll < 0.05, `${text}: ${r && Math.round(r.sm)} sm statt ~${soll}`);
+  const kap = w("NLRTM", "CNSGH", { rotesMeer: true });
+  nahe(kap, 13900, "Rotterdam -> Shanghai ohne Rotes Meer");
+  assert.ok(kap.passagen.includes("kap") && !kap.passagen.includes("suez") && !kap.passagen.includes("panama"), "der Umweg geht ums Kap, nicht durch Panama");
+  const ohnePanama = w("DEHAM", "USLAX", { panama: true });
+  assert.ok(!ohnePanama.passagen.includes("panama") && ohnePanama.sm > 12000, "Hamburg -> Los Angeles ohne Panama: " + Math.round(ohnePanama.sm));
+  // Wer ohnehin durch Panama faehrt, bleibt dabei: New York -> Shanghai
+  assert.ok(w("USNYC", "CNSGH", { rotesMeer: true }).passagen.includes("panama"), "New York -> Shanghai verliert Panama");
+  // Dschidda liegt am Roten Meer: mit der Sperre gibt es keinen Weg -- die Seite sagt das
+  assert.equal(w("DEHAM", "SAJED", { rotesMeer: true }), null);
+  assert.ok(karte.includes("TX.routeKeineRegel"), "Meldung fuer gesperrte Wege fehlt");
+});
+
+test("Tempo: 14 bis 20 Knoten, 16 als Vorgabe -- die Fahrzeit rechnet mit dem gewaehlten", () => {
+  assert.deepStrictEqual(HK_TEMPI, [14, 16, 18, 20]);
+  assert.equal(HK_TEMPO, 16);
+  assert.ok(Math.abs(hkTage(8053, 16) - 20.97) < 0.01, "Bremerhaven -> Long Beach bei 16 kn");
+  assert.ok(hkTage(8053, 20) < hkTage(8053, 14));
+  assert.match(karte, /TX\.tage\(hkTage\(rt\.r\.sm, f\.kn\)\)/, "die Zeilen rechnen mit dem gewaehlten Tempo");
+  assert.match(karte, /TX\.routeHinweis\(f\.kn\)/, "der Hinweis nennt das gewaehlte Tempo");
+  // Die Adresse nimmt nur erlaubte Werte an
+  assert.match(karte, /HK_TEMPI\.indexOf\(kn\) >= 0 \? kn : HK_TEMPO/);
+  assert.match(karte, /f\.ab = f\.von && abGueltig\(f\.von, ab\) \? ab : ""/);
+});
+
+test("ehrlich: keine Fahrplaene versprochen", () => {
+  for (const [name, s] of [["Karte", karte], ["DE", DE], ["EN", EN]]) {
+    assert.ok(!/Reedereien folgen|Laufzeiten der Reedereien folgen|will follow/.test(s), name + ": verspricht Reederei-Fahrplaene");
+  }
 });
 
 // ── Seiten, Quellen, Datenschutz ────────────────────────────────────
