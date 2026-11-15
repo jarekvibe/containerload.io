@@ -12,6 +12,8 @@
 //   merkmale: Bits (HK_BIT unten), groesse: 0 unbekannt .. 4 gross (das BECKEN laut
 //   Index, nicht der Umschlag), kueste: Index in CL_HAEFEN.kue ([englisch, deutsch]),
 //   teu_mio: Containerumschlag des Top-50-Jahres (0 = nicht in der Top 50).
+// CL_HAEFEN.nah: je Land die grossen Containerhaefen in der Naehe (UN/LOCODEs, naechster
+//   zuerst) -- erzeugt von werkzeug/haefen/nah.mjs aus Natural-Earth-Laenderflaechen.
 (function () {
   "use strict";
   var wurzel = document.querySelector("[data-hafenkarte]");
@@ -155,19 +157,60 @@
     });
     return { sm: best, punkte: punkte, passagen: Object.keys(passagen) };
   }
-  // Abgangshaefen eines Landes: seine Top-50-Containerhaefen (nach Umschlag); hat es keinen,
-  // die vier groessten Seehaefen. Der Zielhafen selbst faellt heraus.
-  function hkStartHaefen(haefen, iso, ziel) {
-    var top = [], rest = [];
-    for (var i = 0; i < haefen.length; i++) {
-      var h = haefen[i];
-      if (h[2] !== iso || i === ziel) continue;
-      if (h[5] & 1) top.push(i); else if (h[6] >= 3) rest.push(i);
-    }
-    top.sort(function (a, b) { return haefen[b][13] - haefen[a][13]; });
-    rest.sort(function (a, b) { return (haefen[b][6] - haefen[a][6]) || (haefen[a][0] < haefen[b][0] ? -1 : 1); });
-    return top.length ? top.slice(0, 6) : rest.slice(0, 4);
+  // Ein UN/LOCODE kann im Index mehrfach vorkommen (Cai Mep und Mui Vung Tau teilen VNVUT):
+  // gemeint ist der ERSTE Eintrag -- die Top 50 stehen vorn.
+  function hkLocode(haefen, lo) {
+    if (lo) for (var i = 0; i < haefen.length; i++) if (haefen[i][1] === lo) return i;
+    return -1;
   }
+  // Die Haefen eines Landes in Listen-Reihenfolge: Top 50 nach Umschlag, dann nach
+  // Beckengroesse, bei Gleichstand die mit Container-Anlagen zuerst, dann der Name.
+  function hkLandHaefen(haefen, iso) {
+    var aus = [];
+    for (var i = 0; i < haefen.length; i++) if (haefen[i][2] === iso) aus.push(i);
+    return aus.sort(function (a, b) {
+      var ha = haefen[a], hb = haefen[b];
+      return (hb[13] - ha[13]) || (hb[6] - ha[6]) || ((hb[5] & 2) - (ha[5] & 2)) || (ha[0] < hb[0] ? -1 : ha[0] > hb[0] ? 1 : 0);
+    });
+  }
+  // Abgangshaefen eines Landes: seine Top-50-Containerhaefen (hoechstens sechs); hat es
+  // keinen, die vier groessten Seehaefen (mittel und gross, sonst die groessten ueberhaupt).
+  // Dazu die Haefen in der Naehe aus CL_HAEFEN.nah -- fuer Deutschland Rotterdam und
+  // Antwerpen, fuer die Schweiz (ohne eigenen Seehafen) nur diese. Der Zielhafen faellt heraus.
+  function hkStartHaefen(haefen, iso, ziel, nah) {
+    var alle = hkLandHaefen(haefen, iso).filter(function (i) { return i !== ziel && ((haefen[i][5] & 1) || haefen[i][6] >= 1); });
+    var top = alle.filter(function (i) { return haefen[i][5] & 1; });
+    var gross = alle.filter(function (i) { return haefen[i][6] >= 3; });
+    var aus = top.length ? top.slice(0, 6) : (gross.length ? gross : alle).slice(0, 4);
+    ((nah && nah[iso]) || []).forEach(function (lo) {
+      var i = hkLocode(haefen, lo);
+      if (i >= 0 && i !== ziel && aus.indexOf(i) < 0) aus.push(i);
+    });
+    return aus;
+  }
+  // Regeln: rotesMeer meidet Suez und Bab al-Mandab, panama den Panamakanal. Wer das Rote
+  // Meer meidet, faehrt ums Kap der Guten Hoffnung -- nicht durch Panama: die grossen Asien-
+  // Europa-Schiffe passen dort nicht hindurch (rechnerisch waere Panama manchmal kuerzer).
+  // Fuehrt der Umweg durch Panama, waehrend der freie Weg durchs Rote Meer ginge, wird
+  // Panama deshalb mitgesperrt. null: mit diesen Sperren gibt es keinen Seeweg (Dschidda).
+  function hkWeg(G, von, nach, regeln) {
+    var rg = regeln || {}, m = {};
+    if (rg.panama) m.panama = 1;
+    if (!rg.rotesMeer) return hkSeeweg(G, von, nach, m);
+    m.suez = 1; m.babelmandeb = 1;
+    var r = hkSeeweg(G, von, nach, m);
+    if (r && !m.panama && r.passagen.indexOf("panama") >= 0) {
+      var frei = hkSeeweg(G, von, nach, {});
+      if (frei && (frei.passagen.indexOf("suez") >= 0 || frei.passagen.indexOf("babelmandeb") >= 0)) {
+        var kap = hkSeeweg(G, von, nach, { suez: 1, babelmandeb: 1, panama: 1 });
+        if (kap) r = kap;
+      }
+    }
+    return r;
+  }
+  // Reine Fahrzeit in Tagen; das Tempo waehlt der Nutzer (14 bis 20 Knoten)
+  var HK_TEMPI = [14, 16, 18, 20], HK_TEMPO = 16;
+  function hkTage(sm, kn) { return sm / ((kn || HK_TEMPO) * 24); }
   // HK_SEEWEG_ENDE
 
   var SPR = wurzel.getAttribute("data-sprache") === "en" ? "en" : "de";
@@ -189,7 +232,11 @@
       sm: function (v) { return Math.round(v).toLocaleString("de-DE") + " sm"; }, tage: function (v) { return "≈ " + Math.round(v) + " Tage"; },
       ueber: function (l) { return "über " + l; }, ohneSuez: function (n) { return n + ": ohne Suez und Rotes Meer"; },
       pass: { suez: "Suezkanal", panama: "Panamakanal", kiel: "Nord-Ostsee-Kanal", corinth: "Kanal von Korinth", magellan: "Magellanstraße", bering: "Beringstraße", kap: "Kap der Guten Hoffnung", horn: "Kap Hoorn" },
-      routeHinweis: "Kürzester Seeweg und reine Fahrzeit bei 16 Knoten — ohne Hafenaufenthalte, Umschlag und Fahrplan. Echte Abfahrten und Laufzeiten der Reedereien folgen.",
+      routeAb: "Ab Hafen", routeVergleich: "Wichtigste Häfen vergleichen", routeGrEigen: function (l) { return "Häfen in " + l; },
+      routeGrNah: "Große Containerhäfen in der Nähe", meidenRot: "Rotes Meer meiden", meidenPanama: "Panama meiden", tempo: "Tempo",
+      kn: function (v) { return v + " kn"; }, routeKeineRegel: "Mit den gewählten Sperren führt kein Seeweg hierher.",
+      routeHinweis: function (kn) { return "Kürzester Seeweg und reine Fahrzeit bei " + kn + " Knoten — ohne Hafenaufenthalte, Umschlag und Fahrplan."; },
+      routeNah: "In der Nähe: die großen Containerhäfen anderer Länder bis 500 km Luftlinie zur Landesgrenze (ohne eigenen Seehafen bis 1.000 km).",
       loc: "de-DE"
     },
     en: {
@@ -209,7 +256,11 @@
       sm: function (v) { return Math.round(v).toLocaleString("en-US") + " nm"; }, tage: function (v) { return "≈ " + Math.round(v) + " days"; },
       ueber: function (l) { return "via " + l; }, ohneSuez: function (n) { return n + ": avoiding Suez and the Red Sea"; },
       pass: { suez: "Suez Canal", panama: "Panama Canal", kiel: "Kiel Canal", corinth: "Corinth Canal", magellan: "Strait of Magellan", bering: "Bering Strait", kap: "Cape of Good Hope", horn: "Cape Horn" },
-      routeHinweis: "Shortest sea route and pure sailing time at 16 knots — without port stays, transshipment or schedules. Real carrier departures and transit times will follow.",
+      routeAb: "From port", routeVergleich: "Compare the main ports", routeGrEigen: function (l) { return "Ports in " + l; },
+      routeGrNah: "Large container ports nearby", meidenRot: "Avoid the Red Sea", meidenPanama: "Avoid Panama", tempo: "Speed",
+      kn: function (v) { return v + " kn"; }, routeKeineRegel: "With these restrictions there is no sea route to here.",
+      routeHinweis: function (kn) { return "Shortest sea route and pure sailing time at " + kn + " knots — without port stays, transshipment or schedules."; },
+      routeNah: "Nearby: the large container ports of other countries within 500 km of the border (countries without a seaport: within 1,000 km).",
       loc: "en-US"
     }
   }[SPR];
@@ -245,9 +296,12 @@
   var REDUZIERT = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   // ── Zustand ─────────────────────────────────────────────────────────
-  var f = { q: "", land: "", kue: "", alle: false, von: "" };
+  // von/ab: Abgangsland und (wahlweise) ein bestimmter Abgangshafen; ohneRot/ohnePan: die
+  // Sperren; kn: Tempo fuer die Fahrzeit
+  var f = { q: "", land: "", kue: "", alle: false, von: "", ab: "", ohneRot: false, ohnePan: false, kn: HK_TEMPO };
   var sichtbar = [], gewaehlt = -1;
-  var NETZ = null, netzStatus = "", routen = [], routeWahl = 0, KNOTEN_KN = 16;
+  var NAH = D.nah || {};
+  var NETZ = null, netzStatus = "", routen = [], routeWahl = 0;
   var ansicht = { k: 1, tx: 0, ty: 0 }, cssB = 1, cssH = 1, dpr = 1;
   // Die Welt ohne Antarktis: 84 Grad Nord bis 58 Grad Sued, vom Generator mitgegeben
   var WELT = { x0: L.rahmen[0], y0: L.rahmen[1], x1: L.rahmen[2], y1: L.rahmen[3] };
@@ -367,12 +421,27 @@
     detail.appendChild(links);
   }
 
-  // ── Seewege (Stufe 2a) ──────────────────────────────────────────────
+  // ── Seewege (Stufe 2a/2c) ───────────────────────────────────────────
+  // Abgangslaender: jedes Land mit eigenem Hafen, dazu die ohne Seehafen, fuer die es Haefen
+  // in der Naehe gibt (Schweiz, Oesterreich, Tschechien ...)
   var ROUTE_LAENDER = (function () {
     var z = {};
-    for (var i = 0; i < H.length; i++) if ((H[i][5] & HK_BIT.top) || H[i][6] >= 3) z[H[i][2]] = 1;
+    for (var i = 0; i < H.length; i++) if ((H[i][5] & HK_BIT.top) || H[i][6] >= 1) z[H[i][2]] = 1;
+    Object.keys(NAH).forEach(function (c) { z[c] = 1; });
     return Object.keys(z).sort(function (a, b) { return landName(a).localeCompare(landName(b), TX.loc); });
   })();
+  // Was "Ab Hafen" anbietet: die Haefen des Landes (bis 150, wichtigste zuerst) und die in der Naehe
+  function abHaefen(iso) {
+    var eigen = hkLandHaefen(H, iso).filter(function (i) { return (H[i][5] & HK_BIT.top) || H[i][6] >= 1; }).slice(0, 150);
+    var nah = (NAH[iso] || []).map(function (lo) { return hkLocode(H, lo); }).filter(function (i) { return i >= 0; });
+    return { eigen: eigen, nah: nah };
+  }
+  function abGueltig(iso, lo) {
+    var i = hkLocode(H, lo);
+    if (i < 0) return false;
+    var a = abHaefen(iso);
+    return a.eigen.indexOf(i) >= 0 || a.nah.indexOf(i) >= 0;
+  }
   function netzLaden() {
     if (NETZ || netzStatus) return;
     if (window.CL_SEEWEG) { NETZ = hkGraph(window.CL_SEEWEG); return; }
@@ -390,19 +459,19 @@
   function routenRechnen() {
     routen = []; routeWahl = 0;
     if (gewaehlt < 0 || !f.von || !NETZ) return;
-    var z = H[gewaehlt], ziel = [z[11], z[10]];
-    hkStartHaefen(H, f.von, gewaehlt).forEach(function (i) {
-      var r = hkSeeweg(NETZ, [H[i][11], H[i][10]], ziel);
+    var z = H[gewaehlt], ziel = [z[11], z[10]], regeln = { rotesMeer: f.ohneRot, panama: f.ohnePan };
+    var starts = f.ab ? [hkLocode(H, f.ab)].filter(function (i) { return i >= 0 && i !== gewaehlt; }) : hkStartHaefen(H, f.von, gewaehlt, NAH);
+    starts.forEach(function (i) {
+      var r = hkWeg(NETZ, [H[i][11], H[i][10]], ziel, regeln);
       if (r) routen.push({ i: i, r: r, kap: false });
     });
     routen.sort(function (a, b) { return a.r.sm - b.r.sm; });
-    // Fuehrt der kuerzeste Weg durchs Rote Meer, steht der Umweg direkt darunter -- welchen
-    // die Reedereien gerade fahren, sagt erst ein Fahrplan. Panama ist dabei ebenfalls
-    // gesperrt: die grossen Asien-Europa-Schiffe passen nicht hindurch, der echte Umweg
-    // geht ums Kap der Guten Hoffnung (rechnerisch waere Panama manchmal kuerzer).
+    // Fuehrt der kuerzeste Weg durchs Rote Meer (und ist das Meiden nicht ohnehin gewaehlt),
+    // steht der Umweg direkt darunter -- welchen die Reedereien gerade fahren, sagt erst ein
+    // Fahrplan. hkWeg rechnet ihn ums Kap, nicht durch Panama.
     var b0 = routen[0];
-    if (b0 && (b0.r.passagen.indexOf("suez") >= 0 || b0.r.passagen.indexOf("babelmandeb") >= 0)) {
-      var kap = hkSeeweg(NETZ, [H[b0.i][11], H[b0.i][10]], ziel, { suez: 1, babelmandeb: 1, panama: 1 });
+    if (b0 && !f.ohneRot && (b0.r.passagen.indexOf("suez") >= 0 || b0.r.passagen.indexOf("babelmandeb") >= 0)) {
+      var kap = hkWeg(NETZ, [H[b0.i][11], H[b0.i][10]], ziel, { rotesMeer: true, panama: f.ohnePan });
       if (kap) routen.splice(1, 0, { i: b0.i, r: kap, kap: true });
     }
     routen.forEach(function (rt) {
@@ -424,40 +493,80 @@
     rt.xy.forEach(function (st) { st.forEach(function (p) { if (p[0] < x0) x0 = p[0]; if (p[0] > x1) x1 = p[0]; if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }); });
     fliegen(ansichtFuer(x0, y0, x1, y1, kMin * 20));
   }
+  // Jede Aenderung an Land, Hafen, Sperren oder Tempo rechnet neu und zeichnet das Detail
+  // neu -- danach steht der Fokus wieder auf dem Feld, das man gerade bedient hat
+  function routeNeu(feld) {
+    urlSchreiben();
+    if (f.von && !NETZ) { netzLaden(); detailZeichnen(); }
+    else { routenRechnen(); detailZeichnen(); routeZeigen(); }
+    var el = detail.querySelector('[data-hk-r="' + feld + '"]');
+    if (el) try { el.focus({ preventScroll: true }); } catch (e) {}
+  }
+  function routeHafenName(i) { return H[i][0] + (H[i][2] !== f.von ? " (" + H[i][2] + ")" : ""); }
   function routeTeil(h) {
     var box = document.createElement("div"); box.className = "hk-route";
     var t = document.createElement("h4"); t.textContent = TX.route; box.appendChild(t);
-    var lab = document.createElement("label"); lab.textContent = TX.routeVon;
-    var sel = document.createElement("select");
-    var o0 = document.createElement("option"); o0.value = ""; o0.textContent = TX.routeWaehlen; sel.appendChild(o0);
-    ROUTE_LAENDER.forEach(function (c) { var o = document.createElement("option"); o.value = c; o.textContent = landName(c); sel.appendChild(o); });
+    var feld = function (text, el) { var lab = document.createElement("label"); lab.textContent = text; lab.appendChild(el); return lab; };
+    var option = function (eltern, wert, text) { var o = document.createElement("option"); o.value = wert; o.textContent = text; eltern.appendChild(o); };
+    var felder = document.createElement("div"); felder.className = "hk-rfelder";
+    var sel = document.createElement("select"); sel.setAttribute("data-hk-r", "land");
+    option(sel, "", TX.routeWaehlen);
+    ROUTE_LAENDER.forEach(function (c) { option(sel, c, landName(c)); });
     sel.value = f.von;
-    sel.addEventListener("change", function () {
-      f.von = sel.value; urlSchreiben();
-      if (f.von && !NETZ) { netzLaden(); detailZeichnen(); return; }
-      routenRechnen(); detailZeichnen(); routeZeigen();
-    });
-    lab.appendChild(sel); box.appendChild(lab);
+    sel.addEventListener("change", function () { f.von = sel.value; f.ab = ""; routeNeu("land"); });
+    felder.appendChild(feld(TX.routeVon, sel));
+    box.appendChild(felder);
     if (!f.von) return box;
+    // Ab Hafen: Vergleich der wichtigsten Haefen oder genau einer
+    var ab = document.createElement("select"); ab.setAttribute("data-hk-r", "ab");
+    option(ab, "", TX.routeVergleich);
+    var a = abHaefen(f.von);
+    [[a.eigen, TX.routeGrEigen(landName(f.von))], [a.nah, TX.routeGrNah]].forEach(function (gr) {
+      var liste = gr[0].filter(function (i) { return i !== gewaehlt && H[i][1]; });
+      if (!liste.length) return;
+      var og = document.createElement("optgroup"); og.label = gr[1];
+      liste.forEach(function (i) { option(og, H[i][1], routeHafenName(i)); });
+      ab.appendChild(og);
+    });
+    ab.value = f.ab;
+    ab.addEventListener("change", function () { f.ab = ab.value; routeNeu("ab"); });
+    felder.appendChild(feld(TX.routeAb, ab));
+    // Sperren und Tempo
+    var regeln = document.createElement("div"); regeln.className = "hk-rregeln";
+    var haken = function (key, text, wert) {
+      var lab = document.createElement("label"); lab.className = "hk-rcheck";
+      var c = document.createElement("input"); c.type = "checkbox"; c.checked = wert; c.setAttribute("data-hk-r", key);
+      c.addEventListener("change", function () { if (key === "rot") f.ohneRot = c.checked; else f.ohnePan = c.checked; routeNeu(key); });
+      lab.appendChild(c); lab.appendChild(document.createTextNode(text)); regeln.appendChild(lab);
+    };
+    haken("rot", TX.meidenRot, f.ohneRot);
+    haken("pan", TX.meidenPanama, f.ohnePan);
+    var kn = document.createElement("select"); kn.setAttribute("data-hk-r", "kn");
+    HK_TEMPI.forEach(function (v) { option(kn, String(v), TX.kn(v)); });
+    kn.value = String(f.kn);
+    kn.addEventListener("change", function () { f.kn = +kn.value; routeNeu("kn"); });
+    var tl = document.createElement("label"); tl.className = "hk-rtempo"; tl.textContent = TX.tempo; tl.appendChild(kn);
+    regeln.appendChild(tl);
+    box.appendChild(regeln);
     var p = function (text, cls) { var e = document.createElement("p"); e.className = cls || "hk-rhinweis"; e.textContent = text; box.appendChild(e); };
     if (netzStatus === "fehler") { p(TX.routeFehler); return box; }
     if (!NETZ) { p(TX.routeLaedt); netzLaden(); return box; }
-    if (!routen.length) { p(TX.routeKeine); return box; }
+    if (!routen.length) { p(f.ohneRot || f.ohnePan ? TX.routeKeineRegel : TX.routeKeine); return box; }
     var liste = document.createElement("div"); liste.className = "hk-rliste";
     routen.forEach(function (rt, n) {
       var b = document.createElement("button"); b.type = "button";
       b.className = "hk-rzeile" + (n === routeWahl ? " an" : "") + (rt.kap ? " kap" : "");
       var weg = rt.r.passagen.map(function (k) { return TX.pass[k]; }).filter(Boolean);
       b.innerHTML = '<span class="hk-rn"></span><span class="hk-rw"><b></b> · <span></span></span><span class="hk-rp"></span>';
-      b.children[0].textContent = rt.kap ? TX.ohneSuez(H[rt.i][0]) : H[rt.i][0] + " → " + h[0];
+      b.children[0].textContent = rt.kap ? TX.ohneSuez(routeHafenName(rt.i)) : routeHafenName(rt.i) + " → " + h[0];
       b.children[1].children[0].textContent = TX.sm(rt.r.sm);
-      b.children[1].children[1].textContent = TX.tage(rt.r.sm / (KNOTEN_KN * 24));
+      b.children[1].children[1].textContent = TX.tage(hkTage(rt.r.sm, f.kn));
       b.children[2].textContent = weg.length ? TX.ueber(weg.join(", ")) : "";
       b.addEventListener("click", function () { routeWahl = n; detailZeichnen(); routeZeigen(); });
       liste.appendChild(b);
     });
     box.appendChild(liste);
-    p(TX.routeHinweis);
+    p(TX.routeHinweis(f.kn) + (routen.some(function (rt) { return H[rt.i][2] !== f.von; }) ? " " + TX.routeNah : ""));
     return box;
   }
 
@@ -703,7 +812,7 @@
   feldLand.addEventListener("change", function () { f.land = feldLand.value; f.kue = ""; aktualisieren(true); });
   feldAlle.addEventListener("change", function () { f.alle = feldAlle.checked; laenderFuellen(); aktualisieren(false); });
 
-  // ── Adresse: ?q= ?land= ?gew= ?alle=1 ?hafen= (teilbar, wie der Rechner) ──
+  // ── Adresse: ?q= ?land= ?kueste= ?alle=1 ?hafen= ?von= ?ab= ?meiden= ?kn= (teilbar, wie der Rechner) ──
   function urlSchreiben() {
     try {
       var p = new URLSearchParams();
@@ -713,6 +822,10 @@
       if (f.alle) p.set("alle", "1");
       if (gewaehlt >= 0) p.set("hafen", H[gewaehlt][1] || String(gewaehlt));
       if (f.von) p.set("von", f.von);
+      if (f.von && f.ab) p.set("ab", f.ab);
+      var meiden = [f.ohneRot ? "rotesmeer" : "", f.ohnePan ? "panama" : ""].filter(Boolean).join(",");
+      if (f.von && meiden) p.set("meiden", meiden);
+      if (f.von && f.kn !== HK_TEMPO) p.set("kn", String(f.kn));
       var s = p.toString();
       history.replaceState(null, "", location.pathname + (s ? "?" + s : "") + location.hash);
     } catch (e) {}
@@ -725,6 +838,10 @@
     f.land = /^[A-Z]{2}$/.test(land) ? land : "";
     var kue = p.get("kueste"); f.kue = kue != null && /^\d{1,3}$/.test(kue) ? +kue : "";
     var von = (p.get("von") || "").toUpperCase(); f.von = ROUTE_LAENDER.indexOf(von) >= 0 ? von : "";
+    var ab = (p.get("ab") || "").toUpperCase().replace(/\s+/g, ""); f.ab = f.von && abGueltig(f.von, ab) ? ab : "";
+    var meiden = (p.get("meiden") || "").toLowerCase().split(",");
+    f.ohneRot = meiden.indexOf("rotesmeer") >= 0; f.ohnePan = meiden.indexOf("panama") >= 0;
+    var kn = +(p.get("kn") || HK_TEMPO); f.kn = HK_TEMPI.indexOf(kn) >= 0 ? kn : HK_TEMPO;
     var hafen = (p.get("hafen") || "").toUpperCase().replace(/\s+/g, ""), idx = -1;
     if (hafen) for (var i = 0; i < H.length; i++) if (H[i][1] === hafen) { idx = i; break; }
     return idx;

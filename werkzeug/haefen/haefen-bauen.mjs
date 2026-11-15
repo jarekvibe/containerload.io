@@ -26,10 +26,16 @@ import fs from 'node:fs';
 import zlib from 'node:zlib';
 import { PROJ, RAHMEN } from './land-bauen.mjs';
 import { paketLaden, tarDatei } from './npm-paket.mjs';
+import { nahTabelle } from './nah.mjs';
+import crypto from 'node:crypto';
 
 const PAKET = 'https://registry.npmjs.org/seaport-data-js/-/seaport-data-js-1.0.1.tgz';
 const PAKET_SHA512 = 'AAEueI9tJeAfaOZ/QLU7eyMveig8xYD9cUAr0EAogu1epB5BzeRd1FKPG3w5PCQssQ7Glrjk+LW9afZlhPiQ4A==';
 const TOP50 = new URL('quelle/top50-wsc.csv', import.meta.url);
+// Laenderflaechen fuer die Nachbarhaefen (nah.mjs): Natural Earth Admin 0, 1:50 Mio.,
+// gemeinfrei -- fest auf die Ausgabe 5.1.2 und ihre Pruefsumme. Gelesen wird nur JSON.
+const LAENDER = 'https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_50m_admin_0_countries.geojson';
+const LAENDER_SHA256 = '3e458fc036ad0a66411f2c1e6cac49c5d7bfb81cb1123bc513b22511a2b7fdeb';
 const ZIEL = new URL('../../containerload.io/karte/haefen.js', import.meta.url);
 
 // Rang (WSC) -> WPI-Nummer; name = Anzeige (WSC-Schreibweise, Tippfehler der Vorlage
@@ -162,6 +168,13 @@ const ja = (v) => v === true;
 const zahl = (v) => (typeof v === 'number' && v > 0 ? Math.round(v * 10) / 10 : 0);
 const GROESSE = { 'Very Small': 1, Small: 2, Medium: 3, Large: 4 };
 
+async function laenderLaden() {
+  const roh = Buffer.from(await (await fetch(LAENDER)).arrayBuffer());
+  const ist = crypto.createHash('sha256').update(roh).digest('hex');
+  if (ist !== LAENDER_SHA256) throw new Error('Pruefsumme stimmt nicht (' + LAENDER + '): ' + ist);
+  return JSON.parse(roh.toString('utf8'));
+}
+
 async function haupt() {
   const P = await wpiLaden();
   const zeilen = fs.readFileSync(TOP50, 'utf8').trim().split('\n').slice(1).map((z) => z.split(';'));
@@ -212,9 +225,10 @@ async function haupt() {
       Math.round(lat * 1e4) / 1e4, Math.round(lon * 1e4) / 1e4, alias, t ? t.teu : 0, t ? t.standort : '']);
   }
   h.sort((a, b) => (b[13] - a[13]) || (b[6] - a[6]) || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  const nah = nahTabelle(h, await laenderLaden());
   const out = {
     stand: '2025-04', quelle: 'World Port Index (NGA Pub. 150), Ausgabe April 2025, über seaport-data-js@1.0.1 (CC BY 4.0)',
-    topQuelle: 'World Shipping Council, Top 50 World Container Ports', topJahr: 2025, rahmen: RAHMEN, kue, h
+    topQuelle: 'World Shipping Council, Top 50 World Container Ports', topJahr: 2025, rahmen: RAHMEN, kue, h, nah
   };
   const js = '// Hafenkarte: Seehaefen aus dem World Port Index (NGA Pub. 150, April 2025; ueber seaport-data-js,\n' +
     '// CC BY 4.0) + die 50 groessten Containerhaefen (World Shipping Council, Umschlag 2025).\n' +
@@ -222,7 +236,7 @@ async function haupt() {
     'window.CL_HAEFEN = ' + JSON.stringify(out) + ';\n';
   fs.writeFileSync(ZIEL, js);
   seitenTabellen(h);
-  console.log('haefen.js', js.length, 'Zeichen ·', h.length, 'Haefen ·', h.filter((r) => r[5] & 1).length, 'Top-50 ·', kue.length, 'Kuesten/Gewaesser');
+  console.log('haefen.js', js.length, 'Zeichen ·', h.length, 'Haefen ·', h.filter((r) => r[5] & 1).length, 'Top-50 ·', kue.length, 'Kuesten/Gewaesser ·', Object.keys(nah).length, 'Laender mit Nachbarhaefen');
   if (fehltDe.size) console.log('Ohne deutschen Namen (' + fehltDe.size + '):', [...fehltDe].join(' | '));
 }
 

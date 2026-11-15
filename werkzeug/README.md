@@ -13,5 +13,12 @@ ausserhalb von `containerload.io/`, werden also nie ausgeliefert.
   `haefen/quelle/top50-wsc.csv`) und schreibt die Top-50-Tabelle in beide Seiten.
   Im Ordner `haefen`: `npm install --no-save d3-geo@3 world-atlas@2 topojson-client@3
   topojson-simplify@3 && node land-bauen.mjs && node haefen-bauen.mjs`.
+  (npm legt `node_modules/` dabei im Projektwurzelordner an, weil dort die
+  `package.json` der Functions liegt -- `/node_modules/` steht deshalb in `.gitignore`.)
+  `haefen-bauen.mjs` laedt dazu die Laenderflaechen von Natural Earth (Admin 0, 1:50 Mio.,
+  Ausgabe 5.1.2, sha256 geprueft, gelesen als JSON) und rechnet mit `haefen/nah.mjs` die
+  **Haefen in der Naehe** je Land (`CL_HAEFEN.nah`): Top-50-Haefen anderer Laender bis
+  500 km Luftlinie zur Landesflaeche (hoechstens drei, nur fuer Laender mit weniger als drei
+  eigenen Top-50-Haefen), fuer Laender ohne Seehafen die vier naechsten bis 1.000 km.
 - `haefen/seeweg-bauen.mjs` erzeugt `containerload.io/karte/seeweg.js` (Seeweg-Netz,
   Eurostat SeaRoute, EUPL-1.2) -- braucht nur Node: `node seeweg-bauen.mjs`.
