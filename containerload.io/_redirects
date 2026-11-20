@@ -15,6 +15,13 @@
 /datenschutz.html  /datenschutz   301!
 /admin.html        /admin         301!
 
+# Umbenannte Ratgeber-Seiten (vor den :slug-Rewrites unten, sonst fange die zuerst).
+# 20.11.26: die LKW-Seite heisst nach dem, wonach gesucht wird -- "Lademeter-Rechner".
+/ratgeber/ladungsberechnung-lkw-planensattel        /ratgeber/lademeter-rechner              301
+/ratgeber/ladungsberechnung-lkw-planensattel.html   /ratgeber/lademeter-rechner              301
+/en/guide/truck-trailer-load-calculation            /en/guide/loading-metre-calculator       301
+/en/guide/truck-trailer-load-calculation.html       /en/guide/loading-metre-calculator       301
+
 # Saubere Pfade intern auf die Dateien mappen (200 = Rewrite, URL bleibt)
 /app           /app.html           200
 /share         /share.html         200

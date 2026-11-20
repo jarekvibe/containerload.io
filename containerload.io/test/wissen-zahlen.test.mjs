@@ -102,7 +102,7 @@ test("die Beispielladung hinter dem Knopf passt zur genannten Zahl", () => {
   // Rechner die Zahl im Text im selben Moment widerlegen, in dem jemand draufklickt.
   const erwartet = { "euro-pallets-20ft-container.html": 11, "euro-pallets-40ft-container.html": 25,
     "industrial-pallets-container.html": 22, "wire-mesh-pallets-container.html": 11,
-    "truck-trailer-load-calculation.html": 34, "ibc-totes-container.html": 9,
+    "loading-metre-calculator.html": 34, "ibc-totes-container.html": 9,
     "drums-container.html": 27, "big-bags-container.html": 12,
     "pallets-20ft-container.html": 9, "pallets-40ft-container.html": 20 };
   for (const [datei, menge] of Object.entries(erwartet)) {

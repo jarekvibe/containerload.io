@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lademeter-Rechner: ldm für LKW &amp; Planensattel berechnen</title>
+<meta name="description" content="Lademeter berechnen: Formel L × B ÷ 2,4, Europalette 0,4 ldm, Planensattel 13,6 ldm für 34 Paletten – mit Stapeln, Satz Ihrer Spedition und 3D-Check." />
+<link rel="canonical" href="https://containerload.io/ratgeber/lademeter-rechner" />
+<!-- Zwei Fassungen derselben Frage. x-default zeigt auf die deutsche: Deutsch ist die
+     Ausgangssprache, so wie auf der Startseite und im Rechner auch. Bis 20.11.26 hiessen
+     die Seiten /ratgeber/ladungsberechnung-lkw-planensattel und
+     /en/guide/truck-trailer-load-calculation (301 in _redirects). -->
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lademeter-rechner" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/loading-metre-calculator" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lademeter-rechner" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="article" />
+<meta property="og:locale" content="de_DE" />
+<meta property="og:title" content="Lademeter-Rechner: ldm für LKW &amp; Planensattel berechnen" />
+<meta property="og:description" content="Lademeter berechnen: Formel L × B ÷ 2,4, Europalette 0,4 ldm, Planensattel 13,6 ldm für 34 Paletten – mit Stapeln, Satz Ihrer Spedition und 3D-Check." />
+<meta property="og:url" content="https://containerload.io/ratgeber/lademeter-rechner" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Lademeter-Rechner: ldm für LKW &amp; Planensattel berechnen" />
+<meta name="twitter:description" content="Lademeter berechnen: Formel L × B ÷ 2,4, Europalette 0,4 ldm, Planensattel 13,6 ldm für 34 Paletten – mit Stapeln, Satz Ihrer Spedition und 3D-Check." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Was ist ein Lademeter?","acceptedAnswer":{"@type":"Answer","text":"Ein Lademeter (ldm) ist ein Meter Ladefläche über die volle Breite von 2,40 m. Berechnet wird Länge × Breite ÷ 2,4 in Metern: eine Europalette belegt 0,4 ldm, eine Industriepalette 0,5 ldm."}},{"@type":"Question","name":"Wie viele Lademeter hat ein LKW?","acceptedAnswer":{"@type":"Answer","text":"Ein Planensattel hat rund 13,6 ldm, eine Wechselbrücke rund 7,5 und ein Motorwagen rund 7,2."}},{"@type":"Question","name":"Wie viele Europaletten passen auf einen LKW?","acceptedAnswer":{"@type":"Answer","text":"In einen Planensattel passen 34 Europaletten in einer Lage, gestapelt entsprechend mehr, solange Höhe und Zuladung es erlauben."}},{"@type":"Question","name":"Wie rechnet man Lademeter in Gewicht um?","acceptedAnswer":{"@type":"Answer","text":"Mit dem Satz der Spedition: frachtpflichtig ist das höhere von echtem Gewicht und Lademeter × Satz. Einen allgemeingültigen Satz gibt es nicht, jede Spedition legt ihn in ihren Tarifbedingungen fest."}}]}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <div class="lang" role="group" aria-label="Sprache"><a class="on" href="/ratgeber/lademeter-rechner" hreflang="de" title="Deutsch">DE</a><a href="/en/guide/loading-metre-calculator" hreflang="en" title="English">EN</a></div><a class="btn btn-primary" href="/app?q=34%20Europaletten%20120x80x100%20nicht%20stapelbar%20250kg&d=road">3D-Rechner öffnen</a>
+  </div>
+</header>
+<main>
+  <article class="wrap">
+    <div class="eyebrow">Container-Wissen · LKW &amp; Lademeter</div>
+    <h1>Lademeter-Rechner: Lademeter (ldm) berechnen</h1>
+    <div class="answer"><p class="lead" style="margin:0">Ein <b>Lademeter (ldm)</b> ist ein Meter Ladefläche über die volle Breite von 2,40&nbsp;m. Gerechnet wird <b>Länge × Breite ÷ 2,4</b> (in Metern): eine <b>Europalette</b> belegt <b>0,4&nbsp;ldm</b>, eine <b>Industriepalette 0,5&nbsp;ldm</b>. Ein <b>Planensattel</b> hat rund <b>13,6&nbsp;ldm</b> – Platz für <b>34 Europaletten</b> in einer Lage.</p></div>
+
+    <div class="cbm-calc" data-ldm-widget>
+      <div id="ldmRows"></div>
+      <div class="field ldm-satz"><label for="ldmSatz">kg je Lademeter · Satz Ihrer Spedition, optional</label><input type="number" id="ldmSatz" inputmode="decimal" min="0" step="any" placeholder="z. B. 1750" /></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="ldmAdd" class="cbm-add">+</button>
+        <a id="ldmZur3d" class="cbm-open" hidden href="/app"></a>
+      </div>
+      <div class="cbm-calc-result" id="ldmResult"></div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Gestapelte Ware belegt keine zusätzliche Bodenfläche – tragen Sie dafür die Lagen ein. Das frachtpflichtige Gewicht erscheint, sobald Sie den Satz Ihrer Spedition eintragen: einen allgemeingültigen gibt es nicht.</p>
+    <script>
+    (function(){
+    // LDM_CALC_START
+    // Lademeter = belegte Bodenflaeche / 2,4 m Ladebreite. Gestapelte Ware belegt keine
+    // zusaetzliche Bodenflaeche: n Stueck in L Lagen brauchen aufgerundet n/L Stellplaetze.
+    function ldmBerechnen(l, w, qty, lagen) {
+      var L = Number(l), W = Number(w), Q = Number(qty), N = Math.floor(Number(lagen) || 1);
+      if (!(L > 0) || !(W > 0) || !(Q > 0)) return null;
+      if (N < 1) N = 1;
+      var stueck = (L / 100) * (W / 100) / 2.4, stellen = Math.ceil(Q / N);
+      return { stueck: stueck, stellen: stellen, gesamt: stueck * stellen, menge: Q, lagen: N };
+    }
+    function ldmSumme(zeilen, satz) {
+      var ldm = 0, stk = 0, kg = 0, alleKg = true, alleH = true, gueltig = 0, S = Number(satz);
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = ldmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].qty, zeilen[i].lagen);
+        if (!r) continue;
+        gueltig++;
+        ldm += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+        if (!(Number(zeilen[i].h) > 0)) alleH = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig = das hoehere von echtem Gewicht und Lademeter x Satz. Den Satz legt
+      // jede Spedition in ihren Tarifbedingungen fest -- einen allgemeinen gibt es nicht. Ohne
+      // Satz gibt es deshalb keine Zahl, und ohne Gewicht in JEDER Zeile auch nicht: ein halb
+      // gewogenes Maximum waere eine falsche Zahl mit amtlichem Klang.
+      return { ldm: ldm, stk: stk, kg: kg, frachtKg: alleKg && S > 0 ? Math.max(ldm * S, kg) : null, alleH: alleH, zeilen: gueltig };
+    }
+    // LDM_CALC_END
+    var ldmCfg = {
+      t: function () { return { l: 'Länge (cm)', w: 'Breite (cm)', h: 'Höhe (cm) · für 3D', q: 'Stück', n: 'Lagen', g: 'kg/Stück · optional', weg: 'Position entfernen', plus: '+ Position', stk: 'Packstücke', anteil: 'eines Planensattels', wm: 'frachtpflichtig', ohneSatz: 'frachtpflichtig: Satz Ihrer Spedition eintragen', leer: 'Länge und Breite eingeben. Die Lademeter erscheinen sofort.', zur3d: 'Im 3D-Rechner ansehen →', ohneH: 'Für die 3D-Ansicht noch die Höhen eintragen.' }; },
+      loc: function () { return 'de-DE'; },
+      flach: ' nicht stapelbar',
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q) + '&d=road'; }
+    };
+    // LDM_UI_START
+    var rows = document.getElementById('ldmRows'), out = document.getElementById('ldmResult'),
+        add = document.getElementById('ldmAdd'), zur3d = document.getElementById('ldmZur3d'),
+        satzFeld = document.getElementById('ldmSatz'), nId = 0;
+    function feld(id, key, opts) {
+      var t = ldmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'ldm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid ldm-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '100' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'N', 'n', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '250' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + ldmCfg.t().weg + '">×</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, lagen: v.n, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = ldmCfg.t(), loc = ldmCfg.loc();
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = ldmSumme(daten, satzFeld ? satzFeld.value : '');
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f2 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f2(s.ldm) + ' ldm</b>', f0(s.ldm / 13.6 * 100) + ' % ' + t.anteil, s.stk + ' ' + t.stk];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      else if (s.kg > 0 && !(Number(satzFeld && satzFeld.value) > 0)) teile.push('<span style="color:var(--faint)">' + t.ohneSatz + '</span>');
+      out.innerHTML = teile.join(' · ');
+      // Der Sprung in den echten Rechner (Landfracht, Planensattel): dieselben Zeilen als
+      // ?q=-Import. Die Hoehe braucht nur die 3D-Ansicht -- ohne sie rechnet das Widget
+      // trotzdem, aber der Sprung waere eine erfundene Zahl, also gibt es ihn dann nicht.
+      if (!s.alleH) {
+        out.innerHTML += ' · <span style="color:var(--faint)">' + t.ohneH + '</span>';
+        zur3d.hidden = true;
+        return;
+      }
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = ldmBerechnen(z.l, z.w, z.qty, z.lagen);
+        if (!r) return;
+        // Eine Lage heisst: obenauf darf nichts -- ldmCfg.flach sagt das dem Rechner, sonst stapelt er, was hier flach liegt
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : '') + (r.lagen === 1 ? ldmCfg.flach : ''));
+      });
+      zur3d.href = ldmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    add.textContent = ldmCfg.t().plus;
+    if (satzFeld) satzFeld.addEventListener('input', zeichnen);
+    zeileNeu();
+    zeichnen();
+    // LDM_UI_END
+    })();
+    </script>
+
+    <h2>So rechnet man Lademeter</h2>
+    <p>Lademeter messen <b>Ladefläche</b>, nicht Volumen: wie viel Länge die Ware auf einer 2,40&nbsp;m breiten Ladefläche belegt. Deshalb kommt die Höhe in der Formel nicht vor.</p>
+    <div class="formula">Lademeter = Länge (m) × Breite (m) ÷ 2,4</div>
+    <ul>
+      <li><b>Europalette</b> 1,20 × 0,80&nbsp;m: 0,96&nbsp;m² ÷ 2,4 = <b>0,4&nbsp;ldm</b>. 20 Stück belegen <b>8,0&nbsp;ldm</b>.</li>
+      <li><b>Industriepalette</b> 1,20 × 1,00&nbsp;m: 1,2&nbsp;m² ÷ 2,4 = <b>0,5&nbsp;ldm</b>.</li>
+      <li><b>Kiste</b> 3,00 × 1,50&nbsp;m: 4,5&nbsp;m² ÷ 2,4 = <b>1,875&nbsp;ldm</b>.</li>
+    </ul>
+    <p>Der 3D-Rechner zeigt dazu die <b>belegte Ladelänge</b>: von der Stirnwand bis zur hintersten Palette. Sie ist so groß wie die Formel, wenn die Ware lückenlos steht – und größer, wenn Lücken bleiben (zwei Industriepaletten nebeneinander lassen 48&nbsp;cm frei) oder der Rechner Paletten für die Achslast nach hinten verteilt. Was davon abgerechnet wird, steht in den Tarifbedingungen Ihrer Spedition.</p>
+
+    <h2>Wie viele Paletten passen auf einen LKW?</h2>
+    <p>Teilt man die 13,6&nbsp;ldm des Planensattels durch die Lademeter je Palette, erhält man eine Zahl. Ob sie stimmt, hängt davon ab, ob sich die Paletten lückenlos über die Breite legen lassen:</p>
+    <div class="tabelle"><table><thead><tr><th>Palette</th><th>ldm je Stück</th><th>Nach Formel</th><th>Im Planensattel</th></tr></thead><tbody>
+    <tr><td>Europalette 120 × 80</td><td class="num">0,40</td><td class="num">34,0</td><td class="num">34</td></tr>
+    <tr><td>Industriepalette 120 × 100</td><td class="num">0,50</td><td class="num">27,2</td><td class="num">26</td></tr>
+    <tr><td>Gitterbox 124 × 83</td><td class="num">0,43</td><td class="num">31,7</td><td class="num">32</td></tr>
+    <tr><td>US-Palette 122 × 102</td><td class="num">0,52</td><td class="num">26,2</td><td class="num">26</td></tr>
+    </tbody></table></div>
+    <p>Bei <b>Europaletten</b> geht die Formel auf: drei quer sind genau 2,40&nbsp;m. Bei <b>Industriepaletten</b> nicht – zwei nebeneinander sind 2,00&nbsp;m, der Rest der Breite bleibt leer, deshalb <b>26 statt 27</b>. <b>Gitterboxen</b> kommen umgekehrt auf eine mehr als die Formel, weil der Rechner mit einem innen 2,48&nbsp;m breiten Auflieger rechnet und die Boxen gemischt dreht. Die rechte Spalte rechnet der 3D-Rechner, der die Paletten wirklich stellt; die Formel ist die Abrechnungsgröße.</p>
+
+    <h2>Gestapelt: weniger Lademeter</h2>
+    <p>Was übereinander steht, belegt keine zusätzliche Fläche. <b>26 Europaletten in zwei Lagen</b> brauchen 13 Stellplätze und damit <b>5,2 statt 10,4&nbsp;ldm</b>. Im Rechner oben tragen Sie dafür die Zahl der Lagen ein. Ob Ihre Spedition gestapelte Ware nach Lademetern abrechnet oder einen Zuschlag für nicht stapelbare Ware nimmt, steht in ihren Tarifbedingungen.</p>
+
+    <h2>Lademeter und Gewicht: das frachtpflichtige Gewicht</h2>
+    <p>Bei Teil- und Sammelladungen rechnen viele Speditionen nach dem <b>höheren</b> von zwei Werten: dem echten Gewicht und Lademeter × einem festen Satz in kg. <b>Einen allgemeingültigen Satz gibt es nicht</b> – jede Spedition legt ihn in ihren Tarifbedingungen fest. Tragen Sie ihn oben ein, dann rechnet der Rechner das frachtpflichtige Gewicht aus.</p>
+    <p>Beispiel mit einem <b>angenommenen</b> Satz von 1.750&nbsp;kg je ldm: 10 Europaletten à 300&nbsp;kg belegen 4,0&nbsp;ldm. 4,0 × 1.750 = <b>7.000&nbsp;kg</b> – mehr als die echten 3.000&nbsp;kg, also werden 7.000&nbsp;kg berechnet. Wiegen dieselben Paletten je 900&nbsp;kg, gilt das echte Gewicht von 9.000&nbsp;kg.</p>
+
+    <h2>Lademeter der gängigen Fahrzeuge</h2>
+    <div class="tabelle"><table><thead><tr><th>Fahrzeug</th><th>Ladefläche innen</th><th>Europaletten (1 Lage)</th></tr></thead><tbody>
+    <tr><td>Planensattel</td><td class="num">13,62 × 2,48 m</td><td class="num">34</td></tr>
+    <tr><td>Wechselbrücke</td><td class="num">7,45 × 2,48 m</td><td class="num">18</td></tr>
+    <tr><td>Motorwagen</td><td class="num">7,20 × 2,48 m</td><td class="num">18</td></tr>
+    <tr><td>7,5-Tonner</td><td class="num">6,10 × 2,20 m</td><td class="num">12</td></tr>
+    <tr><td>Transporter (Sprinter)</td><td class="num">4,30 × 1,80 m</td><td class="num">6</td></tr>
+    </tbody></table></div>
+    <p>Bei voller Breite entspricht die Ladelänge den Lademetern: 13,6&nbsp;ldm im Planensattel, rund 7,5 in der Wechselbrücke. Schmalere Fahrzeuge wie der 7,5-Tonner bieten je Meter weniger Fläche. Die Maße sind die typischen Innenmaße, mit denen der Rechner arbeitet – reale Fahrzeuge weichen ab.</p>
+
+    <h2>Lademeter, Stellplätze, Kubikmeter – was wofür?</h2>
+    <ul>
+      <li><b>Lademeter</b> messen Fläche auf dem LKW – die übliche Größe für Teilladungen im Straßenverkehr.</li>
+      <li><b>Stellplätze</b> zählen, wie viele Paletten auf den Boden passen – siehe <a href="/ratgeber/stellplaetze-container">Stellplätze im Container</a>.</li>
+      <li><b>Kubikmeter</b> messen Volumen – die Größe der Seefracht (LCL), siehe <a href="/ratgeber/cbm-berechnen">CBM berechnen</a>.</li>
+    </ul>
+
+    <h2>Häufige Fragen</h2>
+    <p><b>Was ist ein Lademeter?</b><br>Ein Meter Ladefläche über die volle Breite von 2,40&nbsp;m. Berechnet wird Länge × Breite ÷ 2,4 in Metern.</p>
+    <p><b>Wie viele Lademeter hat ein LKW?</b><br>Ein Planensattel hat rund 13,6&nbsp;ldm, eine Wechselbrücke rund 7,5 und ein Motorwagen rund 7,2.</p>
+    <p><b>Wie viele Europaletten passen auf einen LKW?</b><br>In einen Planensattel 34 in einer Lage, gestapelt entsprechend mehr, solange Höhe und Zuladung es erlauben.</p>
+    <p><b>Wie rechnet man Lademeter in Gewicht um?</b><br>Mit dem Satz Ihrer Spedition: frachtpflichtig ist das höhere von echtem Gewicht und Lademeter × Satz. Einen gesetzlichen oder allgemeinen Satz gibt es nicht.</p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="/app?q=34%20Europaletten%20120x80x100%20nicht%20stapelbar%20250kg&d=road">➜ 34 Europaletten im 3D-Rechner ansehen</a>
+      <a class="btn btn-ghost" href="/ratgeber/container-gewicht-strasse">Gewichtsgrenzen auf der Straße</a>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Der Knopf öffnet den Rechner im Landfracht-Modus mit 34 Europaletten in einer Lage auf dem Planensattel — dort frei anpassbar, mit Ladelänge und Achslast-Richtwert.</p>
+
+    <h2>Verwandte Fragen</h2>
+    <div class="related"><a href="/ratgeber/stellplaetze-container">Stellplätze je Container</a><a href="/ratgeber/industriepaletten-container">Industriepaletten</a><a href="/ratgeber/gitterboxen-container">Gitterboxen</a><a href="/ratgeber/container-gewicht-strasse">Gewicht auf der Straße</a><a href="/ratgeber/cbm-berechnen">CBM berechnen</a><a href="/ratgeber/stauplan-container">Stauplan erstellen</a></div>
+
+    <div class="note"><b style="color:var(--dim)">Ohne Gewähr:</b> Lademeter und Palettenzahlen sind geometrische Richtwerte. Maßgeblich sind das reale Fahrzeug, die zulässige Achslast, die Gewichtsverteilung und die Ladungssicherung – und für die Abrechnung die Tarifbedingungen Ihrer Spedition.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen</span>
+    <span><a href="/">Rechner</a> · <a href="/ratgeber/">Container-Wissen</a> · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a></span>
+  </div>
+</footer>
+</body>
+</html>

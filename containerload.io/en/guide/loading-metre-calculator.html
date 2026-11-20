@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loading metre calculator: work out LDM for trucks &amp; trailers</title>
+<meta name="description" content="Calculate loading metres: L × W ÷ 2.4, euro pallet 0.4 ldm, curtainsider 13.6 ldm for 34 pallets – with stacking, your forwarder’s rate and a 3D check." />
+<link rel="canonical" href="https://containerload.io/en/guide/loading-metre-calculator" />
+<!-- Zwei Fassungen derselben Frage. x-default zeigt auf die deutsche: Deutsch ist die
+     Ausgangssprache, so wie auf der Startseite und im Rechner auch. Bis 20.11.26 hiessen
+     die Seiten /ratgeber/ladungsberechnung-lkw-planensattel und
+     /en/guide/truck-trailer-load-calculation (301 in _redirects). -->
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lademeter-rechner" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/loading-metre-calculator" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lademeter-rechner" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="article" />
+<meta property="og:locale" content="en_GB" />
+<meta property="og:title" content="Loading metre calculator: work out LDM for trucks &amp; trailers" />
+<meta property="og:description" content="Calculate loading metres: L × W ÷ 2.4, euro pallet 0.4 ldm, curtainsider 13.6 ldm for 34 pallets – with stacking, your forwarder’s rate and a 3D check." />
+<meta property="og:url" content="https://containerload.io/en/guide/loading-metre-calculator" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Loading metre calculator: work out LDM for trucks &amp; trailers" />
+<meta name="twitter:description" content="Calculate loading metres: L × W ÷ 2.4, euro pallet 0.4 ldm, curtainsider 13.6 ldm for 34 pallets – with stacking, your forwarder’s rate and a 3D check." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"What is a loading metre?","acceptedAnswer":{"@type":"Answer","text":"A loading metre (ldm) is one metre of load floor across the full width of 2.40 m. The formula is length × width ÷ 2.4 in metres: a euro pallet takes 0.4 ldm, an industrial pallet 0.5 ldm."}},{"@type":"Question","name":"How many loading metres does a truck have?","acceptedAnswer":{"@type":"Answer","text":"A curtainsider has around 13.6 ldm, a swap body around 7.5 and a rigid truck around 7.2."}},{"@type":"Question","name":"How many euro pallets fit on a truck?","acceptedAnswer":{"@type":"Answer","text":"A curtainsider takes 34 euro pallets in a single tier, more when stacked, as long as height and payload allow."}},{"@type":"Question","name":"How do you convert loading metres into weight?","acceptedAnswer":{"@type":"Answer","text":"With the forwarder’s rate: the chargeable weight is the higher of the real weight and loading metres × rate. There is no universal rate, each forwarder sets it in their terms."}}]}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/en/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <div class="lang" role="group" aria-label="Language"><a href="/ratgeber/lademeter-rechner" hreflang="de" title="Deutsch">DE</a><a class="on" href="/en/guide/loading-metre-calculator" hreflang="en" title="English">EN</a></div><a class="btn btn-primary" href="/app?lang=en&q=34%20Euro%20pallets%20120x80x100%20not%20stackable%20250kg&d=road">Open 3D calculator</a>
+  </div>
+</header>
+<main>
+  <article class="wrap">
+    <div class="eyebrow">Container Guide · Trucks &amp; loading metres</div>
+    <h1>Loading metre calculator: work out loading metres (ldm)</h1>
+    <div class="answer"><p class="lead" style="margin:0">A <b>loading metre (ldm)</b> is one metre of load floor across the full width of 2.40&nbsp;m. The formula is <b>length × width ÷ 2.4</b> (in metres): a <b>euro pallet</b> takes <b>0.4&nbsp;ldm</b>, an <b>industrial pallet 0.5&nbsp;ldm</b>. A <b>curtainsider</b> has around <b>13.6&nbsp;ldm</b> – room for <b>34 euro pallets</b> in a single tier.</p></div>
+
+    <div class="cbm-calc" data-ldm-widget>
+      <div id="ldmRows"></div>
+      <div class="field ldm-satz"><label for="ldmSatz">kg per loading metre · your forwarder’s rate, optional</label><input type="number" id="ldmSatz" inputmode="decimal" min="0" step="any" placeholder="e.g. 1750" /></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="ldmAdd" class="cbm-add">+</button>
+        <a id="ldmZur3d" class="cbm-open" hidden href="/app?lang=en"></a>
+      </div>
+      <div class="cbm-calc-result" id="ldmResult"></div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Stacked goods take no extra floor space – enter the number of tiers for that. The chargeable weight appears once you enter your forwarder’s rate: there is no universal one.</p>
+    <script>
+    (function(){
+    // LDM_CALC_START
+    // Lademeter = belegte Bodenflaeche / 2,4 m Ladebreite. Gestapelte Ware belegt keine
+    // zusaetzliche Bodenflaeche: n Stueck in L Lagen brauchen aufgerundet n/L Stellplaetze.
+    function ldmBerechnen(l, w, qty, lagen) {
+      var L = Number(l), W = Number(w), Q = Number(qty), N = Math.floor(Number(lagen) || 1);
+      if (!(L > 0) || !(W > 0) || !(Q > 0)) return null;
+      if (N < 1) N = 1;
+      var stueck = (L / 100) * (W / 100) / 2.4, stellen = Math.ceil(Q / N);
+      return { stueck: stueck, stellen: stellen, gesamt: stueck * stellen, menge: Q, lagen: N };
+    }
+    function ldmSumme(zeilen, satz) {
+      var ldm = 0, stk = 0, kg = 0, alleKg = true, alleH = true, gueltig = 0, S = Number(satz);
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = ldmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].qty, zeilen[i].lagen);
+        if (!r) continue;
+        gueltig++;
+        ldm += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+        if (!(Number(zeilen[i].h) > 0)) alleH = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig = das hoehere von echtem Gewicht und Lademeter x Satz. Den Satz legt
+      // jede Spedition in ihren Tarifbedingungen fest -- einen allgemeinen gibt es nicht. Ohne
+      // Satz gibt es deshalb keine Zahl, und ohne Gewicht in JEDER Zeile auch nicht: ein halb
+      // gewogenes Maximum waere eine falsche Zahl mit amtlichem Klang.
+      return { ldm: ldm, stk: stk, kg: kg, frachtKg: alleKg && S > 0 ? Math.max(ldm * S, kg) : null, alleH: alleH, zeilen: gueltig };
+    }
+    // LDM_CALC_END
+    var ldmCfg = {
+      t: function () { return { l: 'Length (cm)', w: 'Width (cm)', h: 'Height (cm) · for 3D', q: 'Pieces', n: 'Tiers', g: 'kg/piece · optional', weg: 'Remove item', plus: '+ item', stk: 'packages', anteil: 'of one curtainsider', wm: 'chargeable', ohneSatz: 'chargeable: enter your forwarder’s rate', leer: 'Enter length and width. Loading metres show up right away.', zur3d: 'See it in the 3D calculator →', ohneH: 'Add the heights for the 3D view.' }; },
+      loc: function () { return 'en-GB'; },
+      flach: ' not stackable',
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q) + '&d=road&lang=en'; }
+    };
+    // LDM_UI_START
+    var rows = document.getElementById('ldmRows'), out = document.getElementById('ldmResult'),
+        add = document.getElementById('ldmAdd'), zur3d = document.getElementById('ldmZur3d'),
+        satzFeld = document.getElementById('ldmSatz'), nId = 0;
+    function feld(id, key, opts) {
+      var t = ldmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'ldm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid ldm-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '100' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'N', 'n', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '250' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + ldmCfg.t().weg + '">×</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, lagen: v.n, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = ldmCfg.t(), loc = ldmCfg.loc();
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = ldmSumme(daten, satzFeld ? satzFeld.value : '');
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f2 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f2(s.ldm) + ' ldm</b>', f0(s.ldm / 13.6 * 100) + ' % ' + t.anteil, s.stk + ' ' + t.stk];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      else if (s.kg > 0 && !(Number(satzFeld && satzFeld.value) > 0)) teile.push('<span style="color:var(--faint)">' + t.ohneSatz + '</span>');
+      out.innerHTML = teile.join(' · ');
+      // Der Sprung in den echten Rechner (Landfracht, Planensattel): dieselben Zeilen als
+      // ?q=-Import. Die Hoehe braucht nur die 3D-Ansicht -- ohne sie rechnet das Widget
+      // trotzdem, aber der Sprung waere eine erfundene Zahl, also gibt es ihn dann nicht.
+      if (!s.alleH) {
+        out.innerHTML += ' · <span style="color:var(--faint)">' + t.ohneH + '</span>';
+        zur3d.hidden = true;
+        return;
+      }
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = ldmBerechnen(z.l, z.w, z.qty, z.lagen);
+        if (!r) return;
+        // Eine Lage heisst: obenauf darf nichts -- ldmCfg.flach sagt das dem Rechner, sonst stapelt er, was hier flach liegt
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : '') + (r.lagen === 1 ? ldmCfg.flach : ''));
+      });
+      zur3d.href = ldmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    add.textContent = ldmCfg.t().plus;
+    if (satzFeld) satzFeld.addEventListener('input', zeichnen);
+    zeileNeu();
+    zeichnen();
+    // LDM_UI_END
+    })();
+    </script>
+
+    <h2>How loading metres are calculated</h2>
+    <p>Loading metres measure <b>floor area</b>, not volume: how much length the goods take up on a 2.40&nbsp;m wide load floor. That is why height does not appear in the formula.</p>
+    <div class="formula">Loading metres = length (m) × width (m) ÷ 2.4</div>
+    <ul>
+      <li><b>Euro pallet</b> 1.20 × 0.80&nbsp;m: 0.96&nbsp;m² ÷ 2.4 = <b>0.4&nbsp;ldm</b>. 20 of them take <b>8.0&nbsp;ldm</b>.</li>
+      <li><b>Industrial pallet</b> 1.20 × 1.00&nbsp;m: 1.2&nbsp;m² ÷ 2.4 = <b>0.5&nbsp;ldm</b>.</li>
+      <li><b>Crate</b> 3.00 × 1.50&nbsp;m: 4.5&nbsp;m² ÷ 2.4 = <b>1.875&nbsp;ldm</b>.</li>
+    </ul>
+    <p>The 3D calculator also shows the <b>occupied load length</b>: from the headboard to the rearmost pallet. It equals the formula when the goods stand without gaps – and is larger when gaps remain (two industrial pallets side by side leave 48&nbsp;cm free) or when the calculator spreads pallets towards the rear for the axle load. Which of the two is billed is set out in your forwarder’s terms.</p>
+
+    <h2>How many pallets fit on a truck?</h2>
+    <p>Dividing the curtainsider’s 13.6&nbsp;ldm by the loading metres per pallet gives you a number. Whether it holds depends on whether the pallets can be laid across the width without gaps:</p>
+    <div class="tabelle"><table><thead><tr><th>Pallet</th><th>ldm each</th><th>By formula</th><th>On a curtainsider</th></tr></thead><tbody>
+    <tr><td>Euro pallet 120 × 80</td><td class="num">0.40</td><td class="num">34.0</td><td class="num">34</td></tr>
+    <tr><td>Industrial pallet 120 × 100</td><td class="num">0.50</td><td class="num">27.2</td><td class="num">26</td></tr>
+    <tr><td>Wire mesh pallet 124 × 83</td><td class="num">0.43</td><td class="num">31.7</td><td class="num">32</td></tr>
+    <tr><td>US pallet 122 × 102</td><td class="num">0.52</td><td class="num">26.2</td><td class="num">26</td></tr>
+    </tbody></table></div>
+    <p>For <b>euro pallets</b> the formula works out: three across are exactly 2.40&nbsp;m. For <b>industrial pallets</b> it does not – two side by side are 2.00&nbsp;m and the rest of the width stays empty, hence <b>26 instead of 27</b>. <b>Wire mesh pallets</b> go the other way and fit one more than the formula, because the calculator works with a trailer 2.48&nbsp;m wide inside and turns the boxes in a mixed pattern. The right-hand column comes from the 3D calculator, which actually places the pallets; the formula is the billing figure.</p>
+
+    <h2>Stacked: fewer loading metres</h2>
+    <p>What stands on top of something takes no extra floor. <b>26 euro pallets in two tiers</b> need 13 floor positions and so <b>5.2 instead of 10.4&nbsp;ldm</b>. In the calculator above, enter the number of tiers for that. Whether your forwarder bills stacked goods by loading metres or charges extra for non-stackable goods is set out in their terms.</p>
+
+    <h2>Loading metres and weight: the chargeable weight</h2>
+    <p>For part and groupage loads, many forwarders charge the <b>higher</b> of two figures: the real weight and loading metres × a fixed rate in kg. <b>There is no universal rate</b> – each forwarder sets it in their terms. Enter it above and the calculator works out the chargeable weight.</p>
+    <p>Example with an <b>assumed</b> rate of 1,750&nbsp;kg per ldm: 10 euro pallets at 300&nbsp;kg take 4.0&nbsp;ldm. 4.0 × 1,750 = <b>7,000&nbsp;kg</b> – more than the real 3,000&nbsp;kg, so 7,000&nbsp;kg are charged. If the same pallets weigh 900&nbsp;kg each, the real 9,000&nbsp;kg count.</p>
+
+    <h2>Loading metres of common vehicles</h2>
+    <div class="tabelle"><table><thead><tr><th>Vehicle</th><th>Load floor inside</th><th>Euro pallets (1 tier)</th></tr></thead><tbody>
+    <tr><td>Curtainsider</td><td class="num">13.62 × 2.48 m</td><td class="num">34</td></tr>
+    <tr><td>Swap body</td><td class="num">7.45 × 2.48 m</td><td class="num">18</td></tr>
+    <tr><td>Rigid truck</td><td class="num">7.20 × 2.48 m</td><td class="num">18</td></tr>
+    <tr><td>7.5-t truck</td><td class="num">6.10 × 2.20 m</td><td class="num">12</td></tr>
+    <tr><td>Van (Sprinter)</td><td class="num">4.30 × 1.80 m</td><td class="num">6</td></tr>
+    </tbody></table></div>
+    <p>At full width the load length equals the loading metres: 13.6&nbsp;ldm on a curtainsider, around 7.5 on a swap body. Narrower vehicles such as the 7.5-t truck offer less floor per metre. The sizes are the typical internal dimensions the calculator works with – real vehicles differ.</p>
+
+    <h2>Loading metres, floor positions, cubic metres – which for what?</h2>
+    <ul>
+      <li><b>Loading metres</b> measure floor area on the truck – the usual unit for part loads by road.</li>
+      <li><b>Floor positions</b> count how many pallets fit on the floor – see <a href="/en/guide/container-floor-positions">floor positions in a container</a>.</li>
+      <li><b>Cubic metres</b> measure volume – the unit of sea freight (LCL), see <a href="/en/guide/how-to-calculate-cbm">how to calculate CBM</a>.</li>
+    </ul>
+
+    <h2>Frequent questions</h2>
+    <p><b>What is a loading metre?</b><br>One metre of load floor across the full width of 2.40&nbsp;m. The formula is length × width ÷ 2.4 in metres.</p>
+    <p><b>How many loading metres does a truck have?</b><br>A curtainsider has around 13.6&nbsp;ldm, a swap body around 7.5 and a rigid truck around 7.2.</p>
+    <p><b>How many euro pallets fit on a truck?</b><br>On a curtainsider 34 in a single tier, more when stacked, as long as height and payload allow.</p>
+    <p><b>How do you convert loading metres into weight?</b><br>With your forwarder’s rate: the chargeable weight is the higher of the real weight and loading metres × rate. There is no statutory or universal rate.</p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="/app?lang=en&q=34%20Euro%20pallets%20120x80x100%20not%20stackable%20250kg&d=road">➜ See 34 euro pallets in the 3D calculator</a>
+      <a class="btn btn-ghost" href="/en/guide/container-road-weight-limits">Weight limits on the road</a>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">The button opens the calculator in road-freight mode with 34 euro pallets in a single tier on the curtainsider — freely adjustable there, with load length and an axle-load estimate.</p>
+
+    <h2>Related questions</h2>
+    <div class="related"><a href="/en/guide/container-floor-positions">Floor positions per container</a><a href="/en/guide/industrial-pallets-container">Industrial pallets</a><a href="/en/guide/wire-mesh-pallets-container">Wire mesh pallets</a><a href="/en/guide/container-road-weight-limits">Weight on the road</a><a href="/en/guide/how-to-calculate-cbm">Calculate CBM</a><a href="/en/guide/container-stowage-plan">Stowage plan</a></div>
+
+    <div class="note"><b style="color:var(--dim)">No warranty:</b> Loading metres and pallet counts are geometric guide values. What counts is the real vehicle, the permitted axle load, weight distribution and load securing – and, for billing, your forwarder’s terms.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen, Germany</span>
+    <span><a href="/en/">Calculator</a> · <a href="/en/guide/">Container Guide</a> · <a href="/impressum">Imprint</a> · <a href="/datenschutz">Privacy</a></span>
+  </div>
+</footer>
+</body>
+</html>

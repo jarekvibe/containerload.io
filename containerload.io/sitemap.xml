@@ -232,19 +232,19 @@
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
-    <loc>https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel</loc>
-    <lastmod>2026-07-09</lastmod>
-    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/truck-trailer-load-calculation"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <loc>https://containerload.io/ratgeber/lademeter-rechner</loc>
+    <lastmod>2026-11-20</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lademeter-rechner"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/loading-metre-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lademeter-rechner"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
-    <loc>https://containerload.io/en/guide/truck-trailer-load-calculation</loc>
-    <lastmod>2026-08-21</lastmod>
-    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
-    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/truck-trailer-load-calculation"/>
-    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladungsberechnung-lkw-planensattel"/>
+    <loc>https://containerload.io/en/guide/loading-metre-calculator</loc>
+    <lastmod>2026-11-20</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lademeter-rechner"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/loading-metre-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lademeter-rechner"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
