@@ -10,6 +10,11 @@ ausserhalb von `containerload.io/`, werden also nie ausgeliefert.
 - `startseite-en.mjs` erzeugt `containerload.io/en/index.html` (englische Startseite) aus
   `containerload.io/index.html` und seinem EN-Woerterbuch -- nach JEDER Aenderung an
   index.html laufen lassen: `node werkzeug/startseite-en.mjs` (braucht nur Node).
+- `palettenrechner.mjs` erzeugt `containerload.io/ratgeber/palettenrechner.html` und
+  `containerload.io/en/guide/pallet-calculator.html` aus `containerload.io/app.html`
+  (Packer `makeFloorPacker`, `PRESETS`, `VEHICLES`) -- nach JEDER Aenderung an Packer,
+  Container- oder Fahrzeugmassen und fuer Textaenderungen an der Seite laufen lassen:
+  `node werkzeug/palettenrechner.mjs` (braucht nur Node).
 - `haefen/land-bauen.mjs` erzeugt `containerload.io/karte/land.js` (Kueste + Grenzen
   der Hafenkarte, Natural Earth 1:50 Mio.), `haefen/haefen-bauen.mjs` erzeugt
   `containerload.io/karte/haefen.js` (World Port Index + Top 50 aus

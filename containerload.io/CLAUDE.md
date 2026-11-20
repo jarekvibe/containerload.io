@@ -1098,6 +1098,18 @@ Die eine Regel über allem: **Wo eine Lesart unsicher ist, meldet der Parser ein
 
 Eine Falle für später: `parseFloat("120x80x95")` liefert 120 — in der positionalen Spaltenerkennung muss die Ketten-Prüfung deshalb VOR der Zahlen-Prüfung laufen, sonst sieht die Maße-Zelle wie eine gewöhnliche Zahl aus.
 
+### Der Palettenrechner — dieselbe Zahl wie der 3D-Rechner
+`/ratgeber/palettenrechner` und `/en/guide/pallet-calculator` (seit 20.11.26), für die größte Anfragefamilie in der Search Console („how many pallets fit in a 20ft/40ft container", „wie viele Europaletten passen …", oft mit „calculator"). Eine Eingabe — Palette (oder eigene Maße), Höhe, kg, stapelbar —, eine Tabelle über ALLE Laderäume: 20′/40′/40′ HC/45′ HC, Planensattel, Wechselbrücke, Motorwagen, 7,5-Tonner, Sprinter.
+
+**Beide Seiten erzeugt `werkzeug/palettenrechner.mjs` aus app.html** — nie von Hand ändern. Der Packer ist WÖRTLICH `makeFloorPacker` aus app.html (Marker `PACKER_START`), die Laderäume sind `PRESETS`/`VEHICLES`, und auch jede Zahl im Text und in den Tabellen rechnet der Generator mit diesem Packer. `test/palettenrechner.test.mjs` vergleicht beide Dateien Zeichen für Zeichen mit der Generator-Ausgabe; wer Packer oder Maße ändert, lässt den Generator laufen.
+
+Die Regeln:
+- **Paletten = Bodenlage × Lagen, begrenzt durch floor(Zuladung / kg).** Lagen = floor(Innenhöhe / Palettenhöhe), aber nur mit Häkchen „stapelbar" UND bekannter Höhe — ohne Höhe eine Lage, nichts erfunden. Beim Bau gegen `packCargo` geprüft (720 Fälle, 0 Abweichungen); der Test führt `palRechnen` der Seite aus und vergleicht 135 Fälle mit `packCargo`.
+- **Jede Zeile öffnet genau ihre Ladung in 3D** (`?q=Nx LxBxH kg [nicht stapelbar]` plus `&cont=` oder `&d=road&fz=`). Ohne Höhe kein Link (dieselbe Regel wie `alleH` beim Lademeter-Widget). Der Test liest den Link mit dem echten `parseCargoText`.
+- **`?fz=` (neu in app.html, `QFZ`):** welches Fahrzeug bei `d=road` — Whitelist `sattel/wb/mw/75t/sprinter`, ohne Angabe der Planensattel wie bisher. Der Lademeter-Rechner gibt keins an.
+- **Langsame Maße:** ungewöhnliche Kanten (43 × 40 cm) brauchen im großen Laderaum bis zu einer halben Sekunde. Darum Zeile für Zeile mit `setTimeout`, eine neue Eingabe bricht den alten Lauf ab, 250 ms Tipp-Pause, und unter 40 cm je Seite rechnet die Seite gar nicht (Kartons → 3D-Rechner).
+- **Ohne JavaScript** steht die Tabelle schon im HTML (Europalette, eine Lage) — das sieht auch die Suche.
+
 ### Der Lademeter-Rechner — auf der LKW-Wissensseite
 Dasselbe Muster wie beim CBM-Rechner, und aus demselben Grund: keine neue, konkurrierende Rechner-Seite im eigenen Suchindex, sondern die bestehende LKW-Seite trägt das Widget. Marker `LDM_CALC`/`LDM_UI`, wörtlich gleich auf beiden Sprachfassungen, seitenspezifisch nur `ldmCfg` — `test/ldm-widget.test.mjs` prüft die Gleichheit.
 
