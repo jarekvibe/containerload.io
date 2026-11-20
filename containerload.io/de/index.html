@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ContainerLoad</title>
+<!-- Der Rueckweg fuer /?lang=de. Netlify leitet /?lang=xx mit 301 auf /xx/ um (_redirects) und
+     haengt dabei die Adresse ?lang=de wieder an. Eine zweite Umleitung /de/ -> / bekaeme sie
+     ebenfalls mit und landete wieder auf /?lang=de -- eine Schleife. Deshalb ist /de/ eine
+     Datei, die OHNE Parameter auf / zurueckschickt und sich die Wahl merkt (wer ?lang=de
+     aufruft, will Deutsch, auch wenn er frueher Englisch gewaehlt hat). -->
+<link rel="canonical" href="https://containerload.io/" />
+<meta http-equiv="refresh" content="0;url=/" />
+<style>body{background:#0E1116;color:#9BA3AF;font:15px system-ui,sans-serif;margin:40px}a{color:#3B9EFF}</style>
+<script>try{localStorage.setItem('cl_lang','de');}catch(e){}try{location.replace('/'+location.hash);}catch(e){}</script>
+</head>
+<body><a href="/">ContainerLoad</a></body>
+</html>

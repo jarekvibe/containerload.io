@@ -955,6 +955,10 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   var erzwungen=urlLang(), gemerkt=null;
   try{var sv=localStorage.getItem('cl_lang'); if(sv==='en'||sv==='de') gemerkt=sv;}catch(e){}
   if(SEITE==='de'&&(erzwungen==='en'||(!erzwungen&&gemerkt==='en'))){ try{location.replace('/en/'+location.hash);}catch(e){} return; }
+  // Netlify haengt beim 301 von /?lang=en die Abfrage an: /en/?lang=en. Auf der englischen
+  // Seite ist sie ueberfluessig -- weg damit, damit kopierte Links sauber sind (canonical
+  // zeigt ohnehin auf /en/). Andere Parameter bleiben stehen.
+  if(SEITE==='en'&&erzwungen){ try{var rest=location.search.replace(/([?&])lang=[^&]*(&|$)/,'$1').replace(/[?&]$/,''); history.replaceState(null,'',location.pathname+rest+location.hash);}catch(e){} }
 
   // Kein automatisches Umschalten, sondern ein Angebot -- nur auf der deutschen Seite, nur
   // fuer Leute, deren Browser nicht auf Deutsch steht und die noch nie selbst gewaehlt haben.
