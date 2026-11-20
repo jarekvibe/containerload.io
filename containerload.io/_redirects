@@ -13,6 +13,10 @@
 /datenschutz   /datenschutz.html   200
 /admin         /admin.html         200
 
+# Partner-Rechner (Speditionen mit eigenem Logo): /p/<kunde> -> partner/index.html.
+# Der Kunde steht in partner/partners.json; die Seite liest den Slug aus dem Pfad.
+/p/*                 /partner/index.html     200
+
 # Ratgeber (SEO Long-Tail): saubere Pfade -> Dateien. 200 = Rewrite (Query-Strings bleiben erhalten).
 # Echte .html-Dateien werden weiterhin direkt ausgeliefert (Rewrites ohne ! haben niedrigere Prio).
 /ratgeber            /ratgeber/index.html    200

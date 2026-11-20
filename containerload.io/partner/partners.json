@@ -1,0 +1,13 @@
+{
+  "muster-spedition": {
+    "name": "Muster Spedition GmbH",
+    "color": "#e2001a",
+    "email": "anfrage@muster-spedition.example",
+    "phone": "+49 421 000000",
+    "logo": "",
+    "active": true,
+    "seit": "2026-10-11",
+    "notiz": "Beispiel-Eintrag zum Testen. Vor dem Livegang löschen oder active auf false setzen. thema: hell oder dunkel.",
+    "thema": "hell"
+  }
+}

@@ -1,0 +1,435 @@
+<!doctype html>
+<html lang="de" data-thema="hell">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Laderaum-Rechner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Der Partner-Rechner ist das Produkt der Spedition, nicht unseres: keine ContainerLoad-
+   Marke, die Firmenfarbe traegt, und der Rechner darunter laeuft im White-Label-Modus
+   (?wl=). Zwei Farbsaetze, dieselben Werte wie C_HELL / C_DUNKEL in app.html, damit
+   zwischen Kopfleiste und Rechner keine Naht entsteht. */
+:root{
+  --brand:#2E8FFF; --on-brand:#fff;
+  --bg:#EEF1F6; --panel:#FFFFFF; --field:#F6F8FB; --line:#E3E8F0; --line2:#C6D0DD;
+  --text:#1C2733; --dim:#46566A; --faint:#5B6B7E;
+  --shadow:0 30px 80px -30px rgba(16,24,40,.32); --scrim:rgba(16,24,40,.45);
+}
+:root[data-thema="dunkel"]{
+  --bg:#0E1116; --panel:#121821; --field:#1C2531; --line:#232C38; --line2:#2E3A49;
+  --text:#E9F0F7; --dim:#9DB0C2; --faint:#7E91A8;
+  --shadow:0 30px 80px -20px rgba(0,0,0,.85); --scrim:rgba(4,8,14,.74);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.45 Archivo,system-ui,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column;overflow:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit}
+[hidden]{display:none!important}
+.mono{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
+
+.top{height:3px;background:var(--brand);flex:none}
+.ribbon{background:var(--panel);border-bottom:1px solid var(--line);color:var(--dim);font-size:13px;padding:7px 20px;display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap;text-align:center}
+.ribbon a{color:var(--brand);font-weight:600;text-decoration:none}
+.ribbon a:hover{text-decoration:underline}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:0 20px;height:64px;background:var(--panel);border-bottom:1px solid var(--line);flex:none}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.brand img{height:40px;max-width:200px;object-fit:contain}
+.badge{flex:none;width:38px;height:38px;border-radius:10px;background:var(--brand);color:var(--on-brand);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;letter-spacing:.02em}
+.pname{font-weight:700;font-size:17px;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.psub{color:var(--faint);font-size:12.5px;margin-top:1px}
+.actions{display:flex;align-items:center;gap:18px;flex:none}
+.phone{display:inline-flex;align-items:center;gap:7px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:500;white-space:nowrap}
+.phone svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.phone:hover{color:var(--text)}
+.cta{background:var(--brand);color:var(--on-brand);border:0;border-radius:10px;padding:11px 18px;font:inherit;font-weight:700;font-size:14.5px;cursor:pointer;white-space:nowrap;transition:filter .15s,transform .15s}
+.cta:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.cta:focus-visible,.ghost:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+
+#app{flex:1;width:100%;border:0;min-height:0;background:var(--bg)}
+.foot{flex:none;font-size:12px;color:var(--faint);padding:6px 20px;border-top:1px solid var(--line);background:var(--panel);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.foot a{text-decoration:none}
+.foot a:hover{color:var(--text);text-decoration:underline}
+.foot .short{display:none}
+@media (max-width:600px){.foot .long{display:none}.foot .short{display:inline}}
+
+#overlay{position:fixed;inset:0;background:var(--scrim);z-index:20}
+#drawer{position:fixed;top:0;right:0;bottom:0;width:min(460px,100%);background:var(--panel);border-left:1px solid var(--line);box-shadow:var(--shadow);z-index:21;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .22s cubic-bezier(.2,.7,.2,1)}
+#drawer.open{transform:none}
+@media (prefers-reduced-motion:reduce){#drawer{transition:none}}
+.dhead{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--line)}
+.dhead h2{margin:0;font-size:18px;letter-spacing:-.01em}
+.x{background:none;border:0;color:var(--faint);font-size:24px;line-height:1;cursor:pointer;padding:4px 8px;border-radius:8px}
+.x:hover{background:var(--field);color:var(--text)}
+.dbody{padding:18px 22px 26px;overflow:auto;flex:1}
+.plan{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:18px;font-size:13.5px;background:var(--field)}
+.plan b{display:block;margin-bottom:3px}
+.plan.warn{border-color:#DDA24C}
+.plan .mono{font-size:12px;color:var(--faint);word-break:break-all;margin-top:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid .full{grid-column:1/-1}
+label{display:block;font-size:12.5px;color:var(--dim);font-weight:500}
+input,select,textarea{display:block;width:100%;margin-top:5px;background:var(--field);border:1px solid var(--line2);border-radius:8px;color:var(--text);font:inherit;padding:9px 11px}
+textarea{resize:vertical;min-height:64px}
+.send{width:100%;margin-top:18px;padding:13px 16px;font-size:16px}
+.ghost{background:none;border:1px solid var(--line2);border-radius:8px;color:var(--text);font:inherit;padding:10px 14px;cursor:pointer}
+.ghost:hover{background:var(--field)}
+.hint{font-size:12px;color:var(--faint);margin-top:10px;line-height:1.5}
+#done textarea{min-height:260px;font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:12.5px}
+#done .row{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+
+@media (max-width:600px){
+  .phone,.psub{display:none}
+  .bar{padding:0 14px;height:58px}
+  .brand img{height:32px}
+  .cta{padding:10px 13px;font-size:14px}
+  .grid{grid-template-columns:1fr}
+  .foot{justify-content:center}
+}
+</style>
+</head>
+<body>
+
+<div class="top" aria-hidden="true"></div>
+
+<div id="ribbon" class="ribbon" hidden>
+  <span>Vorschau mit Ihrem Namen. So würden Ihre Kunden den Rechner sehen.</span>
+  <a id="ribbonLink" href="/fuer-speditionen/#bestellen">14 Tage kostenlos freischalten →</a>
+</div>
+
+<header class="bar">
+  <div class="brand">
+    <img id="logo" alt="" hidden>
+    <span id="badge" class="badge" aria-hidden="true"></span>
+    <div style="min-width:0">
+      <div id="pname" class="pname">Laderaum-Rechner</div>
+      <div class="psub">Laderaum-Rechner · Container &amp; LKW in 3D</div>
+    </div>
+  </div>
+  <div class="actions">
+    <a id="phone" class="phone" hidden><svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg><span id="phoneText"></span></a>
+    <button id="openBtn" class="cta" type="button">Anfrage senden</button>
+  </div>
+</header>
+
+<iframe id="app" title="3D-Laderaum-Rechner"></iframe>
+
+<footer class="foot">
+  <span class="long">Geometrische Schätzung · ohne Gewähr · ersetzt keine Prüfung der Ladungssicherung</span>
+  <span class="short">Geometrische Schätzung · ohne Gewähr</span>
+  <span><a href="/impressum" target="_blank" rel="noopener">Impressum</a> · <a href="/datenschutz" target="_blank" rel="noopener">Datenschutz</a></span>
+</footer>
+
+<div id="overlay" hidden></div>
+<aside id="drawer" aria-hidden="true" aria-labelledby="dtitle" role="dialog">
+  <div class="dhead">
+    <h2 id="dtitle">Anfrage senden</h2>
+    <button class="x" id="closeBtn" type="button" aria-label="Schließen">×</button>
+  </div>
+  <div class="dbody">
+    <div id="plan" class="plan"></div>
+
+    <form id="form" novalidate>
+      <div class="grid">
+        <label>Firma *<input name="firma" required autocomplete="organization"></label>
+        <label>Ansprechpartner *<input name="name" required autocomplete="name"></label>
+        <label>E-Mail *<input name="email" type="email" required autocomplete="email"></label>
+        <label>Telefon<input name="telefon" type="tel" autocomplete="tel"></label>
+        <label>Von (Ort / PLZ / Land) *<input name="von" required placeholder="z. B. 28197 Bremen, DE"></label>
+        <label>Nach (Ort / Hafen / Land) *<input name="nach" required placeholder="z. B. Shanghai, CN"></label>
+        <label>Incoterm
+          <select name="incoterm">
+            <option value="">noch offen</option>
+            <option>EXW</option><option>FCA</option><option>FOB</option><option>CFR</option>
+            <option>CIF</option><option>CPT</option><option>DAP</option><option>DDP</option>
+          </select>
+        </label>
+        <label>Ladebereit ab<input name="termin" type="date"></label>
+        <label class="full">Ware<input name="ware" placeholder="z. B. Maschinenteile, neu"></label>
+        <label>Gefahrgut
+          <select name="gefahrgut"><option>nein</option><option>ja</option></select>
+        </label>
+        <label>Stapelbar
+          <select name="stapelbar"><option>wie im Ladeplan</option><option>ja</option><option>nein</option></select>
+        </label>
+        <label class="full">Bemerkung<textarea name="bemerkung"></textarea></label>
+      </div>
+      <button class="cta send" type="submit">Anfrage an <span id="sendTo">uns</span> senden</button>
+      <p class="hint" id="privacy">Die Anfrage geht als E-Mail direkt an <span id="privName"></span>. Sie wird nirgends sonst gespeichert.</p>
+    </form>
+
+    <div id="done" hidden>
+      <p id="doneMsg"></p>
+      <textarea id="doneText" readonly></textarea>
+      <div class="row">
+        <a class="cta" id="mailLink" href="#" hidden style="text-decoration:none">E-Mail öffnen</a>
+        <button class="cta" id="copyBtn" type="button">Text kopieren</button>
+        <button class="ghost" id="backBtn" type="button">Zurück zum Rechner</button>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var qs = new URLSearchParams(location.search);
+  var pathSlug = (location.pathname.match(/^\/p\/([a-z0-9-]+)/i) || [])[1];
+  var slug = (qs.get('p') || pathSlug || '').toLowerCase();
+  var isDemo = qs.has('demo');
+  var isEmbed = qs.has('embed'); // in der Live-Demo der Verkaufsseite: ohne Band
+  var frame = $('app');
+  var partner = null;
+  var plan = { url: '', stats: '', empty: true };
+
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function validColor(c) { return /^#[0-9a-f]{6}$/i.test(c || '') ? c : null; }
+  function validEmail(e) { return /^[^\s@<>]+@[^\s@<>]+\.[a-z]{2,}$/i.test(e || '') ? e : ''; }
+  // Schwarz oder Weiß auf der Firmenfarbe, je nach Helligkeit
+  function onColor(hex) {
+    var n = parseInt(hex.slice(1), 16), r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#0E1116' : '#ffffff';
+  }
+  function initials(name) {
+    var w = name.replace(/\b(gmbh|ag|kg|co|mbh|se|ohg|ug|e\.k\.|&)\b\.?/gi, ' ').trim().split(/\s+/).filter(Boolean);
+    return ((w[0] || 'L')[0] + (w[1] ? w[1][0] : '')).toUpperCase();
+  }
+  function count(path, isEvent) {
+    var tries = 0;
+    (function go() {
+      if (window.goatcounter && window.goatcounter.count) {
+        window.goatcounter.count({ path: path, title: partner ? partner.name : '', event: !!isEvent });
+      } else if (tries++ < 20) { setTimeout(go, 250); }
+    })();
+  }
+
+  function loadPartner() {
+    if (isDemo) {
+      var th = qs.get('thema');
+      return Promise.resolve({
+        name: (qs.get('name') || 'Ihre Spedition').slice(0, 60),
+        color: qs.get('color'), phone: (qs.get('phone') || '').slice(0, 30), email: '',
+        thema: th === 'dunkel' ? 'dunkel' : 'hell', demo: true
+      });
+    }
+    if (!slug) return Promise.resolve(null);
+    return fetch('/partner/partners.json', { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .then(function (all) { var p = all[slug]; return p && p.active !== false ? p : null; })
+      .catch(function () { return null; });
+  }
+
+  // Der Rechner laeuft im White-Label-Modus: Firmenfarbe als Akzent, Thema der Spedition,
+  // Teilen-Links auf diese Adresse. Geteilte Plaene (?c=) und die Sprache reichen wir durch.
+  function appSrc(p, color, thema) {
+    var sp = new URLSearchParams();
+    sp.set('wl', p.demo ? 'vorschau' : slug);
+    sp.set('accent', color);
+    sp.set('thema', thema);
+    ['c', 'p', 'q', 'd', 'cont', 'lang', 'rampe'].forEach(function (k) { if (qs.has(k) && k !== 'p') sp.set(k, qs.get(k)); });
+    // ?p= ist hier der Partner-Slug (Alt-Form), nicht der alte Plan-Parameter
+    return '/app?' + sp.toString();
+  }
+
+  function applyPartner(p) {
+    var color = validColor(p.color) || '#2E8FFF';
+    var thema = p.thema === 'dunkel' ? 'dunkel' : 'hell';
+    document.documentElement.dataset.thema = thema;
+    document.documentElement.style.setProperty('--brand', color);
+    document.documentElement.style.setProperty('--on-brand', onColor(color));
+    document.title = 'Laderaum-Rechner · ' + p.name;
+    $('pname').textContent = p.name;
+    $('badge').textContent = initials(p.name);
+    // Logos liegen bewusst nur auf der eigenen Seite (CSP: img-src 'self')
+    if (/^\/partner\/logos\/[\w.-]+\.(png|svg|jpg|jpeg|webp)$/i.test(p.logo || '')) {
+      $('logo').src = p.logo; $('logo').alt = p.name; $('logo').hidden = false; $('badge').hidden = true;
+    }
+    if (p.phone) {
+      $('phoneText').textContent = p.phone;
+      $('phone').href = 'tel:' + p.phone.replace(/[^\d+]/g, '');
+      $('phone').hidden = false;
+    }
+    $('sendTo').textContent = p.name;
+    $('privName').textContent = p.name;
+    if (p.demo) {
+      $('privacy').textContent = 'Vorschau: In der freigeschalteten Version geht diese Anfrage als E-Mail direkt an Ihre Adresse.';
+      if (!isEmbed) {
+        $('ribbon').hidden = false;
+        $('ribbonLink').href = '/fuer-speditionen/?firma=' + encodeURIComponent(p.name) +
+          '&farbe=' + encodeURIComponent(color.slice(1)) + '#bestellen';
+      }
+    }
+    frame.src = appSrc(p, color, thema);
+  }
+
+  // ---- Ladeplan aus dem Rechner holen (gleiche Domain, daher Zugriff aufs iframe) ----
+  function readStats(doc) {
+    var best = '';
+    doc.querySelectorAll('main div').forEach(function (el) {
+      var t = el.innerText || '';
+      if (t.length < 220 && t.indexOf('m³') > -1 && t.indexOf('kg') > -1 && (!best || t.length < best.length)) best = t;
+    });
+    var lines = best.split('\n').map(function (s) { return s.trim(); }).filter(Boolean), out = [];
+    for (var i = 0; i + 1 < lines.length; i += 2) {
+      if (/\d/.test(lines[i]) || !/\d/.test(lines[i + 1])) break;
+      out.push(lines[i] + ' ' + lines[i + 1]);
+    }
+    return out.join(' · ');
+  }
+
+  async function capturePlan() {
+    var res = { url: '', stats: '', empty: true };
+    try {
+      var win = frame.contentWindow, doc = frame.contentDocument;
+      res.stats = readStats(doc);
+      res.empty = !res.stats || /\b0\s*\/\s*0\b/.test(res.stats);
+      if (res.empty) return res;
+      // Offizieller Haken der App (window.containerloadShareUrl); darunter der alte Weg ueber den Dialog
+      if (typeof win.containerloadShareUrl === 'function') { res.url = win.containerloadShareUrl(); return res; }
+      var find = function () { return doc.querySelector('a[href*="?c="]'); };
+      var link = find(), opened = false, hide = null;
+      if (!link) {
+        var btn = Array.prototype.find.call(doc.querySelectorAll('header button'), function (b) {
+          return /teilen|share/i.test((b.getAttribute('aria-label') || '') + ' ' + (b.title || '') + ' ' + b.textContent);
+        });
+        if (!btn || btn.disabled) return res;
+        hide = doc.createElement('style');
+        hide.textContent = '.fixed.inset-0{opacity:0!important;pointer-events:none!important}';
+        doc.head.appendChild(hide);
+        btn.click(); opened = true;
+        for (var i = 0; i < 40 && !link; i++) { await sleep(50); link = find(); }
+      }
+      if (link) res.url = link.href;
+      if (opened) {
+        var dlg = link && link.closest('.fixed');
+        var close = dlg && Array.prototype.find.call(dlg.querySelectorAll('button'), function (b) {
+          return /schlie|close/i.test(b.getAttribute('aria-label') || '');
+        });
+        if (close) close.click();
+        await sleep(60);
+        if (hide) hide.remove();
+      }
+    } catch (e) { /* Rechner noch nicht geladen: Anfrage geht auch ohne Plan */ }
+    return res;
+  }
+
+  function showPlan() {
+    var box = $('plan');
+    box.textContent = '';
+    box.classList.toggle('warn', plan.empty);
+    var b = document.createElement('b');
+    if (plan.empty) {
+      b.textContent = 'Noch keine Ladung im Rechner';
+      box.appendChild(b);
+      box.appendChild(document.createTextNode('Sie können trotzdem anfragen. Mit eingegebenen Packstücken hängt der 3D-Ladeplan automatisch an.'));
+    } else {
+      b.textContent = '3D-Ladeplan wird mitgeschickt';
+      box.appendChild(b);
+      box.appendChild(document.createTextNode(plan.stats));
+      if (plan.url) {
+        var m = document.createElement('div'); m.className = 'mono';
+        m.textContent = plan.url.length > 70 ? plan.url.slice(0, 70) + '…' : plan.url;
+        box.appendChild(m);
+      }
+    }
+  }
+
+  function buildMail(f) {
+    var L = [];
+    L.push('Guten Tag,', '', 'bitte um ein Angebot für folgende Sendung:', '');
+    L.push('Von:            ' + f.von);
+    L.push('Nach:           ' + f.nach);
+    L.push('Incoterm:       ' + (f.incoterm || 'noch offen'));
+    if (f.ware) L.push('Ware:           ' + f.ware);
+    if (f.termin) L.push('Ladebereit ab:  ' + f.termin.split('-').reverse().join('.'));
+    L.push('Gefahrgut:      ' + f.gefahrgut);
+    L.push('Stapelbar:      ' + f.stapelbar);
+    L.push('');
+    if (!plan.empty) {
+      L.push('Ladung laut Rechner: ' + plan.stats);
+      if (plan.url) L.push('3D-Ladeplan: ' + plan.url);
+    } else {
+      L.push('Ladung: Maße und Gewichte folgen.');
+    }
+    if (f.bemerkung) L.push('', 'Bemerkung: ' + f.bemerkung);
+    L.push('', 'Mit freundlichen Grüßen', f.name, f.firma, [f.email, f.telefon].filter(Boolean).join(' · '));
+    return {
+      subject: 'Frachtanfrage ' + f.firma + ': ' + f.von + ' → ' + f.nach,
+      body: L.join('\n')
+    };
+  }
+
+  function openDrawer() {
+    $('done').hidden = true; $('form').hidden = false;
+    $('overlay').hidden = false;
+    $('drawer').classList.add('open'); $('drawer').setAttribute('aria-hidden', 'false');
+    $('plan').textContent = 'Ladeplan wird gelesen …';
+    capturePlan().then(function (p) { plan = p; showPlan(); });
+    setTimeout(function () { $('form').elements.firma.focus(); }, 220);
+  }
+  function closeDrawer() {
+    $('overlay').hidden = true;
+    $('drawer').classList.remove('open'); $('drawer').setAttribute('aria-hidden', 'true');
+    $('openBtn').focus();
+  }
+
+  $('openBtn').addEventListener('click', openDrawer);
+  $('closeBtn').addEventListener('click', closeDrawer);
+  $('backBtn').addEventListener('click', closeDrawer);
+  $('overlay').addEventListener('click', closeDrawer);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && $('drawer').classList.contains('open')) closeDrawer(); });
+
+  $('copyBtn').addEventListener('click', function () {
+    var t = $('doneText'); t.select();
+    (navigator.clipboard ? navigator.clipboard.writeText(t.value) : Promise.reject()).catch(function () { document.execCommand('copy'); });
+    this.textContent = 'Kopiert ✓';
+  });
+
+  $('form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var form = e.target;
+    if (!form.reportValidity()) return;
+    var f = {};
+    new FormData(form).forEach(function (v, k) { f[k] = String(v).trim(); });
+    var mail = buildMail(f);
+    var to = validEmail(partner.email);
+    $('doneText').value = mail.body;
+    $('copyBtn').textContent = 'Text kopieren';
+    $('mailLink').hidden = true;
+
+    if (partner.demo || !to) {
+      $('doneMsg').textContent = 'Vorschau: Genau diese E-Mail landet in der freigeschalteten Version in Ihrem Postfach, vollständig mit Route, Incoterm und 3D-Ladeplan.';
+    } else {
+      if (navigator.clipboard) navigator.clipboard.writeText(mail.body).catch(function () {});
+      var href = 'mailto:' + to + '?subject=' + encodeURIComponent(mail.subject) + '&body=' + encodeURIComponent(mail.body);
+      // Sehr lange Links sprengen manche Mailprogramme: dann Text aus der Zwischenablage einfügen lassen
+      if (href.length > 1900) {
+        href = 'mailto:' + to + '?subject=' + encodeURIComponent(mail.subject) +
+          '&body=' + encodeURIComponent('Der Anfragetext liegt in der Zwischenablage. Bitte hier einfügen (Strg+V).');
+      }
+      $('mailLink').href = href; $('mailLink').hidden = false;
+      $('mailLink').click();
+      $('doneMsg').textContent = 'Ihr E-Mail-Programm öffnet sich mit der fertigen Anfrage an ' + to +
+        '. Öffnet sich nichts? Der Text ist kopiert. Einfach in eine E-Mail an ' + to + ' einfügen.';
+      count('p/' + slug + '/anfrage', true);
+    }
+    form.hidden = true; $('done').hidden = false;
+  });
+
+  loadPartner().then(function (p) {
+    // Unbekannter oder gekündigter Partner: Besucher landet im normalen Rechner, ein
+    // geteilter Plan (?c=) bleibt dabei erhalten.
+    if (!p) { location.replace('/app' + location.search); return; }
+    partner = p;
+    applyPartner(p);
+    count(p.demo ? 'p/_vorschau' : 'p/' + slug);
+  });
+})();
+</script>
+<script data-goatcounter="https://containerload.goatcounter.com/count" data-goatcounter-settings='{"no_onload": true}' async src="https://gc.zgo.at/count.js"></script>
+</body>
+</html>

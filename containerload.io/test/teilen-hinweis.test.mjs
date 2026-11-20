@@ -23,7 +23,8 @@ test("der Hinweis haengt am geteilten Link, nicht an jedem Besuch", () => {
   // Der Startwert des States muss SHARED pruefen und ohne SHARED false liefern.
   const init = html.match(/const \[shareBar, setShareBar\] = useState\(\(\) => \{([\s\S]{0,400}?)\}\);/);
   assert.ok(init, "shareBar-State nicht gefunden");
-  assert.ok(init[1].includes("if (!SHARED) return false"), "ohne SHARED muss der Hinweis aus bleiben");
+  // Im Partner-Rechner (WL) bleibt die Leiste immer aus — dort darf keine Marke stehen.
+  assert.ok(init[1].includes("if (!SHARED || WL) return false"), "ohne SHARED (und im White-Label) muss der Hinweis aus bleiben");
 });
 
 test("einmal weggeklickt heisst dauerhaft weg", () => {
