@@ -41,7 +41,11 @@ const NUR_DEUTSCH = new Set([]);
 // Meldung bei zu langer Liste — die haengen an keinem data-i18n).
 const ausAttribut = [...html.matchAll(/data-i18n="([^"]+)"/g)].map((m) => m[1]);
 const ausSkript = [...html.matchAll(/\bEN\.([A-Za-z_$][\w$]*)|\bEN\[["']([^"']+)["']\]/g)].map((m) => m[1] || m[2]);
-const benutzt = [...new Set([...ausAttribut, ...ausSkript])];
+// Seit 20.11.26 erzeugt werkzeug/startseite-en.mjs die englische Startseite /en/ aus diesem
+// Woerterbuch -- Kopf (meta_*) und Schema (ld_*) liest nur der Generator.
+const generator = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "startseite-en.mjs"), "utf8");
+const ausGenerator = [...generator.matchAll(/\bEN\.([A-Za-z_$][\w$]*)/g)].map((m) => m[1]);
+const benutzt = [...new Set([...ausAttribut, ...ausSkript, ...ausGenerator])];
 
 test("die Startseite benutzt ueberhaupt Schluessel", () => {
   assert.ok(benutzt.length > 30, `nur ${benutzt.length} data-i18n-Schluessel gefunden`);

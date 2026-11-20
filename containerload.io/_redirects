@@ -1,3 +1,12 @@
+# Englische Startseite: seit 20.11.26 eine eigene Datei unter /en/ (erzeugt aus index.html
+# von werkzeug/startseite-en.mjs). Die alte Adresse /?lang=en zeigt mit 301 dorthin. Netlify
+# kann den WERT eines Parameters nicht pruefen, nur sein Vorhandensein -- deshalb der
+# Platzhalter (?lang=en -> /en/) und fuer ?lang=de der Rueckweg auf die Startseite. Force (!),
+# weil / eine Datei hat. Ein Rueckfall steht im Skript der Startseite.
+/        lang=:lang   /:lang/   301!
+/de      /            301
+/de/     /            301
+
 # Alte .html-Pfade -> saubere Pfade (301, force weil Dateien existieren)
 /index.html        /              301!
 /app.html          /app           301!
@@ -5,6 +14,13 @@
 /impressum.html    /impressum     301!
 /datenschutz.html  /datenschutz   301!
 /admin.html        /admin         301!
+
+# Umbenannte Ratgeber-Seiten (vor den :slug-Rewrites unten, sonst fange die zuerst).
+# 20.11.26: die LKW-Seite heisst nach dem, wonach gesucht wird -- "Lademeter-Rechner".
+/ratgeber/ladungsberechnung-lkw-planensattel        /ratgeber/lademeter-rechner              301
+/ratgeber/ladungsberechnung-lkw-planensattel.html   /ratgeber/lademeter-rechner              301
+/en/guide/truck-trailer-load-calculation            /en/guide/loading-metre-calculator       301
+/en/guide/truck-trailer-load-calculation.html       /en/guide/loading-metre-calculator       301
 
 # Saubere Pfade intern auf die Dateien mappen (200 = Rewrite, URL bleibt)
 /app           /app.html           200

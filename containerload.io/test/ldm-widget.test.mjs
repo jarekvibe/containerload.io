@@ -10,8 +10,8 @@ import path from "node:path";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const lies = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
-const de = lies("ratgeber/ladungsberechnung-lkw-planensattel.html");
-const en = lies("en/guide/truck-trailer-load-calculation.html");
+const de = lies("ratgeber/lademeter-rechner.html");
+const en = lies("en/guide/loading-metre-calculator.html");
 
 const schnitt = (html, von, bis) => {
   const a = html.indexOf(von), b = html.indexOf(bis);
@@ -55,23 +55,50 @@ test("die Lademeter-Formel stimmt: (L x B) / 2,4 in Metern", () => {
   assert.strictEqual(ldmBerechnen(120, 80, 0), null);
 });
 
-test("frachtpflichtig nur, wenn JEDE gueltige Zeile ein Gewicht traegt", () => {
-  // 10 Europaletten a 300 kg: 4 ldm -> 7.000 kg frachtpflichtig (1 ldm = 1.750 kg),
-  // mehr als die echten 3.000 kg.
-  const voll = ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 300 }]);
+test("gestapelt: n Stueck in L Lagen belegen aufgerundet n/L Stellplaetze", () => {
+  // Das Beispiel der Seite: 26 Europaletten in zwei Lagen = 13 Stellplaetze = 5,2 ldm.
+  const zwei = ldmBerechnen(120, 80, 26, 2);
+  assert.strictEqual(zwei.stellen, 13);
+  assert.ok(Math.abs(zwei.gesamt - 5.2) < 1e-12, `gesamt: ${zwei.gesamt}`);
+  // Ungerade Menge: die letzte Palette steht allein und belegt trotzdem einen Platz.
+  assert.strictEqual(ldmBerechnen(120, 80, 27, 2).stellen, 14);
+  // Ohne, mit 0 oder Unsinn als Lagen: eine Lage (nie mehr Lademeter erfinden als ohne Stapeln).
+  for (const n of [undefined, "", 0, -3, "abc"]) {
+    assert.strictEqual(ldmBerechnen(120, 80, 26, n).stellen, 26, `Lagen=${n}`);
+  }
+  // Angebrochene Lagen zaehlen ganz: 2,7 Lagen sind 2.
+  assert.strictEqual(ldmBerechnen(120, 80, 26, 2.7).lagen, 2);
+  // Die Seite nennt dasselbe Beispiel.
+  assert.ok(de.includes("<b>5,2 statt 10,4&nbsp;ldm</b>") && en.includes("<b>5.2 instead of 10.4&nbsp;ldm</b>"));
+});
+
+test("frachtpflichtig nur mit dem Satz der Spedition und nur, wenn JEDE gueltige Zeile ein Gewicht traegt", () => {
+  // Das Beispiel der Seite, mit dem dort ausdruecklich ANGENOMMENEN Satz von 1.750 kg/ldm:
+  // 10 Europaletten a 300 kg = 4 ldm -> 7.000 kg frachtpflichtig, mehr als die echten 3.000.
+  const voll = ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 300 }], 1750);
   assert.ok(Math.abs(voll.ldm - 4) < 1e-12);
   assert.strictEqual(voll.frachtKg, 7e3);
   // Schwere Ladung: echtes Gewicht schlaegt den Satz.
-  const schwer = ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 900 }]);
-  assert.strictEqual(schwer.frachtKg, 9e3);
+  assert.strictEqual(ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 900 }], 1750).frachtKg, 9e3);
+  // Ein anderer Satz, eine andere Zahl: der Rechner traegt keinen eigenen.
+  assert.strictEqual(ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 300 }], 1850).frachtKg, 7400);
+  // Gegenprobe: ohne Satz gibt es KEIN frachtpflichtiges Gewicht -- ein allgemeiner Satz
+  // existiert nicht, also darf der Rechner auch keinen unterstellen.
+  for (const satz of [undefined, "", 0, -1750, "abc"]) {
+    assert.strictEqual(ldmSumme([{ l: 120, w: 80, h: 100, qty: 10, kg: 300 }], satz).frachtKg, null, `Satz=${satz}`);
+  }
   // Gegenprobe: eine Zeile ohne Gewicht -> KEIN frachtpflichtiges Gewicht. Ein halb
   // gewogenes Maximum waere eine falsche Zahl mit amtlichem Klang.
   const halb = ldmSumme([
     { l: 120, w: 80, h: 100, qty: 5, kg: 300 },
     { l: 120, w: 100, h: 100, qty: 2, kg: "" }
-  ]);
+  ], 1750);
   assert.strictEqual(halb.frachtKg, null);
   assert.ok(Math.abs(halb.ldm - (2 + 1)) < 1e-12, `ldm: ${halb.ldm}`);
+  // Gestapelt wird auch frachtpflichtig weniger: 20 Europaletten a 300 kg in zwei Lagen.
+  const gestapelt = ldmSumme([{ l: 120, w: 80, h: 100, qty: 20, lagen: 2, kg: 300 }], 1750);
+  assert.ok(Math.abs(gestapelt.ldm - 4) < 1e-12);
+  assert.strictEqual(gestapelt.frachtKg, 7e3);
 });
 
 test("die Hoehe ist nur fuer den 3D-Sprung Pflicht, nicht fuer die Lademeter", () => {
@@ -97,8 +124,37 @@ test("der Sprung landet in der Landfracht, mit Sprache", () => {
   assert.ok(app.includes('QROAD ? "Planensattel"'), "Preset-Start nutzt QROAD nicht");
 });
 
-test("der uebliche Satz steht sichtbar auf der Seite, nicht nur im Code", () => {
-  // Wer eine frachtpflichtige Zahl zeigt, muss sagen, woher sie kommt.
-  assert.ok(de.includes("1&nbsp;ldm = 1.750&nbsp;kg"), "DE: Satz 1 ldm = 1.750 kg fehlt im Text");
-  assert.ok(en.includes("1&nbsp;ldm = 1,750&nbsp;kg"), "EN: Satz fehlt im Text");
+test("kein angeblich ueblicher Satz: der Satz ist eine Eingabe, und die Seite sagt das", () => {
+  // Bis 20.11.26 stand hier "der uebliche Satz 1 ldm = 1.750 kg". Einen allgemeingueltigen
+  // Satz gibt es nicht -- jede Spedition legt ihren in den Tarifbedingungen fest (1.500,
+  // 1.650, 1.750, 1.850 ...). Jetzt ist er ein Feld, und ohne Eingabe gibt es keine Zahl.
+  for (const [name, html, satzText, keinSatz] of [
+    ["DE", de, "Satz Ihrer Spedition", "Einen allgemeingültigen Satz gibt es nicht"],
+    ["EN", en, "forwarder’s rate", "There is no universal rate"]
+  ]) {
+    assert.ok(/<input type="number" id="ldmSatz"[^>]*>/.test(html), `${name}: Satz-Feld fehlt`);
+    assert.ok(!/<input type="number" id="ldmSatz"[^>]*\bvalue=/.test(html), `${name}: das Satz-Feld darf nicht vorbelegt sein`);
+    assert.ok(html.includes(satzText) && html.includes(keinSatz), `${name}: Hinweis auf den Satz der Spedition fehlt`);
+    assert.ok(!/(üblich|usual|standard|common)[^.<]{0,40}(1[.,]750|Satz|rate)/i.test(html), `${name}: ein "ueblicher Satz" ist zurueck`);
+    // Das Rechenbeispiel nennt seinen Satz ausdruecklich als Annahme.
+    assert.ok(/<b>(angenommenen|assumed)<\/b>/.test(html), `${name}: das Beispiel nennt den Satz nicht als Annahme`);
+  }
+  // Die Oberflaeche liest den Satz aus dem Feld -- und nirgends aus einer Konstante.
+  const ui = schnitt(de, "// LDM_UI_START", "// LDM_UI_END");
+  assert.ok(ui.includes("ldmSumme(daten, satzFeld ? satzFeld.value : '')"), "UI liest den Satz nicht aus dem Feld");
+  assert.ok(!/1750|1\.750/.test(schnitt(de, "// LDM_CALC_START", "// LDM_UI_END")), "eine feste 1750 steckt im Code");
+});
+
+test("eine Lage heisst im 3D-Rechner: nicht stapelbar", () => {
+  // Sonst stapelt der Rechner, was das Widget flach gerechnet hat -- und zeigt weniger
+  // Lademeter als die Seite. Der Zusatz muss vom Import-Parser in app.html verstanden werden.
+  assert.ok(de.includes("flach: ' nicht stapelbar'") && en.includes("flach: ' not stackable'"));
+  const app = lies("app.html");
+  const m = app.match(/if \((\/nicht\\s\*stapel[^\n]*?\/i)\.test\(low\)\) stackable = false;/);
+  assert.ok(m, "Stapel-Regel im Import-Parser nicht gefunden");
+  const re = new Function("return " + m[1])();
+  assert.ok(re.test("26x 120x80x100 300kg nicht stapelbar") && re.test("26x 120x80x100 300kg not stackable"));
+  assert.ok(!re.test("26x 120x80x100 300kg"), "Gegenprobe: ohne Zusatz bleibt es stapelbar");
+  const ui = schnitt(de, "// LDM_UI_START", "// LDM_UI_END");
+  assert.ok(ui.includes("(r.lagen === 1 ? ldmCfg.flach : '')"), "UI haengt den Zusatz nicht an");
 });

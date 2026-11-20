@@ -19,14 +19,14 @@
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#0E1116" />
-<!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch,
-     /?lang=en ist englisch. Beide zeigen aufeinander, damit Suchmaschinen wissen,
-     dass es dieselbe Seite in zwei Sprachen ist und keine doppelten Inhalte.
-     canonical und og:url werden beim Umschalten mitgefuehrt (siehe setLang). -->
+<!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch, /en/
+     ist englisch -- eine eigene Datei, erzeugt von werkzeug/startseite-en.mjs aus dieser
+     (nicht von Hand aendern, nach jeder Aenderung hier neu erzeugen). Beide zeigen per
+     hreflang aufeinander; die alte Adresse /?lang=en leitet _redirects mit 301 um. -->
 <link rel="canonical" href="https://containerload.io/" />
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ContainerLoad","alternateName":"ContainerLoad 3D-Laderechner","url":"https://containerload.io/","applicationCategory":"BusinessApplication","applicationSubCategory":"Ladeplanung / Load planning","operatingSystem":"Web","browserRequirements":"JavaScript und WebGL","inLanguage":["de","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Kostenloser 3D-Laderechner für Container und LKW: palettengenau, mit Container-Empfehlung, Lademetern und Plan als Link. Direkt im Browser, ohne Anmeldung.","featureList":["3D-Ladeplan für Container und LKW","Container-Empfehlung und Mehr-Container-Ketten","Lademeter und Achslast-Richtwert für den Sattelzug","Plan als Link teilen, ohne Anmeldung für den Empfänger","Ladevorschlag als PDF mit QR-Code","Packliste aus Excel, Text oder Foto einlesen"],"screenshot":"https://containerload.io/og.png","publisher":{"@type":"Organization","name":"ContainerLoad","url":"https://containerload.io/"}}</script>
 <link rel="alternate" hreflang="de" href="https://containerload.io/" />
-<link rel="alternate" hreflang="en" href="https://containerload.io/?lang=en" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -371,7 +371,7 @@ details[open] .faq-plus{transform:rotate(45deg)}
      er richtet sich ja gerade an Leute, die kein Deutsch lesen. -->
 <div id="langbar" class="langbar" role="region" aria-label="Language">
   <span>This page is available in English.</span>
-  <a href="/?lang=en" hreflang="en" data-lang="en">Switch to English →</a>
+  <a href="/en/" hreflang="en" data-lang="en">Switch to English →</a>
   <button id="langbarX" type="button" aria-label="Dismiss">&times;</button>
 </div>
 <!-- NAV -->
@@ -398,8 +398,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <button type="button" data-thema="dunkel" class="themabtn" aria-label="Dunkles Design" title="Dunkles Design"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       </div>
       <div class="langswitch nav-sm-hide">
-        <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
-        <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
+        <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn on">DE</a>
+        <a data-lang="en" href="/en/" hreflang="en" title="English" class="langbtn">EN</a>
       </div>
       <a data-i18n="nav_open" href="/app" class="btn btn-primary text-[13px] px-2 sm:px-4 py-2">Tool öffnen</a>
       <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
@@ -415,8 +415,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a href="#faq" class="navlink py-2">FAQ</a>
       <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
         <div class="langswitch langswitch-lg">
-          <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
-          <a data-lang="en" href="/?lang=en" hreflang="en" title="English" class="langbtn">EN</a>
+          <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn on">DE</a>
+          <a data-lang="en" href="/en/" hreflang="en" title="English" class="langbtn">EN</a>
         </div>
         <div class="themaswitch themaswitch-lg ml-auto" role="group">
         <button type="button" data-thema="hell" class="themabtn" aria-label="Helles Design" title="Helles Design"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
@@ -904,12 +904,15 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
 
 <script>
 (function(){
-  var EN={"nav_ratgeber": "Container facts", "nav_open": "Open tool", "nav_stevie": "Stevie (AI)", "st_ey": "New · AI on board", "st_h": "Ask Stevie.<br><span class=\"sv-dim\">The AI in the calculator.</span>", "st_p": "He reads packing lists, checks the maths and changes your plan on request. The maths always happens in the 3D calculator — Stevie never invents numbers.", "st_c1": "<span class=\"sv-ok\">✓</span> Reads packing lists from text, Excel, photos and screenshots", "st_c2": "<span class=\"sv-ok\">✓</span> Checks the maths — with the conditions from your question", "st_c3": "<span class=\"sv-ok\">✓</span> Switches container, quantities and stacking on request", "st_c4": "<span class=\"sv-ok\">✓</span> Speaks your language — and Ctrl+Z undoes it all", "st_cta": "Meet Stevie in the calculator", "st_b1": "How many euro pallets fit in a 20′ GP if they can't be stacked?", "st_b2": "According to the calculation, 11 fit — on the floor, turned where they fit.", "st_chip": "✓ P1: max. 11 pcs · not stackable", "rg_ey": "Container facts", "rg_h": "Look it up", "rg_p": "Every page links straight into the 3D calculator.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked, more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "Exactly 25 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example and calculator.", "rg_all": "See all pages →", "hero_h1": "<span class=\"hero-kicker\">3D load calculator for containers &amp; trucks</span>11 pallets instead of 8<br><span style=\"color:var(--dim)\">in the same container.</span>", "hero_sub": "The free 3D container loading calculator turns pallets where they fit, so a 20-ft matches the forwarder tables. Enter dimensions, check in 3D, share as a link.", "hero_cta1": "Open the tool for free", "hero_cta2": "Take a look <span style=\"color:var(--faint)\">↓</span>", "tool_ey": "The calculator", "tool_h": "How the calculator works", "tool_p": "Enter, check in 3D, share. No sign-up, nothing to install.", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "· paste your packing list", "sc1_h": "Enter the dimensions", "sc1_p": "Enter items one by one or paste your packing list from Excel. Quantity, dimensions, weight, all in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "The load in 3D", "sc2_p": "You see straight away how the load sits in the container. Rotate, zoom, check. For a single pallet type the tool is pallet-exact. For mixed loads an algorithm finds the best stow.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share and print", "sc3_p": "Pass the load on as a link. Whoever gets it sees it in 3D right away, without signing up. Or as a PDF with a QR code that leads back to the plan.", "kpi1": "Container and vehicle types — open top, flat rack, platform and reefer included.", "kpi2": "Shipping lines with real internal dimensions, to the millimetre, each with a source.", "kpi3": "Sign-ups. The plan goes out as a link and opens straight into 3D.", "cbm_nav": "CBM calculator", "cbm_ey": "Tools", "cbm_h": "Work out cubic metres.<br><span style=\"color:var(--dim)\">Paste a packing list.</span>", "cbm_p": "Several items, CBM and weight together. For LCL the higher of the two counts.", "cbm_link": "How CBM is calculated is in the container guide.", "feat_ey": "Also built in", "f1_h": "3D view", "f1_p": "Rotate, zoom, check — piece by piece.", "f2_h": "Pallet-exact", "f2_p": "Rotated patterns: <b style=\"color:var(--text)\">25 EUR pallets instead of 20</b> in a 40-ft.", "f3_h": "More than one container", "f3_p": "How many it takes, which combination is cheaper — and what goes where.", "f4_h": "Rotation & stacking rules", "f4_p": "Per item: non-stackable, stackable up to a height, rotatable by 90°.", "f5_h": "Weight & payload", "f5_p": "Payload stored for every container — with a warning before you overload.", "f6_h": "Cartons on pallets", "f6_p": "From carton dimensions to the layer pattern and the number of pallets.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account. Just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. Weight distribution and centre of gravity are shown as an estimate, for the semi-trailer also kingpin and axle loads. That is no guarantee for the real weight distribution or load securing: check vehicle data and securing yourself.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away. Nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "q5_s": "How many cartons fit on a pallet?<span class=\"faq-plus text-[22px]\">+</span>", "q5_a": "The calculator works it out: enter carton dimensions, weight and total quantity, pick a Euro pallet (120×80) or industrial pallet (120×100) and the maximum stack height. You get the layer pattern from above, cartons per layer, the number of layers and the total number of pallets, the part-filled last one counted in. Several carton sizes work too, separately or layer by layer on one mixed pallet. The calculation is purely geometric: no interlocking pattern, no load securing, and pallet weight and capacity are guide values.", "cta_h": "Plan your next load", "cta_p": "Enter the dimensions. Then you know whether it fits, and in which container.", "cta_a": "Open the tool for free", "footer_prod": "Product", "footer_res": "Reference", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo2": "The calculator", "fl_ratgeber": "Container facts", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — the calculator finds columns, dimensions and weights by itself.", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool. Dimensions in cm unless stated otherwise", "imp_toolong": "List too long. Please paste directly in the tool via “Excel / text”.", "imp_ph": "Paste your packing list from Excel here …", "imp_demo": "Insert example", "imp_demo_data": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12", "tab_cbm": "CBM calculator", "tab_imp": "Packing list from Excel", "hero_trust": "<span>Free, no limit</span><span>No sign-up</span><span>No cookies, no banner</span>"};
-  var els=[].slice.call(document.querySelectorAll('[data-i18n]'));
-  var DE={};
-  els.forEach(function(el){var k=el.getAttribute('data-i18n'); if(DE[k]===undefined) DE[k]=el.innerHTML;});
-  function appHref(lang){return '/app'+(lang==='en'?'?lang=en':'');}
-  function pageHref(lang){return lang==='en'?'/?lang=en':'/';}
+  var EN={"nav_ratgeber": "Container facts", "nav_open": "Open tool", "nav_stevie": "Stevie (AI)", "st_ey": "New · AI on board", "st_h": "Ask Stevie.<br><span class=\"sv-dim\">The AI in the calculator.</span>", "st_p": "He reads packing lists, checks the maths and changes your plan on request. The maths always happens in the 3D calculator — Stevie never invents numbers.", "st_c1": "<span class=\"sv-ok\">✓</span> Reads packing lists from text, Excel, photos and screenshots", "st_c2": "<span class=\"sv-ok\">✓</span> Checks the maths — with the conditions from your question", "st_c3": "<span class=\"sv-ok\">✓</span> Switches container, quantities and stacking on request", "st_c4": "<span class=\"sv-ok\">✓</span> Speaks your language — and Ctrl+Z undoes it all", "st_cta": "Meet Stevie in the calculator", "st_b1": "How many euro pallets fit in a 20′ GP if they can't be stacked?", "st_b2": "According to the calculation, 11 fit — on the floor, turned where they fit.", "st_chip": "✓ P1: max. 11 pcs · not stackable", "rg_ey": "Container facts", "rg_h": "Look it up", "rg_p": "Every page links straight into the 3D calculator.", "rg1_h": "Euro pallets in a 20-ft container", "rg1_p": "About 11 floor-stacked, more if stackable.", "rg2_h": "Euro pallets in a 40-ft container", "rg2_p": "Exactly 25 in a single layer.", "rg3_h": "Container volume in m³", "rg3_p": "20-ft ≈ 33 m³, 40-ft ≈ 68 m³.", "rg4_h": "Payload & max weight", "rg4_p": "How much can a container carry?", "rg5_h": "Container inner dimensions", "rg5_p": "20′, 40′, 45′ at a glance.", "rg6_h": "Calculate CBM (sea freight)", "rg6_p": "Formula, example and calculator.", "rg_all": "See all pages →", "hero_h1": "<span class=\"hero-kicker\">3D load calculator for containers &amp; trucks</span>11 pallets instead of 8<br><span style=\"color:var(--dim)\">in the same container.</span>", "hero_sub": "The free 3D container loading calculator turns pallets where they fit, so a 20-ft matches the forwarder tables. Enter dimensions, check in 3D, share as a link.", "hero_cta1": "Open the tool for free", "hero_cta2": "Take a look <span style=\"color:var(--faint)\">↓</span>", "tool_ey": "The calculator", "tool_h": "How the calculator works", "tool_p": "Enter, check in 3D, share. No sign-up, nothing to install.", "sc1_tag": "Input", "sc1_row1": "EUR pallet", "sc1_row2": "Crate, engine parts", "sc1_paste": "· paste your packing list", "sc1_h": "Enter the dimensions", "sc1_p": "Enter items one by one or paste your packing list from Excel. Quantity, dimensions, weight, all in centimetres.", "sc2_tag": "3D result", "sc2_pill": "All loaded · 91% · 14.3 t", "sc2_h": "The load in 3D", "sc2_p": "You see straight away how the load sits in the container. Rotate, zoom, check. For a single pallet type the tool is pallet-exact. For mixed loads an algorithm finds the best stow.", "sc3_tag": "Share & PDF", "sc3_pdf_h": "Loading plan · 20′ GP", "sc3_pdf_meta": "QR → interactive 3D plan", "sc3_h": "Share and print", "sc3_p": "Pass the load on as a link. Whoever gets it sees it in 3D right away, without signing up. Or as a PDF with a QR code that leads back to the plan.", "kpi1": "Container and vehicle types — open top, flat rack, platform and reefer included.", "kpi2": "Shipping lines with real internal dimensions, to the millimetre, each with a source.", "kpi3": "Sign-ups. The plan goes out as a link and opens straight into 3D.", "cbm_nav": "CBM calculator", "cbm_ey": "Tools", "cbm_h": "Work out cubic metres.<br><span style=\"color:var(--dim)\">Paste a packing list.</span>", "cbm_p": "Several items, CBM and weight together. For LCL the higher of the two counts.", "cbm_link": "How CBM is calculated is in the container guide.", "feat_ey": "Also built in", "f1_h": "3D view", "f1_p": "Rotate, zoom, check — piece by piece.", "f2_h": "Pallet-exact", "f2_p": "Rotated patterns: <b style=\"color:var(--text)\">25 EUR pallets instead of 20</b> in a 40-ft.", "f3_h": "More than one container", "f3_p": "How many it takes, which combination is cheaper — and what goes where.", "f4_h": "Rotation & stacking rules", "f4_p": "Per item: non-stackable, stackable up to a height, rotatable by 90°.", "f5_h": "Weight & payload", "f5_p": "Payload stored for every container — with a warning before you overload.", "f6_h": "Cartons on pallets", "f6_p": "From carton dimensions to the layer pattern and the number of pallets.", "faq_h": "Frequent questions", "q1_s": "Is the calculator really free?<span class=\"faq-plus text-[22px]\">+</span>", "q1_a": "Yes, completely. The 3D calculator incl. container recommendation is free and usable without an account. Just open it and go.", "q2_s": "How accurate is the calculation?<span class=\"faq-plus text-[22px]\">+</span>", "q2_a": "For a single pallet type the tool calculates pallet-exact (e.g. 11 EUR pallets in a 20-ft, as in the forwarder tables). For mixed loads an algorithm finds the best stow. Weight distribution and centre of gravity are shown as an estimate, for the semi-trailer also kingpin and axle loads. That is no guarantee for the real weight distribution or load securing: check vehicle data and securing yourself.", "q3_s": "Do I need an account?<span class=\"faq-plus text-[22px]\">+</span>", "q3_a": "No. You open the tool and start right away. Nothing to install, nothing to register.", "q4_s": "Does it work on mobile?<span class=\"faq-plus text-[22px]\">+</span>", "q4_a": "Yes, the tool is responsive and runs in the mobile browser. For entering many positions a bigger screen is more comfortable, though.", "q5_s": "How many cartons fit on a pallet?<span class=\"faq-plus text-[22px]\">+</span>", "q5_a": "The calculator works it out: enter carton dimensions, weight and total quantity, pick a Euro pallet (120×80) or industrial pallet (120×100) and the maximum stack height. You get the layer pattern from above, cartons per layer, the number of layers and the total number of pallets, the part-filled last one counted in. Several carton sizes work too, separately or layer by layer on one mixed pallet. The calculation is purely geometric: no interlocking pattern, no load securing, and pallet weight and capacity are guide values.", "cta_h": "Plan your next load", "cta_p": "Enter the dimensions. Then you know whether it fits, and in which container.", "cta_a": "Open the tool for free", "footer_prod": "Product", "footer_res": "Reference", "footer_legal": "Legal", "fl_open": "Open tool", "fl_demo2": "The calculator", "fl_ratgeber": "Container facts", "fl_imp": "Legal notice", "fl_priv": "Privacy", "fl_contact": "Contact", "foot_disc": "geometric estimate · no axle-load guarantee", "footer_tag": "No Excel. No guessing.<br>Just the right container.<br><span style=\"white-space:nowrap\">Bremen, Germany <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>", "imp_p": "Select your packing list in Excel, copy it, paste it here — the calculator finds columns, dimensions and weights by itself.", "imp_box_h": "Paste packing list", "imp_kbd": "Ctrl+V", "imp_cta": "Open in the 3D calculator →", "imp_hint": "checked in the tool. Dimensions in cm unless stated otherwise", "imp_toolong": "List too long. Please paste directly in the tool via “Excel / text”.", "imp_ph": "Paste your packing list from Excel here …", "imp_demo": "Insert example", "imp_demo_data": "Item\tpcs\tL\tW\tH\tkg\nEngine block\t4\t120\t80\t95\t310\nGearbox\t6\t110\t75\t80\t240\nAccessory boxes\t18\t60\t40\t40\t12", "tab_cbm": "CBM calculator", "tab_imp": "Packing list from Excel", "hero_trust": "<span>Free, no limit</span><span>No sign-up</span><span>No cookies, no banner</span>", "meta_t": "3D Container Loading Calculator — free | ContainerLoad", "meta_d": "The free 3D load calculator for sea containers and trucks: pallet-exact stowage, container recommendation, share the plan as a link. No sign-up.", "meta_ot": "ContainerLoad — Every load, in the right container.", "meta_od": "Will your load fit? Which container? ContainerLoad works it out live in 3D.", "ld_name": "ContainerLoad 3D load calculator", "ld_sub": "Load planning", "ld_browser": "JavaScript and WebGL", "ld_d": "Free 3D load calculator for containers and trucks: pallet-exact, with container recommendation, loading metres and the plan as a link. In the browser, no sign-up.", "ld_features": "3D load plan for containers and trucks|Container recommendation and multi-container chains|Loading metres and axle-load estimate for the semi-trailer|Share the plan as a link, no sign-up for the recipient|Loading proposal as PDF with QR code|Read packing lists from Excel, text or photo"};
+  // Seit 20.11.26 gibt es die englische Startseite als EIGENE Datei unter /en/ -- erzeugt
+  // von werkzeug/startseite-en.mjs aus DIESER Datei: Text, Kopfdaten, Schema und Links
+  // stehen dort schon englisch im HTML (vorher war /?lang=en dasselbe HTML, per Skript
+  // uebersetzt, und die Suche zeigte es mit dem deutschen Titel). Zur Laufzeit wird nichts
+  // mehr umgeschaltet: die Sprachknoepfe sind gewoehnliche Links. Das EN-Woerterbuch oben
+  // und die GUIDE-Tabelle unten sind die Quelle fuer den Generator; test/startseite-en
+  // prueft, dass /en/index.html genau das ist, was der Generator daraus macht.
+  var SEITE=document.documentElement.lang==='en'?'en':'de';
   // Das Container-Wissen gibt es seit August 2026 in zwei Fassungen mit EIGENEN Adressen
   // (/ratgeber/<deutscher-slug> und /en/guide/<englischer-slug>) statt als ?lang=en-Variante:
   // es sind eigene Seiten mit eigenen Titeln, und genau so sollen sie indexiert werden.
@@ -920,7 +923,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     '/ratgeber/europaletten-20-fuss-container':'/en/guide/euro-pallets-20ft-container',
     '/ratgeber/industriepaletten-container':'/en/guide/industrial-pallets-container',
     '/ratgeber/gitterboxen-container':'/en/guide/wire-mesh-pallets-container',
-    '/ratgeber/ladungsberechnung-lkw-planensattel':'/en/guide/truck-trailer-load-calculation',
+    '/ratgeber/lademeter-rechner':'/en/guide/loading-metre-calculator',
     '/ratgeber/container-masse-innenmasse':'/en/guide/container-internal-dimensions',
     '/ratgeber/container-volumen-cbm':'/en/guide/container-volume-cbm',
     '/ratgeber/container-zuladung-gewicht':'/en/guide/container-payload-weight',
@@ -939,81 +942,28 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     '/ratgeber/containerhaefen':'/en/guide/container-ports'};
   var GUIDE_ZURUECK={}; for(var _g in GUIDE) GUIDE_ZURUECK[GUIDE[_g]]=_g;
 
-  // Kopfdaten je Sprache. Ohne die steht im Suchergebnis der englischen Seite ein
-  // deutscher Titel — der stille Fehler, der eine Uebersetzung wertlos macht.
-  // Die deutschen Werte werden aus dem Dokument gelesen, damit sie nur an EINER
-  // Stelle stehen (im <head>) und hier nicht doppelt gepflegt werden muessen.
-  var H={t:document.querySelector('title'),d:document.querySelector('meta[name="description"]'),
-         ot:document.querySelector('meta[property="og:title"]'),od:document.querySelector('meta[property="og:description"]'),
-         ou:document.querySelector('meta[property="og:url"]'),tt:document.querySelector('meta[name="twitter:title"]'),
-         td:document.querySelector('meta[name="twitter:description"]'),c:document.querySelector('link[rel="canonical"]')};
-  var META={de:{t:H.t?H.t.textContent:'',d:H.d?H.d.content:'',ot:H.ot?H.ot.content:'',od:H.od?H.od.content:''},
-            en:{t:'3D Container Loading Calculator — free | ContainerLoad',
-                d:'The free 3D load calculator for sea containers and trucks: pallet-exact stowage, container recommendation, share the plan as a link. No sign-up.',
-                ot:'ContainerLoad — Every load, in the right container.',
-                od:'Will your load fit? Which container? ContainerLoad works it out live in 3D.'}};
-
-  function setLang(lang){
-    lang=(lang==='en')?'en':'de';
-    els.forEach(function(el){var k=el.getAttribute('data-i18n');var v=(lang==='en')?(EN[k]!==undefined?EN[k]:DE[k]):DE[k]; if(v!==undefined) el.innerHTML=v;});
-    document.documentElement.lang=lang;
-    var m=META[lang], abs='https://containerload.io'+pageHref(lang);
-    if(H.t) H.t.textContent=m.t;
-    if(H.d) H.d.content=m.d;
-    if(H.ot) H.ot.content=m.ot;
-    if(H.od) H.od.content=m.od;
-    if(H.tt) H.tt.content=m.ot;
-    if(H.td) H.td.content=m.od;
-    if(H.ou) H.ou.content=abs;
-    if(H.c) H.c.href=abs;
-    [].slice.call(document.querySelectorAll('.langbtn')).forEach(function(b){b.classList.toggle('on',b.getAttribute('data-lang')===lang);});
-    [].slice.call(document.querySelectorAll('a[href^="/app"]')).forEach(function(a){a.setAttribute('href',appHref(lang));});
-    [].slice.call(document.querySelectorAll('a[href^="/ratgeber/"],a[href^="/en/guide/"]')).forEach(function(a){
-      var h=a.getAttribute('href'), de=GUIDE_ZURUECK[h]||h, w=(lang==='en')?(GUIDE[de]||de):de;
-      if(h!==w) a.setAttribute('href',w);
-    });
-    var ifr=document.querySelector('iframe[title="ContainerLoad"]'); if(ifr){var want=appHref(lang); if(ifr.getAttribute('src')!==want) ifr.setAttribute('src',want);}
-    // Placeholder ist ein Attribut (data-i18n setzt innerHTML) -> direktes Setzen, gleiches Muster wie frueher.
-    var _ip=document.getElementById('impPaste'); if(_ip){ _ip.placeholder = lang==='en' ? EN.imp_ph : 'Packliste aus Excel hier einfügen …'; }
-    // Der CBM-Rechner baut seine Zeilen selbst -- data-i18n kennt sie nicht.
-    if(window.__cbmNeu) window.__cbmNeu();
-  }
   function merken(lang){try{localStorage.setItem('cl_lang',lang);}catch(e){}}
-  function adresse(lang){try{history.replaceState(null,'',pageHref(lang));}catch(e){}}
-
-  // Klick auf einen Sprachlink: umschalten OHNE Neuladen, aber die Adresse zieht mit.
-  // Die Links bleiben echte Links mit href — nur so findet eine Suchmaschine die
-  // englische Fassung ueberhaupt. Ohne JavaScript laedt der Link ganz normal neu.
+  // Ein Klick auf einen Sprachlink merkt die Wahl -- navigiert wird ganz normal
   [].slice.call(document.querySelectorAll('a[data-lang]')).forEach(function(a){
-    a.addEventListener('click',function(ev){
-      if(ev.metaKey||ev.ctrlKey||ev.shiftKey||ev.button) return; // neuer Tab bleibt neuer Tab
-      ev.preventDefault();
-      var l=a.getAttribute('data-lang');
-      setLang(l); merken(l); adresse(l);
-      var bar=document.getElementById('langbar'); if(bar) bar.classList.remove('on');
-    });
+    a.addEventListener('click',function(){ merken(a.getAttribute('data-lang')); });
   });
+  var _ip=document.getElementById('impPaste'); if(_ip&&SEITE==='en'){ _ip.placeholder=EN.imp_ph; }
 
-  // Sprachwahl: Die ADRESSE hat Vorrang, dann die eigene frühere Wahl, sonst Deutsch.
-  //
-  // Frueher entschied hier die Browsersprache. Das hiess: dieselbe Adresse lieferte je
-  // nach Besucher Deutsch ODER Englisch. Googles Renderer meldet en-US — die deutsche
-  // Startseite wurde also als englisch gerendert, waehrend Titel und Beschreibung im
-  // Quelltext deutsch blieben. Google bietet fuer / und /app bis heute "Diese Seite
-  // uebersetzen" an, fuer die statischen Ratgeber-Seiten nicht. Genau dieser
-  // Widerspruch faellt damit weg.
+  // Sprachwahl: Die ADRESSE hat Vorrang, dann die eigene fruehere Wahl, sonst Deutsch --
+  // NIE die Browsersprache (Googles Renderer meldet en-US; dieselbe Adresse darf nicht je
+  // nach Besucher die Sprache wechseln). Umgeleitet wird nur von der deutschen Seite aus:
+  //   * /?lang=en ist die alte Adresse der englischen Seite. Netlify leitet sie mit 301 auf
+  //     /en/ um (_redirects); lokal geoeffnet tut es dieses Skript.
+  //   * Wer frueher selbst Englisch gewaehlt hat, landet auf /en/ (Suchmaschinen haben
+  //     keinen gemerkten Wert und sehen deshalb immer die Seite, die sie aufrufen).
   function urlLang(){var m=/[?&]lang=([A-Za-z-]+)/.exec(location.search);return m?(m[1].toLowerCase().indexOf('en')===0?'en':'de'):null;}
   var erzwungen=urlLang(), gemerkt=null;
   try{var sv=localStorage.getItem('cl_lang'); if(sv==='en'||sv==='de') gemerkt=sv;}catch(e){}
-  var initial=erzwungen||gemerkt||'de';
-  setLang(initial);
-  // Wer sich frueher fuer Englisch entschieden hat, bekommt es — dann soll aber auch
-  // die Adresse dazu passen, statt Englisch unter der deutschen URL zu zeigen.
-  if(!erzwungen&&initial==='en') adresse('en');
+  if(SEITE==='de'&&(erzwungen==='en'||(!erzwungen&&gemerkt==='en'))){ try{location.replace('/en/'+location.hash);}catch(e){} return; }
 
-  // Kein automatisches Umschalten mehr, sondern ein Angebot. Nur fuer Leute, deren
-  // Browser nicht auf Deutsch steht und die noch nie selbst gewaehlt haben.
-  if(!erzwungen&&!gemerkt&&(navigator.language||'').toLowerCase().indexOf('de')!==0){
+  // Kein automatisches Umschalten, sondern ein Angebot -- nur auf der deutschen Seite, nur
+  // fuer Leute, deren Browser nicht auf Deutsch steht und die noch nie selbst gewaehlt haben.
+  if(SEITE==='de'&&!erzwungen&&!gemerkt&&(navigator.language||'').toLowerCase().indexOf('de')!==0){
     var bar=document.getElementById('langbar'); if(bar) bar.classList.add('on');
   }
   var barX=document.getElementById('langbarX');
