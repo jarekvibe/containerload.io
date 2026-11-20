@@ -149,6 +149,38 @@ for (const [datei, sprache] of [["ratgeber/container-volumen-cbm.html", "deutsch
   });
 }
 
+// ── Volumen: die nutzbaren Spannen (November 2026) ──────────────────────────
+// GSC-Befund 20.11.26: die Volumen-Fragen standen auf Platz 6-9, mit null Klicks -- der
+// Titel nannte die ganze Antwort ("20 Fuss 33 m³, 40 Fuss 68 m³"), und Google zeigt die
+// Zahl ohnehin selbst. Seitdem nennen Titel und Beschreibung, was die Antwortbox nicht
+// kann: wie viel davon NUTZBAR ist. Die Spannen sind 70-85 % des Volumens aus PRESETS --
+// dieselbe Faustregel, die der Abschnitt "Rechnerisch vs. tatsaechlich nutzbar" begruendet.
+for (const [datei, sprache] of [["ratgeber/container-volumen-cbm.html", "deutsch"], ["en/guide/container-volume-cbm.html", "englisch"]]) {
+  test(`Container-Volumen (${sprache}): die nutzbaren Spannen sind 70–85 % des Volumens aus app.html`, () => {
+    const s = lies(datei);
+    const vol = (p) => PRESETS[p].l * PRESETS[p].w * PRESETS[p].h / 1e6;
+    const spanne = (p) => `${Math.round(vol(p) * 0.7)}–${Math.round(vol(p) * 0.85)}`;
+    assert.ok(/70–85/.test(s), `${datei}: die Faustregel 70–85 % steht nicht auf der Seite`);
+    const rows = zeilen(s);
+    for (const [label, preset] of [["20′ Standard", "20' GP"], ["20′ High Cube", "20' HC"], ["40′ Standard", "40' GP"], ["40′ High Cube", "40' HC"], ["45′ High Cube", "45' HC"]]) {
+      const r = rows.find((z) => z[0] === label && z.length === 4);
+      assert.ok(r, `${datei}: keine Zeile ${label} mit Spalte "nutzbar"`);
+      // Spalte 3 direkt neben dem Volumen -- auf dem Telefon soll man sie sehen, ohne zu wischen
+      assert.strictEqual(r[2].replace(/\s*m³$/, ""), spanne(preset), `${datei}: ${label} — Seite ${r[2]}, gerechnet ${spanne(preset)} m³`);
+      assert.strictEqual(zahl(r[1]), Math.round(vol(preset)), `${datei}: ${label} Volumen — Seite ${r[1]}, gerechnet ${Math.round(vol(preset))} m³`);
+    }
+    // Beschreibung (title/og/twitter), Antwortblock, FAQ und FAQ-Schema nennen dieselben Spannen
+    for (const p of ["20' GP", "40' GP"]) {
+      const n = s.split(spanne(p)).length - 1;
+      assert.ok(n >= 7, `${datei}: ${spanne(p)} steht nur ${n}× auf der Seite (Tabelle, Antwort, 3× Beschreibung, FAQ, Schema)`);
+    }
+    assert.ok(s.split(spanne("40' HC")).length - 1 >= 2, `${datei}: 40′ HC fehlt in Antwort oder Tabelle`);
+    // Und der Titel verraet die Antwort nicht mehr vollstaendig
+    const titel = s.match(/<title>([^<]+)<\/title>/)[1];
+    assert.ok(!/33\s*m³/.test(titel) && !/68\s*m³/.test(titel), `${datei}: der Titel nennt wieder die ganze Antwort (${titel})`);
+  });
+}
+
 // ── Der Planensattel-Wert, der auf der Gitterbox-Seite behauptet wird ───────
 test("die 32 Gitterboxen auf dem Planensattel sind gerechnet", () => {
   const echt = makeFloorPacker(GB.l, GB.w, true)(1362, 248).count;
