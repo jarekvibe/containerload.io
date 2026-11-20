@@ -232,6 +232,22 @@
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
+    <loc>https://containerload.io/ratgeber/lkw-beladen</loc>
+    <lastmod>2026-11-20</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lkw-beladen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-load-a-truck"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lkw-beladen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/how-to-load-a-truck</loc>
+    <lastmod>2026-11-20</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lkw-beladen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-load-a-truck"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/lkw-beladen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://containerload.io/ratgeber/lademeter-rechner</loc>
     <lastmod>2026-11-20</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/lademeter-rechner"/>
