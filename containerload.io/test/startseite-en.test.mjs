@@ -108,12 +108,25 @@ test("die alte Adresse /?lang=en ist ueberall abgeloest", () => {
   const sm = lies("sitemap.xml");
   assert.ok(!sm.includes("https://containerload.io/?lang=en"), "Sitemap fuehrt noch /?lang=en");
   assert.ok(sm.includes("<loc>https://containerload.io/en/</loc>"), "Sitemap ohne /en/");
-  // ... Netlify leitet um (Platzhalter, weil Netlify den Wert nicht pruefen kann; ?lang=de
-  // findet ueber /de/ zurueck) ...
+  // ... Netlify leitet um (Platzhalter, weil Netlify den Wert nicht pruefen kann) ...
   const rd = lies("_redirects");
   assert.ok(/^\/\s+lang=:lang\s+\/:lang\/\s+301!$/m.test(rd), "301 fuer /?lang= fehlt");
-  assert.ok(/^\/de\/\s+\/\s+301$/m.test(rd) && /^\/de\s+\/\s+301$/m.test(rd), "Rueckweg fuer ?lang=de fehlt");
-  assert.ok(rd.indexOf("lang=:lang") < rd.indexOf("/index.html"), "die Regel muss vor den uebrigen stehen");
+  assert.ok(rd.search(/^\/\s+lang=:lang/m) < rd.search(/^\/index\.html\s/m), "die Regel muss vor den uebrigen stehen");
+  // ... und ?lang=de findet ueber die DATEI /de/ zurueck. Netlify haengt beim 301 die
+  // Abfrage an (gesehen live: /?lang=en -> /en/?lang=en). Eine Regel /de/ -> / bekaeme
+  // ?lang=de also mit und landete wieder bei der Platzhalter-Regel: Schleife. Deshalb darf
+  // es diese Regel NICHT geben, und de/index.html schickt ohne Parameter zurueck.
+  assert.ok(!/^\/de\/?\s/m.test(rd), "eine Umleitung /de/ -> / liefe mit ?lang=de im Kreis");
+  const dePfad = lies("de/index.html");
+  assert.ok(dePfad.includes('<meta http-equiv="refresh" content="0;url=/" />'), "/de/ ohne Rueckweg (ohne JS)");
+  assert.ok(dePfad.includes("location.replace('/'+location.hash)"), "/de/ ohne Rueckweg (mit JS)");
+  assert.ok(dePfad.includes("localStorage.setItem('cl_lang','de')"), "/de/ merkt sich die Wahl nicht -- wer frueher EN gewaehlt hat, landete sonst auf /en/");
+  assert.ok(!/location\.(replace|href)[^;]*search/.test(dePfad), "/de/ darf die Abfrage nicht mitnehmen");
+  // Die englische Seite raeumt das angehaengte ?lang=en aus der Adresse
+  assert.ok(de.includes("if(SEITE==='en'&&erzwungen){ try{var rest=location.search.replace(/([?&])lang=[^&]*(&|$)/,'$1').replace(/[?&]$/,''); history.replaceState(null,'',location.pathname+rest+location.hash);}catch(e){} }"));
+  for (const [vor, nach] of [["?lang=en", ""], ["?lang=en&utm=x", "?utm=x"], ["?utm=x&lang=en", "?utm=x"], ["?a=1&lang=en&b=2", "?a=1&b=2"]]) {
+    assert.strictEqual(vor.replace(/([?&])lang=[^&]*(&|$)/, "$1").replace(/[?&]$/, ""), nach, `Aufraeumen von ${vor}`);
+  }
   // ... und das Skript der deutschen Seite faengt die alte Adresse auch ohne Netlify ab
   assert.ok(de.includes("if(SEITE==='de'&&(erzwungen==='en'||(!erzwungen&&gemerkt==='en'))){ try{location.replace('/en/'+location.hash);}catch(e){} return; }"));
   // Der Rechner verlinkt seine Startseite richtig
