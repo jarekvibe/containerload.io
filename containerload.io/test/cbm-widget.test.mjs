@@ -123,9 +123,11 @@ test("der Sprung in den 3D-Rechner traegt die Zeilen als ?q= -- und die Sprache"
     "die Startseite vergisst die Sprache");
 });
 
-test("die Startseite zieht das Widget beim Sprachwechsel mit", () => {
-  assert.ok(/if\(window\.__cbmNeu\) window\.__cbmNeu\(\);/.test(html["index.html"]),
-    "setLang kennt das Widget nicht -- nach dem Umschalten staende es halb deutsch da");
+test("die englische Startseite hat das Widget, und es liest die Sprache der Seite", () => {
+  // Seit 20.11.26 gibt es kein Umschalten im Browser mehr: /en/ ist eine eigene Datei mit
+  // <html lang="en">, und das Widget fragt documentElement.lang (siehe oben).
+  const en = fs.readFileSync(path.join(dir, "..", "en", "index.html"), "utf8");
+  assert.ok(en.includes('<html lang="en"') && en.includes("data-cbm-widget"), "en/index.html ohne Widget oder ohne lang=en");
   for (const k of ["cbm_ey", "cbm_h", "cbm_p", "cbm_link"]) {
     assert.ok(html["index.html"].includes(`data-i18n="${k}"`), `${k} steht nicht auf der Seite`);
     assert.ok(html["index.html"].includes(`"${k}": "`), `${k} fehlt im EN-Woerterbuch`);

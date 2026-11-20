@@ -7,6 +7,9 @@ ausserhalb von `containerload.io/`, werden also nie ausgeliefert.
   `/admin`): `npm install --no-save world-atlas@2 topojson-client@3 d3-geo@3
   iso-3166@4 && node karte-bauen.mjs`. Nur noetig, falls die Karte je neu
   gebaut werden muss -- die generierte Datei ist eingecheckt.
+- `startseite-en.mjs` erzeugt `containerload.io/en/index.html` (englische Startseite) aus
+  `containerload.io/index.html` und seinem EN-Woerterbuch -- nach JEDER Aenderung an
+  index.html laufen lassen: `node werkzeug/startseite-en.mjs` (braucht nur Node).
 - `haefen/land-bauen.mjs` erzeugt `containerload.io/karte/land.js` (Kueste + Grenzen
   der Hafenkarte, Natural Earth 1:50 Mio.), `haefen/haefen-bauen.mjs` erzeugt
   `containerload.io/karte/haefen.js` (World Port Index + Top 50 aus

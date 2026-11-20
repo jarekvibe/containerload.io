@@ -27,10 +27,11 @@ test("der deutsche Titel nennt die Kategorie und haelt die Schnittgrenzen", () =
 });
 
 test("die englische Fassung zielt auf 'container loading calculator'", () => {
-  // Die EN-Kopfdaten stehen im META-Objekt und werden beim Sprachwechsel gesetzt.
-  const m = roh.match(/en:\{t:'([^']+)',\s*\n\s*d:'([^']+)',/);
-  assert.ok(m, "EN META nicht gefunden");
-  const [, t, d] = m;
+  // Die EN-Kopfdaten stehen seit 20.11.26 statisch in en/index.html (erzeugt aus index.html)
+  const enHtml = fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "en", "index.html"), "utf8");
+  const t = (enHtml.match(/<title>([^<]+)<\/title>/) || [])[1];
+  const d = (enHtml.match(/<meta name="description" content="([^"]+)"/) || [])[1];
+  assert.ok(t && d, "EN-Titel oder -Beschreibung fehlt in en/index.html");
   assert.ok(/container loading calculator/i.test(t), `EN-Titel ohne Kategorie: "${t}"`);
   // "3D" fuehrt im Titel: "3d load calculator" stand auf Position 9,6 mit 81
   // Impressionen und NULL Klicks -- ein Query mit reiner Tool-Absicht, das keine
