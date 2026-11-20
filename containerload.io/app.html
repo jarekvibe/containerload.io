@@ -3,13 +3,14 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
-<title>ContainerLoad — Rechner</title>
+<title>3D-Laderechner für Container &amp; LKW — ContainerLoad</title>
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://containerload.io/app" />
 <meta property="og:site_name" content="ContainerLoad" />
 <!-- Sprache: /app ist deutsch, /app?lang=en ist englisch. canonical und og:url werden
      beim Start passend zur gewaehlten Sprache nachgezogen (siehe LANG weiter unten). -->
 <link rel="canonical" href="https://containerload.io/app" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ContainerLoad","alternateName":"ContainerLoad 3D-Laderechner","url":"https://containerload.io/app","applicationCategory":"BusinessApplication","applicationSubCategory":"Ladeplanung / Load planning","operatingSystem":"Web","browserRequirements":"JavaScript und WebGL","inLanguage":["de","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Kostenloser 3D-Laderechner für Container und LKW: palettengenau, mit Container-Empfehlung, Lademetern und Plan als Link. Direkt im Browser, ohne Anmeldung.","featureList":["3D-Ladeplan für Container und LKW","Container-Empfehlung und Mehr-Container-Ketten","Lademeter und Achslast-Richtwert für den Sattelzug","Plan als Link teilen, ohne Anmeldung für den Empfänger","Ladevorschlag als PDF mit QR-Code","Packliste aus Excel, Text oder Foto einlesen"],"screenshot":"https://containerload.io/og.png","publisher":{"@type":"Organization","name":"ContainerLoad","url":"https://containerload.io/"}}</script>
 <link rel="alternate" hreflang="de" href="https://containerload.io/app" />
 <link rel="alternate" hreflang="en" href="https://containerload.io/app?lang=en" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/app" />
@@ -22,7 +23,7 @@
 <meta name="twitter:description" content="Passt deine Ladung rein? In welchen Container? ContainerLoad rechnet es live in 3D." />
 <meta name="twitter:image" content="https://containerload.io/og.png" />
 <meta name="theme-color" content="#0E1116" />
-<meta name="description" content="Premium 3D Container-Ladungsrechner: Auslastung, Stapelung & Container-Empfehlung in Sekunden." />
+<meta name="description" content="Kostenloser 3D-Laderechner: Container und LKW beladen, Auslastung, Stapelung, Lademeter und Container-Empfehlung in Sekunden. Ohne Anmeldung." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
@@ -3450,7 +3451,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // widerspruechliches Signal (deutscher Titel ueber englischem Inhalt).
   try {
     document.documentElement.lang = LANG;
-    document.title = LANG === "en" ? "ContainerLoad — Load calculator" : "ContainerLoad — Rechner";
+    document.title = LANG === "en" ? "3D load calculator for containers & trucks — ContainerLoad" : "3D-Laderechner für Container & LKW — ContainerLoad";
     var _abs = "https://containerload.io/app" + (LANG === "en" ? "?lang=en" : "");
     var _can = document.querySelector('link[rel="canonical"]');
     if (_can) _can.href = _abs;
