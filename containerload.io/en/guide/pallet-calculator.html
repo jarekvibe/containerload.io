@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<!-- Erzeugt von werkzeug/palettenrechner.mjs aus app.html -- nicht von Hand aendern. -->
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pallet calculator: how many pallets fit in a container?</title>
+<meta name="description" content="Free pallet calculator: euro, industrial and standard US pallets in 20ft, 40ft and high cube containers and trucks – with stacking, weight and a 3D check." />
+<link rel="canonical" href="https://containerload.io/en/guide/pallet-calculator" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/palettenrechner" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/pallet-calculator" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/palettenrechner" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="article" />
+<meta property="og:locale" content="en_GB" />
+<meta property="og:title" content="Pallet calculator: how many pallets fit in a container?" />
+<meta property="og:description" content="Free pallet calculator: euro, industrial and standard US pallets in 20ft, 40ft and high cube containers and trucks – with stacking, weight and a 3D check." />
+<meta property="og:url" content="https://containerload.io/en/guide/pallet-calculator" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Pallet calculator: how many pallets fit in a container?" />
+<meta name="twitter:description" content="Free pallet calculator: euro, industrial and standard US pallets in 20ft, 40ft and high cube containers and trucks – with stacking, weight and a 3D check." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How many pallets fit in a 20ft container?","acceptedAnswer":{"@type":"Answer","text":"11 euro pallets or 9 standard pallets (48 × 40 in) single-tier. Stacked, twice that, if each pallet is at most 119 cm (46.9 in) high and the weight allows."}},{"@type":"Question","name":"How many pallets fit in a 40ft container?","acceptedAnswer":{"@type":"Answer","text":"25 euro pallets or 20 standard pallets single-tier. In a 40ft high cube, stacked twice that, with pallets up to 135 cm (53.1 in) high."}},{"@type":"Question","name":"How many pallets fit on a truck?","acceptedAnswer":{"@type":"Answer","text":"A curtainsider takes 34 euro pallets or 26 standard pallets single-tier, a 7.5-t truck 12 and a van 6 euro pallets."}},{"@type":"Question","name":"How high can a pallet be to stack two high?","acceptedAnswer":{"@type":"Answer","text":"In a standard container at most 119 cm (46.9 in), in a high cube and on a curtainsider 135 cm (53.1 in) – based on internal heights of 239 and 270 cm."}}]}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/en/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <div class="lang" role="group" aria-label="Language"><a href="/ratgeber/palettenrechner" hreflang="de" title="Deutsch">DE</a><a class="on" href="/en/guide/pallet-calculator" hreflang="en" title="English">EN</a></div><a class="btn btn-primary" href="/app?lang=en">Open 3D calculator</a>
+  </div>
+</header>
+<main>
+  <article class="wrap">
+    <div class="eyebrow">Container Guide · Pallet calculator</div>
+    <h1>Pallet calculator: how many pallets fit in a container or truck?</h1>
+    <div class="answer"><p class="lead" style="margin:0">A <b>20ft container</b> fits <b>11 euro pallets</b> or <b>9 standard pallets</b> (48 × 40 in), a <b>40ft</b> <b>25</b> or <b>20</b> – single-tier. Stacked two high the figures double, if height and payload allow. The calculator below works out any pallet for every container and truck at once.</p></div>
+
+    <div class="cbm-calc" data-pal-widget>
+      <div class="pal-eingabe">
+        <div class="field pal-art"><label for="palArt">Pallet</label><select id="palArt"><option value="120x80" selected>Euro pallet 120 × 80</option><option value="120x100">Industrial pallet 120 × 100</option><option value="122x102">US pallet 48 × 40″ (122 × 102)</option><option value="124x83">Wire mesh pallet 124 × 83</option><option value="80x60">Half pallet 80 × 60</option><option value="114x114">Chemical pallet CP3 114 × 114</option><option value="eigen">Custom size</option></select></div>
+        <div class="field"><label for="palL">Length (cm)</label><input type="number" id="palL" inputmode="numeric" min="1" step="1" value="120" /></div>
+        <div class="field"><label for="palW">Width (cm)</label><input type="number" id="palW" inputmode="numeric" min="1" step="1" value="80" /></div>
+        <div class="field"><label for="palH">Height incl. goods (cm)</label><input type="number" id="palH" inputmode="numeric" min="1" step="1" placeholder="e.g. 150" /></div>
+        <div class="field"><label for="palKg">kg per pallet · optional</label><input type="number" id="palKg" inputmode="decimal" min="0" step="any" placeholder="e.g. 400" /></div>
+        <label class="pal-stapel"><input type="checkbox" id="palStapel" /> stackable</label>
+      </div>
+      <div class="pal-tabelle"><div class="tabelle"><table><thead><tr><th>Load space</th><th class="num">Floor</th><th class="num">Tiers</th><th class="num">Pallets</th><th></th></tr></thead><tbody id="palRows"><tr><td>20ft standard</td><td class="num">11</td><td class="num">–</td><td class="num"><b>11</b></td><td class="num pal-3d"></td></tr><tr><td>40ft standard</td><td class="num">25</td><td class="num">–</td><td class="num"><b>25</b></td><td class="num pal-3d"></td></tr><tr><td>40ft high cube</td><td class="num">25</td><td class="num">–</td><td class="num"><b>25</b></td><td class="num pal-3d"></td></tr><tr><td>45ft high cube</td><td class="num">27</td><td class="num">–</td><td class="num"><b>27</b></td><td class="num pal-3d"></td></tr><tr><td>Curtainsider</td><td class="num">34</td><td class="num">–</td><td class="num"><b>34</b></td><td class="num pal-3d"></td></tr><tr><td>Swap body</td><td class="num">18</td><td class="num">–</td><td class="num"><b>18</b></td><td class="num pal-3d"></td></tr><tr><td>Rigid truck</td><td class="num">18</td><td class="num">–</td><td class="num"><b>18</b></td><td class="num pal-3d"></td></tr><tr><td>7.5-t truck</td><td class="num">12</td><td class="num">–</td><td class="num"><b>12</b></td><td class="num pal-3d"></td></tr><tr><td>Van (Sprinter)</td><td class="num">6</td><td class="num">–</td><td class="num"><b>6</b></td><td class="num pal-3d"></td></tr></tbody></table></div></div>
+      <div class="cbm-calc-result" id="palHinweis"></div>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Calculated with the same packer as the 3D calculator, on the typical internal dimensions of the containers and vehicles. A click on “3D →” opens exactly this load.</p>
+    <script>
+    (function(){
+    // PAL_CALC_START
+    // PACKER_START -- von werkzeug/palettenrechner.mjs aus app.html uebernommen, nicht von Hand aendern
+  function makeFloorPacker(l, w, rotatable, maxSpots) {
+    const memo = /* @__PURE__ */ new Map();
+    const LIMIT = maxSpots > 0 ? maxSpots : Infinity;
+    const grid = (a, b, pl, pw) => {
+      const nx = Math.floor((a + 1e-6) / pl), nz = Math.floor((b + 1e-6) / pw);
+      const r = [];
+      for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+        r.push({ x: i * pl, z: j * pw, dx: pl, dz: pw });
+        if (r.length >= LIMIT) return r;
+      }
+      return r;
+    };
+    const cands = (D) => {
+      const s = /* @__PURE__ */ new Set();
+      for (let k = l; k < D; k += l) s.add(k);
+      if (rotatable) for (let k = w; k < D; k += w) s.add(k);
+      return [...s].filter((v) => v <= D - Math.min(l, w) + 1e-6);
+    };
+    function solve(FL, FW) {
+      const m = Math.min(l, w);
+      if (FL < m - 1e-6 || FW < m - 1e-6) return { count: 0, rects: [], cuts: 0 };
+      const key = FL.toFixed(1) + "x" + FW.toFixed(1);
+      if (memo.has(key)) return memo.get(key);
+      let best = { count: 0, rects: [], cuts: 0 };
+      const grids = rotatable ? [grid(FL, FW, l, w), grid(FL, FW, w, l)] : [grid(FL, FW, l, w)];
+      for (const g of grids) if (g.length > best.count) best = { count: g.length, rects: g, cuts: 0 };
+      // Genug fuer den Aufrufer: das Zerteilen kann die Zahl nur noch weiter erhoehen,
+      // und mehr als LIMIT wird nicht gebraucht.
+      if (best.count >= LIMIT) { memo.set(key, best); return best; }
+      if (best.count < 500) {
+        // Ordnungs-Tiebreaker: bei GLEICHER Stueckzahl gewinnt die Loesung mit den
+        // wenigsten Schnitten (ein reines Raster hat 0, jede Teilung zaehlt 1 dazu).
+        // Wenige Schnitte heisst wenige geschlossene Baender statt Flickwerk --
+        // gemeldet: 11 Stueck 120x80 im 20' standen quer und laengs verschachtelt,
+        // obwohl dieselben 11 als "7 quer + 4 laengs" in zwei Reihen stehen koennen.
+        // Die Stueckzahl entscheidet weiterhin ZUERST und bleibt unangetastet.
+        for (const s of cands(FL)) {
+          const A = solve(s, FW), B = solve(FL - s, FW);
+          const n = A.count + B.count, c = A.cuts + B.cuts + 1;
+          if (n > best.count || (n === best.count && n > 0 && c < best.cuts)) best = { count: n, cuts: c, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, x: r.x + s }))] };
+        }
+        for (const t of cands(FW)) {
+          const A = solve(FL, t), B = solve(FL, FW - t);
+          const n = A.count + B.count, c = A.cuts + B.cuts + 1;
+          if (n > best.count || (n === best.count && n > 0 && c < best.cuts)) best = { count: n, cuts: c, rects: [...A.rects, ...B.rects.map((r) => ({ ...r, z: r.z + t }))] };
+        }
+      }
+      memo.set(key, best);
+      return best;
+    }
+    return solve;
+  }
+    var RAEUME = [{"k":"20gp","l":590,"w":235,"h":239,"kg":28200,"cont":"20gp"},{"k":"40gp","l":1203,"w":235,"h":239,"kg":26600,"cont":"40gp"},{"k":"40hc","l":1203,"w":235,"h":270,"kg":26580,"cont":"40hc"},{"k":"45hc","l":1355,"w":235,"h":270,"kg":27600,"cont":"45hc"},{"k":"sattel","l":1362,"w":248,"h":270,"kg":24000,"fz":"sattel"},{"k":"wb","l":745,"w":248,"h":270,"kg":16000,"fz":"wb"},{"k":"mw","l":720,"w":248,"h":270,"kg":12000,"fz":"mw"},{"k":"75t","l":610,"w":220,"h":230,"kg":2800,"fz":"75t"},{"k":"sprinter","l":430,"w":180,"h":190,"kg":1200,"fz":"sprinter"}];
+    // PACKER_END
+    // Bodenlage x Lagen, begrenzt durch die Zuladung. Lagen nur, wenn gestapelt werden darf UND die Hoehe
+    // bekannt ist -- ohne Hoehe ist "wie oft uebereinander" unbekannt, also eine Lage.
+    function palRechnen(l, w, h, stapel, kg, R) {
+      var L = Number(l), W = Number(w), H = Number(h), G = Number(kg);
+      if (!(L > 0) || !(W > 0)) return null;
+      var boden = makeFloorPacker(L, W, true)(R.l, R.w).count, hoch = H > 0;
+      if (hoch && H > R.h) return { boden: boden, lagen: 0, n: 0, zuHoch: true, kgGrenze: false, hoch: true };
+      var lagen = hoch && stapel ? Math.max(1, Math.floor(R.h / H)) : 1, geo = boden * lagen, n = geo, kgGrenze = false;
+      if (G > 0) { var nachKg = Math.floor(R.kg / G); if (nachKg < geo) { n = nachKg; kgGrenze = true; } }
+      return { boden: boden, lagen: lagen, n: n, zuHoch: false, kgGrenze: kgGrenze, hoch: hoch };
+    }
+    // PAL_CALC_END
+    var palCfg = {
+      t: function () { return { zuHoch: 'too high', zul: 'payload', d3: '3D →', d3Titel: 'Open this row in the 3D calculator', ohneH: 'Enter the height: the calculator then counts the tiers and opens each row in 3D.', stapelOhneH: 'For “stackable” the calculator needs the height of the loaded pallet.', kgHinweis: '“payload”: here the weight runs out before the space does.', klein: 'From 40 cm per side. Smaller packages (cartons) are handled by the 3D calculator.', rechnet: 'calculating …' }; },
+      loc: function () { return 'en-GB'; },
+      raum: {"20gp":"20ft standard","40gp":"40ft standard","40hc":"40ft high cube","45hc":"45ft high cube","sattel":"Curtainsider","wb":"Swap body","mw":"Rigid truck","75t":"7.5-t truck","sprinter":"Van (Sprinter)"},
+      flach: ' not stackable',
+      qhref: function (q, r) { return '/app?q=' + encodeURIComponent(q) + (r.cont ? '&cont=' + r.cont : '&d=road&fz=' + r.fz) + '&lang=en'; }
+    };
+    // PAL_UI_START
+    var art = document.getElementById('palArt'), fl = document.getElementById('palL'), fw = document.getElementById('palW'),
+        fh = document.getElementById('palH'), fkg = document.getElementById('palKg'), fst = document.getElementById('palStapel'),
+        body = document.getElementById('palRows'), hinweis = document.getElementById('palHinweis'), lauf = 0, warte = null;
+    function zelle(r, e) {
+      var t = palCfg.t(), loc = palCfg.loc(), f0 = function (n) { return n.toLocaleString(loc); };
+      var tr = document.createElement('tr');
+      var link = '';
+      if (e && e.hoch && e.n > 0) {
+        var q = e.n + 'x ' + Number(fl.value) + 'x' + Number(fw.value) + 'x' + Number(fh.value) + (Number(fkg.value) > 0 ? ' ' + Number(fkg.value) + 'kg' : '') + (fst.checked ? '' : palCfg.flach);
+        link = '<a href="' + palCfg.qhref(q, r).replace(/&/g, '&amp;') + '" title="' + t.d3Titel + '">' + t.d3 + '</a>';
+      }
+      tr.innerHTML = '<td>' + palCfg.raum[r.k] + '</td>' +
+        '<td class="num">' + (e ? f0(e.boden) : '–') + '</td>' +
+        '<td class="num">' + (!e ? '–' : e.zuHoch ? '<span class="pal-warn">' + t.zuHoch + '</span>' : e.hoch ? e.lagen : '–') + '</td>' +
+        '<td class="num"><b>' + (e ? f0(e.n) : '–') + '</b>' + (e && e.kgGrenze ? ' <span class="pal-warn">' + t.zul + '</span>' : '') + '</td>' +
+        '<td class="num pal-3d">' + link + '</td>';
+      return tr;
+    }
+    function zeichnen() {
+      var t = palCfg.t(), meinLauf = ++lauf;
+      var L = Number(fl.value), W = Number(fw.value);
+      if (!(L >= 40) || !(W >= 40)) {
+        body.innerHTML = '';
+        RAEUME.forEach(function (r) { body.appendChild(zelle(r, null)); });
+        hinweis.textContent = t.klein;
+        return;
+      }
+      hinweis.textContent = t.rechnet;
+      var zeilen = [], kgDa = false, i = 0;
+      // Zeile fuer Zeile, mit Luft dazwischen: ungewoehnliche Masse (43 x 40 cm) brauchen
+      // im grossen Laderaum bis zu einer halben Sekunde. Die Seite bleibt dabei bedienbar,
+      // und eine neue Eingabe bricht den alten Lauf ab.
+      (function weiter() {
+        if (meinLauf !== lauf) return;
+        var r = RAEUME[i], e = palRechnen(L, W, fh.value, fst.checked, fkg.value, r);
+        if (e && e.kgGrenze) kgDa = true;
+        zeilen.push(zelle(r, e));
+        if (++i < RAEUME.length) { setTimeout(weiter, 0); return; }
+        body.innerHTML = '';
+        zeilen.forEach(function (z) { body.appendChild(z); });
+        var h = [];
+        if (!(Number(fh.value) > 0)) h.push(fst.checked ? t.stapelOhneH : t.ohneH);
+        if (kgDa) h.push(t.kgHinweis);
+        hinweis.textContent = h.join(' ');
+      })();
+    }
+    function spaeter() { clearTimeout(warte); warte = setTimeout(zeichnen, 250); }
+    art.addEventListener('change', function () {
+      var m = /^(\d+)x(\d+)$/.exec(art.value);
+      if (m) { fl.value = m[1]; fw.value = m[2]; }
+      zeichnen();
+    });
+    [fl, fw].forEach(function (el) {
+      el.addEventListener('input', function () {
+        var k = Number(fl.value) + 'x' + Number(fw.value), da = false;
+        [].forEach.call(art.options, function (o) { if (o.value === k) da = true; });
+        art.value = da ? k : 'eigen';
+        spaeter();
+      });
+    });
+    [fh, fkg].forEach(function (el) { el.addEventListener('input', spaeter); });
+    fst.addEventListener('change', zeichnen);
+    zeichnen();
+    // PAL_UI_END
+    })();
+    </script>
+
+    <h2>Pallets per container and truck at a glance</h2>
+    <p>Single-tier, both orientations mixed – the way the packer actually places the pallets:</p>
+    <div class="tabelle"><table><thead><tr><th>Load space</th><th>Euro 120 × 80</th><th>Industrial 120 × 100</th><th>US 48 × 40″</th><th>Wire mesh 124 × 83</th></tr></thead><tbody>
+    <tr><td>20ft standard</td><td class="num">11</td><td class="num">9</td><td class="num">9</td><td class="num">11</td></tr>
+    <tr><td>40ft standard / high cube</td><td class="num">25</td><td class="num">22</td><td class="num">20</td><td class="num">23</td></tr>
+    <tr><td>45ft high cube</td><td class="num">27</td><td class="num">24</td><td class="num">24</td><td class="num">26</td></tr>
+    <tr><td>Curtainsider</td><td class="num">34</td><td class="num">26</td><td class="num">26</td><td class="num">32</td></tr>
+    <tr><td>Swap body</td><td class="num">18</td><td class="num">14</td><td class="num">14</td><td class="num">16</td></tr>
+    <tr><td>Rigid truck</td><td class="num">18</td><td class="num">14</td><td class="num">14</td><td class="num">16</td></tr>
+    <tr><td>7.5-t truck</td><td class="num">12</td><td class="num">11</td><td class="num">10</td><td class="num">11</td></tr>
+    <tr><td>Van (Sprinter)</td><td class="num">6</td><td class="num">4</td><td class="num">4</td><td class="num">6</td></tr>
+    </tbody></table></div>
+    <p>Why not just divide the floor area by the pallet area? Because the width decides: a container is 235 cm (92.5 in) wide inside. Two euro pallets lengthwise (160 cm) leave 75 cm – too little for a third. Only a mix of lengthwise and crosswise fills the floor; the reasoning is on the page about <a href="/en/guide/container-floor-positions">floor positions in a container</a>.</p>
+
+    <h2>Stacked: how high can a pallet be?</h2>
+    <p>Whether two tiers fit depends on the internal height. The table shows the maximum height of each loaded pallet:</p>
+    <div class="tabelle"><table><thead><tr><th>Load space</th><th>Internal height</th><th>2 tiers up to</th><th>3 tiers up to</th></tr></thead><tbody>
+    <tr><td>20ft / 40ft standard</td><td class="num">239 cm</td><td class="num">119 cm</td><td class="num">79 cm</td></tr>
+    <tr><td>40ft / 45ft high cube</td><td class="num">270 cm</td><td class="num">135 cm</td><td class="num">90 cm</td></tr>
+    <tr><td>Curtainsider</td><td class="num">270 cm</td><td class="num">135 cm</td><td class="num">90 cm</td></tr>
+    <tr><td>7.5-t truck</td><td class="num">230 cm</td><td class="num">115 cm</td><td class="num">76 cm</td></tr>
+    <tr><td>Van (Sprinter)</td><td class="num">190 cm</td><td class="num">95 cm</td><td class="num">63 cm</td></tr>
+    </tbody></table></div>
+    <p>The difference is large: pallets 125 cm (49 in) high stand single-tier in a standard container but two high in a <b>high cube</b> – twice as many in the same 40ft slot. If pallets go in already stacked, the stack must also pass the door, which is lower than the interior (see <a href="/en/guide/container-internal-dimensions">container dimensions</a>). And only what can carry the load on top is stackable.</p>
+
+    <h2>Weight: when the payload runs out first</h2>
+    <p>With small vehicles the limit is often the weight, not the space. A <b>7.5-t truck</b> takes 12 euro pallets on the floor but carries around 2,800 kg – at 250 kg per pallet that is <b>11</b>. A <b>van</b> with around 1,200 kg payload takes <b>4 instead of 6</b> at 250 kg each. Enter the weight above and the calculator shows where the payload runs out first. For containers, what is allowed on the road also counts: <a href="/en/guide/container-road-weight-limits">weight limits by country</a>.</p>
+
+    <h2>Frequent questions</h2>
+    <p><b>How many pallets fit in a 20ft container?</b><br>11 euro pallets or 9 standard pallets (48 × 40 in) single-tier. Stacked, twice that, if each pallet is at most 119 cm (46.9 in) high and the weight allows.</p>
+    <p><b>How many pallets fit in a 40ft container?</b><br>25 euro pallets or 20 standard pallets single-tier. In a 40ft high cube, stacked twice that, with pallets up to 135 cm (53.1 in) high.</p>
+    <p><b>How many pallets fit on a truck?</b><br>A curtainsider takes 34 euro pallets or 26 standard pallets single-tier, a 7.5-t truck 12 and a van 6 euro pallets.</p>
+    <p><b>How high can a pallet be to stack two high?</b><br>In a standard container at most 119 cm (46.9 in), in a high cube and on a curtainsider 135 cm (53.1 in) – based on internal heights of 239 and 270 cm.</p>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="/app?lang=en">➜ Plan your own load in the 3D calculator</a>
+      <a class="btn btn-ghost" href="/en/guide/container-floor-positions">Floor positions by pallet type</a>
+    </div>
+
+    <h2>Related questions</h2>
+    <div class="related"><a href="/en/guide/container-floor-positions">Floor positions per container</a><a href="/en/guide/euro-pallets-20ft-container">Euro pallets 20ft</a><a href="/en/guide/euro-pallets-40ft-container">Euro pallets 40ft</a><a href="/en/guide/pallets-20ft-container">Pallets in a 20ft</a><a href="/en/guide/pallets-40ft-container">Pallets in a 40ft</a><a href="/en/guide/industrial-pallets-container">Industrial pallets</a><a href="/en/guide/loading-metre-calculator">Loading metre calculator</a><a href="/en/guide/container-internal-dimensions">Container dimensions</a></div>
+
+    <div class="note"><b style="color:var(--dim)">No warranty:</b> The figures apply to typical internal dimensions and payloads; real containers and vehicles differ. What counts is the actual equipment, weight distribution, load securing and what the pallets can carry.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen, Germany</span>
+    <span><a href="/en/">Calculator</a> · <a href="/en/guide/">Container Guide</a> · <a href="/impressum">Imprint</a> · <a href="/datenschutz">Privacy</a></span>
+  </div>
+</footer>
+</body>
+</html>

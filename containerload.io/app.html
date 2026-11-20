@@ -5478,6 +5478,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Landfracht, nicht in den Seecontainer. Nur zusammen mit ?q= wirksam, und nur
   // "road" -- ein Deeplink soll den Modus setzen koennen, aber sonst nichts.
   var QROAD = !!(QIMPORT && new URLSearchParams(window.location.search).get("d") === "road");
+  // ?q=...&d=road&fz=wb: WELCHES Fahrzeug. Der Palettenrechner nennt seine Zahl je Fahrzeug,
+  // und der Knopf einer 7,5-Tonner-Zeile darf nicht auf dem Planensattel landen. Nur
+  // zusammen mit d=road, nur Whitelist, sonst der Planensattel wie bisher.
+  var QFZ = (() => {
+    if (!QROAD) return null;
+    const k = { "sattel": "Planensattel", "wb": "Wechselbrücke", "mw": "Motorwagen", "75t": "7,5-Tonner", "sprinter": "Sprinter" };
+    try { return k[new URLSearchParams(window.location.search).get("fz")] || "Planensattel"; } catch (e) { return "Planensattel"; }
+  })();
   // ?q=...&cont=40gp: die Passt-rein-Seiten nennen ihre Zahl FUER EINEN BESTIMMTEN
   // Container. Ohne Vorwahl oeffnete der Knopf einer 40-Fuss-Seite den 20'-Default,
   // die Kette verteilte auf 2 x 20' -- und die Seite sah im Moment des Klicks
@@ -7854,12 +7862,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Absender gerechnet hat – die duerfen sich beim Empfaenger nicht still veraendern.
     const INIT_CARRIER = SHARED ? "" : loadCarrier();
     const INIT_CONTAINER = SHARED ? SHARED.container
-      : QROAD ? { ...VEHICLES["Planensattel"] }
+      : QROAD ? { ...VEHICLES[QFZ] }
       : QCONT ? { ...applyCarrier(PRESETS[QCONT], INIT_CARRIER, QCONT) }
       : DRAFT && DRAFT.container ? DRAFT.container
       : { ...applyCarrier(PRESETS["20' GP"], INIT_CARRIER, "20' GP") };
     const [domain, setDomain] = useState(SHARED ? SHARED.domain || "sea" : QROAD ? "road" : DRAFT && DRAFT.domain || "sea");
-    const [preset, setPreset] = useState(SHARED ? SHARED.preset : QROAD ? "Planensattel" : QCONT || (DRAFT && DRAFT.preset) || "20' GP");
+    const [preset, setPreset] = useState(SHARED ? SHARED.preset : QROAD ? QFZ : QCONT || (DRAFT && DRAFT.preset) || "20' GP");
     const [carrier, setCarrier] = useState(INIT_CARRIER);
     const [container, setContainer] = useState(INIT_CONTAINER);
     const [cargo, setCargo] = useState(INIT_CARGO);

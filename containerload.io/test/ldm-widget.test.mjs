@@ -121,7 +121,10 @@ test("der Sprung landet in der Landfracht, mit Sprache", () => {
   const app = lies("app.html");
   assert.ok(app.includes('QIMPORT && new URLSearchParams(window.location.search).get("d") === "road"'), "QROAD-Vertrag in app.html fehlt");
   assert.ok(app.includes('QROAD ? "road"'), "Domain-Start nutzt QROAD nicht");
-  assert.ok(app.includes('QROAD ? "Planensattel"'), "Preset-Start nutzt QROAD nicht");
+  // Das Fahrzeug kommt aus ?fz= (Whitelist), ohne Angabe der Planensattel -- der Lademeter-
+  // Rechner gibt keins an und landet deshalb weiter auf dem Planensattel.
+  assert.ok(app.includes("QROAD ? QFZ : QCONT") && app.includes("QROAD ? { ...VEHICLES[QFZ] }"), "Preset-Start nutzt QFZ nicht");
+  assert.ok(app.includes('return k[new URLSearchParams(window.location.search).get("fz")] || "Planensattel";'), "ohne fz nicht der Planensattel");
 });
 
 test("kein angeblich ueblicher Satz: der Satz ist eine Eingabe, und die Seite sagt das", () => {

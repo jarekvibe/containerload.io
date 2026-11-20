@@ -149,6 +149,24 @@ b{color:var(--text);font-weight:700}
    Auf dem Handy greift unten wieder das Drei-Spalten-Raster (gleiche Spezifitaet, spaeter). */
 .ldm-grid{grid-template-columns:repeat(6,1fr) 28px}
 .ldm-satz{margin-top:10px;max-width:300px}
+/* Palettenrechner: eine Eingabezeile (Palette, L, B, H, kg, stapelbar), darunter die Tabelle
+   ueber alle Laderaeume. Die Tabelle ist dieselbe .tabelle wie im Text, nur ohne Aussenabstand. */
+.pal-eingabe{display:grid;grid-template-columns:1.8fr repeat(4,1fr);gap:10px;align-items:end}
+/* Das Haekchen: .cbm-calc label/input sind fuer Zahlenfelder gebaut (Grossbuchstaben, volle
+   Breite) -- hier beides zurueck, mit hoeherer Spezifitaet. */
+.cbm-calc .pal-stapel{display:flex;align-items:center;justify-content:flex-start;gap:8px;grid-column:1/-1;cursor:pointer;font-family:inherit;font-size:14px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--dim)}
+.cbm-calc .pal-stapel input{width:18px;height:18px;padding:0;margin:0;accent-color:var(--accent)}
+.pal-tabelle th.num{text-align:right}
+.pal-tabelle .tabelle{margin:14px 0 0}
+.pal-warn{color:var(--warn);font-size:12px;font-weight:600;white-space:nowrap}
+.pal-3d a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+@media(max-width:560px){
+  .pal-eingabe{grid-template-columns:1fr 1fr}
+  .pal-art{grid-column:1/-1}
+  /* Fuenf Spalten auf 390 px: enger, damit "3D →" ohne Wischen sichtbar bleibt */
+  .pal-tabelle th,.pal-tabelle td{padding:8px 5px}
+  .pal-tabelle td:first-child{font-size:13px}
+}
 .cbm-weg{border:0;background:var(--deep);color:var(--faint);border-radius:var(--r-s);height:36px;cursor:pointer;font-size:15px}
 .cbm-calc-fuss{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
 .cbm-add{border:0;background:var(--deep);color:var(--text);border-radius:var(--r-s);padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:12px}
