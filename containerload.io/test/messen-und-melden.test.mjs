@@ -43,7 +43,9 @@ const EREIGNISSE = [
   "strassenlimit", "teilen-anstoss", "ki-import", "ki-import-foto", "ki-brief", "ki-chat",
   "stevie-geoeffnet", "thema-hell", "thema-dunkel",
   // Zusammenarbeit ueber den Link: geaenderte Fassung gesehen, Verlade-Meldung geoeffnet/verschickt
-  "fassung-geaendert", "meldung-geoeffnet", "verladen-gemeldet"
+  "fassung-geaendert", "meldung-geoeffnet", "verladen-gemeldet",
+  // VGM-Meldung: Formular geoeffnet (Kopfleiste/Menue/Meldungs-Karte), PDF erzeugt
+  "vgm-geoeffnet", "vgm-dokument"
 ];
 
 test("es geht NUR der Name des Ereignisses mit — nie etwas aus der Ladung", () => {
