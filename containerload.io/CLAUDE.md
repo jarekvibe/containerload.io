@@ -180,6 +180,22 @@ Im **gemischten Pfad** (`emsSearch`, ab zwei Typen) entscheidet die **Höhensumm
 
 **Wer an `emsSearch` oder `emsPackOnce` etwas ändert, misst vorher und nachher** — `node test/bench/fuellgrad.mjs app.html` über 300 deterministische Ladungen. Verladene Packstücke und belegtes Volumen dürfen **nicht sinken**; alles andere ist Geschmack. Für den Gleichstand-Entscheid oben lag beides auf die dritte Nachkommastelle identisch (15.189 Packstücke, 5.547,979 m³), während die Ladungen mit mehr als einer Etage von 187 auf 295 von 300 stiegen. Der Messstand liegt bewusst außerhalb von `test/`, weil die CI dort mit `node --test test/*.mjs` greift und 30 Sekunden nicht in jeden Pull Request gehören.
 
+### Große Ladungen: schnell, ohne das Ergebnis zu ändern (23.11.26)
+Aus der Nutzungsstatistik (Vietnam, per „Im Rechner öffnen" nachgestellt): 6 Positionen, **2.169 Packstücke**, und der Rechner stand rund 40 Sekunden. Nachgemessen außerhalb des Browsers: 31 s reine Rechenzeit, 83 `packCargo`-Aufrufe für Kette und Empfehlung, 8 Millionen Auflage-Prüfungen — jede über ALLE ~900 Kisten eines Containers. Jetzt **2,4 s** (Browser: Ergebnis nach ~4 s statt >30), und zwar mit vier Abkürzungen, die alle dieselbe Zusage tragen: **das Ergebnis bleibt Kiste für Kiste dasselbe.**
+
+| | |
+|---|---|
+| **Ebenen-Verzeichnis** (`ebenen`/`ebeneBei` in `emsPackOnce`) | Auflage geben nur Kisten, deren Oberkante auf der gefragten Höhe liegt. `supportOk` und die Turm-Schleife bekommen nur noch diese Ebene statt aller Kisten — sie prüfen die Höhe weiterhin selbst. Liegt in einem Nachbar-Raster (±2/1000 cm) ebenfalls etwas, gibt es die volle Liste: dann ist auch die Summenreihenfolge bitgleich |
+| **Merker `nie` / `vorerst`** | Gleiche Ware ist in `units` dasselbe Objekt. Scheitert ein Stück schon an den Maßen (kein freier Raum groß genug), bleibt das so — freie Räume werden nur kleiner (`nie`). Scheitert es an Auflage oder Stapelgrenze, gilt das nur bis zur nächsten gesetzten Kiste (`vorerst.clear()`), denn die kann neue Auflage schaffen |
+| **Wertung zuerst** | Die Wertung einer Stelle hängt nur an ihrer Lage. Kann sie die bisher beste nicht schlagen, werden Auflage und Stapelgrenze gar nicht geprüft |
+| **`passtAlles` / `sicherZuViel`** | Die Frage „passt ALLES in diesen einen Container?" (Kette: `autoFollow`, Empfehlung: Einzel-Schleife, 45er-Ausnahme, `kombi`) packt nicht mehr, wenn Volumen oder Gewicht es sicher ausschließen (Zugabe 1 Liter / 10 g). Wird weniger als die ganze Liste verlangt, gilt die Abkürzung nicht |
+
+Nebenbei: `emsOris(u)` wird einmal je Stück gerechnet statt je freiem Raum. Der Füllgrad-Messstand ist **Ziffer für Ziffer identisch** (14.746 Packstücke, 5.392,790 m³, 290, 933.040) und läuft in 14,9 statt 25,4 s — die Abkürzungen helfen also auch gewöhnlichen Ladungen.
+
+`test/grossladung.test.mjs` baut die **alte Fassung aus derselben Datei** (alle vier Abkürzungen per Textersatz abgeschaltet; fehlt eine Zeile, schlägt der Ersatz an) und vergleicht: `packCargo` über 40 Zufallsladungen (krumme Maße, Stapelverbote, Grenzen, quick/ordentlich, Vorbelegung), Kette und Empfehlung über 8, dazu der gemeldete Fall mit einer **Arbeits-Obergrenze statt einer Stoppuhr** (Packläufe ≤ 60, durchgesehene Kisten < 1,5 Mrd.; vorher 83 und ~9,7 Mrd.). Zwei Gegenproben gemacht: falsche Ebene → drei Tests rot; `vorerst` nie geleert → **nur** der gezielte Fall rot (zwei Sockel, eine Platte), die Zufallsladungen blieben grün. Genau deshalb gibt es diesen gezielten Fall.
+
+**Wer hier weiter beschleunigen will:** der nächste exakte Schritt wäre ein x-Raster je Ebene (die Auflage-Prüfung kostet noch ~40 % der Zeit). Alles, was an der SUCHTIEFE dreht (weniger Sortierungen/Neustarts für große Ladungen), ändert das Ergebnis und ist eine eigene Entscheidung — mit dem Messstand davor und danach. Ebenfalls offen: `emsSearch` kappt bei 1.500 Stück je Packlauf; eine gemischte Ladung mit mehr Stücken kann deshalb nie als „passt in einen Container" gelten, auch wenn sie es räumlich täte.
+
 ### Kein Überstand: was oben liegt, muss unten auch stehen
 Gemeldet mit Bild: der Packer stellte **längere Packstücke auf kürzere**, sodass sie an einer Kante in der Luft endeten. Die Abstütz-Regel war bis dahin eine reine **Flächenregel** — 70 % der Grundfläche mussten getragen sein (`SUPPORT_MIN`).
 

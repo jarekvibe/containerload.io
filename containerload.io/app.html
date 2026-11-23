@@ -1750,15 +1750,56 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // NICHT im Ergebnis zurueck. "Pack das hier noch dazu" liefert, was dazukam -- der Aufrufer
   // haengt es an seine eigene Liste. Das Gewicht der Vorbelegung zieht packCargo vorher von
   // der Zuladung ab; emsPackOnce rechnet deshalb unveraendert weiter.
+  // ZWEI ABKUERZUNGEN FUER GROSSE LADUNGEN -- beide aendern das Ergebnis nicht, nur die Zeit.
+  //
+  // Gemeldet am 23.11.26 (Nutzungsstatistik, Vietnam): 6 Positionen, 2.169 Packstuecke, und
+  // der Rechner stand rund 40 Sekunden. Nachgemessen: 8 Millionen Auflage-Pruefungen, jede
+  // ueber ALLE schon gesetzten Kisten (in einem 40' HC rund 900), und nach dem letzten Stueck,
+  // das noch hineinging, wurde fuer jedes der ueber tausend uebrigen noch einmal der ganze
+  // freie Raum abgesucht -- obwohl schon das erste derselben Sorte nicht mehr passte.
+  //
+  // (1) EBENEN-VERZEICHNIS. Auflage geben nur Kisten, deren Oberkante auf der Hoehe py liegt.
+  //     `ebenen` fuehrt die gesetzten Kisten nach Oberkante (auf 1/1000 cm gerastert), in
+  //     Setzreihenfolge. Gefragt wird damit nur noch die eine Ebene statt alle Kisten.
+  //     supportOk und die Turm-Schleife pruefen die Hoehe weiterhin selbst (1e-3) -- sie
+  //     bekommen nur eine kuerzere Liste. Liegt in einem Nachbar-Raster ebenfalls etwas
+  //     (Hoehen, die sich um weniger als 3/1000 cm unterscheiden), gibt es die volle Liste:
+  //     dann ist die Reihenfolge der Summanden dieselbe wie frueher, auf das letzte Bit.
+  // (2) MERKER FUER STUECKE, DIE NICHT PASSEN. Gleiche Ware ist in `units` DASSELBE Objekt
+  //     (emsSearch legt je Stueck denselben Typ-Eintrag ab). Findet ein Stueck keinen Platz,
+  //     findet das naechste gleiche auch keinen, solange nichts dazugekommen ist:
+  //       * `nie`     -- es passt in KEINEN freien Raum mehr hinein, schon nach den Massen.
+  //                      Freie Raeume werden nur kleiner (zerteilt, ausgeduennt, gekappt),
+  //                      das bleibt also fuer den Rest dieses Laufs so.
+  //       * `vorerst` -- die Masse passten irgendwo, aber Auflage oder Stapelgrenze fehlten.
+  //                      Das kann die naechste gesetzte Kiste aendern (neue Auflage), deshalb
+  //                      gilt es nur bis zum naechsten Setzen.
+  //
+  // Vertrag: test/grossladung.test.mjs laesst diese Fassung gegen die alte (ohne beide
+  // Abkuerzungen, aus derselben Datei gebaut) laufen und vergleicht jede Kiste.
+  var EMS_LEER = [];
   function emsPackOnce(C2, units, order, pay, cap, vorbelegt) {
     let ems = [{ x: 0, y: 0, z: 0, dx: C2.l, dy: C2.h, dz: C2.w }];
     const placed = [];
     let weight = 0;
+    const ebenen = /* @__PURE__ */ new Map();
+    const ebeneRein = (b) => {
+      const k = Math.round((b.y + b.dy) * 1e3);
+      const l = ebenen.get(k);
+      if (l) l.push(b); else ebenen.set(k, [b]);
+    };
+    const ebeneBei = (py) => {
+      const k = Math.round(py * 1e3);
+      if (ebenen.has(k - 1) || ebenen.has(k + 1) || ebenen.has(k - 2) || ebenen.has(k + 2)) return placed;
+      return ebenen.get(k) || EMS_LEER;
+    };
+    const nie = /* @__PURE__ */ new Set(), vorerst = /* @__PURE__ */ new Set();
     const vorN = vorbelegt && vorbelegt.length ? vorbelegt.length : 0;
     if (vorN) {
       // Von unten nach oben, damit grenzenAus die Traeger schon kennt.
       for (const B of vorbelegt.slice().sort((a2, b2) => a2.y - b2.y)) {
         placed.push(B);
+        ebeneRein(B);
         const next = [];
         for (const S of ems) {
           if (emsOverlap(S, B)) { for (const ns of emsSplit(S, B)) next.push(ns); } else next.push(S);
@@ -1768,14 +1809,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
     }
     for (const u of units) {
+      if (nie.has(u) || vorerst.has(u)) continue;
       if (weight + u.weight > pay + 1e-6) continue;
       let best = null;
+      // Die Ausrichtungen haengen nur am Stueck -- einmal je Stueck, nicht je freiem Raum.
+      const oris = emsOris(u);
+      // massPasst: gab es ueberhaupt einen freien Raum, in den das Stueck nach den Massen geht?
+      // ebPy/ebListe: die Ebene der zuletzt gefragten Hoehe (viele Raeume teilen sich eine).
+      let massPasst = false, ebPy = NaN, ebListe = EMS_LEER;
       for (const S of ems) {
         if (u.stackable === false && S.y > 1e-6) continue;
-        for (const [dx, dy, dz] of emsOris(u)) {
+        for (const [dx, dy, dz] of oris) {
           if (dx <= S.dx + 1e-6 && dy <= S.dy + 1e-6 && dz <= S.dz + 1e-6) {
+            massPasst = true;
             const px = S.x, py = S.y, pz = S.z;
-            if (py > 1e-4 && !supportOk(px, pz, dx, dz, py, placed)) continue; // nicht genug Auflage oder Ueberstand -> nicht schweben lassen
+            // Die Wertung haengt nur an der Lage -- sie steht fest, bevor irgendetwas geprueft
+            // ist. Kann diese Stelle die bisher beste ohnehin nicht schlagen, sind Auflage und
+            // Stapelgrenze egal: sie wuerde unten so oder so verworfen. (Dritte Abkuerzung,
+            // gleiche Zusage: dasselbe Ergebnis. Die Verneinung steht woertlich da, damit
+            // auch ein NaN genauso faellt wie im Vergleich am Ende.)
+            let score;
+            if (order === 0) score = py * 1e12 + px * 1e6 + pz;
+            else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
+            else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
+            else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
+            if (best && !(score < best.score)) continue;
+            if (py > 1e-4 && py !== ebPy) { ebPy = py; ebListe = ebeneBei(py); }
+            if (py > 1e-4 && !supportOk(px, pz, dx, dz, py, ebListe)) continue; // nicht genug Auflage oder Ueberstand -> nicht schweben lassen
             // Stapel-Obergrenze. stackMax ist eine TRAGFAEHIGKEIT: "1x stapelbar" heisst,
             // dass auf dieses Stueck genau ein weiteres darf -- unabhaengig davon, WAS
             // daraufkommt und wie hoch es ueber dem Containerboden steht.
@@ -1805,7 +1865,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             let pos = 1, lim = Infinity, hlim = Infinity;
             if (py > 1e-4) {
               let untenPos = 0, untenLim = Infinity, untenH = Infinity;
-              for (const b of placed) {
+              for (const b of ebListe) {
                 if (Math.abs(b.y + b.dy - py) > 1e-3) continue;
                 const ox = Math.min(px + dx, b.x + b.dx) - Math.max(px, b.x);
                 if (ox <= 1e-6) continue;
@@ -1840,18 +1900,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             // lim = pos heisst: ueber dieser Lage geht in dieser Saeule nichts mehr.
             const tragCap = u.stackMax;
             if (isFinite(tragCap)) lim = Math.min(lim, pos + tragCap - 1);
-            let score;
-            if (order === 0) score = py * 1e12 + px * 1e6 + pz;
-            else if (order === 1) score = py * 1e12 + pz * 1e6 + px;
-            else if (order === 2) score = px * 1e12 + py * 1e6 + pz;
-            else score = py * 1e12 + (px + pz) * 1e6 + Math.min(S.dx - dx, S.dz - dz);
             if (!best || score < best.score) best = { px, py, pz, dx, dy, dz, score, pos, lim, hlim };
           }
         }
       }
-      if (!best) continue;
+      if (!best) { (massPasst ? vorerst : nie).add(u); continue; }
       const B = { x: best.px, y: best.py, z: best.pz, dx: best.dx, dy: best.dy, dz: best.dz };
-      placed.push({ ...B, ti: u.ti, pos: best.pos, lim: best.lim, hlim: best.hlim });
+      const gesetzt = { ...B, ti: u.ti, pos: best.pos, lim: best.lim, hlim: best.hlim };
+      placed.push(gesetzt);
+      ebeneRein(gesetzt);
+      vorerst.clear();
       weight += u.weight;
       const next = [];
       for (const S of ems) {
@@ -1946,6 +2004,36 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       for (let o = 0; o < orderN; o++) consider(emsPackOnce(C2, sh, o, pay, cap, vorbelegt));
     }
     return best;
+  }
+  // "Passt ALLES in diesen einen Container?" -- die Frage stellen Kette und Empfehlung fuer
+  // jeden Standardtyp, und bis November 2026 hat jede dieser Fragen einen vollen Packlauf
+  // gekostet. Bei der gemeldeten Grossladung (122 m3, 53 t) waren das vierzig Packlaeufe ueber
+  // je 1.500 Stueck, um vierzigmal "nein" zu erfahren -- obwohl ein 20-Fuesser 33 m3 fasst.
+  //
+  // Was nach Volumen oder Gewicht sicher nicht hineingeht, wird deshalb gar nicht erst
+  // gepackt. Das ist keine Schaetzung: Kisten ueberlappen sich nicht und bleiben im Container,
+  // also kann nie mehr Volumen stehen, als er hat, und der Packer setzt kein Stueck, das die
+  // Zuladung reisst. Die Zugabe (1 Liter, 10 g) deckt die Rechentoleranzen des Packers
+  // (1e-6 cm je Kante, 1e-6 kg) grosszuegig ab. Gezaehlt wird wie in packCargo: nur Stuecke
+  // mit gueltigen Massen und Menge, Gewicht nie negativ.
+  function sicherZuViel(Ct, types) {
+    const CL = num(Ct.l), CW = num(Ct.w), CH = num(Ct.h);
+    const pay = num(Ct.payload) > 0 ? num(Ct.payload) : Infinity;
+    let vol = 0, kg = 0;
+    for (const t of types) {
+      const l = num(t.l), w = num(t.w), h = num(t.h), q = Math.max(0, Math.floor(num(t.qty)));
+      if (!(l > 0 && w > 0 && h > 0 && q > 0)) continue;
+      vol += l * w * h * q;
+      kg += Math.max(0, num(t.weight)) * q;
+    }
+    return vol > CL * CW * CH + 1e3 || kg > pay + 0.01;
+  }
+  // soll = wie viele Stueck hinein muessen. Die Abkuerzung gilt nur, wenn das die ganze Liste
+  // ist (dann heisst "nicht alles" auch "weniger als soll"); sonst wird gepackt wie immer.
+  function passtAlles(Ct, types, opts, soll) {
+    const alle = types.reduce((s2, t) => s2 + Math.max(0, Math.floor(num(t.qty))), 0);
+    if (soll >= alle && sicherZuViel(Ct, types)) return false;
+    return packCargo(Ct, types, opts).boxes >= soll;
   }
   function packCargo(Ct, types, opts = {}) {
     const CL = num(Ct.l), CW = num(Ct.w), CH = num(Ct.h);
@@ -2570,16 +2658,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // endet die Einzel-Schleife unten spaetestens bei ihm, die Kombi-Logik sieht
       // ihn nie -- und die Kette (autoFollow) kennt ihn weiterhin nicht: er bleibt
       // ein Hinweis mit Uebernehmen-Knopf, nie eine stille Auto-Wahl.
-      if (!need45 && packCargo(hc40.p, cargo, { noHint: true, quick: true }).boxes < totalBoxes
-        && packCargo(hc45.p, cargo, { noHint: true, quick: true }).boxes >= totalBoxes) need45 = true;
+      if (!need45 && !passtAlles(hc40.p, cargo, { noHint: true, quick: true }, totalBoxes)
+        && passtAlles(hc45.p, cargo, { noHint: true, quick: true }, totalBoxes)) need45 = true;
     }
     // Standard-Arbeitsmenge: ohne 45' HC (40' HC ist der groesste Standard und das "Arbeitspferd").
     // Nur im Ausnahmefall (need45) bleibt der 45' HC fuer Einzel- und Kombi-Empfehlung dabei.
     const stdOrder = need45 ? order : order.filter((o) => o.name !== "45' HC");
     const workhorse = stdOrder[stdOrder.length - 1];
     for (const o of stdOrder) {
-      const r = packCargo(o.p, cargo, { noHint: true, quick: true });
-      if (r.boxes >= totalBoxes) return { type: "single", name: o.name, preset: o.p };
+      if (passtAlles(o.p, cargo, { noHint: true, quick: true }, totalBoxes)) return { type: "single", name: o.name, preset: o.p };
     }
     for (const t of cargo) {
       if (num(t.qty) > 0) {
@@ -2618,7 +2705,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Passt der ganze Rest in EINEN Container? Dann den kleinsten davon nehmen.
         let fit = null;
         for (const o of stdOrder) {
-          if (packCargo(o.p, rest, OPT).boxes >= tot) { fit = o; break; }
+          if (passtAlles(o.p, rest, OPT, tot)) { fit = o; break; }
         }
         if (fit) {
           used[fit.name] = (used[fit.name] || 0) + 1;
@@ -3110,7 +3197,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const workhorse = stdOrder[stdOrder.length - 1];
     const autoFollow = (rem, totRem) => {
       for (const o of stdOrder) {
-        if (packCargo(o.p, rem, { noHint: true, quick: true }).boxes >= totRem) return o;
+        if (passtAlles(o.p, rem, { noHint: true, quick: true }, totRem)) return o;
       }
       return workhorse;
     };
