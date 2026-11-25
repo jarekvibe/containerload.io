@@ -621,6 +621,22 @@ Die übrigen Felder sind so zusammengefasst, dass die Mail **ohne Gestaltung les
 
 **Die Datenschutzseite nennt beides namentlich** — dieselbe Ehrlichkeitsregel wie bei den Zahlen und beim Entwurf: was die Seite tut, steht dort auch.
 
+### Die Zugriffsdaten von Netlify: nachsehen, ob und wo das Werkzeug benutzt wird (25.11.26)
+Die Frage „wird ContainerLoad im Ausland benutzt?" ließ sich bis dahin nur über das Admin beantworten — und das kann Claude ohne Jareks Token nicht lesen. Es gibt einen zweiten Weg ohne Geheimnis: **die Zugriffsdaten von Netlify** (MCP-Werkzeug `netlify-observability-services-reader`; die siteId liefert `netlify-project-services-reader`). Im jetzigen Tarif reichen sie **24 Stunden** zurück; Zeitstempel in Millisekunden.
+
+| Frage | Aufruf |
+|---|---|
+| Aus welchen Ländern? | `get-topk`, `client_countries` |
+| Woher kommen sie? | `get-topk`, `referrers`, Filter `UserAgentCategory = browser` |
+| Was rufen Menschen auf, was KI-Dienste? | `get-topk`, `urls`, Filter `UserAgentCategory = browser` bzw. `ai-agent` |
+| Läuft eine Function in Fehler? | `get-topk`, `urls`, Filter `StatusCode >= 500`; die Meldung selbst zeigt `get-request-logs` |
+
+**Lesen, nicht abschreiben:** In den Verweis-Adressen stehen geteilte Pläne (`?c=…`) fremder Nutzer. Sie gehören nicht in Commits, Pull Requests oder diese Datei — hier steht nur, was sich zählen lässt. Es sind **Aufrufe, keine Personen**; ein Land mit fast nur Fehlern ist ein Scanner, kein Markt (am 25.11. Belgien und Italien: 99 % Fehler, gesucht wurden `.env` und PHP-Dateien).
+
+**Stand 25.11.26, ein Tag:** Aufrufe aus 37 Ländern. Erkennbar echte Nutzung u. a. aus Peru (ein geteilter Plan, mehrfach geöffnet), Slowenien (Stevie), China und Singapur (chinesische Startseite und chinesischer Rechner — am Tag ihrer Freischaltung), dazu Kanada, Australien, Ungarn, Paraguay, Vietnam, Schweden, Brasilien. Ein Link wurde aus Microsoft Teams geöffnet. **Und ChatGPT ist bereits ein Kanal:** `ChatGPT-User` holte die Startseite 30-mal (das ist ein Abruf, den eine Nutzerfrage auslöst, kein Crawler), `OAI-SearchBot` liest den englischen Guide, und rund 20 Aufrufe kamen mit `utm_source=chatgpt.com` auf `/en/`. Das ist ein einzelner Tag und keine Statistik — aber der erste Beleg, dass Baustein 5 des Fahrplans (der Rechner, den KI-Assistenten benutzen) auf einen Kanal trifft, den es schon gibt. `/llms.txt` hat an diesem Tag niemand angefragt; ChatGPT liest die Startseite selbst.
+
+**Dabei gefunden: drei Functions antworteten bei JEDEM Aufruf mit 502.** `/api/beacon`, `/api/puls` und `puls-aufraeumen` endeten mit `new Response("", { status: 204 })` — ein 204 darf keinen Körper tragen, auch keinen leeren Text; Node 22 wirft „Invalid response status code 204". Die Daten waren trotzdem da (gespeichert wird VOR der Antwort, und der Absender ist `sendBeacon`, der keine Antwort liest) — deshalb fiel es nie auf; nur die stündliche Aufräum-Function galt bei Netlify als fehlgeschlagen. Jetzt `new Response(null, { status: 204 })`. **Die Lehre:** Kein Test hatte diese Functions je aufgerufen, alle lasen nur ihren Quelltext. `test/functions-antworten.test.mjs` ruft sie auf — `@netlify/blobs` gibt es in der CI nicht (kein `npm install`), ein Lade-Haken (`module.register`) ersetzt das Paket durch einen Speicher im Arbeitsspeicher. Wer eine neue Function schreibt, die speichert, hängt sie dort an.
+
 ### Der KI-Import — Stufen 1–4 der KI-Integration (28.10.26, Jareks Go)
 Die erste Funktion, die Claude nutzt, und zugleich das Muster für alles Weitere. Architektur: Browser → Netlify Function `/api/ki-import` (`netlify/functions/ki-import.mjs`) → Anthropic-API. **Der API-Schlüssel lebt ausschließlich als Netlify-Umgebungsvariable `ANTHROPIC_API_KEY`** — nie im Browser-Code, nie im Repo. `package.json` trägt dafür `@anthropic-ai/sdk`; es bleibt eine reine Function-Abhängigkeit, die Seite selbst ist weiterhin build-frei (die CDN-Regel aus Abschnitt 2 gilt unverändert für den Browser-Teil).
 

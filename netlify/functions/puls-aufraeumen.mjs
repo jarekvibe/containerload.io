@@ -13,7 +13,7 @@ export default async () => {
   const { blobs } = await store.list({ prefix: "p/" });
   const alt = pulsAlt(blobs.map((b) => b.key), Date.now());
   await Promise.all(alt.slice(0, 2000).map((k) => store.delete(k)));
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 };
 
 // Minute 17 jeder Stunde (UTC) -- ein gewoehnlicher Cron-Ausdruck.

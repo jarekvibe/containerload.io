@@ -33,7 +33,7 @@ export default async (req, context) => {
   const jetzt = new Date().toISOString();
   const key = `e/${jetzt.slice(0, 10)}/${jetzt.slice(11, 19).replace(/:/g, "")}-${Math.random().toString(36).slice(2, 8)}`;
   await getStore("nutzung").setJSON(key, ev);
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 };
 
 export const config = { path: "/api/beacon" };
