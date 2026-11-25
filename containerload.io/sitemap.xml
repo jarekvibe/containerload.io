@@ -264,6 +264,22 @@
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
+    <loc>https://containerload.io/ratgeber/paletten-1100x1100-container</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/paletten-1100x1100-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/pallets-1100x1100-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/paletten-1100x1100-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/pallets-1100x1100-container</loc>
+    <lastmod>2026-11-25</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/paletten-1100x1100-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/pallets-1100x1100-container"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/paletten-1100x1100-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://containerload.io/ratgeber/open-top-container-masse</loc>
     <lastmod>2026-10-26</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/open-top-container-masse"/>
