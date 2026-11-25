@@ -6,7 +6,7 @@
 //
 // Wortwahl: "palette", "colis", "gerbable" (das Fachwort fuer stapelbar), Anrede "vous" --
 // im Franzoesischen die uebliche Form fuer Arbeitswerkzeuge.
-// Der Ladevorschlag spricht Franzoesisch (dok weiter unten); Bild-Export und VGM-PDF kommen noch auf Englisch.
+// Die Dokumente sprechen Franzoesisch (dok weiter unten): Ladevorschlag, Bild-Export und VGM-PDF.
 (function () {
   var S = window.CL_SPRACHE = window.CL_SPRACHE || {};
   S.fr = {
@@ -343,6 +343,19 @@
             titel: "Proposition de chargement", druck: "Enregistrer en PDF / imprimer", zu: "Fermer",
             felder: "Les champs en pointillé (REF, expéditeur, destinataire) peuvent être remplis avant l’impression — ils ne quittent jamais cette page."
           },
+          vgmpdf: {
+            titel: "Déclaration VGM", unter: "Masse brute vérifiée (Verified Gross Mass) selon la Convention SOLAS, chapitre VI, règle 2",
+            verlader: "Chargeur", person: "Personne habilitée", ort: "Lieu", buchung: "N° de réservation / B/L", datum: "Date de pesée", erstellt: "Établi le",
+            sp: ["N°", "N° conteneur", "Type", "N° plomb", "Tare", "Marchandise", "Emballage", "VGM"], kg: "kg", summe: "Total",
+            methode: "Méthode utilisée",
+            m1: "Méthode 1", m1t: "Le conteneur empoté et scellé a été pesé.",
+            m2: "Méthode 2", m2t: "Tous les colis, y compris palettes, matériel de calage et d’arrimage, ont été pesés un à un et ajoutés à la tare du conteneur.",
+            erkl: "Il est certifié par la présente que la masse brute indiquée ci-dessus pour chaque conteneur a été obtenue par la méthode indiquée ci-dessus.",
+            name: "Nom en majuscules", unterschrift: "Signature", ortDatum: "Lieu, date", notiz: "Remarques",
+            fuss: "Toutes les données proviennent du chargeur — ContainerLoad ne pèse pas et ne vérifie pas les poids.", mit: "Créé avec ContainerLoad · containerload.io",
+            seite: function (a, b) { return "Page " + a + " / " + b; }
+          },
+          bild: { ausl: "OCCUPATION", geladen: "CHARGÉ", gewicht: "POIDS", volumen: "VOLUME", stk: " PCS", mehr: "DE PLUS" },
           bau: {
             eigen: "Dimensions personnalisées", geo: "vérifié géométriquement", empf: "recommandé", empf2: "recommandation",
             gross: "colis trop grand", schwer: "colis trop lourd", seite: "Page ", gebucht: "VOLUME RÉSERVÉ",

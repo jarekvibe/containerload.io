@@ -25,8 +25,11 @@ const zwischen = (a, b) => {
   assert.ok(i > 0 && j > i, `Ausschnitt ${a} … ${b} nicht gefunden`);
   return roh.slice(i, j);
 };
-const M = new Function(zwischen("// VGM_START", "// VGM_END")
-  + "\nreturn { vgmRechnen, vgmPruefen, vgmPdf, vgmDateiname, pdfBytes, pdfBreite, pdfUmbruch, pdfBauen, pdfSeite, VGM_TXT, VGM_JE_SEITE };")();
+// Die Dokument-Helfer (dokLoc, dokMit) -- das Blatt gibt es seit 25.11.26 auch in den Sprachen,
+// deren Sprachdatei es mitbringt (dok.vgmpdf). Wortgleich aus app.html.
+const DOK_HELFER = (() => { const a = roh.indexOf("  var DOK_MEHR = {};"); const e = roh.indexOf("\n  };\n", roh.indexOf("  var dokMit = ", a)); assert.ok(a > 0 && e > a, "dokMit nicht gefunden"); return roh.slice(a, e + 6); })();
+const M = new Function(DOK_HELFER + zwischen("// VGM_START", "// VGM_END")
+  + "\nreturn { vgmRechnen, vgmPruefen, vgmPdf, vgmDateiname, pdfBytes, pdfBreite, pdfUmbruch, pdfBauen, pdfSeite, VGM_TXT, VGM_JE_SEITE, vgmTexte, vgmSpGibt, DOK_MEHR };")();
 const LINK = new Function(zwischen("  var vmSauber = ", "  var URL_VM = vmLesen") + "\nreturn { vmPacken, vmLesen };")();
 
 const erstellt = new Date(2026, 10, 23, 14, 26);

@@ -6132,6 +6132,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       seite: (a, b) => `Page ${a} / ${b}`
     }
   };
+  // Das Blatt in WEITEREN Sprachen: die Sprachdatei bringt die Texte mit (dok.vgmpdf), und sie
+  // liegen ueber den englischen -- derselbe Weg wie beim Ladevorschlag (dokMit im LANG-Block).
+  // Waehlbar ist im Formular Deutsch, Englisch und, wenn sie das Blatt mitbringt, die Sprache
+  // der Oberflaeche: das Dokument geht an die Reederei, und die liest nicht immer Spanisch.
+  var vgmTexte = (sp) => sp === "de" ? VGM_TXT.de : dokMit(sp, "vgmpdf", Object.assign({}, VGM_TXT.en));
+  var vgmSpGibt = (sp) => sp === "de" || sp === "en" || !!(DOK_MEHR[sp] && DOK_MEHR[sp].vgmpdf);
   // Hoechstens so viele Zeilen traegt eine Seite; die letzte so viele, wie ueber dem Schluss
   // (Summe, Methode, Bemerkung, Erklaerung, Unterschrift) Platz ist -- das rechnet vgmPdf aus.
   var VGM_JE_SEITE = 18, VGM_NOTIZ_ZEILEN = 8;
@@ -6141,10 +6147,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Wert, fett nur, was die Reederei sucht (Container-Nr., VGM, Methode), und Linien nur in
   // der Tabelle und unter der Unterschrift. Keine Flaechen, kein Kasten ums Markenzeichen.
   function vgmPdf(d) {
-    const X = VGM_TXT[d.sprache === "en" ? "en" : "de"], en = d.sprache === "en";
+    const X = vgmTexte(d.sprache), en = d.sprache !== "de";
     const TINTE = "#10151C", GRAU = "#5B6675", HELL = "#8A94A3", LINIE = "#D9DEE5", MARKE = "#2E8FFF";
     const L = 48, R = PDF_A4[0] - 48, B = R - L, halb = B / 2;
-    const zahl = (n) => Math.round(n).toLocaleString(en ? "en-US" : "de-DE");
+    // "always": Spanisch gruppiert vierstellige Zahlen sonst nicht -- in der Tabelle stuende
+    // "3900" unter "20.000". Fuer Deutsch und Englisch aendert es nichts.
+    const zahl = (n) => Math.round(n).toLocaleString(dokLoc(d.sprache), { useGrouping: "always" });
     const tag = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? (en ? `${m[1]}-${m[2]}-${m[3]}` : `${m[3]}.${m[2]}.${m[1]}`) : ""; };
     const heute = (() => { const t = d.erstellt instanceof Date ? d.erstellt : new Date(); const p2 = (n) => String(n).padStart(2, "0"); return tag(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`); })();
     const nrSchoen = (nr) => { const s = String(nr || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return s.length === 11 ? s.slice(0, 4) + " " + s.slice(4, 10) + " " + s.slice(10) : s; };
@@ -9118,12 +9126,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Meldungs-Link, die man selbst verschickt.
     const VGM_ABS = "cl-vgm-absender-v1";
     const [vgmAbs, setVgmAbs] = useState(() => {
-      const leer = { ab: "", ps: "", or: "", sp: DOKLANG === "de" ? "de" : "en" };
+      const leer = { ab: "", ps: "", or: "", sp: vgmSpGibt(DOKLANG) ? DOKLANG : "en" };
       try {
         const d = JSON.parse(localStorage.getItem(VGM_ABS) || "null");
-        return d && typeof d === "object" ? { ab: String(d.ab || "").slice(0, 80), ps: String(d.ps || "").slice(0, 60), or: String(d.or || "").slice(0, 40), sp: d.sp === "en" || d.sp === "de" ? d.sp : leer.sp } : leer;
+        return d && typeof d === "object" ? { ab: String(d.ab || "").slice(0, 80), ps: String(d.ps || "").slice(0, 60), or: String(d.or || "").slice(0, 40), sp: vgmSpGibt(d.sp) ? d.sp : leer.sp } : leer;
       } catch (e) { return leer; }
     });
+    // Die Sprachen, in denen es das VGM-Blatt gibt: Deutsch, Englisch und -- wenn ihre Sprachdatei
+    // es mitbringt -- die der Oberflaeche. Eine Auswahl, kein Automatismus: das Blatt geht an die
+    // Reederei, und ob die Spanisch liest, weiss nur der Absender.
+    const vgmSprachen = [["de", "Deutsch"], ["en", "English"]].concat(LANG !== "de" && LANG !== "en" && vgmSpGibt(LANG) ? [[LANG, (SPRACH_LISTE.find(([k2]) => k2 === LANG) || [LANG, LANG.toUpperCase()])[1]]] : []);
     const vgmAbsSetzen = (feld, wert) => setVgmAbs((a) => {
       const n = { ...a, [feld]: wert };
       try { localStorage.setItem(VGM_ABS, JSON.stringify(n)); } catch (e) {}
@@ -9884,14 +9896,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const MONOF = "'JetBrains Mono', ui-monospace, monospace";
         const SANSF = "'Archivo', system-ui, -apple-system, sans-serif";
         const en = DOKLANG !== "de";
+        // Die sechs Woerter der Karte -- wie beim Ladevorschlag ueber dokMit, damit eine
+        // Sprachdatei sie stellen kann (dok.bild).
+        const BT = dokMit(DOKLANG, "bild", en
+          ? { ausl: "UTILIZATION", geladen: "LOADED", gewicht: "WEIGHT", volumen: "VOLUME", stk: " PCS", mehr: "MORE" }
+          : { ausl: "AUSLASTUNG", geladen: "GELADEN", gewicht: "GEWICHT", volumen: "VOLUMEN", stk: " STK", mehr: "WEITERE" });
         const cv = document.createElement("canvas");
         const g = cv.getContext("2d");
         const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
         const metrics = [
-          { l: en ? "UTILIZATION" : "AUSLASTUNG", v: `${Math.round(shotUtil)} %`, grad: true },
-          { l: en ? "LOADED" : "GELADEN", v: `${shotLoaded}/${shotTotal}` },
-          { l: en ? "WEIGHT" : "GEWICHT", v: `${nf(shotWeight / 1000, 1)} t` },
-          { l: en ? "VOLUME" : "VOLUMEN", v: `${nf(+shotVol || 0, 1)} m\xB3` }
+          { l: BT.ausl, v: `${Math.round(shotUtil)} %`, grad: true },
+          { l: BT.geladen, v: `${shotLoaded}/${shotTotal}` },
+          { l: BT.gewicht, v: `${nf(shotWeight / 1000, 1)} t` },
+          { l: BT.volumen, v: `${nf(+shotVol || 0, 1)} m\xB3` }
         ];
         const valF = `700 ${px(22)}px ${MONOF}`, labF = `500 ${px(10)}px ${MONOF}`, gap = px(26);
         let mutedCol = "#4A5C6E"; // Label-/Untertext-Ton; im Transparenz-Modus heller (Kontrast auf hellem BG)
@@ -9982,21 +9999,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           g.fillText(" \xB7 " + sr.name, ix + mw, y);
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = muted;
           g.textAlign = "right";
-          g.fillText(sr.stueck + (en ? " PCS" : " STK"), ix + iw, y);
+          g.fillText(sr.stueck + BT.stk, ix + iw, y);
         };
         // Die zwei Balken. Zwei, weil zwei Grenzen gelten - Raum und Gewicht - und bei
         // schwerer Ladung die zweite zuerst zuschlaegt. Hoehe: px(50).
         const slotWerte = (sr, ix, yTop, iw, glas) => {
           const muted = glas ? "#BCC9D6" : "#7689A0";
           g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
-          g.fillText(en ? "VOLUME" : "VOLUMEN", ix, yTop + px(8));
+          g.fillText(BT.volumen, ix, yTop + px(8));
           g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = "#C5D4E2";
           g.fillText(`${nf(sr.vol, 1)} / ${nf(sr.cVol, 1)} m\xB3`, ix + iw, yTop + px(8));
           slotBalken(ix, yTop + px(14), iw, sr.cVol > 0 ? sr.vol / sr.cVol * 100 : 0, accStops[0], glas);
           const pPct = sr.pay > 0 ? sr.kg / sr.pay * 100 : 0;
           const kgFarbe = pPct > 100 ? "#FF5D52" : pPct > 90 ? "#F5A524" : accStops[0];
           g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
-          g.fillText(en ? "WEIGHT" : "GEWICHT", ix, yTop + px(39));
+          g.fillText(BT.gewicht, ix, yTop + px(39));
           g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = pPct > 90 ? kgFarbe : "#C5D4E2";
           g.fillText(sr.pay > 0 ? `${nf(sr.kg / 1000, 1)} / ${nf(sr.pay / 1000, 1)} t` : `${nf(sr.kg / 1000, 1)} t`, ix + iw, yTop + px(39));
           slotBalken(ix, yTop + px(45), iw, pPct, kgFarbe, glas);
@@ -10024,7 +10041,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (mehrSlots > 0) {
             g.textAlign = "right"; g.textBaseline = "alphabetic";
             g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = slotMuted;
-            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, sx + sw, sy + stripH + px(16));
+            g.fillText(`+${mehrSlots} ${BT.mehr}`, sx + sw, sy + stripH + px(16));
           }
         };
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
@@ -10070,7 +10087,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (mehrSlots > 0) {
             g.textAlign = "right"; g.textBaseline = "alphabetic";
             g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = glas ? "#BCC9D6" : "#7689A0";
-            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, FR + innenW, gy + gitterH + px(16));
+            g.fillText(`+${mehrSlots} ${BT.mehr}`, FR + innenW, gy + gitterH + px(16));
           }
           const fy = gy + gitterH + mehrH, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), innenW);
@@ -11478,7 +11495,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("input", { type: "date", value: rampeVm.wd || heuteIso(), onChange: (e) => rampeVmSetzen("wd", 0, e.target.value), style: { ...vmFeld, marginTop: SP.xs, fontSize: FS.body, colorScheme: thema === "hell" ? "light" : "dark" } })),
           /* @__PURE__ */ React.createElement("div", { style: { flex: "1 1 200px", minWidth: 0 } },
             /* @__PURE__ */ React.createElement("div", { style: { ...vmLbl, marginBottom: SP.xs } }, T.vgmSprache),
-            /* @__PURE__ */ React.createElement(Seg, { items: [["de", "Deutsch"], ["en", "English"]], value: vgmAbs.sp, onPick: (v2) => vgmAbsSetzen("sp", v2) })))),
+            /* @__PURE__ */ React.createElement(Seg, { items: vgmSprachen, value: vgmAbs.sp, onPick: (v2) => vgmAbsSetzen("sp", v2) })))),
       /* @__PURE__ */ React.createElement("label", { style: vmLbl }, T.vmNotiz,
         /* @__PURE__ */ React.createElement("textarea", { value: rampeVm.n, onChange: (e) => rampeVmSetzen("n", 0, e.target.value.slice(0, 300)), rows: 3, placeholder: T.vmNotizPh, style: { ...vmFeld, marginTop: SP.xs, resize: "vertical", lineHeight: 1.5, fontSize: FS.body } })));
     // DIE AUSGABEN STEHEN IN DER KOPFLEISTE (Jareks Richtung, 23.11.26): Ladevorschlag, Bild und

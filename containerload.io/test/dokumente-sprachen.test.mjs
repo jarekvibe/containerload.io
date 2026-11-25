@@ -43,6 +43,8 @@ const werte = (quelle) => new Function("P", "with (P) { return (" + quelle + ");
 }));
 const BAUSTEINE = {};
 for (const m of app.matchAll(/dokMit\(([A-Za-z.]+), "([a-z]+)", /g)) {
+  // Das VGM-Blatt haelt seine beiden Woerterbuecher in VGM_TXT (weiter unten gelesen)
+  if (m[2] === "vgmpdf") { assert.ok(app.startsWith('dokMit(sp, "vgmpdf", Object.assign({}, VGM_TXT.en))', m.index)); continue; }
   const a = app.indexOf("? {", m.index) + 2;
   assert.ok(a > m.index && a - m.index < 120, `${m[2]}: das englische Woerterbuch steht nicht direkt hinter dokMit(`);
   const aEnde = objEnde(app, a);
@@ -55,6 +57,11 @@ for (const m of app.matchAll(/dokMit\(([A-Za-z.]+), "([a-z]+)", /g)) {
   if (rest.startsWith(", {")) w = app.slice(dEnde + 2, objEnde(app, dEnde + 2));
   else assert.ok(rest.startsWith(")"), `${m[2]}: unerwartetes Ende des dokMit-Aufrufs: ${rest}`);
   BAUSTEINE[m[2]] = { en: werte(app.slice(a, aEnde)), de: werte(app.slice(d, dEnde)), werte: w ? werte(w) : {}, sprache: m[1] };
+}
+{
+  const a = app.indexOf("{", app.indexOf("  var VGM_TXT = {"));
+  const beide = werte(app.slice(a, objEnde(app, a)));
+  BAUSTEINE.vgmpdf = { en: beide.en, de: beide.de, werte: {}, sprache: "sp" };
 }
 const TEILE = Object.keys(BAUSTEINE).sort();
 
@@ -70,7 +77,8 @@ const art = (v) => (Array.isArray(v) ? "liste" : typeof v);
 const zahlen = (s) => [...new Set(String(s).replace(/&[a-z]+;/g, " ").match(/\d+(?:[.,]\d+)*/g) || [])];
 
 test("jeder Baustein des Ladevorschlags laeuft ueber dokMit -- und Deutsch und Englisch tragen dieselben Schluessel", () => {
-  assert.deepStrictEqual(TEILE, ["bau", "doc", "gewicht", "page", "quittung", "row", "sequenz", "stau", "stopps", "uebersicht", "vgm"]);
+  // Ladevorschlag (zehn Bausteine + Zusammenbau), Bild-Export, VGM-Blatt
+  assert.deepStrictEqual(TEILE, ["bau", "bild", "doc", "gewicht", "page", "quittung", "row", "sequenz", "stau", "stopps", "uebersicht", "vgm", "vgmpdf"]);
   for (const t of TEILE) {
     const { en, de } = BAUSTEINE[t];
     assert.deepStrictEqual(Object.keys(de).sort(), Object.keys(en).sort(), `${t}: Deutsch und Englisch haben verschiedene Schluessel`);
@@ -185,5 +193,9 @@ test("die Dokument-Sprache folgt der Oberflaeche, wenn die Sprachdatei Dokumente
   assert.ok(app.includes("legend, LANG: DOKLANG,") && app.includes("LANG: DOKLANG, chainLen: 1 })"));
   assert.doesNotMatch(app, /\n\s+LANG, chainLen: 1 \}\)/);
   // Was noch keine weiteren Sprachen kann, bekommt fuer alles ausser Deutsch Englisch
-  assert.ok(app.includes('sp: DOKLANG === "de" ? "de" : "en" };'), "das VGM-PDF kennt nur Deutsch und Englisch -- mit \"es\" bliebe es ohne Texte");
+  // Das VGM-Blatt: vorbelegt mit der Sprache des Dokuments, wenn es das Blatt in ihr gibt
+  assert.ok(app.includes('sp: vgmSpGibt(DOKLANG) ? DOKLANG : "en" };'), "die VGM-Erklaerung ist nicht mit der Dokument-Sprache vorbelegt");
+  assert.ok(app.includes("sp: vgmSpGibt(d.sp) ? d.sp : leer.sp } : leer;"), "eine gemerkte Sprache, die es nicht (mehr) gibt, wird nicht ersetzt");
+  assert.ok(app.includes("const X = vgmTexte(d.sprache), en = d.sprache !== \"de\";"));
+  assert.ok(app.includes('React.createElement(Seg, { items: vgmSprachen, value: vgmAbs.sp,'), "die Sprachwahl des VGM-Blatts zeigt nicht die Liste vgmSprachen");
 });

@@ -13,7 +13,7 @@
 //   h.loc    -- das Zahlenformat ("es-ES", oder das des Browsers, wenn er Spanisch spricht)
 //
 // Wortwahl: "palet" und "bulto" (so schreibt und sucht die Branche in Spanien), Anrede "tú" wie im Deutschen das Du.
-// Der Ladevorschlag spricht Spanisch (dok weiter unten); Bild-Export und VGM-PDF kommen noch auf Englisch.
+// Die Dokumente sprechen Spanisch (dok weiter unten): Ladevorschlag, Bild-Export und VGM-PDF.
 (function () {
   var S = window.CL_SPRACHE = window.CL_SPRACHE || {};
   S.es = {
@@ -350,6 +350,19 @@
             titel: "Propuesta de carga", druck: "Guardar como PDF / imprimir", zu: "Cerrar",
             felder: "Los campos con línea discontinua (REF, remitente, destinatario) se pueden rellenar antes de imprimir; no salen de esta página."
           },
+          vgmpdf: {
+            titel: "Declaración VGM", unter: "Masa bruta verificada (Verified Gross Mass) según el Convenio SOLAS, capítulo VI, regla 2",
+            verlader: "Embarcador", person: "Persona autorizada", ort: "Lugar", buchung: "N.º de reserva / B/L", datum: "Fecha de pesaje", erstellt: "Emitido el",
+            sp: ["N.º", "N.º contenedor", "Tipo", "N.º precinto", "Tara", "Carga", "Embalaje", "VGM"], kg: "kg", summe: "Total",
+            methode: "Método utilizado",
+            m1: "Método 1", m1t: "Se ha pesado el contenedor lleno y precintado.",
+            m2: "Método 2", m2t: "Todos los bultos, incluidos palets, material de estiba y de sujeción, se han pesado uno a uno y se han sumado a la tara del contenedor.",
+            erkl: "Por la presente se confirma que la masa bruta indicada arriba para cada contenedor se ha obtenido por el método indicado arriba.",
+            name: "Nombre en mayúsculas", unterschrift: "Firma", ortDatum: "Lugar, fecha", notiz: "Observaciones",
+            fuss: "Todos los datos proceden del embarcador — ContainerLoad no pesa ni verifica los pesos.", mit: "Creado con ContainerLoad · containerload.io",
+            seite: function (a, b) { return "Página " + a + " / " + b; }
+          },
+          bild: { ausl: "OCUPACIÓN", geladen: "CARGADO", gewicht: "PESO", volumen: "VOLUMEN", stk: " UDS", mehr: "MÁS" },
           bau: {
             eigen: "Medidas propias", geo: "comprobado geométricamente", empf: "recomendado", empf2: "recomendación",
             gross: "bulto demasiado grande", schwer: "bulto demasiado pesado", seite: "Página ", gebucht: "VOLUMEN CONTRATADO",

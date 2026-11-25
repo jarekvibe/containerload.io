@@ -145,7 +145,7 @@ test("fehlt ein Schluessel, steht dort Englisch -- und Dokumente bekommen nie di
     for (const a of aufrufe) assert.ok(!/(^|[^A-Z])LANG\b/.test(a.replace(/DOKLANG/g, "")), `${baustein}(…) bekommt die Oberflaechen-Sprache statt DOKLANG: ${a.slice(0, 80)}`);
   }
   assert.ok(roh.includes("legend, LANG: DOKLANG,"), "der Stauplan des Ladevorschlags bekommt nicht die Dokument-Sprache");
-  assert.ok(roh.includes('sp: DOKLANG === "de" ? "de" : "en" };'), "die VGM-Erklaerung ist nicht mit der Dokument-Sprache vorbelegt (das PDF kennt Deutsch und Englisch)");
+  assert.ok(roh.includes('sp: vgmSpGibt(DOKLANG) ? DOKLANG : "en" };'), "die VGM-Erklaerung ist nicht mit der Dokument-Sprache vorbelegt");
 });
 
 test("im Rechner steht keine Zwei-Sprachen-Weiche mehr", () => {
