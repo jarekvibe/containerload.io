@@ -49,12 +49,12 @@ const FAELLE = [
   ["faesser-container.html", "Faesser im 40'", "40' GP", [61, 61], 57],
   ["big-bags-container.html", "Big Bags im 20'", "20' GP", [90, 90], 12],
   ["big-bags-container.html", "Big Bags im 40'", "40' GP", [90, 90], 26],
-  // US-Palette: 48x40 Zoll. Die App rechnet Zoll mit *2,54 und rundet auf ganze
-  // Zentimeter — also 122x102, nicht 121,9x101,6. Die Seiten rechnen mit demselben
-  // gerundeten Mass, sonst widersprueche der ?q=-Knopf dem Text. Die Rundung selbst
+  // US-Palette: 48x40 Zoll. Die App rechnet Zoll GENAU um (*2,54) -- also 121,92x101,6,
+  // seit 25.11.26 nicht mehr auf ganze Zentimeter gerundet (122x102). Die Seiten rechnen
+  // mit demselben Mass, sonst widersprueche der ?q=-Knopf dem Text. Die Umrechnung selbst
   // wird unten eigens festgenagelt.
-  ["us-paletten-20-fuss-container.html", "US-Paletten im 20'", "20' GP", [122, 102], 9],
-  ["us-paletten-40-fuss-container.html", "US-Paletten im 40'", "40' GP", [122, 102], 20]
+  ["us-paletten-20-fuss-container.html", "US-Paletten im 20'", "20' GP", [121.92, 101.6], 9],
+  ["us-paletten-40-fuss-container.html", "US-Paletten im 40'", "40' GP", [121.92, 101.6], 20]
 ];
 
 test("die genannten Stellzahlen stimmen mit dem Packer ueberein", () => {
@@ -86,8 +86,8 @@ const EN_FAELLE = [
   ["drums-container.html", "Drums in 40'", "40' GP", [61, 61], 57],
   ["big-bags-container.html", "Big bags in 20'", "20' GP", [90, 90], 12],
   ["big-bags-container.html", "Big bags in 40'", "40' GP", [90, 90], 26],
-  ["pallets-20ft-container.html", "US pallets in 20'", "20' GP", [122, 102], 9],
-  ["pallets-40ft-container.html", "US pallets in 40'", "40' GP", [122, 102], 20]
+  ["pallets-20ft-container.html", "US pallets in 20'", "20' GP", [121.92, 101.6], 9],
+  ["pallets-40ft-container.html", "US pallets in 40'", "40' GP", [121.92, 101.6], 20]
 ];
 
 test("die englische Fassung nennt dieselben gerechneten Zahlen", () => {
@@ -217,8 +217,8 @@ const AUSBAU = [
   ["gitterboxen-container.html", "wire-mesh-pallets-container.html", "40' GP", [124, 83], 23, 18, null, true],
   ["faesser-container.html", "drums-container.html", "20' GP", [61, 61], 27, null, 54, false],
   ["big-bags-container.html", "big-bags-container.html", "20' GP", [90, 90], 12, null, null, false],
-  ["us-paletten-20-fuss-container.html", "pallets-20ft-container.html", "20' GP", [122, 102], 9, 8, 18, true],
-  ["us-paletten-40-fuss-container.html", "pallets-40ft-container.html", "40' GP", [122, 102], 20, 18, 40, true],
+  ["us-paletten-20-fuss-container.html", "pallets-20ft-container.html", "20' GP", [121.92, 101.6], 9, 8, 18, true],
+  ["us-paletten-40-fuss-container.html", "pallets-40ft-container.html", "40' GP", [121.92, 101.6], 20, 18, 40, true],
 ];
 
 test("Warum- und Stapelzahlen: nachgerechnet, und auf beiden Sprachfassungen", () => {
@@ -282,9 +282,9 @@ test("die neuen Passt-rein-Paare haengen im Netz: Sitemap, Uebersichten, GUIDE, 
   }
 });
 
-// ── US-Paletten: die Zoll-Rundung ist Teil des Versprechens ────────────────
-// Die Seiten rechnen mit 122x102 cm, weil die App "48x40x55 Zoll" genau dorthin
-// rundet (*2,54, dann ganze Zentimeter). Driftet der Parser, luegen die Seiten im
+// ── US-Paletten: die Zoll-Umrechnung ist Teil des Versprechens ─────────────
+// Die Seiten rechnen mit 121,92x101,6 cm, weil die App "48x40x55 Zoll" genau so
+// umrechnet (*2,54, ohne Rundung). Driftet der Parser, luegen die Seiten im
 // selben Moment — deshalb laufen die ?q=-Knoepfe hier woertlich durch den echten
 // parseCargoText und muessen exakt die gerechnete Ladung ergeben.
 test("die US-Knoepfe laden durch den echten Parser exakt die gerechnete Ladung", () => {
@@ -303,7 +303,10 @@ test("die US-Knoepfe laden durch den echten Parser exakt die gerechnete Ladung",
     assert.strictEqual(rows.length, 1, "der Knopf laedt nicht genau eine Position");
     const r = rows[0];
     assert.strictEqual(r.qty, menge, `der Knopf laedt ${r.qty} Stueck, die Seite nennt ${menge}`);
-    assert.deepStrictEqual([r.l, r.w], [122, 102], `48x40 Zoll ergeben ${r.l}x${r.w} statt 122x102`);
+    assert.deepStrictEqual([r.l, r.w], [121.92, 101.6], `48x40 Zoll ergeben ${r.l}x${r.w} statt 121.92x101.6`);
+    // Und der Text nennt dasselbe Mass -- nicht mehr die alte Rundung auf ganze Zentimeter.
+    assert.ok(/121[.,]92&nbsp;×&nbsp;101[.,]6&nbsp;cm/.test(txt), "die Seite nennt das genaue Mass nicht");
+    assert.ok(!/122&nbsp;×&nbsp;102&nbsp;cm/.test(txt), "die Seite behauptet noch die Rundung auf 122 x 102 cm");
     assert.ok(r.weight > 0, "die Beispielladung hat kein Gewicht");
   }
 });

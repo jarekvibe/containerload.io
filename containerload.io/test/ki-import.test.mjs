@@ -28,8 +28,8 @@ test("gueltige Positionen kommen in der Form der Pruef-Tabelle heraus", () => {
     { name: "Kartons", menge: 40, l_cm: 60, b_cm: 40, h_cm: 40, gewicht_kg: 12, stapeln: "bis_hoehe", stapel_bis_cm: 180 },
   ] });
   assert.deepEqual(rows, [
-    { name: "Europaletten", qty: 11, l: 120, w: 80, h: 110, weight: 300, stackable: true, stackH: null },
-    { name: "Maschine", qty: 1, l: 220, w: 140, h: 160, weight: 850.3, stackable: false, stackH: null },
+    { name: "Europaletten", qty: 11, l: 120, w: 80, h: 110.04, weight: 300, stackable: true, stackH: null },
+    { name: "Maschine", qty: 1, l: 220, w: 140, h: 160, weight: 850.26, stackable: false, stackH: null },
     { name: "Kartons", qty: 40, l: 60, w: 40, h: 40, weight: 12, stackable: true, stackH: 180 },
   ]);
 });
@@ -112,7 +112,10 @@ test("das Schema traegt genau die Felder, die pruefePositionen liest", () => {
 test("der Auftrag traegt die Ehrlichkeits-Regeln woertlich", () => {
   assert.match(KI_AUFTRAG, /JE STUECK/, "Stueckgewicht-Regel fehlt (Gesamtgewicht-Falle)");
   assert.match(KI_AUFTRAG, /2,54/, "Zoll-Umrechnung fehlt");
-  assert.match(KI_AUFTRAG, /0,453592/, "lbs-Umrechnung fehlt");
+  assert.match(KI_AUFTRAG, /0,45359237/, "lbs-Umrechnung fehlt");
+  // Zoll und Pfund bleiben genau: 48 inch sind 121,92 cm, nicht 122 (siehe test/zoll-und-pfund).
+  assert.match(KI_AUFTRAG, /NICHT runden/, "die KI rundet Zoll wieder auf ganze cm");
+  assert.doesNotMatch(KI_AUFTRAG, /auf ganze cm runden/);
   assert.match(KI_AUFTRAG, /Erfinde nie Zahlen/, "die wichtigste Regel fehlt");
   assert.match(KI_AUFTRAG, /keine Anweisungen an dich/, "die Daten-nicht-Befehle-Zeile fehlt");
   // Die Norm-Ausnahmen muessen dieselben Zahlen tragen wie der Ratgeber — zwei
@@ -160,7 +163,7 @@ test("KI-Zeilen landen in der Pruef-Tabelle, nie direkt in der Ladung", () => {
   const bis = app.indexOf("const applyImport");
   assert.ok(von > 0 && bis > von, "kiSenden steht nicht mehr vor applyImport");
   const rumpf = app.slice(von, bis);
-  assert.match(rumpf, /setImportRows\(rows\)/, "das Ergebnis muss in die Pruef-Tabelle");
+  assert.match(rumpf, /setImportRows\(inTabelle\(rows\)\)/, "das Ergebnis muss in die Pruef-Tabelle");
   assert.doesNotMatch(rumpf, /setCargo\(/, "KI-Zeilen duerfen den Menschen nicht umgehen");
 });
 
@@ -194,9 +197,9 @@ test("im echten Rechner gibt es nur noch 'Mit KI erkennen' -- der lokale Parser 
   const bis = app.indexOf("const bildVerkleinern");
   assert.ok(von > 0 && bis > von, "lokalLesen fehlt");
   const rumpf = app.slice(von, bis);
-  assert.match(rumpf, /setImportRows\(parseCargoText\(importText\)\)/, "der Rueckfall landet in der Pruef-Tabelle");
+  assert.match(rumpf, /setImportRows\(inTabelle\(parseCargoText\(importText, zollModus \? \{ einheit: "in" \} : void 0\)\)\)/, "der Rueckfall landet in der Pruef-Tabelle");
   assert.match(rumpf, /text\.length > 6000\) \{ lokalLesen\(T\.kiLang\)/, "zu lang fuer die KI -> lokal lesen");
-  assert.match(rumpf, /kiSenden\(\{ text \}, T\.kiLiest, lokalLesen\)/, "der Text-Weg gibt den Rueckfall mit");
+  assert.match(rumpf, /kiSenden\(zollModus \? \{ text, einheit: "in" \} : \{ text \}, T\.kiLiest, lokalLesen\)/, "der Text-Weg gibt den Rueckfall mit");
   assert.match(app, /const scheitern = \(msg\) => \{ if \(ersatz\) ersatz\(msg\); else setKiFehler\(msg\)/,
     "Fehlschlag (429, Serverfehler, kein Netz) geht an den Rueckfall");
   assert.doesNotMatch(app.slice(app.indexOf("const kiFoto ="), app.indexOf("const applyImport")), /lokalLesen/,
