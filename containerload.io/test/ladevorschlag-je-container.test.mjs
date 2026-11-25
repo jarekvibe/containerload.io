@@ -27,7 +27,7 @@ const schnitt = (von, bis) => {
 };
 // Die reinen Bausteine der Druckvorlage plus die Formatierer, die sie brauchen.
 const { LV_ROW, LV_UEBERSICHT, LV_PAGE, kettenLabelVor } = new Function(
-  `var LANG = "de";
+  `var LANG = "de"; var DOKLANG = "de";
    var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;
    ${schnitt("var cmTxt =", "var makeQR =")}
    ${schnitt("var LV_ROW =", "  var LV_STOWAGE =")}
@@ -113,7 +113,7 @@ test("das Deckblatt spricht ueber den Plan, nicht ueber den ersten Container", (
   assert.ok(/INNENMASS: mehrere \? fmt1DE\(planCVol\)/.test(roh), "das Deckblatt zeigt kein gebuchtes Gesamtvolumen");
   assert.ok(/PAYLOAD: mehrere \? \(planPayload > 0/.test(roh), "das Deckblatt zeigt die Zuladung eines Containers");
   assert.ok(/VOLPCT: Math\.round\(mehrere \? planVolPct : volPct\)/.test(roh), "die Auslastung des Deckblatts misst gegen einen Container");
-  assert.ok(/STOWAGE: mehrere \? LV_UEBERSICHT\(slotRows, LANG\) : STOWAGE/.test(roh),
+  assert.ok(/STOWAGE: mehrere \? LV_UEBERSICHT\(slotRows, DOKLANG\) : STOWAGE/.test(roh),
     "auf dem Deckblatt steht keine Uebersicht je Container");
   // Und "Passt in" nennt die gebuchte Kette, nicht eine Empfehlung, die davon abweichen kann.
   assert.ok(/if \(result && result\.chain && result\.chain\.length > 1 && planFit\) \{\s*\n\s*passtin = kettenLabelVor\(result\.chain\);/.test(roh),

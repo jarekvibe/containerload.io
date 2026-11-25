@@ -129,13 +129,13 @@ test("Einzelblatt und Container-Blaetter tragen Gewicht-Block und Quittung, das 
   // Zwischen Reihenfolge und Quittung duerfen weitere Rampen-Bloecke stehen
   // (Entladereihenfolge, VGM) -- der Vertrag hier ist: Reihenfolge, dann
   // Gewicht-Block, am Ende die Quittung, auf BEIDEN Blattsorten.
-  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, LANG, tiColor\)[^\n]*\+ LV_GEWICHT\(placed, cargo, num\(container\.l\), LANG\)[^\n]*\+ LV_QUITTUNG\(LANG\),/.test(roh),
+  assert.ok(/: STOWAGE \+ LV_SEQUENZ\(placed, cargo, DOKLANG, tiColor\)[^\n]*\+ LV_GEWICHT\(placed, cargo, num\(container\.l\), DOKLANG\)[^\n]*\+ LV_QUITTUNG\(DOKLANG\),/.test(roh),
     "das einzelne Blatt traegt Gewicht-Block und Quittung nicht");
-  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, LANG, tiC\)[^\n]*\+ LV_GEWICHT\(sp, cargo, num\(cp\.l\), LANG\)[^\n]*\+ LV_QUITTUNG\(LANG\),/.test(roh),
+  assert.ok(/chainLen: 1 \}\) \+ LV_SEQUENZ\(sp, cargo, DOKLANG, tiC\)[^\n]*\+ LV_GEWICHT\(sp, cargo, num\(cp\.l\), DOKLANG\)[^\n]*\+ LV_QUITTUNG\(DOKLANG\),/.test(roh),
     "die Container-Blaetter tragen Gewicht-Block und Quittung nicht");
   // Das Deckblatt zeigt die Uebersicht je Container -- unterschrieben wird an
   // der Rampe je Container, nicht auf dem Deckblatt.
-  assert.ok(/mehrere \? LV_UEBERSICHT\(slotRows, LANG\) :/.test(roh),
+  assert.ok(/mehrere \? LV_UEBERSICHT\(slotRows, DOKLANG\) :/.test(roh),
     "das Deckblatt haengt ploetzlich an einer anderen Weiche");
 });
 

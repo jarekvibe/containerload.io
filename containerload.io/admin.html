@@ -370,7 +370,9 @@
     const html =
       '<div style="margin-bottom:12px"><span class="pille sea">See: ' + (d.modus.sea || 0) + '</span> ' +
       '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
-      '<div><span class="pille">Deutsch: ' + (d.sprachen.de || 0) + '</span> <span class="pille">Englisch: ' + (d.sprachen.en || 0) + "</span></div>" +
+      // Jede Sprache, die vorkommt, bekommt ihre Pille -- Deutsch und Englisch stehen immer da
+      '<div>' + ["de", "en"].concat(Object.keys(d.sprachen || {}).filter((k) => k !== "de" && k !== "en").sort()).map((k) =>
+        '<span class="pille">' + ({ de: "Deutsch", en: "Englisch", es: "Spanisch" }[k] || String(k).replace(/[^a-z]/g, "").toUpperCase()) + ": " + ((d.sprachen || {})[k] || 0) + "</span>").join(" ") + "</div>" +
       '<div class="hinweis" style="margin:12px 0 4px">Verweildauer je Rechnung</div>' + dauerHtml;
     el.innerHTML = html;
   }

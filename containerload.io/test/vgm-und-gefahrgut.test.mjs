@@ -98,9 +98,9 @@ test("TARA und die Zuladungs-Wissensseite erzaehlen dieselben Zahlen", () => {
 });
 
 test("beide Blattsorten tragen den VGM-Block vor der Quittung", () => {
-  assert.ok(roh.includes("+ LV_VGM(placed, cargo, TARA[preset] || null, preset, LANG) + LV_QUITTUNG"),
+  assert.ok(roh.includes("+ LV_VGM(placed, cargo, TARA[preset] || null, preset, DOKLANG) + LV_QUITTUNG"),
     "das einzelne Blatt traegt den VGM-Block nicht");
-  assert.ok(roh.includes("+ LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, LANG) + LV_QUITTUNG"),
+  assert.ok(roh.includes("+ LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, DOKLANG) + LV_QUITTUNG"),
     "die Container-Blaetter tragen den VGM-Block nicht");
 });
 

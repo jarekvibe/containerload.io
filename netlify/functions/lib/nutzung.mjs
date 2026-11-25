@@ -15,7 +15,9 @@ export const FUNK_MAX = 24;       // Funktions-Kennungen je Event
 export const EVENTS_MAX = 5000;   // Events je Auswertung (Schutz der Function-Laufzeit)
 
 const MODI = new Set(["sea", "road"]);
-const SPRACHEN = new Set(["de", "en"]);
+// Jede Sprache, die der Rechner sprechen kann (app.html: Deutsch, Englisch + CL_SPRACHEN).
+// Kommt dort eine dazu, gehoert sie hierher -- sonst verwirft die Statistik ihre Aufrufe.
+const SPRACHEN = new Set(["de", "en", "es"]);
 
 // Zahl im erlaubten Bereich oder null. Rundet auf eine Nachkommastelle --
 // genauer muss keine Kante und kein Gewicht in einer Statistik sein.

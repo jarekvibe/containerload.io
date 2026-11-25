@@ -130,5 +130,5 @@ test("die alte Adresse /?lang=en ist ueberall abgeloest", () => {
   // ... und das Skript der deutschen Seite faengt die alte Adresse auch ohne Netlify ab
   assert.ok(de.includes("if(SEITE==='de'&&(erzwungen==='en'||(!erzwungen&&gemerkt==='en'))){ try{location.replace('/en/'+location.hash);}catch(e){} return; }"));
   // Der Rechner verlinkt seine Startseite richtig
-  assert.ok(lies("app.html").includes('var homeHref = LANG === "en" ? "/en/" : "/";'));
+  assert.ok(lies("app.html").includes('var homeHref = LANG === "de" ? "/" : "/en/";'));
 });

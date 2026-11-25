@@ -26,9 +26,11 @@ assert.ok(s >= 0 && e > s, "LANG-Block in app.html nicht gefunden — Anker gepr
 const quelle = L.slice(s, e + 1).join("\n");
 
 // Baut LANG unter kontrollierten Bedingungen neu auf. URLSearchParams gibt es in Node.
-function lang({ url = "", gemerkt = null, browser = "de-DE" }) {
+// geladen: Sprachdateien, die der Lader im Kopf schon geholt hat (window.CL_SPRACHE);
+// register: was es laut Kopf ueberhaupt gibt (window.CL_SPRACHEN).
+function lang({ url = "", gemerkt = null, browser = "de-DE", geladen = null, register = null }) {
   const fake = {
-    window: { location: { search: url }, localStorage: { getItem: () => gemerkt } },
+    window: { location: { search: url }, localStorage: { getItem: () => gemerkt }, ...(geladen ? { CL_SPRACHE: geladen } : {}), ...(register ? { CL_SPRACHEN: register } : {}) },
     navigator: { language: browser },
   };
   return new Function(
@@ -60,6 +62,23 @@ test("Ohne Parameter und ohne eigene Wahl ist es Deutsch — egal was der Browse
   );
   assert.strictEqual(lang({ browser: "fr-FR" }), "de");
   assert.strictEqual(lang({ browser: "" }), "de");
+});
+
+// Weitere Sprachen (Sprachfabrik): gewaehlt wird nur, was wirklich geladen ist.
+test("eine weitere Sprache gilt, wenn ihre Datei geladen ist — sonst Englisch, nie Deutsch", () => {
+  const register = { es: ["Español", "Cambiar la interfaz a español"] };
+  const geladen = { es: { name: "Español", texte: () => ({}) } };
+  assert.strictEqual(lang({ url: "?lang=es", geladen, register }), "es");
+  assert.strictEqual(lang({ url: "?lang=es-MX", geladen, register }), "es", "die Landesfassung zaehlt als die Sprache");
+  assert.strictEqual(lang({ gemerkt: "es", geladen, register }), "es", "die gemerkte Wahl gilt auch fuer weitere Sprachen");
+  assert.strictEqual(lang({ url: "?lang=de", gemerkt: "es", geladen, register }), "de", "die Adresse schlaegt die gemerkte Wahl");
+  // Im Register, aber die Datei kam nicht an (offline, alter Zwischenspeicher)
+  assert.strictEqual(lang({ url: "?lang=es", register }), "en", "wer Spanisch waehlt und die Datei fehlt, bekommt Englisch");
+  // Gar nicht im Register: wie bisher Deutsch
+  assert.strictEqual(lang({ url: "?lang=fr", register }), "de");
+  assert.strictEqual(lang({ url: "?lang=__proto__", register }), "de");
+  // Der Browser entscheidet weiterhin nichts
+  assert.strictEqual(lang({ browser: "es-ES", geladen, register }), "de");
 });
 
 test("Kaputte Umgebung faellt sauber auf Deutsch zurueck", () => {
