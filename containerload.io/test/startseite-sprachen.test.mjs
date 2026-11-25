@@ -100,9 +100,14 @@ for (const X of SPRACHEN) {
     }
     for (const ziel of Object.values(X.guide)) assert.ok(fs.existsSync(path.join(dir, "..", ziel.replace(/^\//, "") + (ziel.endsWith("/") ? "index.html" : ".html"))), `${ziel} gibt es nicht`);
     // Sprachknoepfe: dieser ist aktiv, DE und EN bleiben Links auf ihre Seiten
-    assert.strictEqual((seite.match(new RegExp(`<a data-lang="${K}" href="/${K}/" hreflang="${K}" title="${X.name}" class="langbtn on">`, "g")) || []).length, 2);
-    assert.ok(seite.includes('<a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>'));
-    assert.ok(seite.includes('<a data-lang="en" href="/en/" hreflang="en" title="English" class="langbtn">EN</a>'));
+    // Sprach-Menue (Kopfzeile + Mobilmenue): diese Sprache ist aktiv und steht im Knopf, die
+    // anderen bleiben Links auf ihre Seiten -- mit vollem Namen, nicht als Kuerzel-Reihe
+    assert.strictEqual((seite.match(new RegExp(`<a data-lang="${K}" href="/${K}/" hreflang="${K}" class="langbtn on">${X.name}</a>`, "g")) || []).length, 2);
+    assert.strictEqual((seite.match(new RegExp(`<span class="langcur">${K.toUpperCase()}</span>`, "g")) || []).length, 2);
+    assert.strictEqual((seite.match(/<a data-lang="de" href="\/" hreflang="de" class="langbtn">Deutsch<\/a>/g) || []).length, 2);
+    assert.strictEqual((seite.match(/<a data-lang="en" href="\/en\/" hreflang="en" class="langbtn">English<\/a>/g) || []).length, 2);
+    assert.strictEqual((seite.match(/<details class="langmenu/g) || []).length, 2, "die Sprachwahl ist kein Aufklapp-Menue");
+    assert.ok(!seite.includes('class="langswitch'), "die alte Knopfreihe ist noch da");
   });
 
   test(`${K}: kein deutscher und kein englischer Fliesstext auf der Seite`, () => {

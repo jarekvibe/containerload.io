@@ -66,7 +66,7 @@
    ============================================================ */
 :root{
   /* Flaechen: vom Grund nach oben, jede Stufe eine Spur heller */
-  --bg:#0E1116; --card:#151A21; --card2:#1A212A;
+  --bg:#0E1116; --card:#151A21; --card2:#1A212A; --menu-schatten:0 14px 36px rgba(0,0,0,.5);
   --line:#232B35; --line2:#303A46;
   /* Text: drei Stufen, mehr braucht es nicht */
   /* --faint war #6D7784 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
@@ -88,7 +88,7 @@
    damit Startseite und Rechner auch im Hellen wie EIN Produkt wirken. Der Akzent ist
    eine Stufe tiefer (#1273E6): #2E8FFF kommt auf Weiss nur auf 3,2:1 (WCAG). */
 :root[data-theme="hell"]{
-  --bg:#EEF1F6; --card:#FFFFFF; --card2:#F6F8FB;
+  --bg:#EEF1F6; --card:#FFFFFF; --card2:#F6F8FB; --menu-schatten:0 12px 30px rgba(16,24,40,.14);
   --line:#E3E8F0; --line2:#C6D0DD;
   --text:#1C2733; --dim:#46566A; --faint:#5B6B7E;
   --accent:#1273E6; --accent-soft:rgba(18,115,230,.10); --accent-line:rgba(18,115,230,.34);
@@ -148,13 +148,30 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
    Rotterdam oder Singapur liest Englisch, ist aber weder Brite noch Amerikaner.
    Ohne die beiden bunten Fahnen ist die Navigationsleiste ausserdem wieder
    einfarbig, und "Tool oeffnen" bleibt das einzige gefuellte Element darin. */
-.langswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
-.langbtn{padding:4px 9px;border-radius:5px;font-size:11px;font-weight:600;line-height:1;
-  color:var(--faint);background:transparent;cursor:pointer;text-decoration:none;
+/* Sprachwahl als Aufklapp-Menue (25.11.26, Jarek: drei Knoepfe nebeneinander "sehen ultra
+   weird aus" -- und mit jeder weiteren Sprache waere die Reihe laenger geworden). Ein Knopf
+   zeigt die aktuelle Sprache, darunter klappt die Liste mit vollen Namen auf. <details>
+   braucht dafuer kein Skript; Klick daneben und Esc schliessen es (unten, drei Zeilen). */
+.langmenu{position:relative}
+.langmenu summary{list-style:none;display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--line);font-size:11px;font-weight:700;line-height:1;
+  color:var(--dim);cursor:pointer;user-select:none;transition:color .15s}
+.langmenu summary::-webkit-details-marker{display:none}
+.langmenu summary:hover,.langmenu[open] summary{color:var(--text)}
+.langmenu[open] summary{box-shadow:inset 0 0 0 1px var(--accent-line)}
+.langmenu .langpfeil{transition:transform .15s}
+.langmenu[open] .langpfeil{transform:rotate(180deg)}
+.langlist{position:absolute;top:calc(100% + 6px);right:0;z-index:60;min-width:148px;padding:4px;border-radius:8px;
+  display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line2);box-shadow:var(--menu-schatten)}
+.langbtn{display:block;padding:8px 10px;border-radius:5px;font-size:13px;font-weight:500;line-height:1.2;
+  color:var(--dim);background:transparent;cursor:pointer;text-decoration:none;white-space:nowrap;
   transition:color .15s,background-color .15s}
-.langbtn:hover{text-decoration:none}
-/* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn. */
-.langswitch-lg .langbtn{padding:7px 14px;font-size:13px;border-radius:6px}
+.langbtn:hover{text-decoration:none;background:var(--card2)}
+/* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn.
+   Die Liste oeffnet dort nach links buendig -- der Knopf steht am linken Rand. */
+.langmenu-lg summary{padding:9px 12px;font-size:13px}
+.langmenu-lg .langlist{left:0;right:auto}
+.langmenu-lg .langbtn{padding:10px 12px}
 /* Hell/Dunkel-Umschalter: gleiche Pille wie der Sprachumschalter. Der aktive Knopf
    haengt REIN am data-theme des <html> — kein Zustand im Skript noetig. */
 .themaswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
@@ -175,7 +192,7 @@ a.card:hover{border-color:var(--line2);background:var(--card2)}
 .langbar a:hover{text-decoration:underline}
 .langbar button{color:var(--faint);background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
 .langbar button:hover{color:var(--text)}
-.langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:700;cursor:default}
+.langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:600;cursor:default}
 .langbtn:hover{color:var(--text)}
 
 /* Die Marke baut sich beim Laden auf: erst die beiden Seitenflaechen, dann der Deckel.
@@ -399,11 +416,14 @@ details[open] .faq-plus{transform:rotate(45deg)}
         <button type="button" data-thema="hell" class="themabtn" aria-label="Light mode" title="Light mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
         <button type="button" data-thema="dunkel" class="themabtn" aria-label="Dark mode" title="Dark mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
       </div>
-      <div class="langswitch nav-sm-hide">
-        <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
-        <a data-lang="en" href="/en/" hreflang="en" title="English" class="langbtn on">EN</a>
-        <a data-lang="es" href="/es/" hreflang="es" title="Español" class="langbtn">ES</a>
-      </div>
+      <details class="langmenu nav-sm-hide">
+        <summary aria-label="Sprache / Language"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span class="langcur">EN</span><svg class="langpfeil" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <div class="langlist">
+          <a data-lang="de" href="/" hreflang="de" class="langbtn">Deutsch</a>
+          <a data-lang="en" href="/en/" hreflang="en" class="langbtn on">English</a>
+          <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
+        </div>
+      </details>
       <a data-i18n="nav_open" href="/app?lang=en" class="btn btn-primary text-[13px] px-2 sm:px-4 py-2">Open tool</a>
       <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -417,11 +437,14 @@ details[open] .faq-plus{transform:rotate(45deg)}
       <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink py-2">Container facts</a>
       <a href="#faq" class="navlink py-2">FAQ</a>
       <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
-        <div class="langswitch langswitch-lg">
-          <a data-lang="de" href="/" hreflang="de" title="Deutsch" class="langbtn">DE</a>
-          <a data-lang="en" href="/en/" hreflang="en" title="English" class="langbtn on">EN</a>
-          <a data-lang="es" href="/es/" hreflang="es" title="Español" class="langbtn">ES</a>
-        </div>
+        <details class="langmenu langmenu-lg">
+          <summary aria-label="Sprache / Language"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span class="langcur">EN</span><svg class="langpfeil" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="langlist">
+            <a data-lang="de" href="/" hreflang="de" class="langbtn">Deutsch</a>
+            <a data-lang="en" href="/en/" hreflang="en" class="langbtn on">English</a>
+            <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
+          </div>
+        </details>
         <div class="themaswitch themaswitch-lg ml-auto" role="group">
         <button type="button" data-thema="hell" class="themabtn" aria-label="Light mode" title="Light mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
         <button type="button" data-thema="dunkel" class="themabtn" aria-label="Dark mode" title="Dark mode"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
@@ -966,6 +989,10 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   [].slice.call(document.querySelectorAll('a[data-lang]')).forEach(function(a){
     a.addEventListener('click',function(){ merken(a.getAttribute('data-lang')); });
   });
+  // Sprach-Menue: Klick daneben oder Esc schliesst es wieder
+  var LM=[].slice.call(document.querySelectorAll('details.langmenu'));
+  document.addEventListener('click',function(e){LM.forEach(function(d){if(d.open&&!d.contains(e.target))d.open=false;});});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')LM.forEach(function(d){d.open=false;});});
   var _ip=document.getElementById('impPaste'); if(_ip&&SEITE!=='de'){ _ip.placeholder=EN.imp_ph; }
 
   // Sprachwahl: Die ADRESSE hat Vorrang, dann die eigene fruehere Wahl, sonst Deutsch --

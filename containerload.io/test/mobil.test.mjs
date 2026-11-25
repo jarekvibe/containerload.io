@@ -70,9 +70,12 @@ test("die Kopfzeile des Rechners darf auf dem Telefon umbrechen", () => {
     "die Kopfzeile bricht nicht mehr um — auf 390 px passt sie nicht in eine Zeile");
   // Die Sprachwahl muss sich per Klasse ausblenden lassen. Stuende display:flex fest im
   // style-Attribut, koennte "hidden sm:flex" nichts ausrichten.
-  const i = s.indexOf('["de", "en"].map((l)');
-  const davor = s.slice(Math.max(0, i - 260), i);
-  assert.match(davor, /className: "hidden sm:flex"/, "die Sprachwahl im Kopf laesst sich nicht mehr ausblenden");
+  // (Der Anker hier zeigte seit dem Seg-Umbau ins Leere und pruefte damit nichts mehr. Jetzt
+  // haengt er am Knopf des Sprach-Menues: dessen Huelle ist auf dem Telefon ausgeblendet.)
+  const i = s.indexOf('onClick: () => setSprachOpen((o) => !o)');
+  assert.ok(i > 0, "der Knopf des Sprach-Menues wurde nicht gefunden");
+  const davor = s.slice(Math.max(0, i - 900), i);
+  assert.match(davor, /!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "hidden sm:block relative" \},/, "die Sprachwahl im Kopf laesst sich nicht mehr ausblenden");
   assert.ok(!/className: "hidden sm:flex", style: \{ display: "flex"/.test(davor),
     "display:flex steht wieder fest im style-Attribut und schlaegt die Klasse");
 });
@@ -96,7 +99,10 @@ test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', 
   assert.ok(i > -1, 'der Knopf "Tool öffnen" wurde nicht gefunden');
   // 700 -> 1600: seit dem Hell/Dunkel-Umschalter stehen zwei SVG-Knoepfe vor dem
   // Sprachumschalter. Im Browser nachgemessen (390 px): Nav-Rechtskante 382 px — passt.
-  const zeile = s.slice(Math.max(0, i - 1600), i + 200);
+  // 1600 -> 2800 (25.11.26): die Sprachwahl ist ein Aufklapp-Menue mit zwei kleinen Symbolen
+  // und der Namensliste -- mehr Markup, auf dem Telefon aber ausgeblendet (nav-sm-hide).
+  // Im Browser nachgemessen (390 px): kein seitliches Scrollen.
+  const zeile = s.slice(Math.max(0, i - 2800), i + 200);
   assert.match(zeile, /class="flex items-center gap-1 sm:gap-2"/,
     "der Abstand vor dem Burger ist auf dem Telefon nicht verkleinert");
   assert.match(zeile, /class="btn btn-primary text-\[13px\] px-2 sm:px-4 py-2"/,

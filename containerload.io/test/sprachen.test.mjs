@@ -142,7 +142,12 @@ test("im Rechner steht keine Zwei-Sprachen-Weiche mehr", () => {
   assert.strictEqual(treffer.length, 2, "neue LANG === \"en\"-Weiche: jede weitere Sprache bekaeme dort Deutsch\n" + treffer.join("\n"));
   assert.ok(treffer.some((z) => z.includes("document.title")) && treffer.some((z) => z.includes('return "en-US"')));
   // Die Auswahl in Kopfzeile und Menue kommt aus EINER Liste
-  assert.ok(roh.includes("items: SPRACH_LISTE.map(([k, n]) => [k, k.toUpperCase(), n]), value: LANG, onPick: setLangTo"));
+  // Kopfzeile: ein Aufklapp-Menue (ein Knopf mit dem Kuerzel, darunter die Namen) -- keine Knopfreihe
+  assert.ok(roh.includes('onClick: () => setSprachOpen((o) => !o)') && roh.includes('"aria-haspopup": "menu"'));
+  assert.ok(roh.includes('SPRACH_LISTE.map(([k, n]) => /* @__PURE__ */ React.createElement("button", { key: k, role: "menuitemradio"'), "die Liste des Sprach-Menues kommt nicht aus SPRACH_LISTE");
+  assert.ok(roh.includes("onClick: () => { setSprachOpen(false); if (k !== LANG) setLangTo(k); }"));
+  assert.ok(!/Seg, \{[^}]*SPRACH_LISTE/.test(roh), "die Sprachen stehen wieder als Knopfreihe da");
+  assert.ok(roh.includes("else if (sprachOpen) setSprachOpen(false);"), "Esc schliesst das Sprach-Menue nicht");
   assert.ok(roh.includes("...SPRACH_LISTE.filter(([k]) => !EMBEDDED && k !== LANG).map(([k, n, satz]) => ({ label: n, sub: satz, fn: () => setLangTo(k) })),"));
   // Statistik und Stevie bekommen die echte Sprache, nicht "alles ausser Englisch ist Deutsch"
   assert.ok(roh.includes("        sprache: LANG,\n        geteilt: !!SHARED,"));

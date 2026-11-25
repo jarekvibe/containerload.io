@@ -152,10 +152,13 @@ function startseite(de, X) {
   s = kopf + koerper;
 
   // 5) Aktive Sprache: der Knopf dieser Seite ist "on", der DE-Knopf nicht
-  s = s.replace(/class="langbtn on">DE<\/a>/g, 'class="langbtn">DE</a>');
+  //    (Sprach-Menue: zwei Stueck, Kopfzeile und Mobilmenue; der Knopf zeigt das Kuerzel)
+  s = s.replace(/(<a data-lang="de" [^>]*class="langbtn) on(">)/g, '$1$2');
   let knoepfe = 0;
   s = s.replace(new RegExp('(<a data-lang="' + K + '" [^>]*class="langbtn)(">)', 'g'), (_, a, b) => { knoepfe++; return a + ' on' + b; });
-  if (knoepfe !== 2) throw new Error(K + ': ' + knoepfe + ' Sprachknoepfe statt 2 -- fehlt der Knopf in index.html?');
+  if (knoepfe !== 2) throw new Error(K + ': ' + knoepfe + ' Eintraege im Sprach-Menue statt 2 -- fehlt die Sprache in index.html?');
+  if (s.split('<span class="langcur">DE</span>').length !== 3) throw new Error('Knopf des Sprach-Menues nicht gefunden');
+  s = s.split('<span class="langcur">DE</span>').join('<span class="langcur">' + K.toUpperCase() + '</span>');
 
   // 5b) Weitere Sprachen: die Texte in den Skripten und das Woerterbuch der Seite
   if (X.inline) {

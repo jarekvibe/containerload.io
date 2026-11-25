@@ -84,8 +84,8 @@ test("Links auf /en/: Rechner englisch, Wissen auf dem Guide, Start auf /en/", (
     assert.ok(G[h], `GUIDE kennt ${h} nicht -- auf /en/ bliebe er deutsch`);
   }
   // Aktiver Sprachknopf
-  assert.ok(/class="langbtn on">EN<\/a>/.test(en) && !/class="langbtn on">DE<\/a>/.test(en), "EN-Knopf nicht aktiv");
-  assert.ok(/class="langbtn on">DE<\/a>/.test(de) && !/class="langbtn on">EN<\/a>/.test(de), "DE-Knopf nicht aktiv");
+  assert.ok(/class="langbtn on">English<\/a>/.test(en) && !/class="langbtn on">Deutsch<\/a>/.test(en) && en.includes('<span class="langcur">EN</span>'), "EN nicht aktiv");
+  assert.ok(/class="langbtn on">Deutsch<\/a>/.test(de) && !/class="langbtn on">English<\/a>/.test(de) && de.includes('<span class="langcur">DE</span>'), "DE nicht aktiv");
 });
 
 test("die alte Adresse /?lang=en ist ueberall abgeloest", () => {
