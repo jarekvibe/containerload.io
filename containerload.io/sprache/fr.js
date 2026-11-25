@@ -6,7 +6,7 @@
 //
 // Wortwahl: "palette", "colis", "gerbable" (das Fachwort fuer stapelbar), Anrede "vous" --
 // im Franzoesischen die uebliche Form fuer Arbeitswerkzeuge.
-// Dokumente (Ladevorschlag, Bild, CSV, VGM) bleiben Englisch -- sie gehen an Dritte.
+// Der Ladevorschlag spricht Franzoesisch (dok weiter unten); Bild-Export und VGM-PDF kommen noch auf Englisch.
 (function () {
   var S = window.CL_SPRACHE = window.CL_SPRACHE || {};
   S.fr = {
@@ -255,6 +255,100 @@
         csv: {
           kopf: ["Conteneur", "Colis", "Quantité", "Longueur_cm", "Largeur_cm", "Hauteur_cm", "Poids_kg_unité", "Poids_kg_total", "Gerbable", "Rotation_90", "Saisi"],
           ja: "oui", nein: "non", bis: function (cm) { return "jusqu’à " + cm + " cm"; }, max: function (n) { return "max. " + n; }, offen: "non chargé", pos: function (n) { return "Colis " + n; }
+        },
+        // Die DOKUMENTE in dieser Sprache (Ladevorschlag mit Stauplan, Reihenfolgen, Gewicht,
+        // VGM-Vorbereitung, Quittung). Je Baustein ein Woerterbuch -- oder eine Funktion, wenn
+        // Zahlen im Satz stehen (w). Es liegt ueber dem englischen (dokMit in app.html); die
+        // Schluessel vergleicht test/dokumente-sprachen.test.mjs. Die Texte gehen roh ins HTML
+        // des Dokuments: "&" als &amp; schreiben, kein "<" ausser den Tags, die auch im
+        // Englischen stehen (<br>, <b>). Spalten und Kopfzeilen sind eng -- kurz bleiben.
+        dok: {
+          loc: "fr-FR",
+          row: { ja: "OUI", nein: "NON", dg: "MD", pos: "Colis " },
+          stau: {
+            top: "VUE DE DESSUS", topSub: "surface au sol", topHint: "d’en haut",
+            side: "VUE DE CÔTÉ", sideSub: "hauteur et gerbage", sideHint: "de côté",
+            len: "Longueur", wid: "Largeur", hei: "Hauteur", front: "PAROI AVANT", door: "◂ PORTE",
+            title: "PLAN D’ARRIMAGE", h2: "Chargement schématique",
+            note: "Vue schématique de la disposition calculée. Arrimage, rotation et gerbage exacts dans le plan 3D interactif (QR). Purement géométrique : la charge à l’essieu, le centre de gravité et l’arrimage de la marchandise sont à vérifier séparément.",
+            multi: function (n) { return "Le dessin montre le conteneur 1 sur " + n + " ; les autres sont dans le plan 3D."; },
+            c1: "SURFACE AU SOL OCCUPÉE", c2: "HAUTEUR MAX. DE GERBAGE", c3: "NIVEAUX DE GERBAGE", clear: "jeu",
+            stack: "gerbable", nostack: "non gerbable"
+          },
+          page: function (w) {
+            return {
+              kicker: "PROPOSITION DE CHARGEMENT", h1: "Plan de chargement<br>sans engagement",
+              cont: "CONTENEUR", inner: "DIM. INT.", payload: "CHARGE UTILE MAX.",
+              discK: "PROPOSITION SANS ENGAGEMENT — À VÉRIFIER",
+              discBody: "Proposition établie à partir des dimensions et des poids saisis. Calcul purement géométrique, sans vérification du poids réel, de la charge à l’essieu, du centre de gravité ni de l’arrimage. Le chargement, la répartition du poids et l’arrimage sont à vérifier par vos soins avant le transport. Ce n’est pas un document officiel.",
+              kPos: "LIGNES", colliTot: w.COLLI + " colis au total",
+              kVol: "VOLUME", volUnit: "m³", util: w.VOLPCT + " % d’occupation",
+              kWeight: "POIDS · SAISI", ofPay: w.WTPCT + " % de la charge utile",
+              fitsIn: "TIENT DANS",
+              tPos: "LIGNES", entries: w.POSCOUNT + " LIGNES · " + w.COLLI + " COLIS",
+              thPos: "N°", thDesc: "Désignation", thQty: "Qté", thDims: "Dim. L×l×H", thWpc: "Poids/u.", thTot: "Total kg", thVol: "Vol. m³", thStk: "Gerb.",
+              orderCol: "Ordre", orderNote: "L’ordre est une suggestion (le lourd et le bas d’abord) — pas une consigne de chargement obligatoire.",
+              sum: "Total",
+              notesK: "REMARQUES", nonbind: "· SANS ENGAGEMENT",
+              hints: [
+                "Placez les palettes lourdes en bas et réparties uniformément.",
+                "Les colis non gerbables restent au sol : rien n’est posé dessus.",
+                "Vérifiez séparément la charge à l’essieu, le centre de gravité et l’arrimage.",
+                "Poids = vos saisies, non vérifiées par l’outil."
+              ],
+              promoK: "PLAN 3D INTERACTIF", promoH: "Faites pivoter le plan en 3D",
+              promoB: "Scannez le QR → voyez le chargement en 3D, ajustez-le et partagez-le. Sans inscription, directement dans le navigateur.",
+              qrAlt: "QR code du plan 3D", linkLabel: "Ou ouvrez le lien sur l’ordinateur :",
+              footer: "Ce n’est pas un document officiel · proposition sans engagement établie à partir de vos saisies · ne remplace pas la vérification professionnelle de l’arrimage, de la charge à l’essieu ni de la répartition du poids.",
+              page: "Page 1 / 1",
+              datum: "DATE", absender: "EXPÉDITEUR", empfaenger: "DESTINATAIRE", hint: "cliquez pour remplir"
+            };
+          },
+          sequenz: {
+            titel: "ORDRE DE CHARGEMENT", h2: "Chargez dans cet ordre",
+            sub: "La paroi avant d’abord, la porte en dernier. Le bas avant le haut. Cochez chaque étape au chargement.",
+            ab: "depuis la paroi avant",
+            mehr: function (n) { return "+ " + n + " étapes de plus — le détail complet dans le plan 3D (QR)"; },
+            pos: "Colis "
+          },
+          stopps: {
+            titel: "ORDRE DE DÉCHARGEMENT", h2: "Déchargez dans cet ordre",
+            sub: "D’après l’arrimage : l’arrêt 1 se trouve à la porte et sort en premier. La marchandise sans arrêt est contre la paroi avant et reste chargée jusqu’à la fin.",
+            stopp: function (n) { return "Arrêt " + n; }, ohne: "Sans arrêt", ohneSub: "reste chargé", pos: "N°",
+            stk: function (n) { return n + " pcs"; }, ab: "depuis la paroi avant"
+          },
+          gewicht: function (w) {
+            return {
+              titel: "POIDS ET CENTRE DE GRAVITÉ · VALEUR INDICATIVE", wand: "PAROI AVANT", tuer: "PORTE",
+              zeile: "Poids du chargement <b>" + w.kg + " kg</b> · centre de gravité à <b>" + w.m + " m</b> de la paroi avant (" + w.pct + " % de la longueur) · moitié avant " + w.vorn + " % / moitié arrière " + w.hinten + " %",
+              sub: "D’après vos poids, masse homogène par colis supposée. Ne remplace pas une pesée ; vérifiez séparément la charge à l’essieu et l’arrimage."
+            };
+          },
+          vgm: function (w) {
+            return {
+              titel: "MASSE BRUTE (PRÉPARATION DE LA VGM) · VALEUR INDICATIVE", ladung: "Chargement", tar: "tare du conteneur", brutto: "brut",
+              typ: w.hatTara ? "(typique " + w.typ + " — la plaque CSC du conteneur fait foi)" : "(à lire sur la plaque CSC du conteneur)",
+              sub: "Ce n’est pas une VGM. La masse brute vérifiée exige une pesée (méthode 1) ou un calcul certifié (méthode 2) selon SOLAS VI/2 — ce chiffre est une valeur indicative issue de vos saisies non vérifiées ; le champ de la tare peut être rempli avant l’impression."
+            };
+          },
+          quittung: {
+            wer: "Chargé par (nom)", wann: "Date / heure", unterschrift: "Signature",
+            sub: "Atteste uniquement le chargement selon cette proposition. Aucune attestation de l’arrimage, de la charge à l’essieu ni des poids."
+          },
+          uebersicht: {
+            titel: "PAR CONTENEUR", h2: "Comment l’envoi se répartit", cont: "Conteneur", typ: "Type", stk: "Chargé", vol: "Volume", kg: "Poids", voll: "Rempli",
+            note: "Une ligne par conteneur. Chacun est mis à quai, pesé et acheminé séparément — les pages suivantes montrent un plan d’arrimage chacune."
+          },
+          doc: {
+            titel: "Proposition de chargement", druck: "Enregistrer en PDF / imprimer", zu: "Fermer",
+            felder: "Les champs en pointillé (REF, expéditeur, destinataire) peuvent être remplis avant l’impression — ils ne quittent jamais cette page."
+          },
+          bau: {
+            eigen: "Dimensions personnalisées", geo: "vérifié géométriquement", empf: "recommandé", empf2: "recommandation",
+            gross: "colis trop grand", schwer: "colis trop lourd", seite: "Page ", gebucht: "VOLUME RÉSERVÉ",
+            gefahr: "Colis marqués MD : simple marquage issu de votre saisie — aucun contrôle des marchandises dangereuses, aucune règle de séparation ni d’arrimage. Le classement et l’admissibilité restent de la responsabilité de l’expéditeur.",
+            contVon: function (i, n) { return "conteneur " + i + " sur " + n; }
+          }
         },
         exportFail: "L’export a échoué", popups: "Autorisez les fenêtres pop-up", posWort: "Colis", farbBlau: "Bleu", farbRot: "Rouge", logoOk: "Logo importé",
         shotBtn: "Image",

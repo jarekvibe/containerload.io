@@ -3600,6 +3600,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Englisch: sie gehen an Dritte, und Englisch ist dort die gemeinsame Sprache. Jede weitere
   // Oberflaechen-Sprache bekommt deshalb englische Dokumente -- nie deutsche.
   var DOKLANG = LANG === "de" ? "de" : "en";
+  // Dokumente in WEITEREN Sprachen (seit 25.11.26; Jarek: "Wir muessen wirklich alles
+  // uebersetzen dann auf die jeweiligen Sprachen"). Deutsch und Englisch stehen in den
+  // Bausteinen selbst -- je Baustein ein Woerterbuch mit zwei Zweigen. Jede weitere Sprache
+  // liefert ihre Sprachdatei: texte(h).dok, je Baustein ein Objekt, oder eine Funktion, wenn
+  // Zahlen in den Saetzen stehen. Es liegt UEBER dem englischen Woerterbuch (dokMit) -- fehlt
+  // ein Text, steht dort Englisch statt nichts, wie bei der Oberflaeche. Bringt die Datei kein
+  // "dok" mit, bleibt DOKLANG Englisch. Gesetzt wird das weiter unten, sobald das Woerterbuch
+  // der Sprache steht.
+  var DOK_MEHR = {};
+  var dokLoc = (lang) => lang === "de" ? "de-DE" : DOK_MEHR[lang] && DOK_MEHR[lang].loc || "en-US";
+  var dokMit = (lang, teil, grund, werte) => {
+    const d = DOK_MEHR[lang] && DOK_MEHR[lang][teil];
+    return d ? Object.assign(grund, typeof d === "function" ? d(werte || {}) : d) : grund;
+  };
   // Die Auswahl: [Kuerzel, Name, Satz im Menue] -- auch fuer Sprachen, die gerade NICHT geladen sind.
   var SPRACH_LISTE = [["de", "Deutsch", "Oberfl\xE4che auf Deutsch"], ["en", "English", "Switch the interface to English"]]
     .concat(Object.entries((typeof window !== "undefined" && window.CL_SPRACHEN) || {}).map(([k, v]) => [k, v[0], v[1]]));
@@ -3849,6 +3863,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       exportDone: "Ladeliste exportiert",
       // Die deutsche CSV-Fassung ist die Vorgabe in buildCargoCSV -- hier bewusst leer.
       csv: null,
+      // Die Dokument-Texte stehen fuer Deutsch und Englisch in den Bausteinen selbst (LV_*);
+      // "dok" bringt nur eine Sprachdatei mit (siehe DOK_MEHR im LANG-Block).
+      dok: null,
       shotBtn: "Bild",
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
@@ -4351,6 +4368,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         kopf: ["Container", "Item", "Qty", "Length_cm", "Width_cm", "Height_cm", "Weight_kg_each", "Weight_kg_total", "Stackable", "Rotatable_90", "Entered"],
         ja: "yes", nein: "no", bis: (cm) => "up to " + cm + " cm", max: (n) => "max. " + n, offen: "open", pos: (n) => "Item " + n
       },
+      dok: null,
       exportFail: "Export failed", popups: "Please allow pop-ups", posWort: "Item", farbBlau: "Blue", farbRot: "Red", logoOk: "Logo uploaded",
       shotBtn: "Image",
       shotExportTitle: "Export image",
@@ -4626,6 +4644,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Text im Rechner, alte Sprachdatei im Zwischenspeicher), steht dort Englisch statt nichts.
   // Die Helfer werden erst beim AUFRUF gebraucht -- plu/fmtDE/LOC stehen weiter unten im Modul.
   if (SPRACHE_MEHR[LANG]) I18N[LANG] = Object.assign({}, I18N.en, SPRACHE_MEHR[LANG].texte({ React: window.React, C, plu: (n, a, b) => plu(n, a, b), fmtDE: (n) => fmtDE(n), loc: () => LOC() }));
+  // Die Dokumente sprechen die Sprache der Oberflaeche, wenn die Sprachdatei sie mitbringt.
+  if (SPRACHE_MEHR[LANG] && I18N[LANG].dok) { DOK_MEHR[LANG] = I18N[LANG].dok; DOKLANG = LANG; }
   var T = I18N[LANG];
   var EMBEDDED = (() => {
     try {
@@ -5116,23 +5136,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return rank;
   }
   var LV_ROW = (it, i, lang, rank) => {
-    const en = lang === "en";
+    const en = lang !== "de", loc = dokLoc(lang);
+    const W = dokMit(lang, "row", en ? { ja: "YES", nein: "NO", dg: "DG", pos: "Item " } : { ja: "JA", nein: "NEIN", dg: "GEFAHRGUT", pos: "Position " });
     const q = Math.max(0, num(it.qty, 1));
     const totKg = q * num(it.weight, 0);
     const volC = q * num(it.l) * num(it.w) * num(it.h) / 1e6;
     const stack = it.stackable !== false;
     const capN = it.stackable === false ? 1 : isFinite(it.stackMax) && +it.stackMax >= 2 ? +it.stackMax : Infinity;
-    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
-    const dims = `${dimDE(it.l, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.w, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.h, en ? "en-US" : "de-DE")}`;
-    const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
+    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : W.ja;
+    const dims = `${dimDE(it.l, loc)} \xD7 ${dimDE(it.w, loc)} \xD7 ${dimDE(it.h, loc)}`;
+    const nm = escHTML(it.name || W.pos + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
-    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${stackTxt}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${en ? "NO" : "NEIN"}</span>`;
+    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${stackTxt}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${W.nein}</span>`;
     const rk = rank ? String(rank) : "—";
     // Gefahrgut-Marke: NUR Kennzeichnung aus der Eingabe (der Hinweis-Satz
     // unter der Tabelle sagt es) -- UN-Nummer ist an jeder Eintrittsstelle
     // auf Ziffern gefiltert, escHTML trotzdem.
     const gefahr = it.gefahr === true
-      ? `<div style="margin-top:3px;"><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:20px; background:#fff7ed; color:#b45309; border:1px solid #fdba74; white-space:nowrap;">${en ? "DG" : "GEFAHRGUT"}${it.un ? " \xB7 UN " + escHTML(it.un) : ""}</span></div>`
+      ? `<div style="margin-top:3px;"><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:20px; background:#fff7ed; color:#b45309; border:1px solid #fdba74; white-space:nowrap;">${W.dg}${it.un ? " \xB7 UN " + escHTML(it.un) : ""}</span></div>`
       : "";
     return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border-radius:20px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2);">${rk}</span></td><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}${gefahr}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
@@ -5176,8 +5197,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const { CL, CW, CH, placed, tiColor, tiPos, legend } = S;
     if (!placed.length || CL <= 0 || CW <= 0 || CH <= 0) return "";
 
-    const _loc = S.LANG === "en" ? "en-US" : "de-DE";
-    const L = S.LANG === "en"
+    const _loc = dokLoc(S.LANG);
+    const L = dokMit(S.LANG, "stau", S.LANG !== "de"
       ? { top: "TOP VIEW", topSub: "footprint", topHint: "from above",
           side: "SIDE VIEW", sideSub: "height & stacking", sideHint: "from the side",
           len: "Length", wid: "Width", hei: "Height", front: "FRONT WALL", door: "◂ DOOR",
@@ -5193,7 +5214,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           note: "Schematische Darstellung der berechneten Anordnung. Exakte Stauung, Drehung und Stapelung im interaktiven 3D-Plan (QR). Rein geometrisch — Achslast, Schwerpunkt und Ladungssicherung sind separat fachlich zu pr\xFCfen.",
           multi: (n) => `Zeichnung zeigt Container 1 von ${n} — weitere im 3D-Plan.`,
           c1: "BODENFL\xC4CHE BELEGT", c2: "MAX. STAPELH\xD6HE", c3: "STAPELEBENEN", clear: "Luft",
-          stack: "stapelbar", nostack: "nicht stapelbar" };
+          stack: "stapelbar", nostack: "nicht stapelbar" });
 
     const MONO = "font-family:'JetBrains Mono',monospace;";
     const round = (n) => Math.round(n);
@@ -5230,7 +5251,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const dyT = oyT + CW + 26;
     top += `<line x1="${oxT}" y1="${dyT}" x2="${oxT + CL}" y2="${dyT}" stroke="#c3cbd6" stroke-width="1"/>`;
     top += `<text x="${oxT + CL / 2}" y="${dyT - 8}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15">${L.len} ${round(CL)} cm</text>`;
-    top += `<text x="${oxT + CL + 34}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15" transform="rotate(90 ${oxT + CL + 34} ${oyT + CW / 2})">${L.wid} ${round(CW)} cm</text>`;
+    // 27 statt 34: hochkant ragen die Buchstaben um ihre Oberlaenge (~11) nach rechts, und der
+    // Rand der Zeichnung liegt bei padRight = 40 -- mit 34 war die Breiten-Angabe halb abgeschnitten.
+    top += `<text x="${oxT + CL + 27}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15" transform="rotate(90 ${oxT + CL + 27} ${oyT + CW / 2})">${L.wid} ${round(CW)} cm</text>`;
     top += `</svg>`;
 
     // ---- SEITENANSICHT: Orthografische Projektion x–y, ferne (gro\xDFes z) zuerst zeichnen ----
@@ -5246,7 +5269,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const col = lvDruckfarbe(tiColor[p.ti] || "#8492a6");
       side += `<rect x="${oxS + p.x}" y="${floorY - (p.y + p.dy)}" width="${p.dx}" height="${p.dy}" rx="3" fill="${tint(col)}" stroke="#0c1320" stroke-width="2"/>`;
     });
-    side += `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${L.door.replace("◂ ", "")}</text>`;
+    // Rechts neben dem Container ist Platz fuer vier Zeichen ("DOOR", "TÜR"). Ein laengeres Wort
+    // ("PUERTA", "PORTE") steht deshalb hochkant wie in der Draufsicht -- sonst schneidet der
+    // Rand der Zeichnung es ab.
+    const tuerWort = L.door.replace("◂ ", "");
+    side += tuerWort.length > 4
+      ? `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="end" style="${MONO}fill:#0891b2;font-weight:600" font-size="13" transform="rotate(90 ${oxS + CL + 8} ${floorY - 4})">${tuerWort}</text>`
+      : `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${tuerWort}</text>`;
     side += `</svg>`;
 
     // ---- Legende ----
@@ -5306,8 +5335,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   };
   var LV_PAGE = (D) => {
     const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, QRURL, STOWAGE, LANG, SEITE, MITTE_LABEL, GEFAHR } = D;
-    const en = DOKLANG === "en";
-    const P = en ? {
+    const en = DOKLANG !== "de";
+    const P = dokMit(DOKLANG, "page", en ? {
       kicker: "LOADING PLAN", h1: "Non-binding<br>Loading Plan",
       cont: "CONTAINER", inner: "INNER DIM.", payload: "MAX. PAYLOAD",
       discK: "NON-BINDING PROPOSAL — PLEASE VERIFY",
@@ -5331,7 +5360,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       promoB: "Scan the QR → view the load in 3D, adjust and share. No login, right in your browser.",
       qrAlt: "QR code 3D plan", linkLabel: "Or open the link on your computer:",
       footer: "Not an official document \xB7 non-binding proposal based on your inputs \xB7 does not replace professional checks of load securing, axle load or weight distribution.",
-      page: "Page 1 / 1"
+      page: "Page 1 / 1",
+      datum: "DATE", absender: "SHIPPER", empfaenger: "CONSIGNEE", hint: "click to fill"
     } : {
       kicker: "LADEVORSCHLAG", h1: "Unverbindlicher<br>Beladungsplan",
       cont: "CONTAINER", inner: "INNENMASS", payload: "MAX. ZULADUNG",
@@ -5356,8 +5386,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       promoB: "QR scannen → Beladung in 3D ansehen, anpassen und teilen. Ohne Login, direkt im Browser.",
       qrAlt: "QR-Code 3D-Plan", linkLabel: "Oder Link am Computer \xF6ffnen:",
       footer: "Kein amtliches Dokument \xB7 unverbindlicher Vorschlag auf Basis der Eingaben \xB7 ersetzt keine fachliche Pr\xFCfung der Ladungssicherung, Achslast oder Gewichtsverteilung.",
-      page: "Seite 1 / 1"
-    };
+      page: "Seite 1 / 1",
+      datum: "DATUM", absender: "ABSENDER", empfaenger: "EMPF\xC4NGER", hint: "klicken &amp; ausf\xFCllen"
+    }, { COLLI, VOLPCT, WTPCT, POSCOUNT });
     const hintRow = (t) => `<div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">${t}</span></div>`;
     return `<div class="page" style="width:794px; min-height:1123px; background:#ffffff; box-shadow:0 20px 60px rgba(15,23,42,.18); border-radius:6px; overflow:hidden; position:relative; display:flex; flex-direction:column; color:#0c1320;">
 
@@ -5376,9 +5407,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         </div>
         <div style="text-align:right; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.9; color:var(--hero-sub,#8a98ad);">
           <div>REF&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" style="color:var(--hero-ink,#fff);">${REF}</span></div>
-          <div>${DOKLANG === "en" ? "DATE" : "DATUM"}&nbsp;&nbsp;<span style="color:var(--hero-ink,#fff);">${DATUM}</span></div>
-          <div>${DOKLANG === "en" ? "SHIPPER" : "ABSENDER"}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${DOKLANG === "en" ? "click to fill" : "klicken &amp; ausf\xFCllen"}" style="color:var(--hero-ink,#fff);"></span></div>
-          <div>${DOKLANG === "en" ? "CONSIGNEE" : "EMPF\xC4NGER"}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${DOKLANG === "en" ? "click to fill" : "klicken &amp; ausf\xFCllen"}" style="color:var(--hero-ink,#fff);"></span></div>
+          <div>${P.datum}&nbsp;&nbsp;<span style="color:var(--hero-ink,#fff);">${DATUM}</span></div>
+          <div>${P.absender}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${P.hint}" style="color:var(--hero-ink,#fff);"></span></div>
+          <div>${P.empfaenger}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${P.hint}" style="color:var(--hero-ink,#fff);"></span></div>
         </div>
       </div>
 
@@ -5525,13 +5556,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // feste Rand am Farb-Chip unten ist die farbunabhaengige Kontur.
   var LV_SEQUENZ = (placed, cargo, lang, tiColor) => {
     if (!placed || placed.length < 2) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
-    const K = en
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
+    const K = dokMit(lang, "sequenz", en
       ? { titel: "LOADING SEQUENCE", h2: "Load in this order", sub: "Front wall first, door last. Bottom before top. Tick each step as you load.",
-          ab: "from front wall", mehr: (n) => `+ ${n} more steps — full detail in the 3D plan (QR)` }
+          ab: "from front wall", mehr: (n) => `+ ${n} more steps — full detail in the 3D plan (QR)`, pos: "Item " }
       : { titel: "BELADE-REIHENFOLGE", h2: "In dieser Reihenfolge laden", sub: "Stirnwand zuerst, Tür zuletzt. Unten vor oben. Kästchen beim Verladen abhaken.",
-          ab: "ab Stirnwand", mehr: (n) => `+ ${n} weitere Schritte — vollständig im 3D-Plan (QR)` };
+          ab: "ab Stirnwand", mehr: (n) => `+ ${n} weitere Schritte — vollständig im 3D-Plan (QR)`, pos: "Position " });
     // Ladereihenfolge: von der Stirnwand (x klein) zur Tuer, im selben Stellplatz von
     // unten nach oben -- dieselbe Ordnung wie loadingOrder fuer den Rang je Position.
     const folge = [...placed].sort((a2, b2) => a2.x - b2.x || a2.y - b2.y || a2.z - b2.z || a2.ti - b2.ti);
@@ -5545,7 +5576,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const MAX = 16;
     const zeilen = schritte.slice(0, MAX).map((sc, i) => {
       const it = cargo[sc.ti] || {};
-      const nm = escHTML(it.name || (en ? "Item " : "Position ") + (sc.ti + 1));
+      const nm = escHTML(it.name || K.pos + (sc.ti + 1));
       return `<div style="display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid #f0f1f4;">
         <span style="width:11px; height:11px; border:1.5px solid #0c1320; border-radius:2.5px; flex:none; align-self:center;"></span>
         <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0c1320; min-width:22px;">${String(i + 1).padStart(2, "0")}</span>
@@ -5573,13 +5604,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length) return "";
     const stopVon = (ti) => { const s = (cargo[ti] || {}).stop; return Number.isInteger(s) && s >= 1 ? s : null; };
     if (!placed.some((p) => stopVon(p.ti) != null)) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
-    const K = en
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
+    const K = dokMit(lang, "stopps", en
       ? { titel: "UNLOADING ORDER", h2: "Unload in this order", sub: "From the stow: stop 1 sits at the door and comes off first. Goods without a stop sit at the front wall and stay loaded until the end.",
           stopp: (n) => `Stop ${n}`, ohne: "No stop", ohneSub: "stays loaded", pos: "Pos", stk: (n) => `${n} pcs`, ab: "from front wall" }
       : { titel: "ENTLADEREIHENFOLGE", h2: "In dieser Reihenfolge entladen", sub: "Aus der Stauung: Stopp 1 liegt an der T\xFCr und kommt zuerst herunter. Ware ohne Stopp liegt an der Stirnwand und bleibt bis zuletzt geladen.",
-          stopp: (n) => `Stopp ${n}`, ohne: "Ohne Stopp", ohneSub: "bleibt geladen", pos: "Pos", stk: (n) => `${n} Stk`, ab: "ab Stirnwand" };
+          stopp: (n) => `Stopp ${n}`, ohne: "Ohne Stopp", ohneSub: "bleibt geladen", pos: "Pos", stk: (n) => `${n} Stk`, ab: "ab Stirnwand" });
     const zonen = new Map();
     for (const p of placed) {
       const st = stopVon(p.ti);
@@ -5624,8 +5655,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length || !(CL > 0)) return "";
     const tis = [...new Set(placed.map((p) => p.ti))];
     if (tis.some((ti) => !(+((cargo[ti] || {}).weight) > 0))) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
     let kg = 0, mx = 0, vorn = 0;
     for (const p of placed) {
       const w = +cargo[p.ti].weight;
@@ -5639,13 +5670,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const x = mx / kg;
     const pct = Math.max(0, Math.min(100, Math.round(x / CL * 100)));
     const vornPct = Math.max(0, Math.min(100, Math.round(vorn / kg * 100)));
-    const K = en
+    const K = dokMit(lang, "gewicht", en
       ? { titel: "WEIGHT &amp; CENTRE OF GRAVITY \xB7 GUIDE VALUE", wand: "FRONT WALL", tuer: "DOOR",
           zeile: `Cargo weight <b>${Math.round(kg).toLocaleString(loc)} kg</b> \xB7 centre of gravity at <b>${(Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</b> from the front wall (${pct} % of length) \xB7 front half ${vornPct} % / rear half ${100 - vornPct} %`,
           sub: "From your weight inputs, homogeneous mass per piece assumed. Not a substitute for weighing; check axle load and securing separately." }
       : { titel: "GEWICHT &amp; SCHWERPUNKT \xB7 RICHTWERT", wand: "STIRNWAND", tuer: "T\xDCR",
           zeile: `Ladungsgewicht <b>${Math.round(kg).toLocaleString(loc)} kg</b> \xB7 Schwerpunkt bei <b>${(Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</b> ab Stirnwand (${pct} % der L\xE4nge) \xB7 vordere H\xE4lfte ${vornPct} % / hintere H\xE4lfte ${100 - vornPct} %`,
-          sub: "Aus Ihren Gewichtsangaben, homogene Masse je St\xFCck angenommen. Kein Wiegeersatz; Achslast und Sicherung separat pr\xFCfen." };
+          sub: "Aus Ihren Gewichtsangaben, homogene Masse je St\xFCck angenommen. Kein Wiegeersatz; Achslast und Sicherung separat pr\xFCfen." }, { kg: Math.round(kg).toLocaleString(loc), m: (Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), pct, vorn: vornPct, hinten: 100 - vornPct });
     return `<div style="margin:14px 44px 0; border:1px solid #eceef2; border-radius:11px; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;">
       <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; color:#8b96a6; margin-bottom:6px;">${K.titel}</div>
       <div style="font-size:11px; line-height:1.5; color:#0c1320;">${K.zeile}</div>
@@ -5670,20 +5701,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length) return "";
     const tis = [...new Set(placed.map((p) => p.ti))];
     if (tis.some((ti) => !(+((cargo[ti] || {}).weight) > 0))) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
     let kg = 0;
     for (const p of placed) kg += +cargo[p.ti].weight;
     if (!(kg > 0)) return "";
     kg = Math.round(kg);
     const hatTara = Number.isFinite(tara) && tara > 0;
-    const K = en
+    const K = dokMit(lang, "vgm", en
       ? { titel: "GROSS MASS (VGM PREPARATION) \xB7 GUIDE VALUE", ladung: "Cargo", tar: "container tare", brutto: "gross",
           typ: hatTara ? `(typical ${typ} — the CSC plate on the container governs)` : "(read from the CSC plate on the container)",
           sub: "Not a VGM. The verified gross mass requires weighing (method 1) or a certified calculation (method 2) under SOLAS VI/2 — this figure is a guide value from your unverified inputs; the tare field can be filled in before printing." }
       : { titel: "BRUTTOMASSE (VGM-VORBEREITUNG) \xB7 RICHTWERT", ladung: "Ladung", tar: "Container-Tara", brutto: "Brutto",
           typ: hatTara ? `(typisch ${typ} — ma\xDFgeblich ist das CSC-Schild am Container)` : "(vom CSC-Schild am Container ablesen)",
-          sub: "Kein VGM-Ersatz. Die Verified Gross Mass verlangt Verwiegung (Methode 1) oder eine zertifizierte Berechnung (Methode 2) nach SOLAS VI/2 — diese Zahl ist ein Richtwert aus Ihren unverifizierten Eingaben, das Tara-Feld ist vor dem Druck anklickbar." };
+          sub: "Kein VGM-Ersatz. Die Verified Gross Mass verlangt Verwiegung (Methode 1) oder eine zertifizierte Berechnung (Methode 2) nach SOLAS VI/2 — diese Zahl ist ein Richtwert aus Ihren unverifizierten Eingaben, das Tara-Feld ist vor dem Druck anklickbar." }, { hatTara, typ });
     const taraTxt = hatTara ? Math.round(tara).toLocaleString(loc) : "";
     const bruttoTxt = hatTara ? "≈ " + (kg + Math.round(tara)).toLocaleString(loc) + " kg" : "—";
     return `<div data-vgm style="margin:14px 44px 0; border:1px solid #eceef2; border-radius:11px; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;">
@@ -5700,12 +5731,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // die Pruefung von Sicherung und Achslast bleibt fachliche Sache, und ein
   // kostenloses Tool darf sie nicht per Unterschriftsfeld einsammeln.
   var LV_QUITTUNG = (lang) => {
-    const en = lang === "en";
-    const K = en
+    const en = lang !== "de";
+    const K = dokMit(lang, "quittung", en
       ? { wer: "Loaded by (name)", wann: "Date / time", unterschrift: "Signature",
           sub: "Confirms loading according to this proposal only. No confirmation of load securing, axle load or weights." }
       : { wer: "Geladen von (Name)", wann: "Datum / Uhrzeit", unterschrift: "Unterschrift",
-          sub: "Best\xE4tigt nur die Verladung nach diesem Vorschlag. Keine Best\xE4tigung von Ladungssicherung, Achslast oder Gewichten." };
+          sub: "Best\xE4tigt nur die Verladung nach diesem Vorschlag. Keine Best\xE4tigung von Ladungssicherung, Achslast oder Gewichten." });
     const feld = (label, breit) => `<div style="flex:${breit};">
       <div style="height:26px; border-bottom:1px solid #0c1320;"></div>
       <div style="font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:.08em; color:#8b96a6; margin-top:4px;">${label}</div>
@@ -5716,12 +5747,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     </div>`;
   };
   var LV_UEBERSICHT = (reihen, lang) => {
-    const en = lang === "en";
-    const K = en
+    const en = lang !== "de";
+    const K = dokMit(lang, "uebersicht", en
       ? { titel: "PER CONTAINER", h2: "How the shipment is split", cont: "Container", typ: "Type", stk: "Loaded", vol: "Volume", kg: "Weight", voll: "Full",
           note: "One line per container. Each is placed, weighed and shipped on its own \u2014 the pages that follow show one stowage plan each." }
       : { titel: "JE CONTAINER", h2: "Wie sich die Sendung aufteilt", cont: "Container", typ: "Typ", stk: "Verladen", vol: "Volumen", kg: "Gewicht", voll: "Voll",
-          note: "Eine Zeile je Container. Jeder wird einzeln gestellt, gewogen und gefahren \u2014 die Seiten danach zeigen je einen Stauplan." };
+          note: "Eine Zeile je Container. Jeder wird einzeln gestellt, gewogen und gefahren \u2014 die Seiten danach zeigen je einen Stauplan." });
     const th = (t, r) => `<th style="padding:0 8px 8px 0; text-align:${r ? "right" : "left"}; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#8492a6; font-weight:600; white-space:nowrap;">${t}</th>`;
     const zeilen = reihen.map((r) => `<tr style="border-bottom:1px solid #f0f1f4;">
       <td style="padding:10px 8px 10px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--ac-solid,#0891b2);">${escHTML(r.marke)}</span></td>
@@ -5739,7 +5770,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="font-size:10px; line-height:1.45; color:#8492a6; margin-top:9px;">${K.note}</div>
     </div>`;
   };
-  var LV_DOC = (pageHTML, lang) => `<!DOCTYPE html><html lang="${lang === "en" ? "en" : "de"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${lang === "en" ? "Loading Plan" : "Ladevorschlag"} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${lang === "en" ? "Save as PDF / print" : "Als PDF speichern / drucken"}</button><button class="cl-x" onclick="window.close()">${lang === "en" ? "Close" : "Schlie\xDFen"}</button><span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${lang === "en" ? "Dashed fields (REF, shipper, consignee) can be filled in before printing — they never leave this page." : "Gestrichelte Felder (REF, Absender, Empf\xE4nger) vor dem Druck anklickbar — sie verlassen dieses Blatt nicht."}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+  var LV_DOC = (pageHTML, lang) => {
+    const K = dokMit(lang, "doc", lang !== "de"
+      ? { titel: "Loading Plan", druck: "Save as PDF / print", zu: "Close", felder: "Dashed fields (REF, shipper, consignee) can be filled in before printing — they never leave this page." }
+      : { titel: "Ladevorschlag", druck: "Als PDF speichern / drucken", zu: "Schlie\xDFen", felder: "Gestrichelte Felder (REF, Absender, Empf\xE4nger) vor dem Druck anklickbar — sie verlassen dieses Blatt nicht." });
+    return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${K.titel} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${K.druck}</button><button class="cl-x" onclick="window.close()">${K.zu}</button><span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${K.felder}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+  };
   var QIMPORT = (() => {
     try {
       const q = new URLSearchParams(window.location.search).get("q");
@@ -9082,7 +9118,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Meldungs-Link, die man selbst verschickt.
     const VGM_ABS = "cl-vgm-absender-v1";
     const [vgmAbs, setVgmAbs] = useState(() => {
-      const leer = { ab: "", ps: "", or: "", sp: DOKLANG };
+      const leer = { ab: "", ps: "", or: "", sp: DOKLANG === "de" ? "de" : "en" };
       try {
         const d = JSON.parse(localStorage.getItem(VGM_ABS) || "null");
         return d && typeof d === "object" ? { ab: String(d.ab || "").slice(0, 80), ps: String(d.ps || "").slice(0, 60), or: String(d.or || "").slice(0, 40), sp: d.sp === "en" || d.sp === "de" ? d.sp : leer.sp } : leer;
@@ -9847,7 +9883,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const accStops = exportAccentStops(EXPORT_ACCENTS[exportAccent]);
         const MONOF = "'JetBrains Mono', ui-monospace, monospace";
         const SANSF = "'Archivo', system-ui, -apple-system, sans-serif";
-        const en = DOKLANG === "en";
+        const en = DOKLANG !== "de";
         const cv = document.createElement("canvas");
         const g = cv.getContext("2d");
         const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
@@ -11003,35 +11039,39 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const pay = num(container.payload, 0);
         const volPct = cVol > 0 ? totVol / cVol * 100 : 0;
         const wtPct = pay > 0 ? totWt / pay * 100 : 0;
-        const enPDF = DOKLANG === "en";
+        const enPDF = DOKLANG !== "de";
+        // Die Texte, die der Zusammenbau selbst beisteuert (alles andere steht in den Bausteinen)
+        const DK = dokMit(DOKLANG, "bau", enPDF
+          ? { eigen: "Custom dimensions", geo: "geometrically checked", empf: "recommended", empf2: "recommendation", gross: "item too large", schwer: "item too heavy", seite: "Page ", gebucht: "BOOKED VOLUME", gefahr: "Items marked DG: marking from your input only — no dangerous-goods check, no segregation or stowage rules. Classification and admissibility remain the shipper's responsibility.", contVon: (i, n) => `container ${i} of ${n}` }
+          : { eigen: "Eigene Ma\xDFe", geo: "geometrisch gepr\xFCft", empf: "empfohlen", empf2: "Empfehlung", gross: "Position zu gro\xDF", schwer: "Position zu schwer", seite: "Seite ", gebucht: "GEBUCHT", gefahr: "Positionen mit GEFAHRGUT-Marke: nur Kennzeichnung aus Ihrer Eingabe — keine Gefahrgut-Pr\xFCfung, keine Trenn- oder Stauvorschriften. Klassifizierung und Zul\xE4ssigkeit bleiben Sache des Versenders.", contVon: (i, n) => `Container ${i} von ${n}` });
         // Im Landfracht-Modus ist preset ein Fahrzeugschluessel und der ist deutsch —
         // im englischen Ladevorschlag stand deshalb "Planensattel" statt "Curtainsider".
-        const pl = preset === "Custom" ? (enPDF ? "Custom dimensions" : "Eigene Ma\xDFe") : (VEHICLE_LABEL(T)[preset] || preset);
+        const pl = preset === "Custom" ? (DK.eigen) : (VEHICLE_LABEL(T)[preset] || preset);
         let passtin, passtsub;
         // Bei einer Kette ist allFit falsch (es zaehlt nur den ersten Container), und ohne
         // diesen Zweig stuende auf dem Deckblatt eine EMPFEHLUNG, die von der gebuchten
         // Kette abweichen kann -- in einem Dokument, das genau diese Kette bucht.
         if (result && result.chain && result.chain.length > 1 && planFit) {
           passtin = kettenLabelVor(result.chain);
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         } else if (allFit) {
           passtin = "1\xD7 " + pl;
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         } else if (sug && sug.type === "single") {
           passtin = "1\xD7 " + sug.name;
-          passtsub = enPDF ? "recommended" : "empfohlen";
+          passtsub = DK.empf;
         } else if (sug && sug.type === "multi" && sug.combo && sug.combo.length) {
           passtin = sug.combo.map((c) => c.count + "\xD7 " + c.name).join(" + ");
-          passtsub = enPDF ? "recommendation" : "Empfehlung";
+          passtsub = DK.empf2;
         } else if (sug && sug.type === "toobig") {
           passtin = "\u2014";
-          passtsub = enPDF ? "item too large" : "Position zu gro\xDF";
+          passtsub = DK.gross;
         } else if (sug && sug.type === "tooheavy") {
           passtin = "\u2014";
-          passtsub = enPDF ? "item too heavy" : "Position zu schwer";
+          passtsub = DK.schwer;
         } else {
           passtin = "1\xD7 " + pl;
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         }
         const now = /* @__PURE__ */ new Date();
         const p2 = (n) => String(n).padStart(2, "0");
@@ -11057,7 +11097,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const kette = result && result.chain && result.chain.length ? result.chain : null;
         const mehrere = !!(kette && kette.length > 1);
         const seitenZahl = mehrere ? kette.length + 1 : 1;
-        const seitenText = (k) => (enPDF ? "Page " : "Seite ") + k + " / " + seitenZahl;
+        const seitenText = (k) => (DK.seite) + k + " / " + seitenZahl;
         // Kopfzeile des Deckblatts: die gebuchte Kombination, gezaehlt nach Typ --
         // "2x 40' HC + 1x 20' GP" ist das, was in die Buchung geht.
         const kettenLabel = kettenLabelVor(kette, pl);
@@ -11077,9 +11117,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // markierte Positionen traegt, und immer mit der Eingrenzung "nur
         // Kennzeichnung": mehr darf das Tool ehrlich nicht behaupten.
         const gefahrHinweis = (its) => its.some((c2) => c2 && c2.gefahr === true)
-          ? `<p style="margin:6px 0 0; font-size:9.5px; line-height:1.5; color:#b45309;">${DOKLANG === "en"
-            ? "Items marked DG: marking from your input only — no dangerous-goods check, no segregation or stowage rules. Classification and admissibility remain the shipper's responsibility."
-            : "Positionen mit GEFAHRGUT-Marke: nur Kennzeichnung aus Ihrer Eingabe — keine Gefahrgut-Pr\xFCfung, keine Trenn- oder Stauvorschriften. Klassifizierung und Zul\xE4ssigkeit bleiben Sache des Versenders."}</p>`
+          ? `<p style="margin:6px 0 0; font-size:9.5px; line-height:1.5; color:#b45309;">${DK.gefahr}</p>`
           : "";
         const deck = LV_PAGE({
           ...grund,
@@ -11089,7 +11127,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           // Zwei Container haben zwei Innenmasse -- ein Gedankenstrich sieht dort aus wie ein
           // Fehler. Auf dem Deckblatt steht deshalb das gebuchte Gesamtvolumen; beim Buchen
           // ist genau das die Zahl.
-          MITTE_LABEL: mehrere ? (enPDF ? "BOOKED VOLUME" : "GEBUCHT") : null,
+          MITTE_LABEL: mehrere ? (DK.gebucht) : null,
           INNENMASS: mehrere ? fmt1DE(planCVol) + " m\xB3" : `${cmTxt(container.l)} \xD7 ${cmTxt(container.w)} \xD7 ${cmTxt(container.h)} cm`,
           PAYLOAD: mehrere ? (planPayload > 0 ? fmtDE(planPayload) : "\u2014") : (pay > 0 ? fmtDE(pay) : "\u2014"),
           POSCOUNT: items.length,
@@ -11146,7 +11184,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               WTBAR: Math.min(100, Math.round(pay2 > 0 ? kg2 / pay2 * 100 : 0)),
               WTPCT: Math.round(pay2 > 0 ? kg2 / pay2 * 100 : 0),
               PASSTIN: escHTML(marke),
-              PASSTSUB: escHTML(enPDF ? `container ${ci + 1} of ${kette.length}` : `Container ${ci + 1} von ${kette.length}`),
+              PASSTSUB: escHTML(DK.contVon(ci + 1, kette.length)),
               ROWS: zeilen.map((z) => LV_ROW({ ...z.it, qty: z.n }, items.indexOf(z.it), DOKLANG, order.get(z.ti))).join(""),
               SUMQTY: sp.length,
               SUMKG: fmtDE(Math.round(kg2)),
@@ -11158,7 +11196,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 // qty der Legende ist die Menge IN DIESEM Container. Sonst stuende unter der
               // Zeichnung eines Containers mit zwei Stueck "9x".
               legend: Object.keys(tiC).map((ti) => ({ ti: +ti, pos: tiP[ti], color: tiC[ti], it: { ...cargo[+ti], qty: jeSorte[+ti] } })).sort((a, b) => a.pos - b.pos),
-                LANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, DOKLANG, tiC) + LV_STOPPS(sp, cargo, tiP, DOKLANG) + LV_GEWICHT(sp, cargo, num(cp.l), DOKLANG) + LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, DOKLANG) + LV_QUITTUNG(DOKLANG),
+                LANG: DOKLANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, DOKLANG, tiC) + LV_STOPPS(sp, cargo, tiP, DOKLANG) + LV_GEWICHT(sp, cargo, num(cp.l), DOKLANG) + LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, DOKLANG) + LV_QUITTUNG(DOKLANG),
               SEITE: seitenText(ci + 2)
             }));
           });

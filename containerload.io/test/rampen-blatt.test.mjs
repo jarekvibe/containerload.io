@@ -18,6 +18,14 @@ import path from "node:path";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
 const cut = (von) => {
   const s = L.findIndex((l) => l.includes(von));
   const e = L.findIndex((l, i) => i > s && l.trim() === "};" && L[i - 1].includes("</div>`;"));
@@ -25,7 +33,7 @@ const cut = (von) => {
   return L.slice(s, e + 1).join("\n");
 };
 const { LV_GEWICHT, LV_QUITTUNG } = new Function(
-  cut("var LV_GEWICHT = (placed")
+  DOK_HELFER + cut("var LV_GEWICHT = (placed")
   + "\n" + cut("var LV_QUITTUNG = (lang)")
   + "\nreturn { LV_GEWICHT, LV_QUITTUNG };"
 )();
@@ -109,8 +117,9 @@ test("die Kopf-Felder sind editierbar -- und bleiben auf dem Blatt", () => {
   // REF, Absender, Empfaenger als contenteditable im Hero von LV_PAGE.
   assert.strictEqual((roh.match(/class="cl-edit" contenteditable="true"/g) || []).length, 3,
     "es muessen genau drei editierbare Felder sein (REF, Absender, Empfaenger)");
-  assert.ok(roh.includes('ABSENDER"}&nbsp;') || /SHIPPER" : "ABSENDER"/.test(roh), "das Absender-Feld fehlt");
-  assert.ok(/CONSIGNEE" : "EMPF\\xC4NGER"/.test(roh), "das Empfaenger-Feld fehlt");
+  // Die Beschriftungen stehen im Woerterbuch der Seite (P), damit eine Sprachdatei sie stellen kann.
+  assert.ok(roh.includes('<div>${P.absender}&nbsp;') && roh.includes('absender: "SHIPPER"') && roh.includes('absender: "ABSENDER"'), "das Absender-Feld fehlt");
+  assert.ok(roh.includes('<div>${P.empfaenger}&nbsp;') && roh.includes('empfaenger: "CONSIGNEE"') && /empfaenger: "EMPF\\xC4NGER"/.test(roh), "das Empfaenger-Feld fehlt");
   // Leer zeigt das Feld seinen Hinweis, im Druck wird daraus eine leere Linie
   // (Handschrift), und der Hinweis verschwindet.
   assert.ok(roh.includes(".cl-edit:empty::before{content:attr(data-hint)"), "der Platzhalter-Hinweis fehlt");

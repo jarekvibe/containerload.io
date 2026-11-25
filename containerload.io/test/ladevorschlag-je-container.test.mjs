@@ -18,6 +18,14 @@ import path from "node:path";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
 // Von "von" bis AUSSCHLIESSLICH "bis" -- die Endmarke ist der Anfang des naechsten Bausteins.
 const schnitt = (von, bis) => {
   const s = L.findIndex((l) => l.includes(von));
@@ -28,6 +36,7 @@ const schnitt = (von, bis) => {
 // Die reinen Bausteine der Druckvorlage plus die Formatierer, die sie brauchen.
 const { LV_ROW, LV_UEBERSICHT, LV_PAGE, kettenLabelVor } = new Function(
   `var LANG = "de"; var DOKLANG = "de";
+   ${DOK_HELFER}
    var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;
    ${schnitt("var cmTxt =", "var makeQR =")}
    ${schnitt("var LV_ROW =", "  var LV_STOWAGE =")}

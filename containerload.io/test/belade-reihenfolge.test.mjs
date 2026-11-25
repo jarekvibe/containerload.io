@@ -15,6 +15,14 @@ import path from "node:path";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
 const cut = (von, bis) => {
   const s = L.findIndex((l) => l.includes(von));
   const e = L.findIndex((l, i) => i > s && bis(l, i));
@@ -22,7 +30,8 @@ const cut = (von, bis) => {
   return L.slice(s, e + 1).join("\n");
 };
 const { LV_SEQUENZ } = new Function(
-  'var escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" })[c]);\n'
+  DOK_HELFER
+  + 'var escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" })[c]);\n'
   + cut("var LV_SEQUENZ = (placed", (l, i) => l.trim() === "};" && L[i - 1].includes("</div>`;"))
   + "\nreturn { LV_SEQUENZ };"
 )();

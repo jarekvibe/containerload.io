@@ -88,6 +88,9 @@ test("jede Sprachdatei traegt genau die Schluessel des englischen Woerterbuchs",
     const T = lade(k).texte(helfer), EN = I18N.en;
     assert.deepStrictEqual(Object.keys(T).sort(), Object.keys(EN).sort(), `${k}: Schluessel weichen vom Englischen ab`);
     for (const key of Object.keys(EN)) {
+      // "dok" (die Dokument-Texte) traegt nur eine Sprachdatei -- im Englischen steht dort null,
+      // die Texte selbst stehen in den Bausteinen. Verglichen wird in test/dokumente-sprachen.
+      if (key === "dok") { assert.ok(T.dok === null || typeof T.dok === "object", `${k}.dok`); continue; }
       const a = EN[key], b = T[key];
       assert.strictEqual(typeof b, typeof a, `${k}.${key}: ${typeof b} statt ${typeof a}`);
       if (typeof a === "string") {
@@ -106,6 +109,7 @@ test("jede Text-Funktion laeuft und liefert dieselbe Art Ergebnis wie die englis
     const T = lade(k).texte(helfer), EN = I18N.en;
     const paare = [];
     for (const key of Object.keys(EN)) {
+      if (key === "dok") continue;   // eigener Test: dokumente-sprachen
       if (typeof EN[key] === "function") paare.push([key, EN[key], T[key]]);
       else if (typeof EN[key] === "object") for (const kk of Object.keys(EN[key])) if (typeof EN[key][kk] === "function") paare.push([key + "." + kk, EN[key][kk], T[key][kk]]);
     }
@@ -124,7 +128,7 @@ test("jede Text-Funktion laeuft und liefert dieselbe Art Ergebnis wie die englis
   }
 });
 
-test("fehlt ein Schluessel, steht dort Englisch -- und Dokumente sind nie deutsch", () => {
+test("fehlt ein Schluessel, steht dort Englisch -- und Dokumente bekommen nie die Oberflaechen-Sprache am Baustein vorbei", () => {
   const stelle = zwischen("  if (SPRACHE_MEHR[LANG]) I18N[LANG] = ", "  var T = I18N[LANG];");
   assert.match(stelle, /Object\.assign\(\{\}, I18N\.en, SPRACHE_MEHR\[LANG\]\.texte\(/, "die Sprache liegt nicht ueber dem englischen Woerterbuch");
   // nachgebaut mit einer Sprachdatei, der die Haelfte fehlt
@@ -132,14 +136,16 @@ test("fehlt ein Schluessel, steht dort Englisch -- und Dokumente sind nie deutsc
   const T = Object.assign({}, I18N.en, halb.texte(helfer));
   assert.strictEqual(T.cargo, "Carga");
   assert.strictEqual(T.shareBtn, "Share", "fehlender Schluessel faellt nicht auf Englisch zurueck");
-  // Dokumente: DOKLANG kennt nur Deutsch und Englisch
+  // Dokumente: DOKLANG ist Deutsch oder Englisch -- oder die Sprache der Oberflaeche, wenn
+  // ihre Datei Dokument-Texte mitbringt (seit 25.11.26; test/dokumente-sprachen).
   assert.ok(roh.includes('var DOKLANG = LANG === "de" ? "de" : "en";'));
+  assert.ok(roh.includes("if (SPRACHE_MEHR[LANG] && I18N[LANG].dok) { DOK_MEHR[LANG] = I18N[LANG].dok; DOKLANG = LANG; }"));
   for (const baustein of ["LV_ROW", "LV_SEQUENZ", "LV_STOPPS", "LV_GEWICHT", "LV_VGM", "LV_QUITTUNG", "LV_UEBERSICHT", "LV_DOC"]) {
     const aufrufe = [...roh.matchAll(new RegExp(baustein + "\\(([^;\\n]{0,160})", "g"))].map((m) => m[1]).filter((a) => !/^\s*(lang|pageHTML|it, i|placed|sp|its|rows|slotRows)[,)]\s*=>|=>\s*[`{]/.test(a) && /\bLANG\b|DOKLANG/.test(a));
     for (const a of aufrufe) assert.ok(!/(^|[^A-Z])LANG\b/.test(a.replace(/DOKLANG/g, "")), `${baustein}(…) bekommt die Oberflaechen-Sprache statt DOKLANG: ${a.slice(0, 80)}`);
   }
   assert.ok(roh.includes("legend, LANG: DOKLANG,"), "der Stauplan des Ladevorschlags bekommt nicht die Dokument-Sprache");
-  assert.ok(roh.includes('sp: DOKLANG };'), "die VGM-Erklaerung ist nicht mit der Dokument-Sprache vorbelegt");
+  assert.ok(roh.includes('sp: DOKLANG === "de" ? "de" : "en" };'), "die VGM-Erklaerung ist nicht mit der Dokument-Sprache vorbelegt (das PDF kennt Deutsch und Englisch)");
 });
 
 test("im Rechner steht keine Zwei-Sprachen-Weiche mehr", () => {

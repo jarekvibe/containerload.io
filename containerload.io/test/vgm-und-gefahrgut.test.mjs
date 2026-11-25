@@ -23,6 +23,14 @@ import path from "node:path";
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const roh = fs.readFileSync(path.join(dir, "..", "app.html"), "utf8");
 const L = roh.split("\n");
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
 const zeile = (von) => { const i = L.findIndex((l) => l.includes(von)); assert.ok(i >= 0, `nicht gefunden: ${von}`); return i; };
 const cutFn = (von) => {
   const i = zeile(von);
@@ -31,7 +39,7 @@ const cutFn = (von) => {
   return L.slice(i, j + 1).join("\n");
 };
 
-const { LV_VGM } = new Function(cutFn("var LV_VGM = (placed") + "\nreturn { LV_VGM };")();
+const { LV_VGM } = new Function(DOK_HELFER + cutFn("var LV_VGM = (placed") + "\nreturn { LV_VGM };")();
 
 const CARGO = [{ weight: 300 }, { weight: 300 }];
 const PLACED = [{ ti: 0, x: 0, dx: 100 }, { ti: 1, x: 100, dx: 100 }];
@@ -107,7 +115,8 @@ test("beide Blattsorten tragen den VGM-Block vor der Quittung", () => {
 // ── Gefahrgut ────────────────────────────────────────────────────────────────
 
 const { LV_ROW } = new Function(
-  'var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;\n'
+  DOK_HELFER
+  + 'var num=(v,d=0)=>Number.isFinite(+v)&&v!==""?+v:d;\n'
   + 'var escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" })[c]);\n'
   + 'var dimDE = (v) => String(v); var fmtDE = (v) => String(v); var fmt1DE = (v) => String(v);\n'
   + L.slice(zeile("var LV_ROW = (it, i, lang, rank)"), L.findIndex((l, i) => i > zeile("var LV_ROW = (it, i, lang, rank)") && l.trim() === "};") + 1).join("\n")
