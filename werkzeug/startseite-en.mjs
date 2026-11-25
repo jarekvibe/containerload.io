@@ -27,6 +27,11 @@ import zh from './sprachen/zh.mjs';
 export const SPRACHEN = [es, fr, zh];
 
 const BASIS = 'https://containerload.io';
+// Impressum und Datenschutz gibt es auf Deutsch (massgeblich) und als englische Uebersetzung.
+// JEDE nicht-deutsche Startseite zeigt auf die englische Fassung -- auch die spanische,
+// franzoesische, chinesische: Rechtstexte in sechs Sprachen muesste man bei jeder Aenderung
+// sechsfach pflegen, und eine schiefe Rechts-Uebersetzung ist schlechter als keine.
+const RECHT = { '/impressum': '/en/imprint', '/datenschutz': '/en/privacy' };
 
 // Inhalt eines Elements ersetzen: vom Ende des oeffnenden Tags bis zum PASSENDEN
 // schliessenden Tag (gleichnamige Tags dazwischen werden mitgezaehlt).
@@ -148,6 +153,7 @@ function startseite(de, X) {
       else if (/^\/app(\?|$)/.test(h)) n = /[?&]lang=/.test(h) ? h : h + (h.includes('?') ? '&' : '?') + 'lang=' + K;
       else if (X.guide[h]) n = X.guide[h];
       else if (GUIDE[h]) n = GUIDE[h];
+      else if (RECHT[h]) n = RECHT[h];
       return 'href="' + n + '"';
     });
   });

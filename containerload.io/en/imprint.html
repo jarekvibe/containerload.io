@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Legal notice — ContainerLoad</title>
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" /></noscript>
+<!-- Verweist auf die Markendateien statt das Zeichen hier noch einmal einzubacken.
+     Eingebackene Kopien laufen auseinander — genau das war hier passiert. -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<style>
+/* Dieselben Werte wie im Rechner, auf der Startseite und im Container-Wissen.
+   Hier standen bis zuletzt die alten: eigener Grundton (#070a0f statt #0E1116),
+   eigene Flaechen- und Textstufen, Inter statt Archivo (und zwar ohne die Schrift
+   ueberhaupt zu laden), Schriftgewicht 800, Radius 14 — und in .ph ein Tuerkis,
+   das es im Produkt seit dem Umbau nicht mehr gibt. Zwei Seiten, die aussehen wie
+   von woanders. Der Rechtstext ist dabei unangetastet geblieben. */
+:root{
+  --bg:#0E1116; --card:#161D27; --line:#1C2531; --line-2:#232C38;
+  --text:#E9F0F7; --dim:#9DB0C2; --faint:#7689A0; --accent:#2E8FFF;
+  --sans:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SF Mono',monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);
+  font-size:15px;line-height:1.65;-webkit-font-smoothing:antialiased}
+.wrap{max-width:720px;margin:0 auto;padding:48px 22px 80px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+/* Markenzeichen wie ueberall sonst: isometrischer Wuerfel auf Akzentgrund, daneben der
+   Schriftzug mit "Load" im Markenton. Kein Verlauf, kein background-clip:text. */
+.brand{display:inline-flex;align-items:center;gap:10px;margin-bottom:36px;color:var(--text)}
+.brand:hover{text-decoration:none}
+.mark{width:30px;height:30px;border-radius:8px;background:var(--accent);
+  display:flex;align-items:center;justify-content:center;flex:none}
+.brand b{font-weight:700;font-size:16px;letter-spacing:-.01em}
+.grad{color:var(--accent)}
+h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:0 0 24px}
+h2{font-size:17px;font-weight:700;margin:30px 0 8px;color:var(--text)}
+p{margin:0 0 12px;color:var(--dim)}
+.box{background:var(--card);border:1px solid var(--line-2);border-radius:12px;
+  padding:18px 20px;margin:14px 0;color:var(--text)}
+.muted{color:var(--faint);font-size:13.5px}
+.back{display:inline-block;margin-top:40px;font-size:13.5px}
+/* Platzhalter im Rechtstext. Trug den Markenton als Flaeche in einem Tuerkis, das es
+   nicht mehr gibt — jetzt derselbe Akzent wie alles andere. */
+.ph{color:var(--accent);background:rgba(46,143,255,.12);padding:1px 6px;border-radius:8px;font-size:14px}
+.good{color:#2FD8A0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="brand" href="/en/">
+    <span class="mark"><svg width="17" height="17" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+    <b>Container<span class="grad">Load</span></b>
+  </a>
+
+  <h1>Legal notice</h1>
+  <div class="box"><b>Translation.</b> This English version is provided for convenience. Only the German version is legally binding: <a href="/impressum" hreflang="de" lang="de">Impressum</a>.</div>
+
+  <h2>Information pursuant to Section 5 DDG (German Digital Services Act)</h2>
+  <div class="box">
+    Jarek Polep<br>
+    Ruhrstraße 51<br>
+    28205 Bremen<br>
+    Germany
+  </div>
+
+  <h2>Contact</h2>
+  <div class="box">
+    Email: <a href="mailto:info@containerload.io">info@containerload.io</a>
+  </div>
+
+  <h2>Responsible for content pursuant to Section 18 (2) MStV (German Interstate Media Treaty)</h2>
+  <p>Jarek Polep, address as above.</p>
+
+  <h2>About the tool</h2>
+  <p>ContainerLoad is a free aid for load planning. All calculations are purely geometric estimates and come without any guarantee as to centre of gravity, axle load or the actual load distribution. Liability for damage arising from the use of the tool is excluded.</p>
+
+  <h2>Liability for content</h2>
+  <p>As a service provider I am responsible for my own content on these pages under the general laws. I am not obliged, however, to monitor transmitted or stored third-party information or to investigate circumstances that indicate unlawful activity.</p>
+
+  <h2>Liability for links</h2>
+  <p>This site may contain links to external third-party websites over whose content I have no influence. The respective provider is always responsible for the content of the linked pages.</p>
+
+  <p class="muted">Last updated: September 2026</p>
+
+  <a class="back" href="/en/">← Back to the home page</a>
+</div>
+</body>
+</html>

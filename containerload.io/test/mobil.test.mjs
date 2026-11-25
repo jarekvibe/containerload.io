@@ -68,16 +68,23 @@ test("die Kopfzeile des Rechners darf auf dem Telefon umbrechen", () => {
   const s = lies("app.html");
   assert.match(s, /"header", \{ className: "flex flex-wrap items-center/,
     "die Kopfzeile bricht nicht mehr um — auf 390 px passt sie nicht in eine Zeile");
-  // Die Sprachwahl muss sich per Klasse ausblenden lassen. Stuende display:flex fest im
-  // style-Attribut, koennte "hidden sm:flex" nichts ausrichten.
-  // (Der Anker hier zeigte seit dem Seg-Umbau ins Leere und pruefte damit nichts mehr. Jetzt
-  // haengt er am Knopf des Sprach-Menues: dessen Huelle ist auf dem Telefon ausgeblendet.)
+  // Die Sprachwahl steht seit 25.11.26 AUCH auf dem Telefon im Kopf (rechts neben dem
+  // Hell/Dunkel-Schalter): die Sprachen sind aus dem "…"-Menue heraus, und damit ist der Knopf
+  // dort der einzige Weg. Gemessen bei 390 und 360 px: zweite Kopfzeile, rechte Kante 301 px.
+  // Vorher war ihre Huelle unter sm ausgeblendet ("hidden sm:block").
   const i = s.indexOf('onClick: () => setSprachOpen((o) => !o)');
   assert.ok(i > 0, "der Knopf des Sprach-Menues wurde nicht gefunden");
   const davor = s.slice(Math.max(0, i - 900), i);
-  assert.match(davor, /!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "hidden sm:block relative" \},/, "die Sprachwahl im Kopf laesst sich nicht mehr ausblenden");
-  assert.ok(!/className: "hidden sm:flex", style: \{ display: "flex"/.test(davor),
-    "display:flex steht wieder fest im style-Attribut und schlaegt die Klasse");
+  assert.match(davor, /const sprachWahl = \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "relative" \},/, "die Sprachwahl ist auf dem Telefon wieder ausgeblendet oder nicht mehr die eine Konstante");
+  assert.ok(!/hidden sm:(block|flex)/.test(davor), "die Sprachwahl ist auf dem Telefon ausgeblendet -- dort gibt es keinen anderen Weg mehr");
+  // Sie haengt rechts, zwischen Hell/Dunkel und den Ausgaben -- nicht mehr links am Logo.
+  assert.ok(s.includes("!EMBEDDED && sprachWahl, !EMBEDDED && kopfAusgaben,"), "die Sprachwahl steht nicht mehr rechts neben dem Hell/Dunkel-Schalter");
+  assert.strictEqual(s.split("sprachWahl").length - 1, 2, "die Sprachwahl wird mehrfach eingesetzt");
+  // Planname und Speichern ruecken erst ab lg in die Kopfzeile; darunter stehen sie in einer
+  // eigenen Zeile. Gemessen bei 768 px mit "sm:": der Speichern-Knopf lag 10 px UEBER dem
+  // Hell/Dunkel-Schalter, das Namensfeld war 26 px breit.
+  assert.ok(s.includes('{ className: "order-last w-full lg:order-none lg:w-auto lg:flex-1 flex items-center justify-center gap-2 lg:px-6 min-w-0" }'),
+    "die Planzeile rueckt wieder schon ab sm in die Kopfzeile");
 });
 
 test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', () => {

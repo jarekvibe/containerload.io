@@ -15,7 +15,7 @@
 // (z. B. auf claude-opus-5-5, wenn der Netlify-Plan laengere Laufzeiten
 // erlaubt); die Fehlleistungen faengt so oder so die Pruef-Tabelle.
 import Anthropic from "@anthropic-ai/sdk";
-import { KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, TEXT_MAX, kiNachricht, pruefeBild, pruefePositionen } from "./lib/ki.mjs";
+import { KI_AUFTRAG, KI_FOTO_FRAGE, KI_SCHEMA, KI_ZOLL_HINWEIS, TEXT_MAX, kiEinheit, kiNachricht, pruefeBild, pruefePositionen } from "./lib/ki.mjs";
 import { tagesdeckel } from "./lib/deckel.mjs";
 
 export default async (req) => {
@@ -31,9 +31,11 @@ export default async (req) => {
   }
   // Stufe 1: {text} — Stufe 2: {bild: {media_type, data}} (Foto/Screenshot,
   // von der App schon verkleinert). Ein Bild gewinnt, wenn beides kommt.
-  let text = "", bild = null;
+  // einheit: "in", wenn die Oberflaeche auf Zoll und Pfund steht -- sonst nichts (Whitelist).
+  let text = "", bild = null, einheit = "";
   try {
     const body = await req.json();
+    einheit = kiEinheit(body.einheit);
     text = String(body.text || "").trim();
     bild = pruefeBild(body.bild);
     if (body.bild && !bild) return Response.json({ fehler: "bild" }, { status: 400 });
@@ -50,8 +52,8 @@ export default async (req) => {
       output_config: { effort: "low", format: { type: "json_schema", schema: KI_SCHEMA } },
       system: KI_AUFTRAG,
       messages: [{ role: "user", content: bild
-        ? [{ type: "image", source: { type: "base64", media_type: bild.media_type, data: bild.data } }, { type: "text", text: KI_FOTO_FRAGE }]
-        : kiNachricht(text) }],
+        ? [{ type: "image", source: { type: "base64", media_type: bild.media_type, data: bild.data } }, { type: "text", text: KI_FOTO_FRAGE + (einheit === "in" ? "\n" + KI_ZOLL_HINWEIS : "") }]
+        : kiNachricht(text, einheit) }],
     });
     const block = antwort.content.find((b) => b.type === "text");
     let daten = null;

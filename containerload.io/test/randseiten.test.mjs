@@ -22,7 +22,7 @@ import path from "node:path";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const lies = (f) => fs.readFileSync(path.join(dir, "..", f), "utf8");
-const SEITEN = ["impressum.html", "datenschutz.html", "share.html"];
+const SEITEN = ["impressum.html", "datenschutz.html", "share.html", "en/imprint.html", "en/privacy.html"];
 const app = lies("app.html");
 
 // Grundton und Akzent kommen aus dem Rechner.

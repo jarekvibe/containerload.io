@@ -44,6 +44,18 @@
   button.quiet { color: var(--dim); }
   .panel { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
   .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .live { margin-bottom: 16px; }
+  .livekopf { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .livekopf h2 { margin: 0; }
+  .livepunkt { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); flex: none; }
+  .livepunkt.an { background: #2FD8A0; box-shadow: 0 0 0 4px rgba(47, 216, 160, 0.18); }
+  .livestand { margin-left: auto; color: var(--faint); font: 12px "JetBrains Mono", monospace; }
+  .livegrid { display: grid; grid-template-columns: minmax(150px, 0.8fr) 1.2fr 1fr 1.4fr; gap: 20px; align-items: start; }
+  @media (max-width: 860px) { .livegrid { grid-template-columns: 1fr 1fr; } }
+  .livezahl { font: 700 40px/1 "JetBrains Mono", monospace; }
+  .liveunter { font-size: 12px; color: var(--dim); margin-top: 8px; }
+  .livetitel { font-size: 12px; color: var(--faint); margin-bottom: 8px; }
+  .liveleer { color: var(--faint); font-size: 13px; }
   .kpi .l { font-size: 12px; color: var(--faint); }
   .kpi .v { font: 700 24px/1.2 "JetBrains Mono", monospace; margin-top: 4px; }
   .kpi .s { font-size: 12px; color: var(--dim); }
@@ -124,6 +136,19 @@
   </div>
 
   <div id="inhalt" hidden>
+    <!-- Gerade online: die Lebenszeichen der offenen Seiten (puls.js -> /api/puls -> /api/live).
+         Gezaehlt werden Lebenszeichen der letzten Minute, nicht Personen: zwei Fenster
+         nebeneinander sind zwei. Aktualisiert sich alle 30 Sekunden, solange dieser Tab
+         sichtbar ist. Der Betreiber selbst zaehlt nicht mit (cl-eigene-nutzung). -->
+    <div class="panel live" id="livePanel">
+      <div class="livekopf"><span class="livepunkt" id="livePunkt"></span><h2>Gerade online</h2><span class="livestand" id="liveStand"></span></div>
+      <div class="livegrid">
+        <div><div class="livezahl" id="liveZahl">–</div><div class="liveunter">offene Seiten in der letzten Minute</div></div>
+        <div><div class="livetitel">Länder</div><div id="liveLaender"></div></div>
+        <div><div class="livetitel">Wo</div><div id="liveSeiten"></div></div>
+        <div><div class="livetitel">Letzte 15 Minuten</div><div id="liveVerlauf"></div></div>
+      </div>
+    </div>
     <div class="kpis" id="kpis"></div>
     <div class="panel karte">
       <h2>Rechnungen nach Land</h2>
@@ -454,6 +479,57 @@
         esc([f.equipment, f.browser].filter(Boolean).join(" · ")) + "</div></div>";
     }).join("");
   }
+  // ── Gerade online ────────────────────────────────────────────────────────
+  // /api/live liefert, was aus den Lebenszeichen der letzten Minute folgt: Zahl, Laender,
+  // Art der Seite, dazu den Verlauf je Minute. Die Laendercodes sind serverseitig auf zwei
+  // Grossbuchstaben geprueft, die Seitenarten kommen aus einer festen Liste -- trotzdem
+  // wird jeder Name escapet, bevor er in die Seite darf.
+  const SEITEN_NAME = { rechner: "Rechner", start: "Startseite", wissen: "Container-Wissen", sonst: "Sonstige" };
+  let liveTimer = null;
+  function liveZeichnen(d) {
+    $("liveZahl").textContent = String(d.online || 0);
+    $("livePunkt").classList.toggle("an", d.online > 0);
+    const stand = new Date(d.stand);
+    $("liveStand").textContent = isNaN(stand) ? "" : "Stand " + stand.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const laender = {};
+    for (const [a2, n] of Object.entries(d.laender || {})) {
+      const name = a2 === "XX" ? "unbekannt" : (typeof WELT !== "undefined" && WELT[a2] ? WELT[a2].n : a2);
+      laender[esc(name)] = (laender[esc(name)] || 0) + n;
+    }
+    if (Object.keys(laender).length) balkenListe($("liveLaender"), laender, FARBE.blau);
+    else $("liveLaender").innerHTML = '<div class="liveleer">gerade niemand</div>';
+    const seiten = {};
+    for (const [k, n] of Object.entries(d.seiten || {})) seiten[esc(SEITEN_NAME[k] || k)] = n;
+    if (Object.keys(seiten).length) balkenListe($("liveSeiten"), seiten, FARBE.orange);
+    else $("liveSeiten").innerHTML = '<div class="liveleer">—</div>';
+    // Verlauf: ein Balken je Minute, die laufende Minute ganz rechts.
+    const v = Array.isArray(d.verlauf) ? d.verlauf : [];
+    const max = Math.max(1, ...v.map((x) => x.n || 0));
+    const W = 300, H = 56, bw = W / Math.max(1, v.length);
+    $("liveVerlauf").innerHTML = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto;display:block">' + v.map((x, i) => {
+      const n = +x.n || 0, h = n ? Math.max(3, Math.round(n / max * (H - 4))) : 2;
+      const t = new Date(x.t), uhr = isNaN(t) ? "" : t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+      return '<rect x="' + (i * bw + 1).toFixed(1) + '" y="' + (H - h) + '" width="' + (bw - 2).toFixed(1) + '" height="' + h + '" rx="2" fill="' + (n ? FARBE.blau : "#1C2531") + '" data-tip="' + esc(uhr) + " · " + n + '"></rect>';
+    }).join("") + "</svg>";
+  }
+  async function liveLaden() {
+    const token = localStorage.getItem(KEY);
+    if (!token || document.visibilityState !== "visible" || $("inhalt").hidden) return;
+    try {
+      const r = await fetch("/api/live", { headers: { authorization: "Bearer " + token } });
+      if (!r.ok) throw new Error(String(r.status));
+      liveZeichnen(await r.json());
+    } catch (e) {
+      $("liveStand").textContent = "Live-Anzeige nicht erreichbar";
+      $("livePunkt").classList.remove("an");
+    }
+  }
+  function liveStarten() {
+    liveLaden();
+    if (!liveTimer) liveTimer = setInterval(liveLaden, 30000);
+  }
+  document.addEventListener("visibilitychange", liveLaden);
+
   function zeichnen(d, tage) {
     kpis(d, tage);
     weltKarte(d);
@@ -518,6 +594,7 @@
       try { localStorage.setItem("cl-eigene-nutzung", "1"); } catch (e) {}
       $("inhalt").hidden = false;
       zeichnen(d, tage);
+      liveStarten();
     } catch (e) {
       if (e.status === 401) { localStorage.removeItem(KEY); $("loginFehler").textContent = "Token stimmt nicht."; $("loginFehler").hidden = false; }
       else { $("loginFehler").textContent = e.message; $("loginFehler").hidden = false; }

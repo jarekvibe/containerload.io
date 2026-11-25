@@ -301,7 +301,9 @@ test("Quellen und Lizenz stehen auf beiden Seiten", () => {
 test("kein Kartendienst: die Karte laedt nur Dateien von containerload.io", () => {
   for (const [name, s] of [["DE", DE], ["EN", EN]]) {
     const skripte = [...s.matchAll(/<script[^>]*src="([^"]+)"/g)].map((m) => m[1]);
-    assert.deepStrictEqual(skripte, ["/karte/land.js", "/karte/haefen.js", "/karte/hafenkarte.js"], `${name}: fremde Skripte`);
+    // /puls.js ist das Lebenszeichen fuer "gerade online" (eigene Datei, auf jeder Wissensseite;
+    // test/live-anzeige.test.mjs) -- kein Kartendienst und keine fremde Herkunft.
+    assert.deepStrictEqual(skripte, ["/karte/land.js", "/karte/haefen.js", "/karte/hafenkarte.js", "/puls.js"], `${name}: fremde Skripte`);
     assert.ok(!/tile|mapbox|leaflet|maps\.google|googleapis\.com\/maps/i.test(s), `${name}: Kartendienst eingebunden`);
   }
   assert.ok(!/fetch\(|XMLHttpRequest|sendBeacon|new Image\(/.test(karte), "die Karte laedt nichts nach");

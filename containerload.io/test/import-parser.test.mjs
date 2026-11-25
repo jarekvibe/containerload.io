@@ -148,8 +148,13 @@ test("genannte Hoehen und beschriftete Masse werden gelesen", () => {
 
 test("Zoll und Pfund werden exakt umgerechnet, das Woertchen 'in' nicht", () => {
   const r = parseCargoText("2 crates 48x40x36 inch, 900 lbs each")[0];
-  assert.strictEqual(`${r.l}x${r.w}x${r.h}`, "122x102x91", "48x40x36 Zoll mal 2,54");
-  assert.strictEqual(r.weight, 408, "900 lbs mal 0,453592");
+  // GENAU, nicht auf ganze cm: wer in Zoll arbeitet, soll danach wieder 48 lesen und nicht
+  // 48,03 (bis 25.11.26 wurden daraus 122x102x91 und 408 kg).
+  assert.strictEqual(`${r.l}x${r.w}x${r.h}`, "121.92x101.6x91.44", "48x40x36 Zoll mal 2,54");
+  assert.strictEqual(r.weight, 408.233133, "900 lbs mal 0,45359237");
+  // Metrische Angaben werden weiter auf ganze cm und kg gerundet.
+  const mm = parseCargoText("3 Kisten 1205x805x1004 mm, 250,4 kg")[0];
+  assert.strictEqual(`${mm.l}x${mm.w}x${mm.h} ${mm.weight}`, "121x81x100 250");
   assert.strictEqual(r.name, "Crates");
   // Gegenprobe: "in Hamburg" ist keine Einheit.
   const h = parseCargoText("4x 120x80x100 in Hamburg 300kg")[0];

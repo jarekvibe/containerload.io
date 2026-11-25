@@ -219,5 +219,11 @@ export default {
     'layer': 'couche',
     'layers': 'couches'
   },
-  guide: {}
+  guide: {
+    '/ratgeber/': '/fr/guide/',
+    '/ratgeber/europaletten-20-fuss-container': '/fr/guide/europalettes-conteneur-20-pieds',
+    '/ratgeber/europaletten-40-fuss-container': '/fr/guide/europalettes-conteneur-40-pieds',
+    '/ratgeber/container-volumen-cbm': '/fr/guide/volume-conteneur-m3',
+    '/ratgeber/container-masse-innenmasse': '/fr/guide/dimensions-conteneur'
+  }
 };
