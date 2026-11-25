@@ -425,6 +425,12 @@ Der Generator ersetzt außerdem `var EN={…}` auf der Seite durch das Wörterbu
 
 **Französisch (`sprache/fr.js`, `/fr/`, 25.11.26):** Jareks Anstoß (*„wenn man Spanisch schon reinnimmt, kann man auch mit Mandarin, Französisch oder so arbeiten"*). „palette", „colis", „gerbable", Anrede „vous". Rechner und Startseite; Wissensseiten noch keine (die Startseite verlinkt die englischen).
 
+**Chinesisch, vereinfacht (`sprache/zh.js`, `/zh/`, 25.11.26):** 集装箱, 托盘, 货件, 可堆叠; keine Mehrzahl (`plu` bekommt zweimal dasselbe Wort), Zahlenformat zh-CN. **Ehrlich dazu:** Die Oberfläche hilft chinesischsprachigen Nutzern (Taiwan, Singapur, Malaysia, Exporteure, die einen Link bekommen) — **Besucher aus Festlandchina bringt sie kaum**: dort wird nicht mit Google gesucht, und Seiten ohne ICP-Lizenz laden langsam oder gar nicht. Dokumente bleiben Englisch; die Standardschriften der VGM-PDF kennen ohnehin keine chinesischen Zeichen.
+
+**Die Sprachwahl für den KI-Brief** (Teilen-Dialog) ist eine Auswahlliste mit vollen Namen statt einer Knopfreihe — mit sechs Sprachen war es dieselbe Reihe, die Jarek an der Kopfzeile nicht mochte. Sie kommt aus `BRIEF_SPRACHEN_UI` (alle Oberflächen-Sprachen plus Niederländisch); der Server führt dieselbe Liste (`BRIEF_SPRACHEN`), `test/sprachen` vergleicht beide.
+
+**Bekannte Kleinigkeit in allen Sprachen außer Deutsch:** Ein `?q=`-Link ohne Namen legt die Position als „Position" an — der Name kommt aus dem lokalen Parser (`parseCargoText`), nicht aus dem Wörterbuch. Von Hand angelegte Positionen heißen richtig (`itemDefault`).
+
 **Spanisch (`sprache/es.js`):** „palé", „bulto", Anrede „tú"; Zahlenformat es-ES. Im Browser durchgesehen (Hauptseite, Import, Paletten, Empfehlung, Sicherung, Teilen, VGM, Bild, Stevie, Handy-Menü, Kopfzeile 1280/1024, Datei nicht erreichbar → Englisch, keine Seitenfehler). **Noch nicht spanisch:** die Wissensseiten (die spanische Startseite verlinkt die englischen — eine „ES-Welle" wie `nl/gids/` ist der nächste Schritt, sonst trägt nur EINE spanische Seite die Suche), Dokumente (bewusst Englisch), der lokale Parser (`parseCargoText` kennt deutsche und englische Wörter — die KI-Erkennung liest jede Sprache), CSV-Spaltenköpfe (seit jeher deutsch). Stevie antwortet ohnehin in der Sprache der Frage.
 
 ### Die vertieften Seiten und die zwei neuen (August 2026)

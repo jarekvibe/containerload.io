@@ -36,12 +36,10 @@ const L = bisher[bisher.length - 1];
 if (bisher.includes(K)) throw new Error(K + " ist schon eingetragen");
 console.log("bisher:", bisher.join(", "), "→ neu:", K);
 
-// 1) Rechner: Register, hreflang, KI-Brief-Auswahl
+// 1) Rechner: Register und hreflang (Sprach-Menue und KI-Brief-Auswahl lesen das Register)
 tausche(path.join(W, "app.html"), [
   [`window.CL_SPRACHEN = {${reg}};`, `window.CL_SPRACHEN = {${reg.replace(/\s*$/, "")}, ${K}: ["${uni(NAME)}", "${uni(SATZ)}"] };`],
   [`<link rel="alternate" hreflang="${L}" href="${B}/app?lang=${L}" />\n`, `<link rel="alternate" hreflang="${L}" href="${B}/app?lang=${L}" />\n<link rel="alternate" hreflang="${K}" href="${B}/app?lang=${K}" />\n`],
-  [/useState\(\[("[a-z]{2}", )+"[a-z]{2}"\]\.includes\(LANG\) \? LANG : "en"\);/, (m) => m.replace(/"\]\.includes/, `", "${K}"].includes`)],
-  [/items: \[\["de", "DE"\], \["en", "EN"\], \["nl", "NL"\](, \["[a-z]{2}", "[A-Z]{2}"\])*\]/, (m) => m.replace(/\]$/, `, ["${K}", "${K.toUpperCase()}"]]`)],
 ]);
 // 2) Server: Statistik und KI-Brief
 tausche(path.join(repo, "netlify/functions/lib/nutzung.mjs"), [[/const SPRACHEN = new Set\(\[[^\]]*\]\);/, (m) => m.replace("]);", `, "${K}"]);`)]]);

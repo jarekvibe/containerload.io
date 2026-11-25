@@ -21,9 +21,10 @@
 import fs from 'node:fs';
 import es from './sprachen/es.mjs';
 import fr from './sprachen/fr.mjs';
+import zh from './sprachen/zh.mjs';
 
 // Jede Sprache ausser Deutsch (Quelle) und Englisch (Woerterbuch steht in index.html)
-export const SPRACHEN = [es, fr];
+export const SPRACHEN = [es, fr, zh];
 
 const BASIS = 'https://containerload.io';
 
