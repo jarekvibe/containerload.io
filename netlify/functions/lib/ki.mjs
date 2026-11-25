@@ -93,7 +93,7 @@ export const kiNachricht = (text) => `<packliste>\n${text}\n</packliste>`;
 // Plan; die KI formuliert NUR — sie erfindet nichts dazu, und der Mensch
 // liest den Entwurf in einem bearbeitbaren Feld, bevor er ihn verschickt.
 
-export const BRIEF_SPRACHEN = ["de", "en", "nl"];
+export const BRIEF_SPRACHEN = ["de", "en", "nl", "es", "fr", "zh"];
 
 export const BRIEF_SCHEMA = {
   type: "object",
@@ -109,7 +109,7 @@ export const BRIEF_AUFTRAG = [
   "Du schreibst fuer einen Container-Ladeplaner einen kurzen, sachlichen E-Mail-Entwurf an einen Geschaeftspartner.",
   "Grundlage sind AUSSCHLIESSLICH die Fakten im fakten-Block. Du erfindest nichts dazu: keine Preise, Termine, Haefen, Firmen- oder Personennamen, keine Zusagen.",
   "Jede Zahl uebernimmst du wertgleich (nur die Tausender-Schreibweise darfst du der Zielsprache anpassen). Den Link uebernimmst du ZEICHENGENAU.",
-  "Zielsprache ist fakten.sprache: de = Deutsch in der Sie-Form, en = Englisch, nl = Niederlaendisch.",
+  "Zielsprache ist fakten.sprache: de = Deutsch in der Sie-Form, en = Englisch, nl = Niederlaendisch, es = Spanisch (usted-Form), fr = Französisch (Sie-Form, vous), zh = Chinesisch (vereinfachte Schrift).",
   "Aufbau: neutraler Gruss ohne Namen; 1-2 Saetze, was geplant wurde (Equipment, Stueckzahl, Gesamtgewicht); die Positionen als kurze Aufzaehlung (buendeln erlaubt, Werte unveraendert); falls fakten.gruende da sind, gib sie in eigenen Worten MIT denselben Zahlen wieder; dann der Hinweis, dass der Link den Plan interaktiv in 3D oeffnet, der Link in eigener Zeile; Schluss ohne Namens-Unterschrift (die ergaenzt der Absender).",
   "Sind Positionen offen (zahlen.offen groesser 0), sag es ehrlich — nichts schoenreden.",
   "Unter 180 Woertern, keine Marketing-Floskeln, kein Werbeton.",

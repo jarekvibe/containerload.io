@@ -38,5 +38,5 @@ test("einmal weggeklickt heisst dauerhaft weg", () => {
 test("die Leiste rendert nur hinter dem Schalter", () => {
   assert.ok(html.includes("shareBar && /* @__PURE__ */ React.createElement"), "Render ist nicht an shareBar gebunden");
   // Der Knopf fuehrt in den leeren Rechner und nimmt die Sprache mit.
-  assert.ok(html.includes('href: "/app" + (LANG === "en" ? "?lang=en" : "")'), "Knopfziel /app mit Sprachanhang fehlt");
+  assert.ok(html.includes('href: "/app" + (LANG === "de" ? "" : "?lang=" + LANG)'), "Knopfziel /app mit Sprachanhang fehlt");
 });

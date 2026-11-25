@@ -174,9 +174,9 @@ test("mit Stopps schweigen sortenrein, Stufe 3 und der Guenstiger-Vorschlag", ()
 });
 
 test("beide Blattsorten haengen die Entladereihenfolge an, das Deckblatt nicht", () => {
-  assert.ok(roh.includes("+ LV_STOPPS(placed, cargo, tiPos, LANG) + LV_GEWICHT"),
+  assert.ok(roh.includes("+ LV_STOPPS(placed, cargo, tiPos, DOKLANG) + LV_GEWICHT"),
     "das einzelne Blatt traegt keine Entladereihenfolge");
-  assert.ok(roh.includes("+ LV_STOPPS(sp, cargo, tiP, LANG) + LV_GEWICHT"),
+  assert.ok(roh.includes("+ LV_STOPPS(sp, cargo, tiP, DOKLANG) + LV_GEWICHT"),
     "die Container-Blaetter tragen keine Entladereihenfolge");
 });
 

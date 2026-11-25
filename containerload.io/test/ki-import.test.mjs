@@ -209,7 +209,7 @@ test("im echten Rechner gibt es nur noch 'Mit KI erkennen' -- der lokale Parser 
 test("der Import-Dialog sagt, dass Fotos per Strg+V gehen", () => {
   assert.match(app, /!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\(KiTipp, null\)/, "der Tipp fehlt oder steht auch im Demo");
   assert.match(app, /var KiTipp = /);
-  assert.match(app, /"\\u2318V" : LANG === "en" \? "Ctrl\+V" : "Strg\+V"/, "Mac, Englisch und Deutsch bekommen ihre Taste");
+  assert.match(app, /"\\u2318V" : LANG === "de" \? "Strg\+V" : "Ctrl\+V"/, "Mac, Deutsch und alle anderen Sprachen bekommen ihre Taste");
   for (const key of ["kiOhne:", "kiTipp:", "kiTippTouch:"]) {
     assert.equal(app.split(key).length - 1, 2, `${key} muss in beiden Woerterbuechern stehen`);
   }
@@ -265,8 +265,8 @@ test("der Link MUSS auf containerload.io zeigen — sonst ist es ein Spam-Werkze
 });
 
 test("pruefeFakten: Sprach-Whitelist, Modus, Pflicht-Positionen, Zahlen-Grenzen", () => {
-  assert.deepEqual(BRIEF_SPRACHEN, ["de", "en", "nl"]);
-  assert.equal(pruefeFakten({ ...FAKTEN_OK, sprache: "fr" }), null);
+  assert.deepEqual(BRIEF_SPRACHEN, ["de", "en", "nl", "es", "fr", "zh"]);
+  assert.equal(pruefeFakten({ ...FAKTEN_OK, sprache: "xx" }), null);
   assert.equal(pruefeFakten({ ...FAKTEN_OK, modus: "air" }), null);
   assert.equal(pruefeFakten({ ...FAKTEN_OK, positionen: [] }), null, "ohne Positionen gibt es nichts zu erklaeren");
   assert.equal(pruefeFakten({ ...FAKTEN_OK, zahlen: { ...FAKTEN_OK.zahlen, gewichtKg: -5 } }), null);
