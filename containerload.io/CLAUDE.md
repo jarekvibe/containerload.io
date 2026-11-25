@@ -659,6 +659,21 @@ Ein Entwurf ist **kein Plan**: ein Plan ist etwas, das jemand benennt und behalt
 
 **Die Datenschutzseite zählt namentlich auf, was lokal gespeichert wird.** Kommt ein neuer Schlüssel dazu, gehört er dort hinein — das ist kein Formalismus, sondern dieselbe Ehrlichkeitsregel wie bei den Zahlen.
 
+### „Gerade online": die Live-Anzeige im Admin (25.11.26, Jareks Auftrag)
+*„Kann man eigentlich auch sehen, wie viele Leute gerade auf der Webseite drauf sind … und aus welchen Ländern?"* Bis dahin nicht: der Rechner meldet sich einmal, beim **Verlassen** der Seite, und die Wissensseiten trugen gar kein Skript. Jarek hat den Einbau samt Anpassung der Datenschutzseite beauftragt.
+
+**Das Prinzip kommt ohne Kennung und ohne IP aus.** Eine offene, sichtbare, benutzte Seite schickt **ein Wort je Minute** (`/puls.js` → `POST /api/puls`): die Art der Seite (`start | wissen | rechner | sonst`). Der Server legt dafür **einen Schlüssel** in Netlify Blobs ab (Store `puls`): `p/<JJJJMMTTHHMM>/<SS>-<LAND>-<art>-<zufall>` — Zeitpunkt, Ländercode aus `context.geo`, Seitenart. „Online" ist, wer in den letzten **60 Sekunden** ein Lebenszeichen geschickt hat; gezählt werden also Lebenszeichen im Fenster, nicht Personen (zwei Fenster nebeneinander sind zwei). Das Admin (`GET /api/live`, dasselbe `STATISTIK_TOKEN`) **listet nur Schlüssel** und holt nie einen Inhalt.
+
+Regeln, die nicht kippen dürfen (`test/live-anzeige.test.mjs` fährt `puls.js` in einer nachgebauten Umgebung und zählt, was hinausgeht):
+- **Hinaus geht ein Wort aus einer festen Liste.** Kein Pfad, keine Abfrage, kein Verweis, kein User-Agent; `puls.js` schreibt nichts auf das Gerät. Der Server prüft das Wort gegen dieselbe Liste und speichert als Wert nur `"1"`.
+- **Wer nicht gezählt werden will oder nicht gemeint ist, sendet nicht:** Do Not Track, Global Privacy Control, Vorschau-Hosts und localhost, eingebettete Fenster, der Betreiber (`cl-eigene-nutzung`, dieselbe Markierung wie bei der Nutzungsstatistik).
+- **Ein offener Tab ist kein Besucher.** Das erste Lebenszeichen kommt nach 8 Sekunden (wer sofort wieder geht — oder ein Crawler ist —, zählt nicht), im Hintergrund wird nicht gesendet, und nach 5 Minuten ohne Regung (Zeiger, Taste, Scrollen) verstummt die Seite, bis sich wieder etwas rührt.
+- **Die Einträge verschwinden wieder:** `PULS_HALTEN_MIN = 20`. Aufgeräumt wird an drei Stellen — nebenbei bei etwa jedem zwanzigsten Lebenszeichen, bei jedem Blick ins Admin, und **stündlich** durch die Scheduled Function `puls-aufraeumen` (`config.schedule`, kein `path` — beides zusammen lässt Netlify nicht zu). Ohne die dritte blieben die letzten Einträge eines Tages bis zum nächsten Morgen liegen.
+- **Wo das Skript steht:** Startseiten, Rechner, alle Wissensseiten (65 Seiten; die erzeugten bekommen es von ihrem Generator). **Nicht** auf Rechtsseiten, Teilen-Zwischenseite und Admin.
+- **Datenschutz, Abschnitt 5,** nennt Takt, Inhalt, Zweck, Löschung und die Ausnahmen — deutsch und englisch. Wer `puls.js` ändert, ändert zuerst dort.
+
+Im Admin steht das Panel ganz oben: Zahl, Länder (Namen aus `welt-karte.js`), Art der Seite, Balken der letzten 15 Minuten; es fragt alle 30 Sekunden neu, aber nur, solange der Tab sichtbar ist. **Grenzen, bewusst:** die Zahl ist ungefähr (am Taktwechsel kann eine Seite für Sekunden fehlen oder doppelt zählen); der Endpunkt ist offen wie `/api/beacon` (weiche Herkunftsprüfung — wer will, kann die Zahl aufblasen); und jedes Lebenszeichen ist ein Function-Aufruf (bei heutigem Verkehr rund 20.000 im Monat; wächst der Verkehr um das Zehnfache, den Takt auf zwei Minuten stellen — Fenster und Takt gehören zusammen).
+
 ### Leere Aufrufe stehen getrennt — Crawler sehen nicht wie Kunden aus
 Gemeldet, als „HK · 4" auf der Länderkarte auftauchte: Ein Aufruf ohne Position und ohne Funktion außer `plan-gerechnet` (feuert beim bloßen Öffnen) ist das Muster eines Crawlers, der JS ausführt — Menschen hinterlassen so etwas auch (kurz reingeschaut), Crawler hinterlassen **nur** so etwas. `aggregiere` zählt deshalb `leerGesamt` und `laenderLeer` getrennt (gelöscht wird nichts, das CSV bleibt roh); das Dashboard zeigt an der Rechnungen-KPI „davon N leer (ohne Ladung)" und in der Länderliste den echten Wert mit „· N leer" am Namen. `test/nutzungsstatistik.test.mjs`.
 

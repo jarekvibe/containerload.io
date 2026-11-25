@@ -65,6 +65,8 @@ Die Seite wird über **Netlify** automatisch aus diesem Repository veröffentlic
 
 Seit der anonymen Nutzungsstatistik gibt es zwei **Netlify Functions** (`/api/beacon` nimmt Events entgegen, `/api/statistik` liefert die Auswertung für `/admin`). Die `package.json` an der Repo-Wurzel existiert nur für deren Abhängigkeit `@netlify/blobs` — die Seite selbst bleibt build-frei. Das Dashboard unter `/admin` verlangt die Netlify-Umgebungsvariable `STATISTIK_TOKEN` (Site settings → Environment variables).
 
+Für die Anzeige **„Gerade online"** im Dashboard kommen drei weitere dazu: `/api/puls` nimmt das Lebenszeichen der offenen Seiten entgegen (`puls.js`, etwa einmal je Minute, ein Wort ohne Kennung), `/api/live` liefert daraus Zahl, Länder und Verlauf (dasselbe `STATISTIK_TOKEN`), und `puls-aufraeumen` läuft stündlich als Scheduled Function und löscht alte Einträge. Einzurichten ist dafür nichts.
+
 Das Dashboard kann außerdem das **Feedback aus Netlify Forms** anzeigen. Dafür braucht die Statistik-Function ein Netlify Personal Access Token: auf app.netlify.com unter **User settings → Applications → Personal access tokens → New access token** eines erzeugen, als Umgebungsvariable `FEEDBACK_TOKEN` setzen und einmal neu deployen. Ohne das Token bleibt der Feedback-Bereich leer und zeigt diese Anleitung.
 
 ## Sprachen
