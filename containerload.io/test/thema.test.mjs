@@ -37,8 +37,13 @@ test("eingebettet bleibt es dunkel", () => {
   assert.ok(app.includes('React.useState(EMBEDDED ? "dunkel" : themaStart())'),
     "der Demo-iframe der Startseite muss dunkel starten — die Landingpage ist dunkel");
   // und der Umschalter erscheint dort gar nicht erst.
-  assert.ok(/!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "flex items-center", role: "group"/.test(app),
+  // Der Umschalter ist eine Konstante (themaSchalter) und wird genau einmal eingesetzt: in der
+  // Einstellungs-Gruppe der Kopfzeile, und die steht hinter !EMBEDDED.
+  assert.ok(/const themaSchalter = \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "flex items-center", role: "group"/.test(app),
+    "der Sonne/Mond-Umschalter ist nicht mehr die eine Konstante");
+  assert.ok(/!EMBEDDED && \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "kopf-einst flex items-center gap-2" \}, themaSchalter, sprachWahl\)/.test(app),
     "der Sonne/Mond-Umschalter muss hinter !EMBEDDED stehen");
+  assert.strictEqual(app.split("themaSchalter").length - 1, 2, "der Umschalter wird noch an anderer Stelle eingesetzt");
 });
 
 test("das Thema steht VOR dem ersten Zeichnen am <html>", () => {

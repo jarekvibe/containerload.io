@@ -171,7 +171,7 @@ test("die Aenderungs-Anzeige: nur bei einem Link mit Kennung, nie eingebettet, r
   assert.match(eff, /fassungUnterschiede\(alt\.c, URL_PLAN_C\)/);
   assert.match(eff, /fassungMerken\(URL_PLAN_ID, URL_PLAN_C\)/, "danach gilt die neue Fassung als gesehen");
   assert.doesNotMatch(eff, /fetch\(/);
-  assert.match(roh, /\)\)\)\)\), fassungEl, vmEl, /, "beide Streifen stehen direkt unter der Kopfzeile");
+  assert.match(roh, /themaSchalter, sprachWahl\)\)\), fassungEl, vmEl, /, "beide Streifen stehen direkt unter der Kopfzeile");
 });
 
 test("Verladen melden: Nummern im Rampen-Eintrag, Meldung nur im selbst verschickten Link", () => {

@@ -66,25 +66,34 @@ test("die Kopfzeile des Container-Wissens bricht auf dem Telefon um", () => {
 
 test("die Kopfzeile des Rechners darf auf dem Telefon umbrechen", () => {
   const s = lies("app.html");
-  assert.match(s, /"header", \{ className: "flex flex-wrap items-center/,
-    "die Kopfzeile bricht nicht mehr um — auf 390 px passt sie nicht in eine Zeile");
+  // Seit dem Umbau vom 25.11.26 ist die Kopfzeile ein Raster mit benannten Feldern (".kopf").
+  // Auf dem Telefon sind es ZWEI Zeilen: oben Marke und Einstellungen, darunter Planname und
+  // Aktionen. Vorher brach eine flex-wrap-Zeile in drei um (162 px hoch, jetzt 121).
+  const css = s.slice(s.indexOf("        .kopf{display:grid;"), s.indexOf("        @keyframes clspin"));
+  assert.match(css, /\.kopf\{display:grid;[^}]*grid-template-columns:minmax\(0,1fr\) auto;grid-template-areas:"marke einst" "plan aktionen"\}/,
+    "die Kopfzeile hat auf dem Telefon keine zwei Zeilen mehr — auf 390 px passt sie nicht in eine");
+  assert.match(css, /\.kopf-rechts\{display:contents\}/, "Aktionen und Einstellungen stehen auf dem Telefon in VERSCHIEDENEN Zeilen");
+  assert.match(css, /\.planname\{width:100%;text-overflow:ellipsis\}/, "das Namensfeld fuellt auf dem Telefon seine Zelle");
   // Die Sprachwahl steht seit 25.11.26 AUCH auf dem Telefon im Kopf (rechts neben dem
   // Hell/Dunkel-Schalter): die Sprachen sind aus dem "…"-Menue heraus, und damit ist der Knopf
-  // dort der einzige Weg. Gemessen bei 390 und 360 px: zweite Kopfzeile, rechte Kante 301 px.
-  // Vorher war ihre Huelle unter sm ausgeblendet ("hidden sm:block").
+  // dort der einzige Weg. Vorher war ihre Huelle unter sm ausgeblendet ("hidden sm:block").
   const i = s.indexOf('onClick: () => setSprachOpen((o) => !o)');
   assert.ok(i > 0, "der Knopf des Sprach-Menues wurde nicht gefunden");
   const davor = s.slice(Math.max(0, i - 900), i);
   assert.match(davor, /const sprachWahl = \/\* @__PURE__ \*\/ React\.createElement\("div", \{ className: "relative" \},/, "die Sprachwahl ist auf dem Telefon wieder ausgeblendet oder nicht mehr die eine Konstante");
   assert.ok(!/hidden sm:(block|flex)/.test(davor), "die Sprachwahl ist auf dem Telefon ausgeblendet -- dort gibt es keinen anderen Weg mehr");
-  // Sie haengt rechts, zwischen Hell/Dunkel und den Ausgaben -- nicht mehr links am Logo.
-  assert.ok(s.includes("!EMBEDDED && sprachWahl, !EMBEDDED && kopfAusgaben,"), "die Sprachwahl steht nicht mehr rechts neben dem Hell/Dunkel-Schalter");
+  // Sie haengt ganz rechts aussen, direkt neben Hell/Dunkel -- nicht mehr links am Logo und
+  // nicht mehr zwischen den Plan-Aktionen (Jarek: "Systemeinstellungen").
+  assert.ok(s.includes('React.createElement("div", { className: "kopf-einst flex items-center gap-2" }, themaSchalter, sprachWahl)'), "die Sprachwahl steht nicht mehr rechts neben dem Hell/Dunkel-Schalter");
   assert.strictEqual(s.split("sprachWahl").length - 1, 2, "die Sprachwahl wird mehrfach eingesetzt");
-  // Planname und Speichern ruecken erst ab lg in die Kopfzeile; darunter stehen sie in einer
-  // eigenen Zeile. Gemessen bei 768 px mit "sm:": der Speichern-Knopf lag 10 px UEBER dem
+  // Planname und Speichern ruecken erst in die Zeile der Marke, wenn sie dort MITTIG stehen
+  // koennen (KOPF_EINZEILIG); darunter stehen sie in einer eigenen Zeile. Gemessen bei 768 px,
+  // als sie schon ab "sm" hineinrueckten: der Speichern-Knopf lag 10 px UEBER dem
   // Hell/Dunkel-Schalter, das Namensfeld war 26 px breit.
-  assert.ok(s.includes('{ className: "order-last w-full lg:order-none lg:w-auto lg:flex-1 flex items-center justify-center gap-2 lg:px-6 min-w-0" }'),
-    "die Planzeile rueckt wieder schon ab sm in die Kopfzeile");
+  assert.match(css, /@media \(min-width: 768px\)\{\s*\.kopf\{grid-template-areas:"marke rechts" "plan plan"\}/, "ab 768 px bekommt der Planname keine eigene Zeile mehr");
+  assert.match(css, /@media \(min-width: \$\{KOPF_EINZEILIG\}px\)\{\s*\.kopf\{grid-template-columns:1fr auto 1fr;grid-template-areas:"marke plan rechts"\}/, "die Planzeile rueckt wieder frueher in die Kopfzeile");
+  // Anfassflaechen: das Wort am Speichern-Knopf ist auf dem Telefon zugeklappt, der Knopf bleibt
+  assert.match(css, /@media \(min-width: 640px\) and \(max-width: \$\{KOPF_EINZEILIG - 0\.02\}px\)\{\.kopf-wort-s\{max-width:none;margin-left:0\}\}/);
 });
 
 test('der Knopf "Tool öffnen" ragt auf dem Telefon nicht mehr ueber den Rand', () => {
