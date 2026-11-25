@@ -254,6 +254,10 @@
         exportTitle: "货物清单导出为 CSV（供 Excel 使用）",
         exportEmpty: "请先添加货物",
         exportDone: "货物清单已导出",
+        csv: {
+          kopf: ["集装箱", "货件", "数量", "长_cm", "宽_cm", "高_cm", "单件重量_kg", "总重量_kg", "可堆叠", "可旋转90", "录入数量"],
+          ja: "是", nein: "否", bis: function (cm) { return "最高 " + cm + " cm"; }, max: function (n) { return "最多 " + n; }, offen: "未装", pos: function (n) { return "货件 " + n; }
+        },
         exportFail: "导出失败", popups: "请允许弹出窗口", posWort: "货件", farbBlau: "蓝色", farbRot: "红色", logoOk: "徽标已上传",
         shotBtn: "图片",
         shotExportTitle: "导出图片",

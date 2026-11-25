@@ -252,6 +252,10 @@
         exportTitle: "Liste de chargement en CSV pour Excel",
         exportEmpty: "Ajoutez d’abord un chargement",
         exportDone: "Liste de chargement exportée",
+        csv: {
+          kopf: ["Conteneur", "Colis", "Quantité", "Longueur_cm", "Largeur_cm", "Hauteur_cm", "Poids_kg_unité", "Poids_kg_total", "Gerbable", "Rotation_90", "Saisi"],
+          ja: "oui", nein: "non", bis: function (cm) { return "jusqu’à " + cm + " cm"; }, max: function (n) { return "max. " + n; }, offen: "non chargé", pos: function (n) { return "Colis " + n; }
+        },
         exportFail: "L’export a échoué", popups: "Autorisez les fenêtres pop-up", posWort: "Colis", farbBlau: "Bleu", farbRot: "Rouge", logoOk: "Logo importé",
         shotBtn: "Image",
         shotExportTitle: "Exporter une image",

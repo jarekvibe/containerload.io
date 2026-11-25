@@ -107,3 +107,67 @@ test("keine Position geht verloren und keine wird doppelt gezaehlt", () => {
     });
   }
 });
+
+// ── Die Sprache der Datei (25.11.26) ────────────────────────────────────────────────────
+// Spaltenkoepfe und die paar Woerter darin waren seit jeher deutsch -- auch im englischen
+// Rechner. Jetzt kommen sie aus T.csv; ohne Angabe gilt Deutsch (die deutsche Fassung steht
+// nur in buildCargoCSV selbst, I18N.de.csv ist bewusst null).
+const roh = L.join("\n");
+const DE_KOPF = ["Container", "Position", "Menge", "Laenge_cm", "Breite_cm", "Hoehe_cm", "Gewicht_kg_Stueck", "Gewicht_kg_gesamt", "Stapelbar", "Drehbar_90", "Eingegeben"];
+// Die Sprachen: Englisch aus app.html, die weiteren aus sprache/<k>.js
+const enBlock = /exportDone: "Cargo list exported",\n\s*csv: (\{[\s\S]*?\n\s*\}),\n/.exec(roh);
+assert.ok(enBlock, "das englische csv-Woerterbuch wurde nicht gefunden");
+const SPRACHEN = { en: new Function("return " + enBlock[1])() };
+for (const f of fs.readdirSync(path.join(dir, "..", "sprache")).filter((x) => x.endsWith(".js"))) {
+  const w = { CL_SPRACHE: {} };
+  new Function("window", fs.readFileSync(path.join(dir, "..", "sprache", f), "utf8"))(w);
+  const k = f.replace(".js", "");
+  const el = (typ, _p, ...kinder) => ({ typ, kinder });
+  SPRACHEN[k] = w.CL_SPRACHE[k].texte({ React: { createElement: el, Fragment: "f" }, C: new Proxy({}, { get: () => "#000000" }), plu: (n, a, b) => n + " " + (n === 1 ? a : b), fmtDE: (n) => String(n), loc: () => "en-GB" }).csv;
+}
+
+test("ohne Angabe bleibt die Datei deutsch -- Zeichen fuer Zeichen wie bisher", () => {
+  const cargo = [{ name: "", l: 120, w: 80, h: 110, weight: 250, qty: 5, stackable: false, rotatable: false }, { name: "B", l: 60, w: 40, h: 40, weight: 12, qty: 2, stackH: 180 }, { name: "C", l: 60, w: 40, h: 40, weight: 12, qty: 2, stackMax: 3 }];
+  const csv = buildCargoCSV(cargo, { perType: [{ loaded: 3 }, { loaded: 2 }, { loaded: 2 }] }, {}, "20' GP", {});
+  assert.deepStrictEqual(csv.split("\r\n"), [
+    DE_KOPF.join(";"),
+    "C1;Position 1;3;120;80;110;250;750;nein;nein;5",
+    "C1;B;2;60;40;40;12;24;bis 180 cm;ja;2",
+    "C1;C;2;60;40;40;12;24;max. 3;ja;2",
+    "offen;Position 1;2;120;80;110;250;500;nein;nein;5",
+  ]);
+  assert.ok(/exportDone: "Ladeliste exportiert",\n[^\n]*\n\s*csv: null,/.test(roh), "I18N.de.csv ist nicht mehr leer -- die deutsche Fassung gaebe es dann zweimal");
+});
+
+test("mit T.csv spricht die Datei die Sprache der Oberflaeche", () => {
+  assert.ok(roh.includes("const csv = buildCargoCSV(cargo, result, container, preset, { domain, texte: T.csv });"), "der Export reicht die Texte nicht durch");
+  const cargo = [{ name: "", l: 120, w: 80, h: 110, weight: 250, qty: 5, stackable: false, rotatable: false }, { name: "B", l: 60, w: 40, h: 40, weight: 12, qty: 2, stackH: 180 }, { name: "C", l: 60, w: 40, h: 40, weight: 12, qty: 2, stackMax: 3 }];
+  const en = buildCargoCSV(cargo, { perType: [{ loaded: 3 }, { loaded: 2 }, { loaded: 2 }] }, {}, "20' GP", { texte: SPRACHEN.en }).split("\r\n");
+  assert.deepStrictEqual(en, [
+    "Container;Item;Qty;Length_cm;Width_cm;Height_cm;Weight_kg_each;Weight_kg_total;Stackable;Rotatable_90;Entered",
+    "C1;Item 1;3;120;80;110;250;750;no;no;5",
+    "C1;B;2;60;40;40;12;24;up to 180 cm;yes;2",
+    "C1;C;2;60;40;40;12;24;max. 3;yes;2",
+    "open;Item 1;2;120;80;110;250;500;no;no;5",
+  ]);
+  assert.ok(Object.keys(SPRACHEN).length >= 4, "Sprachdateien nicht gefunden: " + Object.keys(SPRACHEN));
+  for (const [k, W] of Object.entries(SPRACHEN)) {
+    assert.ok(W && Array.isArray(W.kopf), `${k}: kein csv-Woerterbuch`);
+    assert.strictEqual(W.kopf.length, DE_KOPF.length, `${k}: ${W.kopf.length} Spaltenkoepfe statt ${DE_KOPF.length}`);
+    assert.strictEqual(new Set(W.kopf).size, W.kopf.length, `${k}: doppelter Spaltenkopf`);
+    // Koepfe ohne Trenner, Anfuehrungszeichen und Leerzeichen -- sie sollen sich in Excel und
+    // in Skripten ohne Quoting benutzen lassen.
+    for (const h of W.kopf) assert.ok(h && !/[;",\s]/.test(h), `${k}: Spaltenkopf „${h}" braucht Quoting`);
+    // Die Einheiten bleiben cm und kg -- und stehen an denselben Spalten wie im Deutschen.
+    W.kopf.forEach((h, i) => assert.strictEqual(/_cm$/.test(h) || /_cm\b/.test(h), /_cm$/.test(DE_KOPF[i]), `${k}: Spalte ${i + 1} („${h}") und die Einheit cm`));
+    assert.strictEqual(W.kopf.filter((h) => /kg/.test(h)).length, 2, `${k}: zwei Gewichtsspalten in kg`);
+    for (const key of ["ja", "nein", "offen"]) assert.ok(typeof W[key] === "string" && W[key] && !/[;"\n]/.test(W[key]), `${k}: ${key}`);
+    assert.notStrictEqual(W.ja, W.nein, `${k}: ja und nein sind dasselbe Wort`);
+    assert.ok(W.bis(180).includes("180") && W.bis(180).includes("cm") && W.max(3).includes("3") && W.pos(7).includes("7"), `${k}: bis/max/pos nennen ihre Zahl nicht`);
+    // Die Datei bleibt lesbar: gleiche Zeilenzahl, gleiche Zahlen wie auf Deutsch.
+    const z = buildCargoCSV(cargo, { perType: [{ loaded: 3 }, { loaded: 2 }, { loaded: 2 }] }, {}, "20' GP", { texte: W }).split("\r\n");
+    assert.strictEqual(z.length, 5, `${k}: Zeilenzahl`);
+    assert.strictEqual(spalten(z[1]).slice(2, 8).join(";"), "3;120;80;110;250;750", `${k}: Zahlen der ersten Zeile`);
+    assert.strictEqual(spalten(z[4])[0], W.offen, `${k}: die Marke fuer nicht Verladenes`);
+  }
+});

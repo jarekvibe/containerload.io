@@ -259,6 +259,10 @@
         exportTitle: "Lista de carga en CSV para Excel",
         exportEmpty: "Añade primero la carga",
         exportDone: "Lista de carga exportada",
+        csv: {
+          kopf: ["Contenedor", "Bulto", "Cantidad", "Largo_cm", "Ancho_cm", "Alto_cm", "Peso_kg_ud", "Peso_kg_total", "Apilable", "Giro_90", "Introducido"],
+          ja: "sí", nein: "no", bis: function (cm) { return "hasta " + cm + " cm"; }, max: function (n) { return "máx. " + n; }, offen: "pendiente", pos: function (n) { return "Bulto " + n; }
+        },
         exportFail: "No se ha podido exportar", popups: "Permite las ventanas emergentes", posWort: "Bulto", farbBlau: "Azul", farbRot: "Rojo", logoOk: "Logo subido",
         shotBtn: "Imagen",
         shotExportTitle: "Exportar imagen",

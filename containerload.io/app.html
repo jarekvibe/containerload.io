@@ -3847,6 +3847,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       exportEmpty: "Erst Packst\xFCcke hinzuf\xFCgen",
       exportFail: "Export fehlgeschlagen", popups: "Bitte Pop-ups erlauben", posWort: "Position", farbBlau: "Blau", farbRot: "Rot", logoOk: "Logo hochgeladen",
       exportDone: "Ladeliste exportiert",
+      // Die deutsche CSV-Fassung ist die Vorgabe in buildCargoCSV -- hier bewusst leer.
+      csv: null,
       shotBtn: "Bild",
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
@@ -4345,6 +4347,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       exportTitle: "Cargo list as CSV for Excel",
       exportEmpty: "Add cargo first",
       exportDone: "Cargo list exported",
+      csv: {
+        kopf: ["Container", "Item", "Qty", "Length_cm", "Width_cm", "Height_cm", "Weight_kg_each", "Weight_kg_total", "Stackable", "Rotatable_90", "Entered"],
+        ja: "yes", nein: "no", bis: (cm) => "up to " + cm + " cm", max: (n) => "max. " + n, offen: "open", pos: (n) => "Item " + n
+      },
       exportFail: "Export failed", popups: "Please allow pop-ups", posWort: "Item", farbBlau: "Blue", farbRot: "Red", logoOk: "Logo uploaded",
       shotBtn: "Image",
       shotExportTitle: "Export image",
@@ -5039,7 +5045,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     const row = (arr) => arr.map(esc).join(sep);
     const lines = [];
-    lines.push(row(["Container", "Position", "Menge", "Laenge_cm", "Breite_cm", "Hoehe_cm", "Gewicht_kg_Stueck", "Gewicht_kg_gesamt", "Stapelbar", "Drehbar_90", "Eingegeben"]));
+    // Spaltenkoepfe und Woerter in der Sprache der Oberflaeche (opts.texte = T.csv). Ohne Angabe
+    // Deutsch -- die deutsche Fassung steht NUR hier (I18N.de.csv ist null), damit es sie
+    // nicht zweimal gibt. Die Einheiten in den Koepfen bleiben cm und kg: die Datei ist ein
+    // Dokument, und Dokumente rechnen metrisch (siehe "Zoll und Pfund").
+    const TX = opts && opts.texte || {
+      kopf: ["Container", "Position", "Menge", "Laenge_cm", "Breite_cm", "Hoehe_cm", "Gewicht_kg_Stueck", "Gewicht_kg_gesamt", "Stapelbar", "Drehbar_90", "Eingegeben"],
+      ja: "ja", nein: "nein", bis: (cm) => "bis " + cm + " cm", max: (n) => "max. " + n, offen: "offen", pos: (n) => "Position " + n
+    };
+    lines.push(row(TX.kopf));
     // Verteilung je Position auf die Container. Ohne Kette ist das der eine Container.
     const kette = result && result.chain && result.chain.length ? result.chain : null;
     const slots = kette
@@ -5047,11 +5061,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       : [{ marke: road ? "F1" : "C1", je: cargo.map((_, k) => (result && result.perType && result.perType[k] ? result.perType[k].loaded : 0)) }];
     const zeile = (marke, c, i, menge) => row([
       marke,
-      c.name || "Position " + (i + 1),
+      c.name || TX.pos(i + 1),
       menge, +c.l || 0, +c.w || 0, +c.h || 0,
       +c.weight || 0, (+c.weight || 0) * menge,
-      c.stackable === false ? "nein" : isFinite(+c.stackH) && +c.stackH > 0 ? "bis " + +c.stackH + " cm" : isFinite(c.stackMax) && +c.stackMax >= 2 ? "max. " + +c.stackMax : "ja",
-      c.rotatable === false ? "nein" : "ja",
+      c.stackable === false ? TX.nein : isFinite(+c.stackH) && +c.stackH > 0 ? TX.bis(+c.stackH) : isFinite(c.stackMax) && +c.stackMax >= 2 ? TX.max(+c.stackMax) : TX.ja,
+      c.rotatable === false ? TX.nein : TX.ja,
       Math.max(0, +c.qty || 0)
     ]);
     slots.forEach((sl) => {
@@ -5060,7 +5074,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     cargo.forEach((c, i) => {
       const drin = slots.reduce((s2, sl) => s2 + sl.je[i], 0);
       const offen = Math.max(0, +c.qty || 0) - drin;
-      if (offen > 0) lines.push(zeile("offen", c, i, offen));
+      if (offen > 0) lines.push(zeile(TX.offen, c, i, offen));
     });
     return lines.join("\r\n");
   }
@@ -10068,7 +10082,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         setToast(T.exportEmpty);
         return;
       }
-      const csv = buildCargoCSV(cargo, result, container, preset, { domain });
+      const csv = buildCargoCSV(cargo, result, container, preset, { domain, texte: T.csv });
       const now = /* @__PURE__ */ new Date();
       const p2 = (n) => String(n).padStart(2, "0");
       const stamp = `${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}`;
