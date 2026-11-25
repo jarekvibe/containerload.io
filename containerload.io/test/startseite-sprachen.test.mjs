@@ -151,6 +151,6 @@ test("die deutsche Seite schickt gemerkte und erzwungene Sprachen auf ihre Seite
   assert.strictEqual(lauf("?lang=en"), "/en/");
   assert.strictEqual(lauf("", "es"), "/es/");
   assert.strictEqual(lauf("?lang=de", "es"), null, "die Adresse schlaegt die gemerkte Wahl");
-  for (const fremd of ["?lang=fr", "?lang=xx", "?lang=//evil.example", ""]) assert.strictEqual(lauf(fremd), null, `"${fremd}" leitet um`);
+  for (const fremd of ["?lang=qq", "?lang=xx", "?lang=//evil.example", ""]) assert.strictEqual(lauf(fremd), null, `"${fremd}" leitet um`);
   assert.strictEqual(lauf("", "//evil.example"), null);
 });

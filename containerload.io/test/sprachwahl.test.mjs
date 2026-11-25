@@ -75,7 +75,7 @@ test("eine weitere Sprache gilt, wenn ihre Datei geladen ist — sonst Englisch,
   // Im Register, aber die Datei kam nicht an (offline, alter Zwischenspeicher)
   assert.strictEqual(lang({ url: "?lang=es", register }), "en", "wer Spanisch waehlt und die Datei fehlt, bekommt Englisch");
   // Gar nicht im Register: wie bisher Deutsch
-  assert.strictEqual(lang({ url: "?lang=fr", register }), "de");
+  assert.strictEqual(lang({ url: "?lang=qq", register }), "de");
   assert.strictEqual(lang({ url: "?lang=__proto__", register }), "de");
   // Der Browser entscheidet weiterhin nichts
   assert.strictEqual(lang({ browser: "es-ES", geladen, register }), "de");

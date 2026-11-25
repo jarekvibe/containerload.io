@@ -20,9 +20,10 @@
 // Aufruf: node werkzeug/startseite-en.mjs
 import fs from 'node:fs';
 import es from './sprachen/es.mjs';
+import fr from './sprachen/fr.mjs';
 
 // Jede Sprache ausser Deutsch (Quelle) und Englisch (Woerterbuch steht in index.html)
-export const SPRACHEN = [es];
+export const SPRACHEN = [es, fr];
 
 const BASIS = 'https://containerload.io';
 
