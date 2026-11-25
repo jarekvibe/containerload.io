@@ -175,7 +175,7 @@ test("die Einheit kommt aus dem Link (&u=in) oder aus der eigenen Wahl -- und re
   assert.match(block, /const g = window\.localStorage\.getItem\("cl_unit"\); return EINHEITEN\.includes\(g\) \? g : "cm";/);
   // Gemerkt wird nur die eigene Wahl: der Link allein schreibt nichts.
   assert.ok(!/setItem\("cl_unit"/.test(block), "ein Link darf die gemerkte Einheit nicht ueberschreiben");
-  assert.ok(app.includes('const mitId = (url) => url + "&id=" + planId + (unit === "in" ? "&u=in" : "");'));
+  assert.ok(app.includes('const mitId = (url) => teilAdresse(url) + "&id=" + planId + (unit === "in" ? "&u=in" : "");'));
   // share.html reicht die ganze Abfrage weiter -- sonst ginge &u= auf dem Weg verloren.
   assert.match(lese("share.html"), /location\.search/, "share.html reicht die Abfrage nicht mehr durch");
 });

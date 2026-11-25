@@ -4893,6 +4893,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // die Vorgabe, und ein Link soll nicht laenger sein, als er sein muss.
     return window.location.origin + "/share?c=" + encodeURIComponent(s) + (LANG === "de" ? "" : "&lang=" + LANG);
   };
+  // Die Adresse, die HERAUSGEGEBEN wird (Teilen, QR-Code, Kopieren): jede Sprache ausser Deutsch
+  // hat ihre eigene Teilen-Seite /<kuerzel>/share. Die Vorschau-Karte von WhatsApp, Teams oder
+  // Slack liest nur den Kopf der Seite und fuehrt kein Skript aus -- ueber /share bekaeme ein
+  // spanischer Plan die deutsch-englische Karte. Die Seiten erzeugt werkzeug/teilen-seiten.mjs
+  // aus share.html; test/teilen-seite.test.mjs verlangt eine fuer jede Sprache des Rechners.
+  // encodePlanURL selbst bleibt, wie es ist: der Rampen-Schluessel hasht diese Adresse, und
+  // ein neuer Pfad haette die Haken aller laufenden Verladungen verworfen.
+  var teilAdresse = (url) => LANG === "de" ? url : url.replace("/share?c=", "/" + LANG + "/share?c=");
   // localStorage-Persistenz fuer "Meine Plaene" – nur lokal im Browser. Alles defensiv: Safari-
   // Privatmodus / Quota koennen werfen; kaputte Eintraege werden uebersprungen; max. 50 Plaene.
   // Der Entwurf: der Arbeitsstand, an dem gerade jemand sitzt. Bis hierher ueberlebte
@@ -8408,7 +8416,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setToast(T.plansSaved);
     };
     const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d, pl.name, pl.pid); onClose(); setToast(T.plansLoaded); };
-    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain) + (PLAN_ID_RE.test(pl.pid || "") ? "&id=" + pl.pid : ""); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
+    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = teilAdresse(encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain)) + (PLAN_ID_RE.test(pl.pid || "") ? "&id=" + pl.pid : ""); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
     const removePlan = (id) => setPlans(deletePlanFromStore(id));
     const startRename = (pl) => { setEditingId(pl.id); setEditName(pl.name); };
     const commitRename = () => {
@@ -8859,7 +8867,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Die Einheit des Absenders faehrt mit, wenn sie Zoll ist: sonst liest der Empfaenger
     // einen in Zoll gebauten Plan in Zentimetern. Eigener Parameter wie die Kennung -- im
     // Plan selbst (?c=) steht weiter cm und kg.
-    const mitId = (url) => url + "&id=" + planId + (unit === "in" ? "&u=in" : "");
+    const mitId = (url) => teilAdresse(url) + "&id=" + planId + (unit === "in" ? "&u=in" : "");
     const fassungJetztMerken = () => { try { fassungMerken(planId, compactEncode(planStateFrom(preset, container, cargo, forceCentered, domain), { presets: PRESETS, vehicles: VEHICLES })); } catch (e) {} };
     // Oeffnet jemand einen Link mit Plan-Kennung, den DIESES Geraet schon in einer anderen
     // Fassung gesehen (oder selbst verschickt) hat, steht oben, was sich geaendert hat.

@@ -75,7 +75,11 @@ function pngLesen(buf) {
   return { w, h, hex };
 }
 
-const KARTEN = [["og.png", "Startseite und Wissens-Seiten"], ["share-og.png", "geteilter Plan"]];
+// Dazu die Karten der Sprachseiten (/es/share ...): dieselbe Gestaltung, einsprachig. Sie
+// muessen dieselben Pruefungen bestehen -- wer sie ohne die Schrift oder mit einem anderen
+// Grundton neu erzeugt, faellt hier auf.
+const SPRACH_KARTEN = fs.readdirSync(path.join(dir, "..")).filter((f) => /^share-og-[a-z]{2}\.png$/.test(f)).sort();
+const KARTEN = [["og.png", "Startseite und Wissens-Seiten"], ["share-og.png", "geteilter Plan"], ...SPRACH_KARTEN.map((f) => [f, "geteilter Plan, " + f.slice(9, 11)])];
 
 for (const [datei, wofuer] of KARTEN) {
   const bild = pngLesen(lies(datei));

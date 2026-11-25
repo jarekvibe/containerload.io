@@ -10,6 +10,13 @@ ausserhalb von `containerload.io/`, werden also nie ausgeliefert.
 - `startseite-en.mjs` erzeugt `containerload.io/en/index.html` (englische Startseite) aus
   `containerload.io/index.html` und seinem EN-Woerterbuch -- nach JEDER Aenderung an
   index.html laufen lassen: `node werkzeug/startseite-en.mjs` (braucht nur Node).
+- `teilen-seiten.mjs` erzeugt die Teilen-Seiten je Sprache (`containerload.io/<kuerzel>/share.html`)
+  aus `containerload.io/share.html` und dessen `TEXTE`-Woerterbuch -- nach JEDER Aenderung an
+  share.html laufen lassen: `node werkzeug/teilen-seiten.mjs` (braucht nur Node).
+- `teilen-bilder.mjs` erzeugt die Vorschaubilder dazu (`containerload.io/share-og-<kuerzel>.png`)
+  aus `containerload.io/test/og/karte.html` -- braucht Playwright mit Chromium und die Schrift
+  Archivo: `node werkzeug/teilen-bilder.mjs [--schriften <ordner>]`. Nur noetig, wenn sich die
+  Karte oder ihre Texte aendern oder eine Sprache dazukommt; die Bilder sind eingecheckt.
 - `palettenrechner.mjs` erzeugt `containerload.io/ratgeber/palettenrechner.html` und
   `containerload.io/en/guide/pallet-calculator.html` aus `containerload.io/app.html`
   (Packer `makeFloorPacker`, `PRESETS`, `VEHICLES`) -- nach JEDER Aenderung an Packer,

@@ -6,6 +6,7 @@
 
   ?v=start  -> og.png        (Startseite und alle Wissens-/Guide-Seiten)
   ?v=share  -> share-og.png  (geteilter Plan, share.html)
+  ?v=share&lang=en|es|fr|zh -> share-og-<kuerzel>.png  (geteilter Plan je Sprache, <kuerzel>/share.html)
 
   Neu erzeugen: Seite im Browser oeffnen, Fenster auf exakt 1200 x 630 (deviceScaleFactor 1)
   und abfotografieren – oder mit Playwright:
@@ -22,9 +23,14 @@
   Kicker/Domain. Die Kennfarben der Kisten sind TYPE_COLORS[0] und [1] aus app.html;
   sie tragen Information (Packstueckart) und sind darum bunt.
 
-  Beide Karten sind ZWEISPRACHIG. Ein Vorschaubild ist statisch – der Scraper von Teams,
-  Slack oder LinkedIn liest die Meta-Angaben, bevor irgendein ?lang=en gewirkt haette.
+  Die beiden Karten ohne lang= sind ZWEISPRACHIG. Ein Vorschaubild ist statisch – der Scraper
+  von Teams, Slack oder LinkedIn liest die Meta-Angaben, bevor irgendein ?lang=en gewirkt haette.
   Zwei Sprachen auf einer Karte ist die einzige Fassung, die ohne zweite Seite auskommt.
+
+  Seit 25.11.26 GIBT es die zweite Seite: jede Sprache des Rechners ausser Deutsch hat ihre
+  eigene Teilen-Seite (/es/share ...) mit einsprachiger Karte. Alle auf einmal erzeugt
+  werkzeug/teilen-bilder.mjs. Die Texte stehen unten in TXT (share_<kuerzel>); kommt im
+  Rechner eine Sprache dazu, gehoert sie auch hierher (test/teilen-seite.test.mjs prueft es).
 -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -75,6 +81,30 @@
       e: "Sieh in 3D, wie die Ladung in den Container passt.<br>See in 3D how the cargo fits into the container.",
       f: "ohne Login \u00B7 no sign-up"
     },
+    share_en: {
+      k: "Shared load plan",
+      h: 'A load plan<br><em>was shared with you.</em>',
+      e: "See in 3D how the cargo fits into the container.",
+      f: "no sign-up"
+    },
+    share_es: {
+      k: "Plan de carga compartido",
+      h: 'Un plan de carga<br><em>compartido contigo.</em>',
+      e: "Mira en 3D c\u00F3mo cabe la carga en el contenedor.",
+      f: "sin registro"
+    },
+    share_fr: {
+      k: "Plan de chargement partag\u00E9",
+      h: 'Un plan de chargement<br><em>partag\u00E9 avec vous.</em>',
+      e: "Voyez en 3D comment la marchandise tient dans le conteneur.",
+      f: "sans inscription"
+    },
+    share_zh: {
+      k: "\u5206\u4EAB\u7684\u88C5\u8F7D\u65B9\u6848",
+      h: '\u4E00\u4EFD\u88C5\u8F7D\u65B9\u6848<br><em>\u5DF2\u5206\u4EAB\u7ED9\u4F60\u3002</em>',
+      e: "\u4EE5 3D \u67E5\u770B\u8D27\u7269\u5982\u4F55\u88C5\u5165\u96C6\u88C5\u7BB1\u3002",
+      f: "\u65E0\u9700\u6CE8\u518C"
+    },
     start: {
       k: "3D-Ladungsrechner &nbsp;\u00B7&nbsp; 3D load calculator",
       h: 'Jede Ladung.<br><em>Im richtigen Container.</em>',
@@ -82,7 +112,10 @@
       f: "ISO 668 \u00B7 kostenlos \u00B7 ohne Account"
     }
   };
-  var t = TXT[new URLSearchParams(location.search).get("v") === "start" ? "start" : "share"];
+  var Q = new URLSearchParams(location.search);
+  var SPR = (Q.get("lang") || "").toLowerCase().slice(0, 2);
+  var t = Q.get("v") === "start" ? TXT.start : (TXT["share_" + SPR] || TXT.share);
+  if (t !== TXT.start && t !== TXT.share) document.documentElement.lang = SPR;
   document.getElementById("kt").innerHTML = t.k;
   document.getElementById("h").innerHTML = t.h;
   document.getElementById("e").innerHTML = t.e;

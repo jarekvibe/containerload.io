@@ -161,7 +161,7 @@ test("jeder verschickte Plan-Link traegt die Kennung, und der Absender merkt sic
   assert.match(roh, /const planURL = mitId\(encodePlanURL\(preset, container, cargo, forceCentered, domain\)\);\n\s*fassungJetztMerken\(\);/,
     "der QR-Code im Ladevorschlag fuehrt zur selben Plan-Kennung");
   assert.match(roh, /writeText\(mitId\(encodePlanURL\(preset, container, cargo, forceCentered, domain\)\) \+ "&rampe=1"\)/);
-  assert.match(roh, /const mitId = \(url\) => url \+ "&id=" \+ planId \+ \(unit === "in" \? "&u=in" : ""\);/, "eigener Parameter -- die Codetabelle von ?c= bleibt unberuehrt");
+  assert.match(roh, /const mitId = \(url\) => teilAdresse\(url\) \+ "&id=" \+ planId \+ \(unit === "in" \? "&u=in" : ""\);/, "eigener Parameter -- die Codetabelle von ?c= bleibt unberuehrt");
   assert.match(roh, /setPlanId\(neuePlanId\(\)\); \/\/ geleert = neuer Plan/, "Leeren beginnt einen neuen Plan");
 });
 
