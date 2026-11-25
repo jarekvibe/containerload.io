@@ -266,14 +266,15 @@ test("Ehrlichkeit im Formular: die Tara wird nie vorbelegt, das Plangewicht ist 
 });
 
 test("die Ausgaben stehen in der Kopfleiste, das Menue behaelt alle", () => {
-  // Ladevorschlag, Bild und VGM sichtbar neben "Teilen" (ab md als Symbol, ab xl mit Wort)
+  // Ladevorschlag, Bild und VGM sichtbar neben "Teilen": ab md als Symbol, mit Wort, sobald es
+  // neben dem mittigen Plannamen Platz hat (das misst die Kopfzeile selbst -- test/kopfzeile)
   assert.ok(roh.includes("!EMBEDDED && kopfAusgaben, /* @__PURE__ */ React.createElement(\"button\", { onClick: manualMode ? void 0 : doShare"), "die Ausgaben stehen nicht direkt vor Teilen");
   const kopf = zwischen("const kopfAusgaben = [", "].filter(Boolean);");
   assert.match(kopf, /domain === "sea" && kopfKnopf\("lv", T\.pdfBtn, T\.pdfTitle, buildLadevorschlag/);
   assert.match(kopf, /kopfKnopf\("bild", T\.shotBtn, T\.shotTitle, \(\) => setExportOpen\(true\)/);
   assert.match(kopf, /domain === "sea" && kopfKnopf\("vgm", T\.vgmKopfBtn, T\.vgmKopfTitel, \(\) => vgmOeffnen\(null\), !planSteht \|\| manualMode/);
   const knopf = zwischen("const kopfKnopf = (", "const kopfAusgaben = [");
-  assert.ok(knopf.includes('className: "hidden md:flex') && knopf.includes('className: "hidden xl:inline"'), "Symbol ab md, Wort ab xl");
+  assert.ok(knopf.includes('className: "hidden md:flex') && knopf.includes('className: "kopf-wort"'), "Symbol ab md, Wort nach Platz");
   assert.ok(knopf.includes('"aria-label": label') && knopf.includes("strokeWidth: ICO.sw"));
   // Im Menue stehen weiterhin alle -- auf dem Telefon ist es der einzige Weg
   const menu = zwischen("domain === \"sea\" && { label: T.pdfBtn, sub: T.pdfTitle, fn: buildLadevorschlag }", "].filter(Boolean).map((e, i) => e.trenner");
