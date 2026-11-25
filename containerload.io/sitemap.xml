@@ -13,6 +13,7 @@
     <loc>https://containerload.io/</loc>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/"/>
     <changefreq>weekly</changefreq><priority>1.0</priority>
   </url>
@@ -20,6 +21,15 @@
     <loc>https://containerload.io/en/</loc>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/"/>
+    <changefreq>weekly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/es/</loc>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/"/>
     <changefreq>weekly</changefreq><priority>0.8</priority>
   </url>

@@ -123,12 +123,12 @@ test("die alte Adresse /?lang=en ist ueberall abgeloest", () => {
   assert.ok(dePfad.includes("localStorage.setItem('cl_lang','de')"), "/de/ merkt sich die Wahl nicht -- wer frueher EN gewaehlt hat, landete sonst auf /en/");
   assert.ok(!/location\.(replace|href)[^;]*search/.test(dePfad), "/de/ darf die Abfrage nicht mitnehmen");
   // Die englische Seite raeumt das angehaengte ?lang=en aus der Adresse
-  assert.ok(de.includes("if(SEITE==='en'&&erzwungen){ try{var rest=location.search.replace(/([?&])lang=[^&]*(&|$)/,'$1').replace(/[?&]$/,''); history.replaceState(null,'',location.pathname+rest+location.hash);}catch(e){} }"));
+  assert.ok(de.includes("if(SEITE!=='de'&&erzwungen){ try{var rest=location.search.replace(/([?&])lang=[^&]*(&|$)/,'$1').replace(/[?&]$/,''); history.replaceState(null,'',location.pathname+rest+location.hash);}catch(e){} }"));
   for (const [vor, nach] of [["?lang=en", ""], ["?lang=en&utm=x", "?utm=x"], ["?utm=x&lang=en", "?utm=x"], ["?a=1&lang=en&b=2", "?a=1&b=2"]]) {
     assert.strictEqual(vor.replace(/([?&])lang=[^&]*(&|$)/, "$1").replace(/[?&]$/, ""), nach, `Aufraeumen von ${vor}`);
   }
   // ... und das Skript der deutschen Seite faengt die alte Adresse auch ohne Netlify ab
-  assert.ok(de.includes("if(SEITE==='de'&&(erzwungen==='en'||(!erzwungen&&gemerkt==='en'))){ try{location.replace('/en/'+location.hash);}catch(e){} return; }"));
+  assert.ok(de.includes("var ziel=erzwungen||gemerkt;\n  if(SEITE==='de'&&ziel&&ziel!=='de'){ try{location.replace('/'+ziel+'/'+location.hash);}catch(e){} return; }"));
   // Der Rechner verlinkt seine Startseite richtig
-  assert.ok(lies("app.html").includes('var homeHref = LANG === "de" ? "/" : "/en/";'));
+  assert.ok(lies("app.html").includes('var homeHref = LANG === "de" ? "/" : (SPRACHE_MEHR[LANG] && SPRACHE_MEHR[LANG].start) || "/en/";'));
 });

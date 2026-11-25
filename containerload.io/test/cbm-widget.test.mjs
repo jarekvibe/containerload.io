@@ -119,7 +119,7 @@ test("der Sprung in den 3D-Rechner traegt die Zeilen als ?q= -- und die Sprache"
     "der englische Sprung der Volumen-Seite oeffnet einen deutschen Rechner");
   assert.ok(html["en/guide/how-to-calculate-cbm.html"].includes("encodeURIComponent(q) + '&lang=en'"),
     "der englische Sprung oeffnet einen deutschen Rechner");
-  assert.ok(html["index.html"].includes("(document.documentElement.lang === 'en' ? '&lang=en' : '')"),
+  assert.ok(html["index.html"].includes("(document.documentElement.lang === 'de' ? '' : '&lang=' + document.documentElement.lang)"),
     "die Startseite vergisst die Sprache");
 });
 

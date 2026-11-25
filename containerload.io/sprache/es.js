@@ -21,6 +21,7 @@
     loc: "es-ES",
     titel: "Calculadora de carga 3D para contenedores y camiones — ContainerLoad",
     laden: "ContainerLoad se está cargando…",
+    start: "/es/",            // die Startseite dieser Sprache (fehlt sie, gilt /en/)
     texte: function (h) {
       var React = h.React, C = h.C, plu = h.plu, fmtDE = h.fmtDE;
       var e = React.createElement, F = React.Fragment;

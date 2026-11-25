@@ -4656,7 +4656,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   window.addEventListener("pagehide", nutzSenden);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") nutzSenden(); });
   // Die englische Startseite ist seit 20.11.26 eine eigene Datei unter /en/
-  var homeHref = LANG === "de" ? "/" : "/en/";
+  var homeHref = LANG === "de" ? "/" : (SPRACHE_MEHR[LANG] && SPRACHE_MEHR[LANG].start) || "/en/";
   // Einheitliche (De-)Serialisierung des Plan-States – von Teilen, Speichern UND Laden gemeinsam
   // genutzt, damit nichts auseinanderdriftet. Format: { pr, eq, fc, co:{l,w,h,p}, it:[{n,l,w,h,wt,q,s,r}] }.
   var planStateFrom = (preset, container, cargo, forceCentered, domain) => ({ dm: domain === "road" ? "road" : "sea", pr: preset, eq: container.kind || "dry", fc: forceCentered ? 1 : 0, co: { l: container.l, w: container.w, h: container.h, p: container.payload }, it: cargo.map((c) => ({ n: c.name, l: c.l, w: c.w, h: c.h, wt: c.weight, q: c.qty, s: c.stackable === false ? 0 : isFinite(c.stackMax) && +c.stackMax >= 2 ? +c.stackMax : 1, sh: isFinite(+c.stackH) && +c.stackH > 0 ? +c.stackH : void 0, r: c.rotatable ? 1 : 0, cl: c.color || void 0, sl: Number.isInteger(c.slot) && c.slot >= 0 ? c.slot + 1 : void 0, st: Number.isInteger(c.stop) && c.stop >= 1 ? Math.min(9, c.stop) : void 0, g: c.gefahr === true ? 1 : void 0, un: c.gefahr === true && typeof c.un === "string" && /^\d{4}$/.test(c.un) ? c.un : void 0 })) });
