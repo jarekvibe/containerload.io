@@ -5957,9 +5957,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       methode: "Ermittlungsmethode",
       m1: "Methode 1", m1t: "Der gepackte und versiegelte Container wurde gewogen.",
       m2: "Methode 2", m2t: "Alle Packst\xFCcke einschlie\xDFlich Paletten, Stau- und Sicherungsmaterial wurden einzeln gewogen; dazu die Tara des Containers.",
-      erkl: "Hiermit wird best\xE4tigt, dass die oben angegebene Bruttomasse je Container nach der angekreuzten Methode ermittelt wurde.",
+      erkl: "Hiermit wird best\xE4tigt, dass die oben angegebene Bruttomasse je Container nach der oben genannten Methode ermittelt wurde.",
       name: "Name in Gro\xDFbuchstaben", unterschrift: "Unterschrift", ortDatum: "Ort, Datum", notiz: "Bemerkung",
-      fuss: "Erstellt mit ContainerLoad (containerload.io). Alle Angaben stammen vom Verlader — ContainerLoad wiegt nicht und pr\xFCft die Gewichte nicht.",
+      fuss: "Alle Angaben stammen vom Verlader — ContainerLoad wiegt nicht und pr\xFCft die Gewichte nicht.", mit: "Erstellt mit ContainerLoad · containerload.io",
       seite: (a, b) => `Seite ${a} / ${b}`
     },
     en: {
@@ -5969,120 +5969,150 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       methode: "Method used",
       m1: "Method 1", m1t: "The packed and sealed container was weighed.",
       m2: "Method 2", m2t: "All packages including pallets, dunnage and securing material were weighed individually and added to the tare mass of the container.",
-      erkl: "It is hereby confirmed that the gross mass stated above for each container was obtained by the method marked.",
+      erkl: "It is hereby confirmed that the gross mass stated above for each container was obtained by the method stated above.",
       name: "Name in capital letters", unterschrift: "Signature", ortDatum: "Place, date", notiz: "Remarks",
-      fuss: "Created with ContainerLoad (containerload.io). All figures are provided by the shipper — ContainerLoad does not weigh and does not verify the weights.",
+      fuss: "All figures are provided by the shipper — ContainerLoad does not weigh and does not verify the weights.", mit: "Created with ContainerLoad · containerload.io",
       seite: (a, b) => `Page ${a} / ${b}`
     }
   };
-  var VGM_JE_SEITE = 12;
+  // Hoechstens so viele Zeilen traegt eine Seite; die letzte so viele, wie ueber dem Schluss
+  // (Summe, Methode, Bemerkung, Erklaerung, Unterschrift) Platz ist -- das rechnet vgmPdf aus.
+  var VGM_JE_SEITE = 18, VGM_NOTIZ_ZEILEN = 8;
   // d: { sprache, methode (1|2), verlader, person, ort, buchung, datum ("JJJJ-MM-TT"), notiz,
   //      erstellt (Date), container: [{ marke, typ, nr, sg, ta, ld, vp, vgm }] }
+  // Die Ordnung des Blatts: EINE linke Kante fuer alles, kleine graue Beschriftung ueber dem
+  // Wert, fett nur, was die Reederei sucht (Container-Nr., VGM, Methode), und Linien nur in
+  // der Tabelle und unter der Unterschrift. Keine Flaechen, kein Kasten ums Markenzeichen.
   function vgmPdf(d) {
     const X = VGM_TXT[d.sprache === "en" ? "en" : "de"], en = d.sprache === "en";
-    const TINTE = "#10151C", GRAU = "#5B6675", HELL = "#8A94A3", LINIE = "#D9DEE5", BAND = "#F1F4F8", MARKE = "#2E8FFF";
-    const L = 48, R = PDF_A4[0] - 48, B = R - L;
+    const TINTE = "#10151C", GRAU = "#5B6675", HELL = "#8A94A3", LINIE = "#D9DEE5", MARKE = "#2E8FFF";
+    const L = 48, R = PDF_A4[0] - 48, B = R - L, halb = B / 2;
     const zahl = (n) => Math.round(n).toLocaleString(en ? "en-US" : "de-DE");
     const tag = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? (en ? `${m[1]}-${m[2]}-${m[3]}` : `${m[3]}.${m[2]}.${m[1]}`) : ""; };
     const heute = (() => { const t = d.erstellt instanceof Date ? d.erstellt : new Date(); const p2 = (n) => String(n).padStart(2, "0"); return tag(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`); })();
     const nrSchoen = (nr) => { const s = String(nr || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return s.length === 11 ? s.slice(0, 4) + " " + s.slice(4, 10) + " " + s.slice(10) : s; };
-    const m2 = d.methode !== 1;
-    const teile = [];
-    for (let i = 0; i < d.container.length; i += VGM_JE_SEITE) teile.push(d.container.slice(i, i + VGM_JE_SEITE));
+    const m2 = d.methode !== 1, mehrere = d.container.length > 1;
+    // Was zu lang fuer seinen Platz ist, wird kleiner gesetzt -- und reicht auch das nicht, in
+    // zwei Zeilen. Abgeschnitten wird nichts: eine halbe Siegelnummer waere eine falsche.
+    const passend = (s, size, fett, breite, min = 7.5) => { let g = size; while (g > min && pdfBreite(s, g, fett) > breite) g -= 0.5; return g; };
+    const einpassen = (S, x, y, t, size, fett, breite, farbe) => {
+      const g = passend(t, size, fett, breite);
+      if (pdfBreite(t, g, fett) <= breite) { S.text(x, y, t, { size: g, fett, farbe }); return; }
+      let n1 = pdfUmbruch(t, 7.5, fett, breite)[0].length;
+      while (n1 > 1 && pdfBreite(t.slice(0, n1), 7.5, fett) > breite) n1--;
+      const rest = t.slice(n1).trim();
+      S.text(x, y - 5, t.slice(0, n1).trim(), { size: 7.5, fett, farbe });
+      S.text(x, y + 4, rest, { size: passend(rest, 7.5, fett, breite, 4), fett, farbe });
+    };
+    const klein = (S, x, y, t, o) => S.text(x, y, t, { size: 8, farbe: HELL, ...o });
+    const ZEILE = 26, TAB_Y = 268, TAB_KOPF = 20, UNTEN = 772;
+    // Spaltenkanten in Punkt ab L: Text steht linksbuendig AN der Kante, Zahlen rechtsbuendig
+    const sp = m2
+      ? { cnr: 26, typ: 120, sg: 180, sgEnde: 262, ta: 302, ld: 366, vp: 444 }
+      : { cnr: 26, typ: 170, sg: 250, sgEnde: B - 64 };
+    // Der Schluss des Dokuments ab der Hoehe y; gibt zurueck, wie weit er reicht. Er wird
+    // zweimal gebraucht: einmal zum Ausmessen (wie viele Zeilen passen darueber?), einmal echt.
+    const schluss = (S, y) => {
+      if (mehrere) {
+        S.text(L + sp.cnr, y + 17, X.summe, { size: 10, farbe: GRAU });
+        S.text(R, y + 17, zahl(d.container.reduce((s, k) => s + (k.vgm || 0), 0)), { size: 11, fett: true, farbe: TINTE, rechts: true });
+        y += ZEILE;
+      }
+      y += 32;
+      klein(S, L, y, X.methode);
+      S.text(L, y + 15, m2 ? X.m2 : X.m1, { size: 10.5, fett: true, farbe: TINTE });
+      const mz = pdfUmbruch(m2 ? X.m2t : X.m1t, 9.5, false, B - 60);
+      mz.forEach((t, i) => S.text(L, y + 29 + i * 13, t, { size: 9.5, farbe: GRAU }));
+      y += 29 + (mz.length - 1) * 13;
+      const nAlle = pdfUmbruch(String(d.notiz || "").trim(), 9.5, false, B - 60).filter(Boolean);
+      const nz = nAlle.slice(0, VGM_NOTIZ_ZEILEN);
+      if (nAlle.length > nz.length) nz[nz.length - 1] += " …";
+      if (nz[0]) {
+        y += 26;
+        klein(S, L, y, X.notiz);
+        nz.forEach((t, i) => S.text(L, y + 15 + i * 13, t, { size: 9.5, farbe: TINTE }));
+        y += 15 + (nz.length - 1) * 13;
+      }
+      y += 36;
+      const ez = pdfUmbruch(X.erkl, 9.5, false, B - 60);
+      ez.forEach((t, i) => S.text(L, y + i * 13, t, { size: 9.5, farbe: TINTE }));
+      y += (ez.length - 1) * 13 + 20;
+      const od = [String(d.ort || "").trim(), heute].filter(Boolean).join(", ");
+      S.text(L, y, od, { size: passend(od, 9.5, false, B), farbe: TINTE });
+      // Unterschrift: links der Name gedruckt, rechts die Linie zum Unterschreiben
+      y += 62;
+      const wLinie = halb - 24, nm = String(d.person || "").toUpperCase();
+      einpassen(S, L, y - 7, nm, 10, false, wLinie, TINTE);
+      S.linie(L, y, L + wLinie, y, TINTE, 0.5);
+      klein(S, L, y + 12, X.name);
+      S.linie(L + halb, y, R, y, TINTE, 0.5);
+      klein(S, L + halb, y + 12, X.unterschrift);
+      return y + 14;
+    };
+    // Seiten: die LETZTE traegt so viele Zeilen, wie ueber dem Schluss Platz ist (dort wird
+    // unterschrieben -- sie soll nicht fast leer sein), der Rest verteilt sich gleichmaessig davor.
+    // Ohne diese Rechnung lief der Schluss bei voller Tabelle und langer Bemerkung in den Fuss.
+    const platz = UNTEN - (TAB_Y + TAB_KOPF);
+    const nLetzte = Math.max(1, Math.min(VGM_JE_SEITE, Math.floor((platz - schluss(pdfSeite(), 0)) / ZEILE)));
+    const teile = [], n = d.container.length, vorn = n - Math.min(n, nLetzte);
+    const je = vorn ? Math.ceil(vorn / Math.ceil(vorn / VGM_JE_SEITE)) : 0;
+    for (let i = 0; i < vorn; i += je) teile.push(d.container.slice(i, Math.min(vorn, i + je)));
+    teile.push(d.container.slice(vorn));
     const seiten = teile.map((zeilen, si) => {
       const S = pdfSeite();
-      // Kopf: Markenzeichen (derselbe Wuerfel wie im Rechner), Wortmarke, rechts die Kennung
-      S.flaeche(L, 44, 26, 26, MARKE);
-      const wx = (px) => L + 3 + px * 20 / 24, wy = (py) => 47 + py * 20 / 24;
+      // Kopf: der Wuerfel der Marke steht FREI auf dem Papier (kein farbiger Grund), daneben
+      // die Wortmarke, rechts das Erstelldatum
+      const ws = 20 / 17.2, wx = (px) => L + (px - 4.4) * ws, wy = (py) => 40 + (py - 3.4) * ws;
       S.vieleck([[12, 3.4], [19.6, 7.8], [12, 12.2], [4.4, 7.8]].map(([a, b]) => [wx(a), wy(b)]), "#0A2B46");
       S.vieleck([[4.4, 7.8], [12, 12.2], [12, 20.6], [4.4, 16.2]].map(([a, b]) => [wx(a), wy(b)]), "#165780");
       S.vieleck([[19.6, 7.8], [12, 12.2], [12, 20.6], [19.6, 16.2]].map(([a, b]) => [wx(a), wy(b)]), "#0F3C60");
-      const cw = S.text(L + 34, 62, "Container", { size: 13, fett: true, farbe: TINTE });
-      S.text(L + 34 + cw, 62, "Load", { size: 13, fett: true, farbe: MARKE });
-      S.text(R, 54, X.erstellt + " " + heute, { size: 8.5, farbe: GRAU, rechts: true });
-      S.text(R, 66, X.seite(si + 1, teile.length), { size: 8.5, farbe: HELL, rechts: true });
-      S.text(L, 112, X.titel, { size: 26, fett: true, farbe: TINTE });
-      S.text(L, 130, X.unter, { size: 9.5, farbe: GRAU });
-      S.linie(L, 144, R, 144, LINIE, 0.75);
+      const tx = L + 15.2 * ws + 8;
+      const cw = S.text(tx, 54.5, "Container", { size: 12.5, fett: true, farbe: TINTE });
+      S.text(tx + cw, 54.5, "Load", { size: 12.5, fett: true, farbe: MARKE });
+      klein(S, R, 54.5, X.erstellt + " " + heute, { rechts: true });
+      S.text(L, 114, X.titel, { size: 24, fett: true, farbe: TINTE });
+      S.text(L, 132, X.unter, { size: 9.5, farbe: GRAU });
       // Angaben: zwei Spalten, Beschriftung klein darueber
       const feld = (x, y, name, wert, breite) => {
-        S.text(x, y, name.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-        const zl = pdfUmbruch(wert || "–", 11, true, breite).slice(0, 2);
-        zl.forEach((t, i) => S.text(x, y + 15 + i * 13, t, { size: 11, fett: true, farbe: TINTE }));
+        klein(S, x, y, name);
+        // zwei Zeilen hat ein Feld; ein langer Firmenname wird dafuer kleiner gesetzt, nicht gekappt
+        const g = [10.5, 9.5, 8.5, 7.5].find((gr) => pdfUmbruch(wert || "–", gr, false, breite).length <= 2) || 7.5;
+        pdfUmbruch(wert || "–", g, false, breite).slice(0, 2).forEach((t, i) => S.text(x, y + 15 + i * 13, t, { size: g, farbe: TINTE }));
       };
-      const halb = B / 2;
-      feld(L, 164, X.verlader, d.verlader, halb - 16);
-      feld(L + halb, 164, X.buchung, d.buchung, halb - 8);
-      feld(L, 210, X.person, d.person, halb - 16);
-      feld(L + halb, 210, X.datum, tag(d.datum), halb - 8);
-      // Tabelle. Spaltenkanten in Punkt ab L; Zahlen stehen rechtsbuendig.
-      let y = 262;
-      const sp = m2
-        ? { nr: 0, cnr: 26, typ: 132, sg: 186, ta: 304, ld: 364, vp: 432, vgm: B }
-        : { nr: 0, cnr: 26, typ: 170, sg: 250, vgm: B };
-      S.flaeche(L, y, B, 22, BAND);
-      const kopf = (x, t, rechts) => S.text(L + x + (rechts ? 0 : 8), y + 14.5, t.toUpperCase(), { size: 7, fett: true, farbe: GRAU, sperr: 0.5, rechts });
-      kopf(sp.nr, X.sp[0]); kopf(sp.cnr, X.sp[1]); kopf(sp.typ, X.sp[2]); kopf(sp.sg, X.sp[3]);
-      if (m2) { kopf(sp.ta, X.sp[4], true); kopf(sp.ld, X.sp[5], true); kopf(sp.vp, X.sp[6], true); }
-      kopf(sp.vgm - 8, X.sp[7] + " " + X.kg, true);
-      y += 22;
-      zeilen.forEach((k) => {
+      feld(L, 168, X.verlader, d.verlader, halb - 24);
+      feld(L + halb, 168, X.buchung, d.buchung, halb);
+      feld(L, 218, X.person, d.person, halb - 24);
+      feld(L + halb, 218, X.datum, tag(d.datum), halb);
+      // Tabelle: Kopf ohne Flaeche, darunter EINE kraeftige Linie, zwischen den Zeilen Haarlinien
+      let y = TAB_Y;
+      const kopf = (x, t, rechts) => klein(S, L + x, y + 12, t, { rechts });
+      kopf(0, X.sp[0]); kopf(sp.cnr, X.sp[1]); kopf(sp.typ, X.sp[2]); kopf(sp.sg, X.sp[3]);
+      if (m2) { kopf(sp.ta, X.sp[4] + " " + X.kg, true); kopf(sp.ld, X.sp[5] + " " + X.kg, true); kopf(sp.vp, X.sp[6] + " " + X.kg, true); }
+      kopf(B, X.sp[7] + " " + X.kg, true);
+      y += TAB_KOPF;
+      S.linie(L, y, R, y, TINTE, 0.75);
+      zeilen.forEach((k, i) => {
         const ty = y + 17;
-        S.text(L + 8, ty, k.marke || "", { size: 9, farbe: GRAU });
-        S.text(L + sp.cnr + 8, ty, nrSchoen(k.nr), { size: 11, fett: true, farbe: TINTE });
-        S.text(L + sp.typ + 8, ty, k.typ || "", { size: 9.5, farbe: TINTE });
-        S.text(L + sp.sg + 8, ty, k.sg || "–", { size: 9.5, farbe: TINTE });
+        const zelle = (x, t, breite, fett) => einpassen(S, L + x, ty, t, fett ? 10.5 : 10, fett, breite, TINTE);
+        S.text(L, ty, k.marke || "", { size: 9, farbe: HELL });
+        zelle(sp.cnr, nrSchoen(k.nr), sp.typ - sp.cnr - 8, true);
+        zelle(sp.typ, k.typ || "", sp.sg - sp.typ - 8, false);
+        if (k.sg) zelle(sp.sg, k.sg, sp.sgEnde - sp.sg, false); else S.text(L + sp.sg, ty, "–", { size: 10, farbe: HELL });
         if (m2) {
-          S.text(L + sp.ta, ty, zahl(k.ta), { size: 9.5, farbe: TINTE, rechts: true });
-          S.text(L + sp.ld, ty, zahl(k.ld), { size: 9.5, farbe: TINTE, rechts: true });
-          S.text(L + sp.vp, ty, k.vp > 0 ? zahl(k.vp) : "–", { size: 9.5, farbe: TINTE, rechts: true });
+          S.text(L + sp.ta, ty, zahl(k.ta), { size: 10, farbe: TINTE, rechts: true });
+          S.text(L + sp.ld, ty, zahl(k.ld), { size: 10, farbe: TINTE, rechts: true });
+          S.text(L + sp.vp, ty, k.vp > 0 ? zahl(k.vp) : "–", { size: 10, farbe: k.vp > 0 ? TINTE : HELL, rechts: true });
         }
-        S.text(L + sp.vgm - 8, ty, zahl(k.vgm), { size: 12, fett: true, farbe: TINTE, rechts: true });
-        y += 27;
-        S.linie(L, y, R, y, LINIE, 0.5);
+        S.text(R, ty, zahl(k.vgm), { size: 11, fett: true, farbe: TINTE, rechts: true });
+        y += ZEILE;
+        const letzteZeile = i === zeilen.length - 1;
+        S.linie(L, y, R, y, letzteZeile ? TINTE : LINIE, letzteZeile ? 0.75 : 0.5);
       });
-      const letzte = si === teile.length - 1;
-      if (letzte && d.container.length > 1) {
-        S.text(L + sp.cnr + 8, y + 18, X.summe, { size: 9.5, fett: true, farbe: GRAU });
-        S.text(L + sp.vgm - 8, y + 18, zahl(d.container.reduce((s, k) => s + (k.vgm || 0), 0)), { size: 12, fett: true, farbe: TINTE, rechts: true });
-        y += 28;
-      }
-      if (letzte) {
-        // Methode: beide stehen da, eine ist angekreuzt -- so liest es sich ohne Legende.
-        y += 22;
-        S.text(L, y, X.methode.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-        y += 12;
-        [[1, X.m1, X.m1t], [2, X.m2, X.m2t]].forEach(([nr, name, text]) => {
-          const an = (d.methode === 1 ? 1 : 2) === nr;
-          S.rahmen(L, y, 11, 11, an ? TINTE : HELL, an ? 1 : 0.75);
-          if (an) { S.linie(L + 2.4, y + 5.8, L + 4.8, y + 8.4, TINTE, 1.4); S.linie(L + 4.8, y + 8.4, L + 8.8, y + 2.6, TINTE, 1.4); }
-          const nw = S.text(L + 19, y + 9, name, { size: 10, fett: true, farbe: an ? TINTE : HELL });
-          const zl = pdfUmbruch(text, 9.5, false, B - 19 - nw - 8);
-          zl.forEach((t, i) => S.text(L + 19 + nw + 8, y + 9 + i * 12.5, t, { size: 9.5, farbe: an ? TINTE : HELL }));
-          y += Math.max(1, zl.length) * 12.5 + 9;
-        });
-        if (String(d.notiz || "").trim()) {
-          y += 8;
-          S.text(L, y, X.notiz.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-          pdfUmbruch(d.notiz, 9.5, false, B).slice(0, 4).forEach((t, i) => S.text(L, y + 14 + i * 12.5, t, { size: 9.5, farbe: TINTE }));
-          y += 14 + Math.min(4, pdfUmbruch(d.notiz, 9.5, false, B).length) * 12.5;
-        }
-        // Erklaerung und Unterschrift stehen unten auf dem Blatt, nicht direkt unter der Tabelle
-        const uy = Math.max(y + 34, 640);
-        pdfUmbruch(X.erkl, 9.5, false, B).forEach((t, i) => S.text(L, uy + i * 12.5, t, { size: 9.5, farbe: TINTE }));
-        const sy = uy + 62;
-        S.text(L, sy, String(d.person || "").toUpperCase(), { size: 12, fett: true, farbe: TINTE });
-        S.linie(L, sy + 7, L + halb - 24, sy + 7, TINTE, 0.75);
-        S.text(L, sy + 19, X.name.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-        S.linie(L + halb, sy + 7, R, sy + 7, TINTE, 0.75);
-        S.text(L + halb, sy + 19, X.unterschrift.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-        const od = [String(d.ort || "").trim(), heute].filter(Boolean).join(", ");
-        S.text(L, sy + 48, od, { size: 10.5, farbe: TINTE });
-        S.linie(L, sy + 55, L + halb - 24, sy + 55, LINIE, 0.75);
-        S.text(L, sy + 67, X.ortDatum.toUpperCase(), { size: 7, farbe: HELL, sperr: 0.6 });
-      }
-      S.linie(L, 792, R, 792, LINIE, 0.5);
-      pdfUmbruch(X.fuss, 7.5, false, B).forEach((t, i) => S.text(L, 804 + i * 9.5, t, { size: 7.5, farbe: HELL }));
+      if (si === teile.length - 1) schluss(S, y);
+      // Fuss: von wem die Zahlen stammen, rechts die Seite
+      S.text(L, 798, X.fuss, { size: 7.5, farbe: HELL });
+      S.text(L, 808, X.mit, { size: 7.5, farbe: HELL });
+      S.text(R, 798, X.seite(si + 1, teile.length), { size: 7.5, farbe: HELL, rechts: true });
       return S;
     });
     const erste = d.container[0] ? nrSchoen(d.container[0].nr) : "";

@@ -110,6 +110,11 @@ test("die PDF: gueltiger Aufbau, auslesbarer Text, die Zahlen des Formulars", ()
   assert.match(M.VGM_TXT.de.fuss, /Alle Angaben stammen vom Verlader .* ContainerLoad wiegt nicht und prüft die Gewichte nicht/);
   assert.match(M.VGM_TXT.en.fuss, /provided by the shipper .* does not weigh and does not verify/);
   assert.ok(s.includes("wiegt nicht und pr\\374ft die Gewichte nicht"));
+  assert.ok(s.includes("(Erstellt mit ContainerLoad \\267 containerload.io)"), "die Herkunftszeile im Fuss fehlt");
+  // Nur die GEWAEHLTE Methode steht im Dokument -- keine zweite, ausgegraute daneben
+  assert.ok(s.includes("(Methode 2)") && !s.includes("(Methode 1)"));
+  assert.match(M.VGM_TXT.de.erkl, /nach der oben genannten Methode/);
+  assert.match(M.VGM_TXT.en.erkl, /by the method stated above/);
   // Klammern und Rueckstriche in Eingaben zerbrechen die Datei nicht
   pruefePdf(M.vgmPdf(dok({ verlader: "A (B) \\ C", notiz: "Zeile 1\nZeile (2)" })));
 });
@@ -117,8 +122,9 @@ test("die PDF: gueltiger Aufbau, auslesbarer Text, die Zahlen des Formulars", ()
 test("Methode 1 und Englisch: andere Spalten, andere Sprache, dieselbe Datei-Sorgfalt", () => {
   const d = dok({ sprache: "en", methode: 1, container: [cont({ ...M.vgmRechnen({ br: 24180 }, 1), ta: 0, ld: 0, vp: 0 })] });
   const { s } = pruefePdf(M.vgmPdf(d));
-  for (const t of ["(VGM Declaration)", "(24,180)", "(2026-11-23)", "(SHIPPER)", "(Method 1)", "(JAREK POLEP)"]) assert.ok(s.includes(t), `fehlt ${t}`);
-  assert.ok(!s.includes("(TARE)") && !s.includes("(CARGO)"), "bei Methode 1 gibt es keine Einzelgewichts-Spalten");
+  for (const t of ["(VGM Declaration)", "(24,180)", "(2026-11-23)", "(Shipper)", "(Method 1)", "(JAREK POLEP)", "(VGM kg)"]) assert.ok(s.includes(t), `fehlt ${t}`);
+  assert.ok(!/\((Tare|Cargo|Packing)\b/i.test(s), "bei Methode 1 gibt es keine Einzelgewichts-Spalten");
+  assert.ok(!s.includes("(Method 2)"), "die nicht gewaehlte Methode steht nicht im Dokument");
   assert.ok(!s.includes("Erkl\\344rung"), "deutscher Text im englischen Dokument");
   // Beide Sprachen tragen dieselben Textschluessel
   assert.deepStrictEqual(Object.keys(M.VGM_TXT.en).sort(), Object.keys(M.VGM_TXT.de).sort());
@@ -133,6 +139,79 @@ test("viele Container: mehrere Seiten, Unterschrift nur auf der letzten", () => 
   assert.strictEqual(s.split("(JAREK POLEP)").length - 1, 1, "die Unterschrift steht nicht genau einmal da");
   assert.ok(s.includes("(Seite 1 / 2)") && s.includes("(Seite 2 / 2)"));
   assert.ok(s.includes(`(${(24250 * n).toLocaleString("de-DE")})`), "die Summe ueber alle Container fehlt");
+});
+
+// Die Seiten einzeln, mit den Grundlinien aller Textzeilen (in Punkt von OBEN gemessen)
+const seitenVon = (bytes) => [...text(bytes).matchAll(/<< \/Length \d+ >>\nstream\n([\s\S]*?)\nendstream/g)].map((m) => ({
+  strom: m[1],
+  zeilen: [...m[1].matchAll(/1 0 0 1 [\d.]+ ([\d.]+) Tm \(((?:\\.|[^\\)])*)\) Tj/g)].map((t) => ({ y: 841.89 - Number(t[1]), t: t[2] }))
+}));
+
+test("das Blatt ist ruhig: Markenzeichen ohne Grund, keine Flaechen, nur zwei Linienfarben", () => {
+  for (const d of [dok(), dok({ sprache: "en", methode: 1, container: [cont({ ...M.vgmRechnen({ br: 24180 }, 1) })] })]) {
+    for (const { strom } of seitenVon(M.vgmPdf(d))) {
+      assert.ok(!/ re f/.test(strom), "gefuelltes Rechteck im Dokument -- das Markenzeichen steht frei, die Tabelle hat kein Band");
+      // Der Wuerfel: genau drei gefuellte Vielecke in den drei Flaechentoenen der Marke
+      const flaechen = [...strom.matchAll(/^([\d.]+ [\d.]+ [\d.]+) rg [^\n]* h f$/gm)].map((m) => m[1]);
+      assert.deepStrictEqual(flaechen, ["0.04 0.17 0.27", "0.09 0.34 0.5", "0.06 0.24 0.38"]);
+      // Linien: Tinte (Tabelle, Unterschrift) und die Haarlinie -- sonst nichts
+      const linien = new Set([...strom.matchAll(/([\d.]+ [\d.]+ [\d.]+) RG/g)].map((m) => m[1]));
+      for (const l of linien) assert.ok(["0.06 0.08 0.11", "0.85 0.87 0.9"].includes(l), "fremde Linienfarbe " + l);
+    }
+  }
+});
+
+test("der Schluss laeuft nie in den Fuss -- egal wie viele Container und wie lang die Bemerkung", () => {
+  const lang = "Zwei Kartons an der Ecke eingedrückt, Fotos folgen per Mail. ".repeat(12);
+  for (const notiz of ["", lang]) for (const methode of [1, 2]) for (let n = 1; n <= 40; n++) {
+    const d = dok({ notiz, methode, container: Array.from({ length: n }, (_, i) => cont({ marke: "C" + (i + 1) })) });
+    const seiten = seitenVon(M.vgmPdf(d));
+    let zeilen = 0;
+    seiten.forEach(({ zeilen: zl }, si) => {
+      const inhalt = zl.filter((z) => z.y < 790);
+      const tiefste = Math.max(...inhalt.map((z) => z.y));
+      assert.ok(tiefste <= 772, `${n} Container, Methode ${methode}, Seite ${si + 1}: Text bei ${tiefste.toFixed(1)} pt liegt im Fuss`);
+      assert.strictEqual(zl.filter((z) => z.y >= 790).length, 3, "im Fuss stehen genau drei Zeilen (Herkunft der Zahlen, Erstellt mit, Seite)");
+      zeilen += zl.filter((z) => /^C\d+$/.test(z.t)).length;
+    });
+    assert.strictEqual(zeilen, n, `${n} Container: es stehen ${zeilen} Zeilen im Dokument`);
+    // Unterschrieben wird genau einmal, auf der letzten Seite -- und die traegt immer Container
+    const mitName = seiten.map(({ zeilen: zl }) => zl.some((z) => z.t === "JAREK POLEP"));
+    assert.deepStrictEqual(mitName, seiten.map((_, i) => i === seiten.length - 1));
+    assert.ok(seiten[seiten.length - 1].zeilen.some((z) => /^C\d+$/.test(z.t)), "die Unterschriftsseite traegt keinen Container");
+  }
+});
+
+test("zu lange Eintraege werden kleiner oder zweizeilig gesetzt -- nie abgeschnitten, nie in die Nachbarspalte", () => {
+  const siegel = "SIEGEL-1234567890-ABCDEFGH/XYZ", name = "Maximilian Alexander von Hohenstein-Schwarzenberg der Jüngere";
+  const firma = "Internationale Maschinen- und Anlagenbau Verwaltungsgesellschaft Bremen-Nord mbH";
+  const d = dok({ person: name, verlader: firma, container: [cont({ sg: siegel, typ: "40' Flat Rack" })] });
+  const { strom } = seitenVon(M.vgmPdf(d))[0];
+  const ops = [...strom.matchAll(/BT \/(F[12]) ([\d.]+) Tf [\d. ]+ rg [\d.]+ Tc 1 0 0 1 ([\d.]+) ([\d.]+) Tm \(((?:\\.|[^\\)])*)\) Tj ET/g)]
+    .map((m) => ({ fett: m[1] === "F2", size: +m[2], x: +m[3], y: 841.89 - m[4], t: m[5].replace(/\\([0-7]{3})/g, (_, o) => String.fromCharCode(parseInt(o, 8))).replace(/\\(.)/g, "$1") }));
+  const breit = (o) => M.pdfBreite(o.t, o.size, o.fett);
+  // Siegel: Spalte beginnt bei 48 + 180 und ist 82 pt breit -- zwei Zeilen, zusammen die ganze Nummer
+  const sg = ops.filter((o) => Math.abs(o.x - 228) < 0.01 && o.y > 290 && o.y < 320);
+  assert.strictEqual(sg.length, 2, "das lange Siegel steht nicht zweizeilig da");
+  assert.strictEqual(sg.map((o) => o.t).join(""), siegel);
+  for (const o of sg) assert.ok(breit(o) <= 82 + 1e-6, `Siegelzeile "${o.t}" ist ${breit(o).toFixed(1)} pt breit`);
+  // Bauart: kleiner gesetzt, eine Zeile, in der Spalte (52 pt)
+  const typ = ops.find((o) => o.t === "40' Flat Rack");
+  assert.ok(typ && typ.size < 10 && breit(typ) <= 52 + 1e-6);
+  // Die normale Container-Nr. bleibt in voller Groesse
+  assert.strictEqual(ops.find((o) => o.t === "MSKU 123456 5").size, 10.5);
+  // Der Name ueber der Unterschriftslinie: ganz da, nicht breiter als die Linie
+  const linie = (499.28 / 2) - 24;
+  const nm = ops.filter((o) => o.y > 400 && name.toUpperCase().includes(o.t) && o.t.length > 5);
+  assert.strictEqual(nm.map((o) => o.t).join(" "), name.toUpperCase());
+  for (const o of nm) assert.ok(breit(o) <= linie + 1e-6, "der Name ragt ueber die Linie");
+  // Der Firmenname im Kopf: hoechstens zwei Zeilen, aber vollstaendig
+  const fa = ops.filter((o) => o.y < 210 && Math.abs(o.x - 48) < 0.01 && firma.includes(o.t) && o.t.length > 5);
+  assert.ok(fa.length <= 2 && fa.map((o) => o.t).join(" ") === firma, "der Firmenname ist gekappt: " + fa.map((o) => o.t).join(" | "));
+  // Eine sehr lange Bemerkung wird gekappt -- dann aber sichtbar, mit Auslassungspunkten
+  const viele = Array.from({ length: 20 }, (_, i) => "Zeile " + (i + 1)).join("\n");
+  const s2 = text(M.vgmPdf(dok({ notiz: viele })));
+  assert.ok(s2.includes("(Zeile 8 \\205)") && !s2.includes("(Zeile 9)"), "die gekappte Bemerkung zeigt keine Auslassungspunkte");
 });
 
 test("Dateiname: Container-Nr. und Datum, bei mehreren die Anzahl dazu", () => {
