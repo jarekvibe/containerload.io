@@ -7,8 +7,8 @@
 // Wortwahl: 集装箱 (Container), 托盘 (Palette), 货件 (Packstueck), 可堆叠 (stapelbar),
 // 船公司 (Reederei), 铅封 (Siegel), 皮重 (Tara). Chinesisch kennt keine Mehrzahl -- plu()
 // bekommt deshalb zweimal dasselbe Wort.
-// Dokumente (Ladevorschlag, Bild, CSV, VGM) bleiben Englisch: sie gehen an Dritte, und die
-// Standardschriften der VGM-PDF kennen keine chinesischen Zeichen.
+// Ladevorschlag und Bild-Export sprechen Chinesisch (dok weiter unten), im Dokument-Fenster
+// mit dem Umschalter auf Englisch. Das VGM-Blatt bleibt Englisch (das PDF kennt keine Schriftzeichen).
 (function () {
   var S = window.CL_SPRACHE = window.CL_SPRACHE || {};
   S.zh = {
@@ -258,9 +258,102 @@
           kopf: ["集装箱", "货件", "数量", "长_cm", "宽_cm", "高_cm", "单件重量_kg", "总重量_kg", "可堆叠", "可旋转90", "录入数量"],
           ja: "是", nein: "否", bis: function (cm) { return "最高 " + cm + " cm"; }, max: function (n) { return "最多 " + n; }, offen: "未装", pos: function (n) { return "货件 " + n; }
         },
-        // Dokumente bleiben Englisch: die Standardschriften des VGM-PDF kennen keine chinesischen
-        // Schriftzeichen, und ein Ladevorschlag geht meist an Dritte, die Englisch lesen.
-        dok: null,
+        // Die DOKUMENTE auf Chinesisch: Ladevorschlag und Bild-Export. Das VGM-Blatt fehlt hier mit
+        // Absicht (kein "vgmpdf"): die Standardschriften des PDF kennen keine chinesischen
+        // Schriftzeichen -- es bleibt Englisch und steht im Formular nicht auf Chinesisch zur Wahl.
+        // Im Dokument-Fenster des Ladevorschlags steht der Umschalter 中文 | English: das Blatt fuer
+        // die eigene Rampe auf Chinesisch, das fuer den Kunden im Ausland auf Englisch.
+        // Je Baustein ein Woerterbuch -- oder eine Funktion, wenn Zahlen im Satz stehen (w). Die
+        // Schluessel vergleicht test/dokumente-sprachen.test.mjs. Die Texte gehen roh ins HTML.
+        dok: {
+          loc: "zh-CN",
+          row: { ja: "是", nein: "否", dg: "危险品", pos: "货件 " },
+          stau: {
+            top: "俯视图", topSub: "占地面积", topHint: "从上方看",
+            side: "侧视图", sideSub: "高度与堆叠", sideHint: "从侧面看",
+            len: "长", wid: "宽", hei: "高", front: "前壁", door: "◂ 箱门",
+            title: "积载图", h2: "装载示意",
+            note: "按计算结果绘制的示意图。准确的积载、旋转和堆叠见交互式 3D 方案（二维码）。纯几何计算 — 轴荷、重心和货物绑扎须另行核查。",
+            multi: function (n) { return "图示为第 1 个集装箱（共 " + n + " 个）— 其余见 3D 方案。"; },
+            c1: "已占地面", c2: "最大堆叠高度", c3: "堆叠层数", clear: "余量",
+            stack: "可堆叠", nostack: "不可堆叠"
+          },
+          page: function (w) {
+            return {
+              kicker: "装载方案", h1: "非约束性<br>装载方案",
+              cont: "集装箱", inner: "内部尺寸", payload: "最大载重",
+              discK: "非约束性方案 — 请自行核查",
+              discBody: "本方案依据所填尺寸和重量生成。纯几何计算 — 未核查实际重量、轴荷、重心或货物绑扎。装载、重量分布和绑扎须在运输前自行核查。本文件不是正式单证。",
+              kPos: "条目", colliTot: "共 " + w.COLLI + " 件",
+              kVol: "体积", volUnit: "m³", util: "装载率 " + w.VOLPCT + " %",
+              kWeight: "重量 · 填写值", ofPay: "占载重 " + w.WTPCT + " %",
+              fitsIn: "适用箱型",
+              tPos: "条目", entries: w.POSCOUNT + " 条 · " + w.COLLI + " 件",
+              thPos: "序号", thDesc: "名称", thQty: "数量", thDims: "尺寸 长×宽×高", thWpc: "单件重", thTot: "总重 kg", thVol: "体积 m³", thStk: "堆叠",
+              orderCol: "顺序", orderNote: "顺序仅为建议（重货和底层货先装）— 不是强制装载指令。",
+              sum: "合计",
+              notesK: "提示", nonbind: "· 非约束性",
+              hints: [
+                "重托盘放在底层并均匀分布。",
+                "不可堆叠的货件放在地面 — 其上不放任何货物。",
+                "轴荷、重心和货物绑扎须另行核查。",
+                "重量 = 你填写的数据，工具未作核实。"
+              ],
+              promoK: "交互式 3D 方案", promoH: "在 3D 中旋转并查看方案",
+              promoB: "扫描二维码 → 以 3D 查看装载、调整并分享。无需注册，直接在浏览器中打开。",
+              qrAlt: "3D 方案二维码", linkLabel: "或在电脑上打开链接：",
+              footer: "本文件不是正式单证 · 依据你填写的数据生成的非约束性方案 · 不能替代对货物绑扎、轴荷或重量分布的专业核查。",
+              page: "第 1 / 1 页",
+              datum: "日期", absender: "发货人", empfaenger: "收货人", hint: "点击填写"
+            };
+          },
+          sequenz: {
+            titel: "装载顺序", h2: "按此顺序装载",
+            sub: "先装前壁，最后装箱门处。先下后上。每完成一步打勾。",
+            ab: "距前壁",
+            mehr: function (n) { return "+ " + n + " 个步骤 — 完整内容见 3D 方案（二维码）"; },
+            pos: "货件 "
+          },
+          stopps: {
+            titel: "卸货顺序", h2: "按此顺序卸货",
+            sub: "按积载位置：第 1 站的货在箱门处，最先卸下。未指定站点的货在前壁处，留到最后。",
+            stopp: function (n) { return "第 " + n + " 站"; }, ohne: "未指定站点", ohneSub: "留在箱内", pos: "序号",
+            stk: function (n) { return n + " 件"; }, ab: "距前壁"
+          },
+          gewicht: function (w) {
+            return {
+              titel: "重量与重心 · 参考值", wand: "前壁", tuer: "箱门",
+              zeile: "货物重量 <b>" + w.kg + " kg</b> · 重心距前壁 <b>" + w.m + " m</b>（长度的 " + w.pct + " %）· 前半部 " + w.vorn + " % / 后半部 " + w.hinten + " %",
+              sub: "依据你填写的重量，假设每件货物质量均匀。不能替代称重；轴荷和绑扎须另行核查。"
+            };
+          },
+          vgm: function (w) {
+            return {
+              titel: "毛重（VGM 准备）· 参考值", ladung: "货物", tar: "箱体皮重", brutto: "毛重",
+              typ: w.hatTara ? "（" + w.typ + " 的典型值 — 以箱体 CSC 铭牌为准）" : "（请从箱体 CSC 铭牌读取）",
+              sub: "这不是 VGM。核实毛重须按 SOLAS VI/2 称重（方法 1）或经认证的计算（方法 2）得出 — 此数值仅为依据你未经核实的数据得出的参考值，皮重栏可在打印前填写。"
+            };
+          },
+          quittung: {
+            wer: "装载人（姓名）", wann: "日期 / 时间", unterschrift: "签名",
+            sub: "仅确认已按本方案装载。不确认货物绑扎、轴荷或重量。"
+          },
+          uebersicht: {
+            titel: "按集装箱", h2: "货物如何分配", cont: "集装箱", typ: "箱型", stk: "已装", vol: "体积", kg: "重量", voll: "装满",
+            note: "每个集装箱一行。每个箱单独到位、称重和运输 — 后面各页分别给出一张积载图。"
+          },
+          doc: {
+            titel: "装载方案", druck: "保存为 PDF / 打印", zu: "关闭",
+            felder: "虚线栏（REF、发货人、收货人）可在打印前填写 — 内容不会离开本页。"
+          },
+          bild: { ausl: "装载率", geladen: "已装", gewicht: "重量", volumen: "体积", stk: " 件", mehr: "更多" },
+          bau: {
+            eigen: "自定义尺寸", geo: "已作几何校验", empf: "推荐", empf2: "推荐",
+            gross: "货件过大", schwer: "货件过重", seite: "页 ", gebucht: "已订舱容积",
+            gefahr: "标有“危险品”的货件：仅为依据你填写内容所作的标记 — 不作危险品核查，不含隔离或积载规定。分类和可否承运仍由托运人负责。",
+            contVon: function (i, n) { return "第 " + i + " 个集装箱（共 " + n + " 个）"; }
+          }
+        },
         importNamen: { pos: "货件", pal: "托盘", ep: "欧标托盘" },
         exportFail: "导出失败", popups: "请允许弹出窗口", posWort: "货件", farbBlau: "蓝色", farbRot: "红色", logoOk: "徽标已上传",
         shotBtn: "图片",

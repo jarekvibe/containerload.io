@@ -92,19 +92,32 @@ test("jeder Baustein des Ladevorschlags laeuft ueber dokMit -- und Deutsch und E
   assert.strictEqual((bausteine.match(/en \? "en-US" : "de-DE"/g) || []).length, 0, "das Zahlenformat kommt nicht aus dokLoc");
 });
 
-test("Spanisch und Franzoesisch bringen den Ladevorschlag mit, Chinesisch bewusst nicht", () => {
-  assert.deepStrictEqual(MIT, ["es", "fr"]);
-  assert.strictEqual(dok("zh"), null, "Chinesisch: die Standardschriften des VGM-PDF kennen keine Schriftzeichen -- Dokumente bleiben Englisch");
+// Das VGM-Blatt ist ein PDF mit den Standardschriften (WinAnsi) -- die kennen keine chinesischen
+// Schriftzeichen. Eine Sprache darf deshalb Dokumente mitbringen und das Blatt auslassen: dann
+// bleibt es Englisch und steht im Formular nicht in dieser Sprache zur Wahl.
+const OHNE_VGM_BLATT = ["zh"];
+const teileVon = (k) => TEILE.filter((t) => !(t === "vgmpdf" && OHNE_VGM_BLATT.includes(k)));
+
+test("Spanisch, Franzoesisch und Chinesisch bringen ihre Dokumente mit -- Chinesisch ohne das VGM-Blatt", () => {
+  assert.deepStrictEqual(MIT, ["es", "fr", "zh"]);
+  for (const k of MIT) assert.strictEqual("vgmpdf" in dok(k), !OHNE_VGM_BLATT.includes(k), `${k}: VGM-Blatt`);
+  // Was das Blatt nicht in der Sprache hat, bietet das Formular auch nicht an
+  const { vgmSpGibt, vgmTexte, DOK_MEHR, VGM_TXT } = new Function(HELFER + app.slice(app.indexOf("  var VGM_TXT = {"), app.indexOf("  var VGM_JE_SEITE")) + "\nreturn { vgmSpGibt, vgmTexte, DOK_MEHR, VGM_TXT };")();
+  DOK_MEHR.zh = dok("zh"); DOK_MEHR.es = dok("es");
+  assert.strictEqual(vgmSpGibt("zh"), false, "das Formular boete ein chinesisches Blatt an, das es nicht gibt");
+  assert.strictEqual(vgmSpGibt("es"), true);
+  assert.strictEqual(vgmTexte("zh").titel, VGM_TXT.en.titel, "ohne eigenes Blatt muss es Englisch sein");
+  assert.strictEqual(vgmTexte("es").titel, "Declaración VGM");
 });
 
 for (const k of MIT) {
   const D = dok(k);
 
   test(`${k}: dieselben Bausteine, dieselben Schluessel, dieselbe Art wie im Englischen`, () => {
-    assert.deepStrictEqual(Object.keys(D).sort(), [...TEILE, "loc"].sort(), `${k}: andere Bausteine`);
+    assert.deepStrictEqual(Object.keys(D).sort(), [...teileVon(k), "loc"].sort(), `${k}: andere Bausteine`);
     assert.doesNotThrow(() => new Intl.NumberFormat(D.loc), `${k}: "${D.loc}" ist kein Zahlenformat`);
     assert.ok(D.loc.startsWith(k + "-"));
-    for (const t of TEILE) {
+    for (const t of teileVon(k)) {
       const en = BAUSTEINE[t].en, o = teil(D, t);
       // Funktion genau dort, wo Zahlen aus der Rechnung im Satz stehen
       assert.strictEqual(typeof D[t] === "function", Object.keys(BAUSTEINE[t].werte).length > 0, `${k}.${t}: Funktion/Objekt passt nicht zu den Werten des Bausteins`);
@@ -117,7 +130,7 @@ for (const k of MIT) {
   });
 
   test(`${k}: jeder Text steht da, traegt die Zahlen des englischen und ist HTML-fest`, () => {
-    for (const t of TEILE) {
+    for (const t of teileVon(k)) {
       const en = BAUSTEINE[t].en, o = teil(D, t);
       for (const key of Object.keys(en)) {
         const paare = art(en[key]) === "liste" ? en[key].map((x, i) => [x, o[key][i]])
@@ -143,14 +156,19 @@ for (const k of MIT) {
 
   test(`${k}: die Ehrlichkeitslinie steht auch hier -- unverbindlich, kein VGM, keine Pruefung`, () => {
     const p = teil(D, "page"), v = teil(D, "vgm"), q = teil(D, "quittung");
-    const unverb = k === "es" ? /no vinculante/i : /sans engagement/i;
-    assert.match(p.h1 + p.discK + p.footer, unverb, "das Dokument nennt sich nicht mehr unverbindlich");
-    assert.match(p.discBody, k === "es" ? /No es un documento oficial/ : /pas un document officiel/);
-    assert.match(v.sub, k === "es" ? /^No es una VGM\./ : /^Ce n’est pas une VGM\./, "die VGM-Vorbereitung gibt sich als VGM aus");
+    const SATZ = {
+      es: { unverb: /no vinculante/i, amtlich: /No es un documento oficial/, keinVgm: /^No es una VGM\./, richtwert: /VALOR ORIENTATIVO/, quittung: /^Solo confirma la carga/, gefahr: /no hay comprobación de mercancías peligrosas/ },
+      fr: { unverb: /sans engagement/i, amtlich: /pas un document officiel/, keinVgm: /^Ce n’est pas une VGM\./, richtwert: /VALEUR INDICATIVE/, quittung: /^Atteste uniquement le chargement/, gefahr: /aucun contrôle des marchandises dangereuses/ },
+      zh: { unverb: /非约束性/, amtlich: /不是正式单证/, keinVgm: /^这不是 VGM。/, richtwert: /参考值/, quittung: /^仅确认已按本方案装载/, gefahr: /不作危险品核查/ }
+    }[k];
+    assert.ok(SATZ, `${k}: fuer diese Sprache steht die Ehrlichkeitslinie noch nicht im Test`);
+    assert.match(p.h1 + p.discK + p.footer, SATZ.unverb, "das Dokument nennt sich nicht mehr unverbindlich");
+    assert.match(p.discBody, SATZ.amtlich);
+    assert.match(v.sub, SATZ.keinVgm, "die VGM-Vorbereitung gibt sich als VGM aus");
     assert.match(v.sub, /SOLAS VI\/2/);
-    assert.match(v.titel, k === "es" ? /VALOR ORIENTATIVO/ : /VALEUR INDICATIVE/);
-    assert.match(q.sub, k === "es" ? /^Solo confirma la carga/ : /^Atteste uniquement le chargement/, "die Quittung bestaetigt mehr als das Laden");
-    assert.match(teil(D, "bau").gefahr, k === "es" ? /no hay comprobación de mercancías peligrosas/ : /aucun contrôle des marchandises dangereuses/);
+    assert.match(v.titel, SATZ.richtwert);
+    assert.match(q.sub, SATZ.quittung, "die Quittung bestaetigt mehr als das Laden");
+    assert.match(teil(D, "bau").gefahr, SATZ.gefahr);
   });
 }
 
