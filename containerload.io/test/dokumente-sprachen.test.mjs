@@ -199,3 +199,59 @@ test("die Dokument-Sprache folgt der Oberflaeche, wenn die Sprachdatei Dokumente
   assert.ok(app.includes("const X = vgmTexte(d.sprache), en = d.sprache !== \"de\";"));
   assert.ok(app.includes('React.createElement(Seg, { items: vgmSprachen, value: vgmAbs.sp,'), "die Sprachwahl des VGM-Blatts zeigt nicht die Liste vgmSprachen");
 });
+
+// ── Die Sprachwahl im Dokument-Fenster ────────────────────────────────────────────────
+// Ein Dokument geht an Dritte. Der Kunde eines spanischen Verladers liest nicht unbedingt
+// Spanisch -- und der eines deutschen nicht unbedingt Deutsch. Seit die Dokumente die Sprache
+// der Oberflaeche sprechen, braucht es deshalb den Weg zurueck zum Englischen, ohne den ganzen
+// Rechner umzustellen: ein Umschalter in der Leiste des Dokument-Fensters.
+const WAHL = (() => { const a = L.findIndex((l) => l.includes("var dokWahl = () => {")); const e = L.findIndex((l, i) => i > a && l === "  };"); assert.ok(a > 0 && e > a, "dokWahl nicht gefunden"); return L.slice(a, e + 1).join("\n"); })();
+const DOC = (() => { const a = L.findIndex((l) => l.includes("var LV_DOC = (pageHTML, lang, wahl) => {")); const e = L.findIndex((l, i) => i > a && l === "  };"); assert.ok(a > 0 && e > a, "LV_DOC nicht gefunden"); return L.slice(a, e + 1).join("\n"); })();
+const LISTE = [["de", "Deutsch"], ["en", "English"], ["es", "Español"], ["fr", "Français"], ["zh", "中文"]];
+
+test("zur Wahl stehen die Sprache der Oberflaeche und Englisch -- wenn es zwei verschiedene sind", () => {
+  const wahl = (LANG, mehr) => new Function("LANG", "SPRACH_LISTE", HELFER + WAHL + "\nObject.assign(DOK_MEHR, " + JSON.stringify(mehr || {}) + ");\nreturn dokWahl();")(LANG, LISTE);
+  assert.deepStrictEqual(wahl("de"), [["de", "Deutsch"], ["en", "English"]], "auch der deutsche Verlader hat auslaendische Kunden");
+  assert.deepStrictEqual(wahl("es", { es: {} }), [["es", "Español"], ["en", "English"]]);
+  assert.deepStrictEqual(wahl("fr", { fr: {} }), [["fr", "Français"], ["en", "English"]]);
+  assert.deepStrictEqual(wahl("en"), [], "Englisch allein ist keine Wahl");
+  assert.deepStrictEqual(wahl("zh"), [], "ohne eigene Dokumente gibt es nur Englisch");
+  assert.deepStrictEqual(wahl("es"), [], "die Sprachdatei kam nicht an -- dann gibt es das Dokument nur englisch");
+});
+
+test("der Umschalter steht in der Leiste, druckt nicht mit und ruft den Rechner zurueck", () => {
+  const { LV_DOC } = new Function("escHTML", HELFER + DOC + "\nreturn { LV_DOC };")((t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]));
+  const mit = LV_DOC("<div class='page'></div>", "de", [["de", "Deutsch"], ["en", "English"]]);
+  assert.ok(mit.includes('<button class="cl-spk on" aria-pressed="true">Deutsch</button>'), "die aktive Sprache ist nicht markiert");
+  assert.ok(mit.includes(`<button class="cl-spk" aria-pressed="false" onclick="try{window.opener.__clLadevorschlag(window,'en')}catch(e){}">English</button>`), "der andere Knopf ruft den Rechner nicht");
+  assert.strictEqual((mit.match(/__clLadevorschlag\(/g) || []).length, 1, "der aktive Knopf darf nichts ausloesen");
+  // in der Leiste, und die Leiste verschwindet im Druck
+  assert.match(mit, /<div class="cl-tb">.*<span class="cl-sp" role="group">.*<\/span>.*<\/div>/s);
+  assert.ok(mit.includes("@media print{.cl-tb{display:none!important}"));
+  // andersherum
+  const en = LV_DOC("", "en", [["de", "Deutsch"], ["en", "English"]]);
+  assert.ok(en.includes('<html lang="en">') && en.includes('<button class="cl-spk on" aria-pressed="true">English</button>') && en.includes("__clLadevorschlag(window,'de')"));
+  // ohne Wahl kein Umschalter
+  for (const ohne of [LV_DOC("", "en", []), LV_DOC("", "en"), LV_DOC("", "de", [["de", "Deutsch"]])]) assert.ok(!ohne.includes('class="cl-sp"') && !ohne.includes("__clLadevorschlag("));
+  // Ein Kuerzel, das keines ist, kommt nicht in den Aufruf
+  const boese = LV_DOC("", "de", [["de", "Deutsch"], ["x');alert(1);('", "<b>"]]);
+  assert.ok(!boese.includes("alert(1)") && !boese.includes("<b>"), "ein fremdes Kuerzel landet im onclick");
+});
+
+test("der Rechner baut dasselbe Blatt in der gewaehlten Sprache ins selbe Fenster -- und nur dann", () => {
+  const bau = app.slice(app.indexOf("    const buildLadevorschlag = (dokSprache, fenster) => {"), app.indexOf("    // Am Schreibtisch ist der Rahmen genau ein Fenster hoch"));
+  assert.ok(bau.length > 5000, "der Zusammenbau wurde nicht gefunden");
+  // Der gewoehnliche Aufruf bekommt ein Klick-Ereignis: nur eine Sprache aus dokWahl() plus ein Fenster zaehlt
+  assert.ok(bau.includes('const wechsel = typeof dokSprache === "string" && !!(fenster && fenster.document) && dokWahl().some(([k]) => k === dokSprache);'));
+  // Die Sprache gilt fuer diesen einen Bau und wird IMMER zurueckgesetzt (auch nach return und Fehler)
+  assert.ok(bau.includes("const dokVorher = DOKLANG;") && bau.includes("if (wechsel) DOKLANG = dokSprache;"));
+  assert.match(bau, /\} finally \{\n\s*DOKLANG = dokVorher;\n\s*\}\n\s*\};\n$/, "DOKLANG wird nach dem Bau nicht zurueckgesetzt -- die naechsten Dokumente kaemen in der falschen Sprache");
+  // selbes Fenster, selbe Referenz, und der Wechsel zaehlt nicht als weiterer Ladevorschlag
+  assert.ok(bau.includes('const w = wechsel ? fenster : window.open("", "_blank");'));
+  assert.ok(bau.includes("const ref = wechsel && LV_LETZTE_REF ? LV_LETZTE_REF : `CL-") && bau.includes("LV_LETZTE_REF = ref;"));
+  assert.match(bau, /if \(!wechsel\) \{\n\s*zaehl\("ladevorschlag"\);/);
+  assert.ok(bau.includes("w.document.write(LV_DOC(pageHTML, DOKLANG, dokWahl()));"));
+  assert.ok(bau.includes("window.__clLadevorschlag = (f, k) => buildLadevorschlag(k, f);"));
+  // Die editierbaren Felder des Blatts liest dabei niemand aus (sie verlassen das Blatt nie)
+  assert.doesNotMatch(bau, /cl-edit/);
+});

@@ -3621,6 +3621,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const d = DOK_MEHR[lang] && DOK_MEHR[lang][teil];
     return d ? Object.assign(grund, typeof d === "function" ? d(werte || {}) : d) : grund;
   };
+  // In welchen Sprachen der LADEVORSCHLAG zu haben ist: in der der Oberflaeche (wenn es sie als
+  // Dokument gibt) und auf Englisch. Das Dokument geht an Dritte -- der Kunde eines spanischen
+  // Verladers liest nicht unbedingt Spanisch, der eines deutschen nicht unbedingt Deutsch.
+  // Vorher gab es diese Wahl nur ueber das Umstellen der ganzen Oberflaeche. Gewaehlt wird im
+  // Dokument-Fenster selbst (Umschalter in der Leiste von LV_DOC). Leer = keine Wahl (Englisch,
+  // oder eine Sprache ohne eigene Dokumente).
+  var dokWahl = () => {
+    const eigen = LANG === "de" || DOK_MEHR[LANG] ? LANG : null;
+    return eigen && eigen !== "en" ? [[eigen, (SPRACH_LISTE.find(([k]) => k === eigen) || [eigen, eigen.toUpperCase()])[1]], ["en", "English"]] : [];
+  };
+  var LV_LETZTE_REF = null;
   // Die Auswahl: [Kuerzel, Name, Satz im Menue] -- auch fuer Sprachen, die gerade NICHT geladen sind.
   var SPRACH_LISTE = [["de", "Deutsch", "Oberfl\xE4che auf Deutsch"], ["en", "English", "Switch the interface to English"]]
     .concat(Object.entries((typeof window !== "undefined" && window.CL_SPRACHEN) || {}).map(([k, v]) => [k, v[0], v[1]]));
@@ -5782,11 +5793,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="font-size:10px; line-height:1.45; color:#8492a6; margin-top:9px;">${K.note}</div>
     </div>`;
   };
-  var LV_DOC = (pageHTML, lang) => {
+  var LV_DOC = (pageHTML, lang, wahl) => {
     const K = dokMit(lang, "doc", lang !== "de"
       ? { titel: "Loading Plan", druck: "Save as PDF / print", zu: "Close", felder: "Dashed fields (REF, shipper, consignee) can be filled in before printing — they never leave this page." }
       : { titel: "Ladevorschlag", druck: "Als PDF speichern / drucken", zu: "Schlie\xDFen", felder: "Gestrichelte Felder (REF, Absender, Empf\xE4nger) vor dem Druck anklickbar — sie verlassen dieses Blatt nicht." });
-    return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${K.titel} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${K.druck}</button><button class="cl-x" onclick="window.close()">${K.zu}</button><span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${K.felder}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+    // Der Sprach-Umschalter (siehe dokWahl): der aktive Knopf tut nichts, der andere laesst den
+    // Rechner dasselbe Blatt in seiner Sprache in DIESES Fenster schreiben. Gleiche Herkunft --
+    // das Fenster ist vom Rechner geoeffnet; ist der Rechner inzwischen zu, passiert nichts.
+    const wahlHTML = Array.isArray(wahl) && wahl.length > 1
+      ? '<span class="cl-sp" role="group">' + wahl.filter(([k]) => /^[a-z]{2}$/.test(k)).map(([k, n]) => k === lang
+        ? `<button class="cl-spk on" aria-pressed="true">${escHTML(n)}</button>`
+        : `<button class="cl-spk" aria-pressed="false" onclick="try{window.opener.__clLadevorschlag(window,'${k}')}catch(e){}">${escHTML(n)}</button>`).join("") + "</span>"
+      : "";
+    return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${K.titel} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-sp{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:#161D27}.cl-tb .cl-spk{background:transparent;color:#8a98ad;padding:6px 12px;border-radius:7px}.cl-tb .cl-spk.on{background:#232C38;color:#fff;cursor:default}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${K.druck}</button><button class="cl-x" onclick="window.close()">${K.zu}</button>${wahlHTML}<span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${K.felder}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
   };
   var QIMPORT = (() => {
     try {
@@ -11031,9 +11050,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         : tuerKonflikte(cargo, result.chain && result.chain.length ? result.chain : [{ placed: result.placed, preset: container }], doorOpening);
     const doorFails = cargo.filter((_, i) => doorCheck.idx.has(i));
     const oogRows = result.oog ? [["overHeight", T.oogH], ["overWidthL", T.oogWL], ["overWidthR", T.oogWR], ["overLengthFront", T.oogLF], ["overLengthBack", T.oogLB]].filter(([k]) => (result.oog[k] || 0) > 0).map(([k, lbl]) => ({ lbl, v: Math.round(result.oog[k]) })) : [];
-    const buildLadevorschlag = () => {
-      zaehl("ladevorschlag");
-      setTimeout(fbFragen, 4000); // erst, wenn der Vorgang durch ist
+    // dokSprache und fenster kommen NUR vom Sprach-Umschalter im Dokument-Fenster (window.opener.
+    // __clLadevorschlag): dasselbe Blatt noch einmal, in der anderen Sprache, ins selbe Fenster.
+    // Der gewoehnliche Aufruf (Knopf, Menue) bekommt ein Klick-Ereignis -- das ist keine Sprache.
+    const buildLadevorschlag = (dokSprache, fenster) => {
+      const wechsel = typeof dokSprache === "string" && !!(fenster && fenster.document) && dokWahl().some(([k]) => k === dokSprache);
+      if (!wechsel) {
+        zaehl("ladevorschlag");
+        setTimeout(fbFragen, 4000); // erst, wenn der Vorgang durch ist
+      }
+      // Die Bausteine lesen DOKLANG: fuer diesen einen Bau gilt die gewaehlte Sprache.
+      const dokVorher = DOKLANG;
+      if (wechsel) DOKLANG = dokSprache;
       try {
         const items = cargo.filter((c) => num(c.qty, 0) > 0);
         if (!items.length) {
@@ -11109,7 +11137,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const datum = enPDF
           ? `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
           : `${p2(now.getDate())}.${p2(now.getMonth() + 1)}.${now.getFullYear()}`;
-        const ref = `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        // Beim Sprachwechsel bleibt die Referenz des Blatts dieselbe
+        const ref = wechsel && LV_LETZTE_REF ? LV_LETZTE_REF : `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        LV_LETZTE_REF = ref;
         const planURL = mitId(encodePlanURL(preset, container, cargo, forceCentered, domain));
         fassungJetztMerken();
         const qr = makeQR(planURL);
@@ -11231,16 +11261,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           });
         }
         const pageHTML = blaetter.join("");
-        const w = window.open("", "_blank");
+        const w = wechsel ? fenster : window.open("", "_blank");
         if (!w) {
           setToast(T.popups);
           return;
         }
         w.document.open();
-        w.document.write(LV_DOC(pageHTML, DOKLANG));
+        w.document.write(LV_DOC(pageHTML, DOKLANG, dokWahl()));
         w.document.close();
+        // Der Umschalter im Dokument-Fenster ruft hierher zurueck
+        window.__clLadevorschlag = (f, k) => buildLadevorschlag(k, f);
       } catch (e) {
         setToast(T.exportFail);
+      } finally {
+        DOKLANG = dokVorher;
       }
     };
     // Am Schreibtisch ist der Rahmen genau ein Fenster hoch: Kopfzeile, 3D-Ansicht, Statuszeile
