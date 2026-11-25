@@ -261,6 +261,7 @@
         // Dokumente bleiben Englisch: die Standardschriften des VGM-PDF kennen keine chinesischen
         // Schriftzeichen, und ein Ladevorschlag geht meist an Dritte, die Englisch lesen.
         dok: null,
+        importNamen: { pos: "货件", pal: "托盘", ep: "欧标托盘" },
         exportFail: "导出失败", popups: "请允许弹出窗口", posWort: "货件", farbBlau: "蓝色", farbRot: "红色", logoOk: "徽标已上传",
         shotBtn: "图片",
         shotExportTitle: "导出图片",

@@ -370,6 +370,7 @@
             contVon: function (i, n) { return "contenedor " + i + " de " + n; }
           }
         },
+        importNamen: { pos: "Bulto", pal: "Palet", ep: "Europalet" },
         exportFail: "No se ha podido exportar", popups: "Permite las ventanas emergentes", posWort: "Bulto", farbBlau: "Azul", farbRot: "Rojo", logoOk: "Logo subido",
         shotBtn: "Imagen",
         shotExportTitle: "Exportar imagen",

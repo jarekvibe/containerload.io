@@ -363,6 +363,7 @@
             contVon: function (i, n) { return "conteneur " + i + " sur " + n; }
           }
         },
+        importNamen: { pos: "Colis", pal: "Palette", ep: "Europalette" },
         exportFail: "L’export a échoué", popups: "Autorisez les fenêtres pop-up", posWort: "Colis", farbBlau: "Bleu", farbRot: "Rouge", logoOk: "Logo importé",
         shotBtn: "Image",
         shotExportTitle: "Exporter une image",

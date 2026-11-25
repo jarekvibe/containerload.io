@@ -742,6 +742,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Bewusst Modul-Variable statt Zusatzfeld in den rows: der parseCargoText-Vertrag
   // (rows = {qty,l,w,h,weight,stackable,rotatable,name}) bleibt unangetastet (QIMPORT!).
   var LAST_TSV_MAP = null;
+  // Wie eine Position heisst, die OHNE Namen ankommt ("12 x 120x80x100", ein ?q=-Link ohne
+  // Wort davor). Die Vorgabe des Parsers ist deutsch; der Rechner setzt hier die Woerter
+  // seiner Sprache ein, sobald das Woerterbuch steht (T.importNamen). Ein einzelner Aufruf
+  // kann sie mit opts.namen ueberstimmen. Vorher hiess so eine Position in jeder Sprache
+  // "Position", "Palette" oder "Europalette" -- auch im englischen Rechner.
+  var PARSER_NAMEN = null;
+  var parserNamen = (opts) => (opts && opts.namen) || (typeof PARSER_NAMEN !== "undefined" && PARSER_NAMEN) || {};
   // Excel-Copy-Paste (TSV): Kopfzeilen-Erkennung DE/EN, Einheiten aus dem Header
   // (mm/10, m*100, t*1000 – pro Spalte), positionaler Fallback ohne Header.
   // Ehrlichkeit: OHNE Einheit im Header wird cm angenommen – keine Magnitude-Heuristik.
@@ -902,7 +909,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       let stackable = true;
       if (map.stackable !== void 0 && /^(nein|no|0|false|✗|x)$/i.test(String(cell("stackable")).trim())) stackable = false;
       let name = String(cell("name") || "").replace(/\s+/g, " ").trim();
-      if (!name) name = "Position";
+      if (!name) name = parserNamen(opts).pos || "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
       // Metrische Listen werden wie eh und je auf ganze cm und kg gerundet. Zoll und Pfund
@@ -1092,7 +1099,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
       name = name.replace(/(?:^|\s)(?:je|à|each)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/\s+/g, " ").trim();
-      if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : dim2 ? "Palette" : "Position";
+      if (!name) { const NM = parserNamen(opts); name = pal ? pal.w === 80 ? NM.ep || "Europalette" : NM.pal || "Palette" : dim2 ? NM.pal || "Palette" : NM.pos || "Position"; }
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
       // Zoll und Pfund bleiben genau (48 in = 121,92 cm), metrische Angaben werden wie
@@ -3863,6 +3870,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       exportDone: "Ladeliste exportiert",
       // Die deutsche CSV-Fassung ist die Vorgabe in buildCargoCSV -- hier bewusst leer.
       csv: null,
+      // Ebenso die Namen namenloser Import-Positionen: Deutsch ist die Vorgabe des Parsers.
+      importNamen: null,
       // Die Dokument-Texte stehen fuer Deutsch und Englisch in den Bausteinen selbst (LV_*);
       // "dok" bringt nur eine Sprachdatei mit (siehe DOK_MEHR im LANG-Block).
       dok: null,
@@ -4369,6 +4378,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         ja: "yes", nein: "no", bis: (cm) => "up to " + cm + " cm", max: (n) => "max. " + n, offen: "open", pos: (n) => "Item " + n
       },
       dok: null,
+      importNamen: { pos: "Item", pal: "Pallet", ep: "Euro pallet" },
       exportFail: "Export failed", popups: "Please allow pop-ups", posWort: "Item", farbBlau: "Blue", farbRot: "Red", logoOk: "Logo uploaded",
       shotBtn: "Image",
       shotExportTitle: "Export image",
@@ -4646,6 +4656,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   if (SPRACHE_MEHR[LANG]) I18N[LANG] = Object.assign({}, I18N.en, SPRACHE_MEHR[LANG].texte({ React: window.React, C, plu: (n, a, b) => plu(n, a, b), fmtDE: (n) => fmtDE(n), loc: () => LOC() }));
   // Die Dokumente sprechen die Sprache der Oberflaeche, wenn die Sprachdatei sie mitbringt.
   if (SPRACHE_MEHR[LANG] && I18N[LANG].dok) { DOK_MEHR[LANG] = I18N[LANG].dok; DOKLANG = LANG; }
+  // ... und der Import nennt namenlose Positionen in der Sprache der Oberflaeche.
+  PARSER_NAMEN = (I18N[LANG] && I18N[LANG].importNamen) || null;
   var T = I18N[LANG];
   var EMBEDDED = (() => {
     try {
