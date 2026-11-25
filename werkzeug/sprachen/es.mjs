@@ -232,6 +232,8 @@ export default {
     '/ratgeber/europaletten-20-fuss-container': '/es/guia/europalets-contenedor-20-pies',
     '/ratgeber/europaletten-40-fuss-container': '/es/guia/europalets-contenedor-40-pies',
     '/ratgeber/container-volumen-cbm': '/es/guia/metros-cubicos-contenedor',
-    '/ratgeber/container-masse-innenmasse': '/es/guia/medidas-contenedor'
+    '/ratgeber/container-masse-innenmasse': '/es/guia/medidas-contenedor',
+    '/ratgeber/us-paletten-20-fuss-container': '/es/guia/pallets-48x40-contenedor-20-pies',
+    '/ratgeber/us-paletten-40-fuss-container': '/es/guia/pallets-48x40-contenedor-40-pies'
   }
 };

@@ -55,8 +55,18 @@ const WELLEN = {
     nurEnDe: /(qu’|uniquement |seulement )en anglais (ou|et) en allemand/i,
   },
 };
+// Themen, die es NICHT in allen fuenf Sprachen gibt, bilden ihr eigenes, kleineres Netz -- mit
+// denselben Regeln (hreflang auf allen Fassungen, Menue ab drei Sprachen, Sitemap). Die Palette
+// 48 x 40 Zoll (Nordamerika; in Mexiko "tarima"): Deutsch, Englisch, Spanisch.
+const TEIL_CLUSTER = [
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-20-fuss-container", "en/guide/pallets-20ft-container", "es/guia/pallets-48x40-contenedor-20-pies"] },
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-40-fuss-container", "en/guide/pallets-40ft-container", "es/guia/pallets-48x40-contenedor-40-pies"] },
+];
+const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
 const seiten = (k) => CLUSTER.map((c) => c[spalte(k)]);
+// Was eine Welle ueber ihre vier Themen hinaus traegt (in der Reihenfolge von TEIL_CLUSTER).
+const mehr = (k) => TEIL_CLUSTER.filter((n) => n.spalten.includes(k)).map((n) => n.seiten[n.spalten.indexOf(k)]);
 
 for (const [k, W] of Object.entries(WELLEN)) {
   const [s20, s40, sM3, sMass] = seiten(k);
@@ -114,7 +124,7 @@ for (const [k, W] of Object.entries(WELLEN)) {
   });
 
   test(`${K}: Suchergebnis -- Titel mit Zahl oder Thema, Laengen im Schnitt, og/twitter gleichlautend`, () => {
-    for (const f of [...seiten(k), W.ordner + "/index"]) {
+    for (const f of [...seiten(k), ...mehr(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const titel = /<title>(.*?)<\/title>/.exec(s)[1], desc = /<meta name="description" content="([^"]*)"/.exec(s)[1];
       assert.ok(titel.length <= 60, `${f}: Titel ${titel.length} Zeichen`);
@@ -138,7 +148,7 @@ for (const [k, W] of Object.entries(WELLEN)) {
     // die englischen Rechtsseiten -- die deutschen sind fuer nicht-deutsche Seiten tabu
     // (test/rechtsseiten-en).
     const baum = new RegExp(`^/${k}/|^/en/guide/$|^/en/imprint$|^/en/privacy$`);
-    for (const f of [...seiten(k), W.ordner + "/index"]) {
+    for (const f of [...seiten(k), ...mehr(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const koerper = s.slice(s.indexOf("<body"));
       const text = koerper.replace(/<details class="langmenu">[\s\S]*?<\/details>/, " ").replace(/<svg[\s\S]*?<\/svg>/g, " ")
@@ -154,7 +164,7 @@ for (const [k, W] of Object.entries(WELLEN)) {
     }
     // Uebersicht und Rueckweg
     const ix = lese(W.ordner + "/index.html");
-    for (const p of seiten(k)) {
+    for (const p of [...seiten(k), ...mehr(k)]) {
       assert.ok(ix.includes(`href="/${p}"`), `${K}-Uebersicht verlinkt ${p} nicht`);
       assert.ok(lese(p + ".html").includes(`href="/${W.ordner}/"`), `${p}: Rueckweg zur Uebersicht fehlt`);
     }
@@ -167,9 +177,85 @@ for (const [k, W] of Object.entries(WELLEN)) {
   });
 }
 
+// ── Die Palette 48 x 40 Zoll auf Spanisch ──────────────────────────────────────────────────
+// Dritte Fassung der US-Seiten (test/wissen-zahlen rechnet die deutsche und die englische).
+// Der eigene Kern der spanischen: mit "palet americano" ist in Spanien oft die Palette
+// 1200 x 1000 mm gemeint -- im 20-Fuss ergibt das dieselbe Zahl, im 40-Fuss 22 statt 20.
+// Beide Zahlen kommen aus dem Packer; der Namensgebrauch selbst ist nicht gerechnet.
+test("ES: die Seiten zur Palette 48 x 40 Zoll -- Packer, Draufsicht, Knopf und der Vergleich mit 1200 x 1000", () => {
+  const PL = 121.92, PW = 101.6;
+  assert.deepStrictEqual([48 * 2.54, 40 * 2.54], [PL, PW]);
+  const [s20, s40] = mehr("es");
+  const faelle = [
+    [s20, "20' GP", "20' HC", 9, 8, 18, null, 9],
+    [s40, "40' GP", "40' HC", 20, 18, 40, "40gp", 22],
+  ];
+  for (const [f, gp, hc, lage, ohne, zwei, cont, iso] of faelle) {
+    const C = PRESETS[gp], H = PRESETS[hc];
+    assert.strictEqual(makeFloorPacker(PL, PW, true)(C.l, C.w).count, lage);
+    assert.strictEqual(makeFloorPacker(PL, PW, false)(C.l, C.w).count, ohne);
+    assert.strictEqual(makeFloorPacker(PL, PW, true)(H.l, H.w).count, lage, "High Cube: derselbe Boden");
+    assert.strictEqual(makeFloorPacker(120, 100, true)(C.l, C.w).count, iso, "die Palette 1200 x 1000");
+    assert.strictEqual(zwei, 2 * lage);
+    const s = lese(f + ".html");
+    for (const z of [lage, ohne, zwei]) assert.ok(new RegExp(`<b>${z}( (pallets|huecos)[^<]*)?</b>`).test(s), `${f}: die Zahl ${z} steht nicht hervorgehoben im Text`);
+    // Das genaue Mass, nicht die Rundung auf ganze Zentimeter
+    assert.ok(/121,92&nbsp;×&nbsp;101,6&nbsp;cm/.test(s) && !/122&nbsp;×&nbsp;102/.test(s), `${f}: das genaue Mass fehlt`);
+    // Tabelle: Innenmass aus PRESETS, Stellzahl, und zwei Lagen passen wirklich unter die Decke
+    const zeilen = [...s.matchAll(/<tr><td>([^<]*)<\/td><td class="num">(\d+) × (\d+) cm<\/td><td class="num">(\d+)<\/td><td class="num">(\d+) cm por pallet<\/td><\/tr>/g)];
+    assert.strictEqual(zeilen.length, 2, `${f}: Tabelle`);
+    zeilen.forEach((z, i) => {
+      const P = i ? H : C;
+      assert.deepStrictEqual([+z[2], +z[3], +z[4]], [P.l, P.w, lage], `${f}: Tabellenzeile ${z[1]}`);
+      assert.ok(2 * +z[5] <= P.h, `${f}: zwei Lagen zu ${z[5]} cm passen nicht in ${P.h} cm`);
+      assert.ok(s.includes(`<b>${z[5]}&nbsp;cm (`), `${f}: die Hoehe ${z[5]} cm steht nicht im Text`);
+    });
+    // Draufsicht: ein Rechteck je Stellplatz plus Umriss
+    const m = s.match(/<figure class="stau">([\s\S]*?)<\/figure>/);
+    assert.ok(m, `${f}: keine Draufsicht`);
+    assert.strictEqual((m[1].match(/<rect /g) || []).length, lage + 1, `${f}: SVG-Stellplaetze`);
+    // Der Knopf: durch den echten Parser genau diese Ladung, metrisch geoeffnet, im richtigen Container
+    const links = [...s.matchAll(/href="\/app\?lang=es&q=([^"&]+)(?:&cont=([a-z0-9]+))?"/g)];
+    assert.strictEqual(links.length, 2, `${f}: Rechner-Knoepfe`);
+    for (const [, q, c] of links) {
+      const rows = parseCargoText(decodeURIComponent(q));
+      assert.strictEqual(rows.length, 1);
+      assert.deepStrictEqual([rows[0].qty, rows[0].l, rows[0].w], [lage, PL, PW], `${f}: der Knopf laedt eine andere Ladung`);
+      assert.ok(rows[0].weight > 0 && 2 * rows[0].h > C.h, `${f}: die Beispielladung ginge in zwei Lagen -- der Rechner zeigte eine andere Zahl`);
+      assert.strictEqual(c || null, cont, `${f}: der Knopf waehlt den falschen Container vor`);
+    }
+    assert.ok(!/href="\/app\?[^"]*u=in/.test(s) && s.includes("selector «in»"), `${f}: metrisch oeffnen, mit Hinweis auf den Schalter`);
+    // FAQ-Schema: gueltig, die erste Antwort nennt die Zahl der Seite
+    const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+    assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 2 && new RegExp(`^${lage} pallets`).test(ld.mainEntity[0].acceptedAnswer.text), `${f}: die erste Antwort beginnt nicht mit ${lage}`);
+    assert.ok(/\d/.test(/<title>(.*?)<\/title>/.exec(s)[1]), `${f}: Titel ohne Zahl`);
+  }
+  // Warum nicht 10: die Rechnung der 20-Fuss-Seite
+  const C20 = PRESETS["20' GP"], C40 = PRESETS["40' GP"], t20 = lese(s20 + ".html"), t40 = lese(s40 + ".html");
+  assert.ok(5 * PL > C20.l && 2 * PL > C20.w, "zehn passten doch");
+  for (const z of [Math.round(5 * PL), C20.l, Math.round(2 * PL), C20.w]) assert.ok(t20.includes(`<b>${z}&nbsp;cm</b>`), `${s20}: ${z} cm fehlt in der Rechnung`);
+  assert.ok(t20.includes("también 9"), `${s20}: der Vergleich mit 1200 × 1000 fehlt`);
+  // 20 gegen 22: die Rechnung der 40-Fuss-Seite
+  assert.deepStrictEqual([Math.floor(C40.l / PW), Math.floor(C40.l / PL), Math.floor(C40.l / 100), Math.floor(C40.l / 120)], [11, 9, 12, 10]);
+  assert.ok(t40.includes("<b>12 atravesados y 10 a lo largo, 22</b>") && t40.includes("<b>11 y 9, 20</b>") && t40.includes("11 pallets atravesados junto a una pared y 9 a lo largo"), `${s40}: die zwei Muster`);
+  assert.strictEqual(C40.l - 12 * 100, 3);
+  assert.ok(t40.includes("<b>3&nbsp;cm</b>"), `${s40}: der knappe Rest der 22 fehlt`);
+  assert.ok(t40.includes(`${Math.round(12 * PW)} cm y el interior mide ${C40.l} cm`), `${s40}: warum keine 12 quer`);
+  assert.deepStrictEqual([Math.round(PL * 10 - 1200), Math.round(PW * 10 - 1000)], [19, 16]);
+  for (const t of [t20, t40]) assert.ok(/19&nbsp;mm más corto y 16&nbsp;mm más estrecho/.test(t), "der Unterschied in Millimetern");
+  // Gewicht: Zuladung aus PRESETS, die US-Grenze umgerechnet
+  assert.ok(t40.includes(`<b>${(C40.payload / 1000).toFixed(1).replace(".", ",")}&nbsp;t</b>`), `${s40}: Zuladung`);
+  assert.ok(t40.includes(`(unas ${(80000 * 0.45359237 / 1000).toFixed(1).replace(".", ",")}&nbsp;t)`), `${s40}: 80.000 Pfund in Tonnen`);
+  assert.ok(t20.includes(`${18 * 500 / 1000}&nbsp;t de unas ${Math.round(C20.payload / 1000)}&nbsp;t`), `${s20}: Gewichtsrechnung`);
+  assert.strictEqual(PRESETS["40' HC"].h - C40.h, 31);
+  assert.ok(t40.includes("31&nbsp;cm de más"), `${s40}: Mehrhoehe High Cube`);
+  // Die Uebersicht verspricht den Stoff nicht mehr dem englischen Guide
+  assert.ok(!/palets americanos/.test(lese("es/guia/index.html")), "die Uebersicht schickt fuer diese Palette noch auf den englischen Guide");
+});
+
 test("jedes Cluster ist ein sauberes Netz: hreflang auf ALLEN Fassungen, in beide Richtungen", () => {
-  const zeilen = SPALTEN.length + 1;                                           // jede Sprache + x-default
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
+    const zeilen = SPALTEN.length + 1;                                         // jede Sprache + x-default
     for (const f of c) {
       const s = lese(f + ".html");
       for (const [k, ziel] of [...SPALTEN.map((k, i) => [k, c[i]]), ["x-default", c[0]]]) {
@@ -185,7 +271,7 @@ test("die Sprachwahl dieser Seiten ist ein Aufklapp-Menue -- und zeigt auf die U
   // Fuenf Kuerzel nebeneinander lasen sich wie ein Code (Jarek zur Reihe im Rechner: "sieht
   // ultra weird aus ... am besten waere doch ein Drop-down"). Ein Knopf zeigt das Kuerzel der
   // aktuellen Sprache, darunter stehen die vollen Namen.
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
     c.forEach((f, i) => {
       const s = lese(f + ".html");
       const m = /<details class="langmenu"><summary aria-label="[^"]+">[\s\S]*?<span class="langcur">([A-Z]{2})<\/span>[\s\S]*?<\/summary><div class="lang" role="group" aria-label="[^"]+">([\s\S]*?)<\/div><\/details>/.exec(s);
@@ -213,7 +299,7 @@ test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und da
       if (menue) menues++; else reihen++;
     }
   }
-  assert.ok(menues >= CLUSTER.length * SPALTEN.length && reihen > 0, `Menues ${menues}, Reihen ${reihen}`);
+  assert.ok(menues >= NETZE.reduce((n, x) => n + x.seiten.length, 0) && reihen > 0, `Menues ${menues}, Reihen ${reihen}`);
   // Die Uebersichten der drei Wellen zeigen aufeinander
   for (const [f, k] of [["nl/gids/index.html", "nl"], ["es/guia/index.html", "es"], ["fr/guide/index.html", "fr"]]) {
     const s = lese(f);
@@ -232,10 +318,10 @@ test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und da
   assert.ok(!/fetch|XMLHttpRequest|localStorage|cookie/.test(js), "das Menue-Skript tut mehr als auf- und zuklappen");
 });
 
-test("Sitemap: jede Fassung gelistet, jeder Block der vier Themen traegt alle Sprachzeilen", () => {
+test("Sitemap: jede Fassung gelistet, jeder Block eines Netzes traegt alle seine Sprachzeilen", () => {
   const sm = lese("sitemap.xml");
-  const zeilen = SPALTEN.length + 1;
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
+    const zeilen = SPALTEN.length + 1;
     for (const pfad of c) {
       const i = sm.indexOf(`<loc>${B}/${pfad}</loc>`);
       assert.ok(i > 0, `Sitemap: ${pfad} fehlt`);
