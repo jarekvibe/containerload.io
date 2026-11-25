@@ -134,7 +134,10 @@ for (const [k, W] of Object.entries(WELLEN)) {
   });
 
   test(`${K}: die Seiten stehen in ihrer Sprache, fuehren in ihren Rechner und nie in den deutschen Baum`, () => {
-    const baum = new RegExp(`^/${k}/|^/en/guide/$|^/impressum$|^/datenschutz$`);
+    // Hinaus fuehren nur: der englische Guide (fuer alles, was es in der Sprache nicht gibt) und
+    // die englischen Rechtsseiten -- die deutschen sind fuer nicht-deutsche Seiten tabu
+    // (test/rechtsseiten-en).
+    const baum = new RegExp(`^/${k}/|^/en/guide/$|^/en/imprint$|^/en/privacy$`);
     for (const f of [...seiten(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const koerper = s.slice(s.indexOf("<body"));

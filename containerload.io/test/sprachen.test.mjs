@@ -155,7 +155,9 @@ test("im Rechner steht keine Zwei-Sprachen-Weiche mehr", () => {
   assert.ok(roh.includes("onClick: () => { setSprachOpen(false); if (k !== LANG) setLangTo(k); }"));
   assert.ok(!/Seg, \{[^}]*SPRACH_LISTE/.test(roh), "die Sprachen stehen wieder als Knopfreihe da");
   assert.ok(roh.includes("else if (sprachOpen) setSprachOpen(false);"), "Esc schliesst das Sprach-Menue nicht");
-  assert.ok(roh.includes("...SPRACH_LISTE.filter(([k]) => !EMBEDDED && k !== LANG).map(([k, n, satz]) => ({ label: n, sub: satz, fn: () => setLangTo(k) })),"));
+  // Im "…"-Menue stehen die Sprachen NICHT mehr (Jarek, 25.11.26: vier Eintraege dort waren
+  // zu viel) -- die Sprachwahl im Kopf ist dafuer auf jeder Breite da (test/mobil).
+  assert.ok(!/SPRACH_LISTE\.filter\(/.test(roh) && !/fn: \(\) => setLangTo\(k\)/.test(roh), "die Sprachen stehen wieder im Mehr-Menue");
   // Statistik und Stevie bekommen die echte Sprache, nicht "alles ausser Englisch ist Deutsch"
   assert.ok(roh.includes("        sprache: LANG,\n        geteilt: !!SHARED,"));
   assert.ok(roh.includes("body: JSON.stringify({ sprache: LANG, fakten, verlauf, frage,"));

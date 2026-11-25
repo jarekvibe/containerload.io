@@ -78,29 +78,59 @@
 <script>
   (function () {
     var search = window.location.search || "";
-    // Sprache: Der Rechner haengt beim Teilen &lang=en an, wenn der Absender englisch
-    // arbeitet. Vorher ging die Sprache hier verloren — der Empfaenger sah eine deutsche
-    // Zwischenseite und landete in einem deutschen Rechner, obwohl der Plan auf Englisch
-    // erstellt und geteilt wurde. Der Query-String wandert unveraendert weiter nach /app,
-    // dort liest LANG dasselbe ?lang= wieder aus.
-    var en = false;
+    // Sprache: Der Rechner haengt beim Teilen &lang=… an, wenn der Absender nicht deutsch
+    // arbeitet. Diese Seite spricht JEDE Sprache des Rechners -- sonst begruesst sie den
+    // Empfaenger eines chinesischen Plans auf Deutsch (so war es bis 25.11.26: nur de/en).
+    // Der Query-String wandert unveraendert weiter nach /app, dort liest LANG dasselbe
+    // ?lang= wieder aus. Kommt eine Sprache im Rechner dazu (CL_SPRACHEN in app.html),
+    // gehoert sie auch hierher -- test/teilen-seite.test.mjs vergleicht beide Listen.
+    var TEXTE = {
+      en: {
+        titel: "View stowage plan — ContainerLoad",
+        ey: "Shared stowage plan",
+        h1: "A loading plan<br>was shared with you.",
+        p: "You are about to see in 3D how the load fits into the container — interactive, no sign-up.",
+        go: "Open the plan →",
+        ns: "Please enable JavaScript or click “Open the plan”."
+      },
+      es: {
+        titel: "Ver el plan de carga — ContainerLoad",
+        ey: "Plan de carga compartido",
+        h1: "Han compartido contigo<br>un plan de carga.",
+        p: "Enseguida verás en 3D cómo cabe la carga en el contenedor: interactivo y sin registro.",
+        go: "Abrir el plan →",
+        ns: "Activa JavaScript o pulsa «Abrir el plan»."
+      },
+      fr: {
+        titel: "Voir le plan de chargement — ContainerLoad",
+        ey: "Plan de chargement partagé",
+        h1: "Un plan de chargement<br>a été partagé avec vous.",
+        p: "Vous allez voir en 3D comment la marchandise tient dans le conteneur — interactif, sans inscription.",
+        go: "Ouvrir le plan →",
+        ns: "Activez JavaScript ou cliquez sur « Ouvrir le plan »."
+      },
+      zh: {
+        titel: "查看装载方案 — ContainerLoad",
+        ey: "分享的装载方案",
+        h1: "有人与你分享了<br>一份装载方案。",
+        p: "马上以 3D 查看货物如何装入集装箱 — 可交互，无需注册。",
+        go: "打开方案 →",
+        ns: "请启用 JavaScript，或点击“打开方案”。"
+      }
+    };
+    var k = "";
     try {
-      var p = (new URLSearchParams(search).get("lang") || "").toLowerCase();
-      if (p) en = p.indexOf("en") === 0;
-      else en = ((window.localStorage.getItem("cl_lang") || "").toLowerCase().indexOf("en") === 0);
+      k = (new URLSearchParams(search).get("lang") || "").toLowerCase().slice(0, 2);
+      if (!k) k = (window.localStorage.getItem("cl_lang") || "").toLowerCase().slice(0, 2);
     } catch (e) {}
-    if (en) {
-      document.documentElement.lang = "en";
-      document.title = "View stowage plan — ContainerLoad";
-      var t = {
-        "s-ey": "Shared stowage plan",
-        "s-h1": "A loading plan<br>was shared with you.",
-        "s-p": "You are about to see in 3D how the load fits into the container — interactive, no sign-up.",
-        "go": "Open the plan →"
-      };
-      for (var id in t) { var el = document.getElementById(id); if (el) el.innerHTML = t[id]; }
+    var t = TEXTE[k];
+    if (t) {
+      document.documentElement.lang = k;
+      document.title = t.titel;
+      var setze = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
+      setze("s-ey", t.ey); setze("s-h1", t.h1); setze("s-p", t.p); setze("go", t.go);
       var ns = document.getElementById("s-noscript");
-      if (ns) ns.textContent = "Please enable JavaScript or click “Open the plan”.";
+      if (ns) ns.textContent = t.ns;
     }
     var target = "/app" + search;
     var go = document.getElementById("go");

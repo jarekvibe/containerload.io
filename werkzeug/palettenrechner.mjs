@@ -373,7 +373,7 @@ ${inhalt}
     <span>${DE ? '© ContainerLoad · Bremen' : '© ContainerLoad · Bremen, Germany'}</span>
     <span>${DE
       ? '<a href="/">Rechner</a> · <a href="/ratgeber/">Container-Wissen</a> · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a>'
-      : '<a href="/en/">Calculator</a> · <a href="/en/guide/">Container Guide</a> · <a href="/impressum">Imprint</a> · <a href="/datenschutz">Privacy</a>'}</span>
+      : '<a href="/en/">Calculator</a> · <a href="/en/guide/">Container Guide</a> · <a href="/en/imprint">Imprint</a> · <a href="/en/privacy">Privacy</a>'}</span>
   </div>
 </footer>
 </body>
