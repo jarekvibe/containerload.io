@@ -235,7 +235,7 @@
         impApplied: function (n) { return "已添加 " + n + " 件货件"; },
         shareBtn: "分享",
         shareTitle: "分享方案",
-        shareDesc: "拿到此链接的人都能看到这份 3D 装载方案 — 无需登录，直接在浏览器中打开。",
+        shareDesc: "拿到此链接的人都能看到这份 3D 装载方案 — 无需登录，直接在浏览器中打开，并尽量以对方的语言显示。",
         shareCopy: "复制链接",
         shareCopied: "已复制 ✓",
         shareOpen: "打开预览 ↗",

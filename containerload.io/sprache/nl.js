@@ -241,7 +241,7 @@
         impApplied: function (n) { return n + " " + mv(n, "collo", "colli") + " toegevoegd"; },
         shareBtn: "Delen",
         shareTitle: "Plan delen",
-        shareDesc: "Wie deze link heeft, ziet precies dit laadplan in 3D — zonder account, direct in de browser.",
+        shareDesc: "Wie deze link heeft, ziet precies dit laadplan in 3D — zonder account, direct in de browser en waar mogelijk in de eigen taal.",
         shareCopy: "Link kopiëren",
         shareCopied: "Gekopieerd ✓",
         shareOpen: "Voorbeeld openen ↗",

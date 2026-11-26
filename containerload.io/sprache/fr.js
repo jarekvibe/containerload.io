@@ -233,7 +233,7 @@
         impApplied: function (n) { return n + " colis ajouté" + s(n); },
         shareBtn: "Partager",
         shareTitle: "Partager le plan",
-        shareDesc: "Toute personne ayant ce lien voit ce même plan de chargement en 3D — sans inscription, directement dans le navigateur.",
+        shareDesc: "Toute personne ayant ce lien voit ce même plan de chargement en 3D — sans inscription, directement dans le navigateur et, si possible, dans sa langue.",
         shareCopy: "Copier le lien",
         shareCopied: "Copié ✓",
         shareOpen: "Ouvrir l’aperçu ↗",

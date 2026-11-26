@@ -240,7 +240,7 @@
         impApplied: function (n) { return n + " bulto" + s(n) + " añadido" + s(n); },
         shareBtn: "Compartir",
         shareTitle: "Compartir el plan",
-        shareDesc: "Quien tenga este enlace ve este mismo plan de carga en 3D — sin registro, directamente en el navegador.",
+        shareDesc: "Quien tenga este enlace ve este mismo plan de carga en 3D — sin registro, directamente en el navegador y, si es posible, en su idioma.",
         shareCopy: "Copiar enlace",
         shareCopied: "Copiado ✓",
         shareOpen: "Abrir vista previa ↗",
