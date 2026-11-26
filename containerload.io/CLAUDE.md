@@ -744,6 +744,33 @@ Die Frage „wird ContainerLoad im Ausland benutzt?" ließ sich bis dahin nur ü
 
 **Dabei gefunden: drei Functions antworteten bei JEDEM Aufruf mit 502.** `/api/beacon`, `/api/puls` und `puls-aufraeumen` endeten mit `new Response("", { status: 204 })` — ein 204 darf keinen Körper tragen, auch keinen leeren Text; Node 22 wirft „Invalid response status code 204". Die Daten waren trotzdem da (gespeichert wird VOR der Antwort, und der Absender ist `sendBeacon`, der keine Antwort liest) — deshalb fiel es nie auf; nur die stündliche Aufräum-Function galt bei Netlify als fehlgeschlagen. Jetzt `new Response(null, { status: 204 })`. **Die Lehre:** Kein Test hatte diese Functions je aufgerufen, alle lasen nur ihren Quelltext. `test/functions-antworten.test.mjs` ruft sie auf — `@netlify/blobs` gibt es in der CI nicht (kein `npm install`), ein Lade-Haken (`module.register`) ersetzt das Paket durch einen Speicher im Arbeitsspeicher. Wer eine neue Function schreibt, die speichert, hängt sie dort an.
 
+### Der Wächter: antwortet die Seite, und liegt dort der Stand von main? (26.11.26)
+**Der Anlass.** Am 26.11.26 war containerload.io ab etwa 05:30 UTC nicht mehr erreichbar, und der Merge von #173 (08:27 UTC) wurde nie veröffentlicht. Gemerkt hat es **achteinhalb Stunden lang niemand** — es fiel erst auf, als Claude dem ausgebliebenen Deploy nachging. Was sich von außen feststellen ließ:
+- Netlify führte das Team als „Restricted Team" (`get-team`, geändert 05:30 UTC); `get-project` zeigte weiter den Deploy von #172.
+- In den Zugriffsdaten gab es ab 05:35 UTC **keinen einzigen** Aufruf mehr (vorher jede Stunde welche).
+- Die anderen Seiten desselben Netlify-Kontos antworteten mit Netlifys Seite „Site not found" (404).
+- **Die Ursache stand beim Schreiben nicht fest** — das Netlify-Konto sieht nur Jarek. Zwei Möglichkeiten: verbrauchte Credits (siehe unten; dagegen spricht, dass Netlify dafür die Seite „Site not available" beschreibt, nicht „Site not found") oder eine Sperre des Kontos durch Netlify. **Wer die Antwort kennt, trägt sie hier nach.**
+
+**Was ein Merge kostet.** Netlifys Gratis-Tarif hat **300 Credits im Monat — für alle Projekte des Kontos zusammen** (es sind sieben), und **jeder Produktions-Deploy kostet 15** (Netlify-Doku und Preisseite, Websuche 26.11.26). Im November 2026 gingen 21 Merges nach main: allein das sind 315. Sind die Credits verbraucht, pausiert Netlify die Projekte bis zum nächsten Abrechnungszeitraum oder bis zu einem Bezahltarif. Ob das der Grund des Ausfalls war oder nicht — die Rechnung stimmt in jedem Fall, und daraus folgt die Regel in Abschnitt 5: **Merges bündeln.**
+
+**Der Wächter** (`werkzeug/erreichbar.mjs`, Workflow `.github/workflows/erreichbar.yml`) sieht stündlich von außen nach — von einem Rechner bei GitHub, nicht von Netlify, und ohne jede Abhängigkeit. Drei Fragen, in dieser Reihenfolge:
+
+| | |
+|---|---|
+| **Antwortet die Seite?** | `SEITEN` (Startseite, Rechner, Teilen-Seite, eine Sprachseite): nur der Status zählt, per HEAD — `app.html` wiegt fast 1 MB |
+| **Liegt dort der Stand von main?** | `STAND`: sechs kleine Dateien, Byte für Byte gegen das Repository (`sitemap.xml`, `llms.txt`, `openapi.json`, `puls.js`, `ratgeber/wissen.css`, `sprache/es.js`). So fällt ein Merge auf, der nie veröffentlicht wurde |
+| **Rechnet die Schnittstelle wie main?** | `/api/plan` mit zwei Probe-Ladungen (See und Straße) gegen `planen()` aus demselben Stand — verglichen werden die Zahlen, nicht der Wortlaut |
+
+- **Antwortet gar nichts, gibt es EINEN Befund** („nicht erreichbar"), nicht ein Dutzend Folgemeldungen.
+- **Erst der zweite Befund zählt.** Findet die erste Prüfung etwas, wartet der Workflow fünf Minuten, holt main neu und prüft noch einmal. Das fängt einen gerade laufenden Deploy ab (direkt nach einem Merge liegt der neue Stand noch nicht draußen) und einen einzelnen Netz-Aussetzer; im Skript hat außerdem jeder Abruf einen zweiten Versuch.
+- **Kein HTML im Stand-Vergleich.** `app.html` trägt ein Netlify-Formular, und Netlify schreibt solche Seiten beim Veröffentlichen um — ein Byte-Vergleich schlüge dort falschen Alarm. Der Test verbietet HTML in `STAND`.
+- **Nur zwei Auslöser:** der Stundentakt und der Knopf „Run workflow". Kein Lauf bei Pull Requests oder Pushes — ein Ausfall der Seite soll keinen Pull Request rot färben. Die CI prüft deshalb nicht die echte Seite, sondern `test/erreichbar.test.mjs` stellt die Antworten nach (12 Tests: alles gut, Seite weg wie am 26.11., keine Antwort, einzelner Aussetzer, veralteter Stand, ein abweichendes Byte, Schnittstelle fehlt / rechnet anders / Tagesgrenze, Listen und Workflow).
+- **Wer es erfährt:** Schlägt ein Lauf fehl, schickt GitHub eine Mail („Run failed: Seite erreichbar?") an den, der den Workflow angelegt hat — nach GitHubs Voreinstellung; im Lauf selbst steht der Befund auf Deutsch (Zusammenfassung). Solange die Störung dauert, kommt die Mail stündlich.
+- **Sparsam:** zwölf Aufrufe je Stunde, mit eigener Kennung (`KENNUNG`, in den Zugriffsdaten als `containerload-erreichbar` zu erkennen und herauszurechnen); zwei davon rechnen (`/api/plan`, 48 von 5.000 am Tag). Der Test hält die Liste kurz.
+- **Grenzen, ehrlich:** Ein Deploy, der NUR HTML ändert, fällt dem Stand-Vergleich nicht auf. GitHubs Stundentakt läuft oft mit Verspätung, und GitHub schaltet Zeitpläne in Repositories ab, in denen 60 Tage nichts geschah. Geprüft wird von EINEM Ort aus.
+- **Von der Entwicklungsumgebung aus nicht geprüft:** Der Workflow läuft erst, wenn er auf main liegt, und die echte Seite war beim Bauen nicht erreichbar. **Der erste Lauf nach dem Merge zeigt, ob Netlify die sechs Dateien wirklich Byte für Byte ausliefert.** Schlägt er dort falsch an: die Datei aus `STAND` nehmen — nicht den Wächter abschalten.
+- **Nicht gebaut:** eine genaue Deploy-Kennung (eine Datei mit der Commit-Nummer, die der Build-Befehl schreibt — das änderte, wie die Seite gebaut wird, und ist Jareks Entscheidung); eine Statusseite; ein zweiter Hoster als Ausweiche.
+
 ### Der KI-Import — Stufen 1–4 der KI-Integration (28.10.26, Jareks Go)
 Die erste Funktion, die Claude nutzt, und zugleich das Muster für alles Weitere. Architektur: Browser → Netlify Function `/api/ki-import` (`netlify/functions/ki-import.mjs`) → Anthropic-API. **Der API-Schlüssel lebt ausschließlich als Netlify-Umgebungsvariable `ANTHROPIC_API_KEY`** — nie im Browser-Code, nie im Repo. `package.json` trägt dafür `@anthropic-ai/sdk`; es bleibt eine reine Function-Abhängigkeit, die Seite selbst ist weiterhin build-frei (die CDN-Regel aus Abschnitt 2 gilt unverändert für den Browser-Teil).
 
@@ -1587,6 +1614,7 @@ Jareks Auslöser: Ein Kollege suchte einen Hafen an der Westküste, den Containe
 
 - **Auf einem Branch arbeiten, niemals direkt auf `main` committen.** Änderungen als Branch/Pull-Request anlegen, damit der Projektinhaber sie über die Netlify-Vorschau prüfen kann, bevor sie live gehen.
 - **Kleine, nachvollziehbare Commits** mit klaren Beschreibungen — auf Deutsch ist völlig in Ordnung.
+- **Merges bündeln (seit 26.11.26).** Jeder Merge nach main ist ein Produktions-Deploy, und der kostet bei Netlify 15 von 300 Credits im Monat — für alle Projekte des Kontos zusammen. Commits sind gratis, Merges nicht: mehrere fertige Themen in EINEN Pull Request, und eine Kleinigkeit wartet auf den nächsten, statt allein live zu gehen. Vor einem Merge-Vorschlag steht, der wievielte des Monats es wäre (`git log origin/main --since=<Monatserster> --oneline | wc -l`). Siehe „Der Wächter".
 - **Ehrlichkeit in allen Texten wahren.** Die Berechnung ist **rein geometrisch**. Schwerpunkt, Achslast und Ladungssicherung sind *nicht* enthalten. UI-Texte, Marketing und PDF dürfen **niemals** mehr Genauigkeit oder rechtliche Verbindlichkeit suggerieren, als das Tool liefert. Die bestehenden „unverbindlich"-Hinweise nicht entfernen oder abschwächen.
 - **Testen ohne Server:** Datei im Browser öffnen. Wichtig zu prüfen, wenn am Rechner gearbeitet wurde: 3D-Ansicht lädt, eine Ladung lässt sich eingeben, Teilen-Link öffnet die Ladung korrekt, PDF/Druck sieht sauber aus, DE↔EN-Umschaltung funktioniert.
 - **Das responsive Verhalten nicht kaputtmachen.** Desktop ist der Komfort-Fall, aber das Tool muss im mobilen Browser nutzbar bleiben.
