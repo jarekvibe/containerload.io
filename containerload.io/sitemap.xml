@@ -621,17 +621,28 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/stauplan-container</loc>
-    <lastmod>2026-08-21</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-stowage-plan"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/plan-de-estiba-contenedor"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
     <loc>https://containerload.io/en/guide/container-stowage-plan</loc>
-    <lastmod>2026-08-21</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-stowage-plan"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/plan-de-estiba-contenedor"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/es/guia/plan-de-estiba-contenedor</loc>
+    <lastmod>2026-11-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/container-stowage-plan"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/plan-de-estiba-contenedor"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/stauplan-container"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>

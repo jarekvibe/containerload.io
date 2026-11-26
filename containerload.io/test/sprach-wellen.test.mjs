@@ -79,6 +79,8 @@ const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm"] },
   // Gewicht und Zuladung -- die meistgesehene deutsche Seite, mit dem Gewichts-Check
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/container-zuladung-gewicht", "en/guide/container-payload-weight", "es/guia/peso-contenedor-carga-maxima"] },
+  // Der Stauplan ("plan de estiba") -- die Seite, die das Werkzeug selbst beschreibt
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/stauplan-container", "en/guide/container-stowage-plan", "es/guia/plan-de-estiba-contenedor"] },
 ];
 const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
@@ -359,6 +361,62 @@ test("ES: die Seite zum Container-Gewicht -- Tara, Zuladung, Strasse und Dichte 
 // (1,00 x 1,20 m; Handbuch "Palete PBR-1" der ABRAS -- nachgeschlagen 26.11.26, nicht gerechnet).
 // Die portugiesischen Palettenseiten nennen deshalb beide. Die Zahlen der PBR-Palette kommen
 // aus dem Packer: 9 im 20-Fuss (nicht 10), 22 im 40-Fuss.
+test("ES: die Seite zum Stauplan (plan de estiba) -- Dreh-Zahlen aus dem Packer, Beispiel durch die echte Rechnung, Ehrlichkeit", async () => {
+  const f = "es/guia/plan-de-estiba-contenedor.html";
+  const s = lese(f);
+  const text = s.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  // "11 europalets en lugar de 8": dieselben Zahlen wie auf der Europaletten-Seite, aus dem Packer.
+  const C20 = PRESETS["20' GP"];
+  const mit = makeFloorPacker(120, 80, true)(C20.l, C20.w).count, ohne = makeFloorPacker(120, 80, false)(C20.l, C20.w).count;
+  assert.ok(text.includes(`caben ${mit} europalets en lugar de ${ohne}`), `${f}: der Dreh-Vergleich nennt nicht ${mit} gegen ${ohne}`);
+  assert.ok(s.includes(`<a href="/es/guia/europalets-contenedor-20-pies">${mit} europalets en lugar de ${ohne}</a>`), `${f}: der Vergleich verweist nicht auf die Seite, die ihn herleitet`);
+
+  // Der Beispiel-Knopf: was der Satz darunter verspricht (10 Paletten nicht stapelbar, 6 Kisten,
+  // ein 20-Fuss-Container), liest der Parser -- und die Rechnung des Rechners bestaetigt es.
+  const m = s.match(/<a class="btn btn-ghost" href="\/app\?lang=es&q=([^"&]+)">Ver un ejemplo en 3D<\/a>/);
+  assert.ok(m, `${f}: der Beispiel-Knopf fehlt`);
+  const q = decodeURIComponent(m[1]);
+  const rows = parseCargoText(q);
+  assert.deepStrictEqual(rows.map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.stackable !== false]),
+    [[10, 120, 80, 110, 300, false], [6, 60, 40, 40, 12, true]], `${f}: das Beispiel liest sich anders`);
+  assert.ok(text.includes("El ejemplo abre 10 palets no apilables y 6 cajas en un contenedor de 20 pies"), `${f}: der Satz zum Beispiel fehlt`);
+  const { planen } = await import("../../netlify/functions/lib/plan.mjs");
+  const b = planen({ q, lang: "es" }).body;
+  assert.strictEqual(b.ok, true);
+  assert.strictEqual(b.plan.container.code, "20gp", "das Beispiel oeffnet nicht den 20-Fuss-Container");
+  assert.deepStrictEqual([b.plan.fits_in_one, b.plan.pieces_loaded, b.plan.pieces_left], [true, 16, 0], `${f}: das Beispiel passt nicht in einen Container`);
+
+  // Vier Schritte, drei Wege -- und jeder Weg, den die Seite nennt, heisst wie im spanischen Rechner.
+  assert.strictEqual((s.match(/<tr><td>\d\. /g) || []).length, 4, `${f}: nicht vier Schritte`);
+  const es = lese("sprache/es.js");
+  for (const wort of ["Propuesta de carga", "no apilable", "apilable hasta "]) {
+    assert.ok(es.includes(`"${wort}"`), `sprache/es.js kennt "${wort}" nicht mehr -- die Seite nennt es`);
+    assert.ok(text.toLowerCase().includes(wort.trim().toLowerCase()), `${f}: "${wort}" fehlt`);
+  }
+
+  // Die Ehrlichkeitslinie: geometrisch, keine Ladungssicherung, kein Nachweis.
+  assert.match(text, /estimación puramente geométrica/);
+  assert.match(text, /No incluye comprobación de cargas por eje, centro de gravedad ni sujeción de la carga/);
+  assert.match(text, /no es un justificante conforme al Código CTU/);
+  assert.match(text, /plan de estiba geométrico no es: un plan de sujeción de la carga/);
+  // Keine Behauptung ueber Pflichten einzelner Laender, keine deutsche Richtlinie auf einer spanischen Seite.
+  assert.ok(!/VDI|aduana/i.test(text), `${f}: nennt VDI oder den Zoll -- beides ist fuer diese Leser unbelegt`);
+
+  // Das FAQ-Schema sagt dasselbe wie die Seite (vier Fragen, keine davon ohne Antwort).
+  const ld = JSON.parse(s.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.strictEqual(ld["@type"], "FAQPage");
+  assert.strictEqual(ld.mainEntity.length, 4);
+  for (const e of ld.mainEntity) assert.ok(e.name.startsWith("¿") && e.acceptedAnswer.text.length > 80, "FAQ-Eintrag unvollstaendig: " + e.name);
+  assert.ok(ld.mainEntity.some((e) => /no es un justificante conforme al Código CTU/.test(e.acceptedAnswer.text)), "das Schema verschweigt die Grenze des Plans");
+
+  // Verlinkt von der Uebersicht und von der Gewichts-Seite; die Startseiten-Tabelle kennt sie.
+  assert.ok(lese("es/guia/index.html").includes('href="/es/guia/plan-de-estiba-contenedor"'), "die spanische Uebersicht verlinkt die Seite nicht");
+  assert.ok(lese("es/guia/peso-contenedor-carga-maxima.html").includes('href="/es/guia/plan-de-estiba-contenedor"'), "die Gewichts-Seite verlinkt sie nicht");
+  const gen = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "sprachen", "es.mjs"), "utf8");
+  assert.ok(gen.includes("'/ratgeber/stauplan-container': '/es/guia/plan-de-estiba-contenedor'"), "werkzeug/sprachen/es.mjs: guide-Eintrag fehlt");
+});
+
 test("PT: die PBR-Palette (1,00 x 1,20 m) -- Zahlen aus dem Packer, eigene Draufsicht, eigener Knopf", () => {
   const C20 = PRESETS["20' GP"], C40 = PRESETS["40' GP"];
   const [s20, s40] = seiten("pt");
