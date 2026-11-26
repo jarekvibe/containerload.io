@@ -68,6 +68,8 @@ const WELLEN = {
 const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-20-fuss-container", "en/guide/pallets-20ft-container", "es/guia/pallets-48x40-contenedor-20-pies"] },
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-40-fuss-container", "en/guide/pallets-40ft-container", "es/guia/pallets-48x40-contenedor-40-pies"] },
+  // CBM berechnen ("cubicaje" -- so heisst die Rechnung in Lateinamerika), mit dem CBM-Rechner
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm"] },
 ];
 const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
@@ -158,7 +160,9 @@ for (const [k, W] of Object.entries(WELLEN)) {
     for (const f of [...seiten(k), ...mehr(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const koerper = s.slice(s.indexOf("<body"));
-      const text = koerper.replace(/<details class="langmenu">[\s\S]*?<\/details>/, " ").replace(/<svg[\s\S]*?<\/svg>/g, " ")
+      // Skripte sind kein sichtbarer Text (der CBM-Rechner traegt deutsche Kommentare und
+      // steht auf jeder Seite woertlich gleich -- test/cbm-widget).
+      const text = koerper.replace(/<details class="langmenu">[\s\S]*?<\/details>/, " ").replace(/<svg[\s\S]*?<\/svg>/g, " ").replace(/<script[\s\S]*?<\/script>/g, " ")
         .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
       const fremd = text.match(W.fremd) || [];
       assert.deepStrictEqual([...new Set(fremd)], [], `${f}: fremde Woerter im Text`);
@@ -258,6 +262,34 @@ test("ES: die Seiten zur Palette 48 x 40 Zoll -- Packer, Draufsicht, Knopf und d
   assert.ok(t40.includes("31&nbsp;cm de más"), `${s40}: Mehrhoehe High Cube`);
   // Die Uebersicht verspricht den Stoff nicht mehr dem englischen Guide
   assert.ok(!/palets americanos/.test(lese("es/guia/index.html")), "die Uebersicht schickt fuer diese Palette noch auf den englischen Guide");
+});
+
+test("ES: die Seite zum Cubicaje (CBM) -- Beispielrechnung, Containervolumen aus PRESETS, Knopf durch den Parser", () => {
+  const f = mehr("es")[2];
+  assert.strictEqual(f, "es/guia/calcular-cubicaje-cbm");
+  const s = lese(f + ".html");
+  // Die Beispielrechnung: 10 Kartons 60 x 40 x 40 cm
+  const je = 0.6 * 0.4 * 0.4, sp = (n, d) => n.toFixed(d).replace(".", ",");
+  for (const t of [`<td class="num">0,6 × 0,4 × 0,4</td><td class="num">${sp(je, 3)} m³</td>`, `<td class="num">${sp(je, 3)} × 10</td><td class="num">${sp(je * 10, 2)} CBM</td>`]) assert.ok(s.includes(t), `${f}: Beispielrechnung — ${t}`);
+  const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+  assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 2 && ld.mainEntity[0].acceptedAnswer.text.includes(`${sp(je, 3)} m³ por caja × 10 = ${sp(je * 10, 2)} CBM`), `${f}: die erste Antwort rechnet anders als die Seite`);
+  // Containervolumen: dieselben Zahlen wie die spanische Volumen-Seite, aus PRESETS
+  for (const name of ["20' GP", "40' GP", "40' HC"]) {
+    const P = PRESETS[name], m3 = sp(P.l * P.w * P.h / 1e6, 1);
+    assert.ok(s.includes(`${m3}&nbsp;m³`), `${f}: ${name} = ${m3} m³ fehlt`);
+    assert.ok(lese("es/guia/metros-cubicos-contenedor.html").includes(`${m3} m³`), "die Volumen-Seite nennt eine andere Zahl");
+  }
+  assert.ok(ld.mainEntity[2].acceptedAnswer.text.includes("33,1 m³") && ld.mainEntity[2].acceptedAnswer.text.includes("67,6 m³"));
+  // Der Knopf laedt genau das Beispiel
+  const links = [...s.matchAll(/href="\/app\?lang=es&q=([^"&]+)"/g)];
+  assert.strictEqual(links.length, 2, `${f}: Rechner-Knoepfe`);
+  for (const [, q] of links) {
+    const rows = parseCargoText(decodeURIComponent(q));
+    assert.strictEqual(rows.length, 1);
+    assert.deepStrictEqual([rows[0].qty, rows[0].l, rows[0].w, rows[0].h], [10, 60, 40, 40], `${f}: der Knopf laedt ein anderes Beispiel`);
+  }
+  // Die Uebersicht, die Volumen-Seite und die Startseite fuehren hierher
+  for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
 });
 
 test("jedes Cluster ist ein sauberes Netz: hreflang auf ALLEN Fassungen, in beide Richtungen", () => {

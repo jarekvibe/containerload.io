@@ -25,6 +25,8 @@ const SEITEN = {
   // Seit November 2026 auch auf den Volumen-Seiten (zweitstaerkste Seite in der Search Console)
   "ratgeber/container-volumen-cbm.html": "de",
   "en/guide/container-volume-cbm.html": "en",
+  // Die spanische CBM-Seite ("cubicaje", 26.11.26): derselbe Rechner, spanisch beschriftet
+  "es/guia/calcular-cubicaje-cbm.html": "es",
 };
 const html = Object.fromEntries(Object.keys(SEITEN).map((p) => [p, fs.readFileSync(path.join(dir, "..", p), "utf8")]));
 
@@ -119,6 +121,16 @@ test("der Sprung in den 3D-Rechner traegt die Zeilen als ?q= -- und die Sprache"
     "der englische Sprung der Volumen-Seite oeffnet einen deutschen Rechner");
   assert.ok(html["en/guide/how-to-calculate-cbm.html"].includes("encodeURIComponent(q) + '&lang=en'"),
     "der englische Sprung oeffnet einen deutschen Rechner");
+  // Die spanische Seite: Sprung in den spanischen Rechner, Beschriftungen und Zahlenformat
+  // spanisch -- und zwar dieselben Texte wie auf der spanischen Startseite.
+  const es = html["es/guia/calcular-cubicaje-cbm.html"];
+  assert.ok(es.includes("encodeURIComponent(q) + '&lang=es'"), "der spanische Sprung oeffnet keinen spanischen Rechner");
+  assert.ok(es.includes("loc: function () { return 'es-ES'; }"), "die spanische Seite schreibt Zahlen nicht spanisch");
+  const tEs = new Function("return " + /t: function \(\) \{ return (\{[^\n]*\}); \},\n/.exec(es)[1])();
+  const tEn = new Function("return " + /t: function \(\) \{ return (\{[^\n]*\}); \},\n/.exec(html["en/guide/how-to-calculate-cbm.html"])[1])();
+  assert.deepStrictEqual(Object.keys(tEs), Object.keys(tEn), "dem spanischen Rechner fehlt eine Beschriftung");
+  for (const [k, v] of Object.entries(tEs)) assert.ok(v && v !== tEn[k], `die Beschriftung "${k}" ist nicht uebersetzt`);
+  assert.deepStrictEqual([tEs.l, tEs.stk1, tEs.wm], ["Largo (cm)", "bulto", "facturable (W/M)"]);
   assert.ok(html["index.html"].includes("(document.documentElement.lang === 'de' ? '' : '&lang=' + document.documentElement.lang)"),
     "die Startseite vergisst die Sprache");
 });

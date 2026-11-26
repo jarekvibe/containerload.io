@@ -491,17 +491,28 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/cbm-berechnen</loc>
-    <lastmod>2026-07-27</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/calcular-cubicaje-cbm"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
     <loc>https://containerload.io/en/guide/how-to-calculate-cbm</loc>
-    <lastmod>2026-08-21</lastmod>
+    <lastmod>2026-11-26</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/calcular-cubicaje-cbm"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/es/guia/calcular-cubicaje-cbm</loc>
+    <lastmod>2026-11-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/calcular-cubicaje-cbm"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
