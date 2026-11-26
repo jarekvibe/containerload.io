@@ -2,7 +2,7 @@
 
 > Free 3D load calculator for sea containers and trucks. It runs in the browser: no account, no API key, nothing to install. Enter packages (dimensions, weight, quantity) and see in 3D how they fit. A plan can be passed on as a link.
 
-Home: https://containerload.io/ (German). Other languages: https://containerload.io/en/ (English), https://containerload.io/es/ (Español), https://containerload.io/fr/ (Français), https://containerload.io/nl/ (Nederlands), https://containerload.io/zh/ (中文).
+Home: https://containerload.io/ (German). Other languages: https://containerload.io/en/ (English), https://containerload.io/es/ (Español), https://containerload.io/fr/ (Français), https://containerload.io/nl/ (Nederlands), https://containerload.io/zh/ (中文), https://containerload.io/pt/ (Português).
 
 ## What it does
 
@@ -17,11 +17,11 @@ There is no API and no result is returned as data. But you can give a user a lin
 
 Format: https://containerload.io/app?q=<cargo text>[&cont=<container>][&lang=<language>] (parameters in any order)
 
-- q: the cargo as text, one position per line. Separate positions with ";" (a comma does NOT separate positions). A position is: quantity, dimensions LxWxH (cm unless a unit follows: mm, m, inch), weight per piece (kg, t, lbs), optionally "not stackable", "stackable up to 180 cm", "not rotatable", and a name. "11 euro pallets" works without dimensions (120x80 cm, height 110 cm). The same words are understood in German, Spanish, French, Dutch and Chinese.
+- q: the cargo as text, one position per line. Separate positions with ";" (a comma does NOT separate positions). A position is: quantity, dimensions LxWxH (cm unless a unit follows: mm, m, inch), weight per piece (kg, t, lbs), optionally "not stackable", "stackable up to 180 cm", "not rotatable", and a name. "11 euro pallets" works without dimensions (120x80 cm, height 110 cm). The same words are understood in German, Spanish, French, Dutch, Portuguese and Chinese.
 - cont (optional): 20gp, 20hc, 40gp, 40hc, 45hc, 20ot, 40ot, 20fr, 40fr, 20rf, 40rf. Without it the calculator starts with a 20ft standard container, adds containers as needed and suggests a better size.
 - d=road (optional): truck mode instead of sea container; fz picks the vehicle: sattel, wb, mw, 75t, sprinter.
 - u=in (optional): input fields in inches and pounds.
-- lang (optional): en, es, fr, zh, nl. Without it the interface is German.
+- lang (optional): en, es, fr, zh, nl, pt. Without it the interface is German.
 - URL-encode the text. Keep links under about 2,000 characters.
 
 Examples:

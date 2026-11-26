@@ -66,7 +66,10 @@ test("jede Sprache bringt die drei Woerter mit, und der Rechner meldet sie beim 
     const k = f.slice(0, -3), n = win.CL_SPRACHE[k].texte(h).importNamen;
     assert.deepStrictEqual(Object.keys(n).sort(), ["ep", "pal", "pos"], `${k}: importNamen`);
     for (const w of Object.values(n)) assert.ok(typeof w === "string" && w.trim().length > 1, `${k}: leeres Wort`);
-    assert.ok(!gesehen.has(n.pos) && n.pos !== "Position", `${k}: "${n.pos}" ist nicht uebersetzt`);
+    // Portugiesisch sagt "item" -- dasselbe Wort wie das englische. Die Ausnahme steht namentlich
+    // hier; fuer jede andere Sprache waere ein englisches Wort ein vergessener Eintrag.
+    const GLEICH_WIE_ENGLISCH = { pt: "Item" };
+    assert.ok((!gesehen.has(n.pos) || GLEICH_WIE_ENGLISCH[k] === n.pos) && n.pos !== "Position", `${k}: "${n.pos}" ist nicht uebersetzt`);
     gesehen.add(n.pos);
     // ... und der Parser benutzt sie
     const { parseCargoText, setze } = parser();

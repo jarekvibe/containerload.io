@@ -397,7 +397,7 @@
       '<span class="pille road">Straße: ' + (d.modus.road || 0) + "</span></div>" +
       // Jede Sprache, die vorkommt, bekommt ihre Pille -- Deutsch und Englisch stehen immer da
       '<div>' + ["de", "en"].concat(Object.keys(d.sprachen || {}).filter((k) => k !== "de" && k !== "en").sort()).map((k) =>
-        '<span class="pille">' + ({ de: "Deutsch", en: "Englisch", es: "Spanisch", fr: "Französisch", zh: "Chinesisch", nl: "Niederländisch" }[k] || String(k).replace(/[^a-z]/g, "").toUpperCase()) + ": " + ((d.sprachen || {})[k] || 0) + "</span>").join(" ") + "</div>" +
+        '<span class="pille">' + ({ de: "Deutsch", en: "Englisch", es: "Spanisch", fr: "Französisch", zh: "Chinesisch", nl: "Niederländisch", pt: "Portugiesisch" }[k] || String(k).replace(/[^a-z]/g, "").toUpperCase()) + ": " + ((d.sprachen || {})[k] || 0) + "</span>").join(" ") + "</div>" +
       '<div class="hinweis" style="margin:12px 0 4px">Verweildauer je Rechnung</div>' + dauerHtml;
     el.innerHTML = html;
   }

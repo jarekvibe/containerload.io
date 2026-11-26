@@ -268,7 +268,7 @@ test("der Link MUSS auf containerload.io zeigen — sonst ist es ein Spam-Werkze
 });
 
 test("pruefeFakten: Sprach-Whitelist, Modus, Pflicht-Positionen, Zahlen-Grenzen", () => {
-  assert.deepEqual(BRIEF_SPRACHEN, ["de", "en", "nl", "es", "fr", "zh"]);
+  assert.deepEqual(BRIEF_SPRACHEN, ["de", "en", "nl", "es", "fr", "zh", "pt"]);
   assert.equal(pruefeFakten({ ...FAKTEN_OK, sprache: "xx" }), null);
   assert.equal(pruefeFakten({ ...FAKTEN_OK, modus: "air" }), null);
   assert.equal(pruefeFakten({ ...FAKTEN_OK, positionen: [] }), null, "ohne Positionen gibt es nichts zu erklaeren");

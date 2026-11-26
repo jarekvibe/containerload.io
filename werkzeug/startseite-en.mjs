@@ -23,9 +23,10 @@ import es from './sprachen/es.mjs';
 import fr from './sprachen/fr.mjs';
 import zh from './sprachen/zh.mjs';
 import nl from './sprachen/nl.mjs';
+import pt from './sprachen/pt.mjs';
 
 // Jede Sprache ausser Deutsch (Quelle) und Englisch (Woerterbuch steht in index.html)
-export const SPRACHEN = [es, fr, zh, nl];
+export const SPRACHEN = [es, fr, zh, nl, pt];
 
 const BASIS = 'https://containerload.io';
 // Impressum und Datenschutz gibt es auf Deutsch (massgeblich) und als englische Uebersetzung.

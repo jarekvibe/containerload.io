@@ -17,6 +17,7 @@
 <link rel="alternate" hreflang="fr" href="https://containerload.io/app?lang=fr" />
 <link rel="alternate" hreflang="zh" href="https://containerload.io/app?lang=zh" />
 <link rel="alternate" hreflang="nl" href="https://containerload.io/app?lang=nl" />
+<link rel="alternate" hreflang="pt" href="https://containerload.io/app?lang=pt" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/app" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta property="og:image:width" content="1200" />
@@ -117,7 +118,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // im Menue). Geladen wird sie nur, wenn sie gewaehlt ist -- und zwar hier, VOR dem Rechner,
   // weil der sein Woerterbuch beim Start einmal liest. document.write ist dafuer der eine Weg
   // ohne Build-Schritt, der die Reihenfolge haelt (gleiche Herkunft, eine kleine Datei).
-  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"], nl: ["Nederlands", "Schakel de interface naar het Nederlands"] };
+  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"], nl: ["Nederlands", "Schakel de interface naar het Nederlands"], pt: ["Portugu\u00eas", "Mudar a interface para portugu\u00eas"] };
   (function () {
     try {
       var q = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase().slice(0, 2);
@@ -729,10 +730,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // "Industriepaletten" und griff sich dort das falsche Grundmass.
     // Seit 26.11.26 auch in den uebrigen Sprachen der Oberflaeche: euro pallet / europallet
     // (en, nl), europalet / palé europeo (es), palette Europe (fr), 欧标托盘 (zh); Industrie:
-    // palet industrial, palette industrielle, blokpallet. "Palet americano" steht NICHT da:
+    // palet industrial, palette industrielle, blokpallet, palete PBR (Brasilien, 1000 x 1200).
+    // Portugiesisch: palete europeu / europalete. "Palet americano" steht NICHT da:
     // in Spanien meint es 1200 x 1000, in Lateinamerika 48 x 40 Zoll (siehe es/guia).
-    { re: /euro\s*-?\s*pal(?:ette|let|et|é)|eur\s*-?\s*pal(?:ette|let)|\bepal\b|pal(?:ette|let|et|é)s?\s+(?:euro(?:p[eé][a-zé]*)?|eur)(?![a-zà-ÿ])|欧标托盘|欧洲托盘|欧式托盘/i, l: 120, w: 80 },
-    { re: /industrie\s*-?\s*pal(?:ette|let)|industrial\s*pallet|pal(?:ette|let|et|é)s?\s+industri|\bblokpallet|工业托盘/i, l: 120, w: 100 }
+    { re: /euro\s*-?\s*pal(?:ette|let|et|é)|eur\s*-?\s*pal(?:ette|let)|\bepal\b|pal(?:ette|ete|let|et|é)s?\s+(?:euro(?:p[eé][a-zé]*)?|eur)(?![a-zà-ÿ])|欧标托盘|欧洲托盘|欧式托盘/i, l: 120, w: 80 },
+    { re: /industrie\s*-?\s*pal(?:ette|let)|industrial\s*pallet|pal(?:ette|ete|let|et|é)s?\s+industri|\bblokpallet|\bpal(?:ete|let)s?\s+pbr\b|工业托盘/i, l: 120, w: 100 }
   ];
   // Die Woerter des Text-Imports in den Sprachen der Oberflaeche (26.11.26). Bis dahin
   // verstand der lokale Parser nur Deutsch und Englisch: "9 bultos 250x80x30 no apilables"
@@ -746,20 +748,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   //      ein neues Zaehlwort endet an einer ("12 Futterkisten" sind keine "12 fut").
   //   3. Kein Lookbehind: aeltere Safari-Fassungen kennen es nicht, und die Seite bliebe stehen.
   var IMPORT_WORT = {
-    nichtStapelbar: /nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel|\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apila|remonta)|\bsin\s+apilar|\b(?:non|pas)[-\s]?(?:gerb|empil)|\bniet[-\s]?stapel|\bonstapelbaar|不可堆|不能堆|禁止堆|不可叠|不能叠/i,
-    nichtDrehbar: /nicht\s*drehbar|not\s*rotat|no\s*rotat|\bno\s+(?:se\s+pueden?\s+)?(?:gira|rota)|\bsin\s+(?:gira|rota)|\bne\s+pas\s+(?:tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\brotation\s+interdite|\bniet[-\s]?draai|不可旋转|不能旋转|禁止旋转/i,
+    nichtStapelbar: /nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel|\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apila|remonta)|\bsin\s+apilar|\b(?:non|pas)[-\s]?(?:gerb|empil)|\bniet[-\s]?stapel|\bonstapelbaar|\bn[aã]o\s+(?:(?:[eé]|s[aã]o|podem?\s+ser)\s+)?(?:empilh|remont|sobrepo)|不可堆|不能堆|禁止堆|不可叠|不能叠/i,
+    nichtDrehbar: /nicht\s*drehbar|not\s*rotat|no\s*rotat|\bno\s+(?:se\s+pueden?\s+)?(?:gira|rota)|\bsin\s+(?:gira|rota)|\bne\s+pas\s+(?:tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\brotation\s+interdite|\bniet[-\s]?draai|\bn[aã]o\s+(?:gir|rotac)|\bsem\s+gir|不可旋转|不能旋转|禁止旋转/i,
     // "stapelbar bis 180 cm" -- das Schluesselwort vor der Hoehe
-    bis: "(?:bis|m[aá]x\\.?|maximal|maximaal|m[aá]ximo|up\\s*to|hasta|jusqu['’]?\\s*[àa]|\\btot|限高|最高|不超过|至)",
+    bis: "(?:bis|m[aá]x\\.?|maximal|maximaal|m[aá]ximo|up\\s*to|hasta|jusqu['’]?\\s*[àa]|\\btot|\\bat[eé]|限高|最高|不超过|至)",
     // Zaehlwoerter, die mit der Zahl verschwinden ("12 Stück") -- alt und neu getrennt, weil
     // die neuen an einer Wortgrenze enden muessen (Regel 2)
     stk: "x\\b|×|stk\\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?",
-    stkNeu: "uds?\\b\\.?|unidades|unid\\b\\.?|piezas?|pzas?\\b\\.?|pi[eè]ces?|unit[eé]s?|stuks?|个|件",
+    stkNeu: "uds?\\b\\.?|unidades?|unid\\b\\.?|un\\b\\.?|pe[cç]as?|piezas?|pzas?\\b\\.?|pi[eè]ces?|unit[eé]s?|stuks?|个|件",
     // Ware, die als Name stehen bleibt ("12 Kisten" -> "Kisten")
     ware: "paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?",
-    wareNeu: "europalets?|palets?|pal[eé]s|palé|tarimas?|cajas?|cajones|bultos?|bidones|tambores|sacos?|rollos?|bobinas?|colis|caisses?|f[uû]ts?|sacs?|rouleaux|bobines?|europallets?|blokpallets?|vaten|kratten|zakken|rollen|balen|托盘|托|箱|桶|卷|包|台|捆",
-    gewicht: "kgs?|kilo[a-z]*|toneladas?|tonnes|tonnen?|to\\b|t\\b|lbs?\\b|pounds?\\b|libras?\\b|公斤|千克|吨",
+    wareNeu: "europaletes?|paletes?|caixas?|caixotes?|volumes|fardos?|rolos?|bombonas?|engradados?|europalets?|palets?|pal[eé]s|palé|tarimas?|cajas?|cajones|bultos?|bidones|tambores|sacos?|rollos?|bobinas?|colis|caisses?|f[uû]ts?|sacs?|rouleaux|bobines?|europallets?|blokpallets?|vaten|kratten|zakken|rollen|balen|托盘|托|箱|桶|卷|包|台|捆",
+    gewicht: "kgs?|kilo[a-z]*|quilo[a-z]*|toneladas?|tonnes|tonnen?|to\\b|t\\b|lbs?\\b|pounds?\\b|libras?\\b|公斤|千克|吨",
     // Was nach dem Lesen aus dem NAMEN verschwindet (Deutsch und Englisch raeumt die Zeile selbst)
-    wortWeg: /\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apilables?|apilar|remontables?)|\bsin\s+apilar|\bapilables?|\bremontables?|\b(?:non|pas)[-\s]?(?:gerbables?|empilables?)|\bgerbables?|\bempilables?|\bniet[-\s]?stapelbaar|\bniet\s+stapelen|\bstapelbaar|\bno\s+(?:se\s+pueden?\s+)?(?:girar|girables?|rotar|rotables?)|\bsin\s+girar|\bne\s+pas\s+(?:gerber|empiler|tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\bniet[-\s]?draai(?:baar|en)|不可堆叠|不可堆放|不能堆叠|可堆叠|可堆放|不可旋转|不能旋转/ig
+    wortWeg: /\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apilables?|apilar|remontables?)|\bsin\s+apilar|\bapilables?|\bremontables?|\b(?:non|pas)[-\s]?(?:gerbables?|empilables?)|\bgerbables?|\bempilables?|\bniet[-\s]?stapelbaar|\bniet\s+stapelen|\bstapelbaar|\bno\s+(?:se\s+pueden?\s+)?(?:girar|girables?|rotar|rotables?)|\bsin\s+girar|\bne\s+pas\s+(?:gerber|empiler|tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\bniet[-\s]?draai(?:baar|en)|\bn[aã]o\s+(?:empilh[aá]ve(?:l|is)|empilhar|remont[aá]ve(?:l|is))|\bempilh[aá]ve(?:l|is)|\bn[aã]o\s+girar|\bsem\s+girar|不可堆叠|不可堆放|不能堆叠|可堆叠|可堆放|不可旋转|不能旋转/ig
   };
   var IMPORT_RE = (function () {
     var W = IMPORT_WORT, ende = "(?![a-zà-ÿ])";
@@ -793,7 +795,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var PARSER_NAMEN = null;
   var parserNamen = (opts) => (opts && opts.namen) || (typeof PARSER_NAMEN !== "undefined" && PARSER_NAMEN) || {};
   // Excel-Copy-Paste (TSV): Kopfzeilen-Erkennung in den Sprachen der Oberflaeche (DE, EN,
-  // seit 26.11.26 ES, FR, NL, ZH -- Regeln siehe IMPORT_WORT), Einheiten aus dem Header
+  // seit 26.11.26 ES, FR, NL, ZH, PT -- Regeln siehe IMPORT_WORT), Einheiten aus dem Header
   // (mm/10, m*100, t*1000 – pro Spalte), positionaler Fallback ohne Header.
   // Ehrlichkeit: OHNE Einheit im Header wird cm angenommen – keine Magnitude-Heuristik.
   function parseTSV(text, opts) {
@@ -809,19 +811,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // "Bultos", "Colis" zaehlen nur am ANFANG der Zelle oder hinter "Nº (de)": in
       // "Descripción de los bultos" sind sie die Beschreibung. Franz. "Nombre" nur mit dem,
       // was gezaehlt wird ("Nombre de colis") -- allein ist es der spanische NAME.
-      ["qty", /anzahl|menge|stk|stück|qty|quantity|pcs|colli|kartons|cantidad|^cant\b|(?:^|n[uú]m(?:ero)?\.?\s+(?:de\s+)?|n[º°]\.?\s*(?:de\s+)?)(?:bultos|piezas|unidades|uds?\b|colis\b|cajas\b|palets\b)|quantit[eé]|^qt[eé](?![a-zà-ÿ])|^nbr?e?\b|nombre\s+de\s+(?:colis|palettes?|cartons|caisses|pi[eè]ces|unit[eé]s)|aantal|stuks|数量|件数|箱数/i],
-      ["l", /länge|laenge|length|^l$|^l\s*\(|\blargo\b|\blongitud\b|longueur|lengte|^长度?\s*(?:$|[(（\[])/i],
-      ["w", /breite|width|^b$|^w$|^b\s*\(|^w\s*\(|\banch(?:o|ura)\b|largeur|breedte|^宽度?\s*(?:$|[(（\[])/i],
+      ["qty", /anzahl|menge|stk|stück|qty|quantity|pcs|colli|kartons|cantidad|^cant\b|(?:^|n[uú]m(?:ero)?\.?\s+(?:de\s+)?|n[º°]\.?\s*(?:de\s+)?)(?:bultos|piezas|unidades|uds?\b|colis\b|cajas\b|palets\b)|quantit[eé]|^qt[eé](?![a-zà-ÿ])|^nbr?e?\b|nombre\s+de\s+(?:colis|palettes?|cartons|caisses|pi[eè]ces|unit[eé]s)|aantal|stuks|quantidade|^qtde?\b|^volumes\b|数量|件数|箱数/i],
+      ["l", /länge|laenge|length|^l$|^l\s*\(|\blargo\b|\blongitud\b|longueur|lengte|comprimento|^compr\b|^长度?\s*(?:$|[(（\[])/i],
+      ["w", /breite|width|^b$|^w$|^b\s*\(|^w\s*\(|\banch(?:o|ura)\b|largeur|breedte|largura|^larg\b|^宽度?\s*(?:$|[(（\[])/i],
       ["h", /höhe|hoehe|height|^h$|^h\s*\(|\balt(?:o|ura)\b|hauteur|hoogte|^高度?\s*(?:$|[(（\[])/i],
       // "Maße"/"Abmessungen"/"LxBxH" VOR dem Gewicht pruefen: "Masse (LxBxH)" ist eine
       // Massspalte, "Masse (kg)" bleibt Gewicht. Das nackte "Maße" (mit ß) ist eindeutig
       // eine Massspalte; das nackte "Masse" bleibt beim Gewicht.
-      ["dims", /abmessung|dimensions?\b|^maße$|ma(?:ß|ss)e\s*\(\s*(?:mm|cm|m\b|lxbxh|l\s*[x×])|l\s*[x×]\s*b\s*[x×]\s*h|lxbxh|dimensiones|\bmedidas\b|afmetingen|^maten\b|尺寸|规格/i],
+      ["dims", /abmessung|dimensions?\b|^maße$|ma(?:ß|ss)e\s*\(\s*(?:mm|cm|m\b|lxbxh|l\s*[x×])|l\s*[x×]\s*b\s*[x×]\s*h|lxbxh|dimensiones|dimens[oõ]es|\bmedidas\b|afmetingen|^maten\b|尺寸|规格/i],
       ["weight", /gewicht|weight|^kg$|kg\/|masse\b|brutto|netto|\bpeso\b|poids|重量|毛重|净重/i],
-      ["stackable", /stapel|stack|apilable|remontable|gerbable|empilable|堆叠|堆放|叠放/i],
+      ["stackable", /stapel|stack|apilable|remontable|gerbable|empilable|empilh|堆叠|堆放|叠放/i],
       // Bewusst NICHT dabei: "Referencia", "Référence", "Article" -- das ist meist die
       // Artikelnummer, und die erste passende Spalte gewinnt den Namen.
-      ["name", /bezeichnung|artikel|beschreibung|name|description|item|ware|inhalt|position|descripci[oó]n|art[ií]culo|producto|mercanc[ií]a|\bnombre\b|d[eé]signation|produit|marchandise|libell[eé]|omschrijving|\bnaam\b|goederen|^bulto$|品名|名称|货物|描述/i]
+      ["name", /bezeichnung|artikel|beschreibung|name|description|item|ware|inhalt|position|descripci[oó]n|art[ií]culo|producto|mercanc[ií]a|\bnombre\b|d[eé]signation|produit|marchandise|libell[eé]|omschrijving|\bnaam\b|goederen|^bulto$|descri[cç][aã]o|produto|mercadoria|\bnome\b|品名|名称|货物|描述/i]
     ];
     // Eine Kopfzelle, die ZWEI der drei Kanten nennt ("Länge x Breite x Höhe", "Medidas
     // (largo x ancho x alto)"), ist die kombinierte Mass-Spalte -- nicht die Laenge. Vorher
@@ -850,12 +852,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               else if (/cm|centim|cent[ií]m|厘米/i.test(c)) unitF[i] = 1;
               // Zoll nur, wenn es als EINHEIT dasteht -- "(in)", "inch", "Zoll", Zollzeichen.
               // Ein blankes "in" waere auch das deutsche/englische Wort ("Laenge in cm").
-              else if (/[(\[]\s*in(?:ch(?:es)?)?\.?\s*[)\]]|\binch(?:es)?\b|\bzoll\b|["\u2033]|\bpulgadas?\b|\bpulg\b|\bpouces?\b|英寸/i.test(c)) unitF[i] = ZOLL;
+              else if (/[(\[]\s*in(?:ch(?:es)?)?\.?\s*[)\]]|\binch(?:es)?\b|\bzoll\b|["\u2033]|\bpulgadas?\b|\bpulg\b|\bpouces?\b|\bpolegadas?\b|英寸/i.test(c)) unitF[i] = ZOLL;
               else if (/\bm\b|\(m\)|\b(?:meters?|metros?|m[eè]tres?)\b|[(（]\s*米\s*[)）]/i.test(c)) unitF[i] = 100;
             } else if (k === "weight") {
               if (/\bt\b|tonnen|toneladas?|tonnes?|吨/i.test(c)) unitF[i] = 1e3;
               else if (/\blbs?\b|pounds?|pfund|libras?|磅/i.test(c)) unitF[i] = PFUND;
-              else if (/\bkg\b|kilo|公斤|千克/i.test(c)) unitF[i] = 1;
+              else if (/\bkg\b|kilo|quilo|公斤|千克/i.test(c)) unitF[i] = 1;
             }
             break;
           }
@@ -967,7 +969,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Die Zelle sagt "nein" -- als Wort der Sprache oder ausgeschrieben ("no apilable",
       // "nicht stapelbar": das stand vorher als STAPELBAR in der Liste).
       const stapelZelle = map.stackable !== void 0 ? String(cell("stackable")).trim() : "";
-      if (/^(nein|no|non|nee|0|false|falso|faux|✗|x|否|不|不可|不能|不可以)$/i.test(stapelZelle) || IMPORT_WORT.nichtStapelbar.test(stapelZelle)) stackable = false;
+      if (/^(nein|no|non|nee|n[aã]o|0|false|falso|faux|✗|x|否|不|不可|不能|不可以)$/i.test(stapelZelle) || IMPORT_WORT.nichtStapelbar.test(stapelZelle)) stackable = false;
       let name = String(cell("name") || "").replace(/\s+/g, " ").trim();
       if (!name) name = parserNamen(opts).pos || "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
@@ -1024,8 +1026,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Die LETZTE Einheit einer Kette muss an einem Wortende stehen: bis 26.11.26 frass die
       // Kette das "m" des naechsten Wortes als Meter -- "5 Kisten 120x80x100 mit Deckel" waren
       // 12000 x 8000 x 10000 cm, ebenso "... Maschinenteile", "... machine parts", "... max".
-      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)(?![a-zà-ÿ]))?/i);
-      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)(?![a-zà-ÿ]))?/i);
+      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i);
+      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i);
       if (dim4) {
         l = toNum(dim4[2]);
         w = toNum(dim4[4]);
@@ -1079,8 +1081,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Industrie) zaehlt NUR mit Massen in der Zeile -- ohne sie waere das Grundmass
       // geraten, die Presets bringen ihres dagegen selbst mit.
       let dim2 = null;
-      if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b|\bpalettes?\b|\bpalets?\b|\bpalés?(?![a-zà-ÿ])|\bpales\b|\btarimas?\b|托盘/i.test(low))) {
-        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)(?![a-zà-ÿ]))?(?!\s*[x×\*\/])/i);
+      if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b|\bpalettes?\b|\bpalets?\b|\bpalés?(?![a-zà-ÿ])|\bpales\b|\btarimas?\b|\bpaletes?\b|托盘/i.test(low))) {
+        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?(?!\s*[x×\*\/])/i);
       }
       // Beschriftete Masse ("Länge 320 Breite 145 Höhe 168"): die Prosa-Form ohne
       // x-Kette. Nur wenn alle drei Angaben da sind -- zwei plus Raten waere erfunden.
@@ -1092,8 +1094,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const v = toNum(m[1]), u = (m[2] || "").toLowerCase();
           return u === "m" ? v * 100 : u === "mm" ? v / 10 : v;
         };
-        const L2 = teil(/(?:l(?:änge|aenge|ength)|\blargo|\blongitud|\blongueur|\blengte|长度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
-        const B2 = teil(/(?:breite|width|\banch(?:o|ura)|\blargeur|\bbreedte|宽度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
+        const L2 = teil(/(?:l(?:änge|aenge|ength)|\blargo|\blongitud|\blongueur|\blengte|\bcomprimento|长度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
+        const B2 = teil(/(?:breite|width|\banch(?:o|ura)|\blargeur|\bbreedte|\blargura|宽度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
         const H2 = teil(/(?:h(?:öhe|oehe|eight)|\balt(?:o|ura)|\bhauteur|\bhoogte|高度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
         if (L2 > 0 && B2 > 0 && H2 > 0) { lbl = true; l = L2; w = B2; h = H2; }
       }
@@ -1158,11 +1160,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       let rotatable = true;
       if (IMPORT_WORT.nichtDrehbar.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?)(?![a-zà-ÿ]))?/i, "")).replace(IMPORT_RE.gewicht, "").replace(IMPORT_RE.stk, "").replace(IMPORT_RE.ware, "$2").replace(IMPORT_RE.bisWeg, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(IMPORT_WORT.wortWeg, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/\b(?:m[aá]x\.?|m[aá]ximo|maximaal)\b/ig, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i, "")).replace(IMPORT_RE.gewicht, "").replace(IMPORT_RE.stk, "").replace(IMPORT_RE.ware, "$2").replace(IMPORT_RE.bisWeg, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(IMPORT_WORT.wortWeg, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/\b(?:m[aá]x\.?|m[aá]ximo|maximaal)\b/ig, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (dim2) name = name.replace(dim2[0], "").trim();
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
-      name = name.replace(/(?:^|\s)(?:je|à|each|c\/u|cada\s+un[oa]|cada|chacune?|la\s+pi[eè]ce|l['’]unit[eé]|por\s+(?:unidad|bulto|pieza)|par\s+colis|per\s+stuk|per\s+collo)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece|ud|unidad|pza|pi[eè]ce|stuk|collo|colis)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/\s+/g, " ").trim();
+      name = name.replace(/(?:^|\s)(?:je|à|each|c\/u|cada\s+u(?:n[oa]|ma?)|cada|chacune?|la\s+pi[eè]ce|l['’]unit[eé]|por\s+(?:unidade?|bulto|pieza|pe[cç]a|volume|item)|par\s+colis|per\s+stuk|per\s+collo)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece|ud|unidade?|un|pza|pe[cç]a|pi[eè]ce|stuk|collo|colis)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/\s+/g, " ").trim();
       if (!name) { const NM = parserNamen(opts); name = pal ? pal.w === 80 ? NM.ep || "Europalette" : NM.pal || "Palette" : dim2 ? NM.pal || "Palette" : NM.pos || "Position"; }
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);

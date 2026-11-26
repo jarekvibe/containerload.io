@@ -167,6 +167,36 @@ test("die Einheit endet am Wortende: \"120x80x100 mit Deckel\" sind keine 120 Me
   assert.deepStrictEqual([r.length, ...masse(r[0])], [1, 60, 40, 40]);
 });
 
+test("Portugiesisch: não empilhável, até, paletes, quilos, comprimento/largura/altura -- und der palete PBR", () => {
+  // Die siebte Sprache der Oberflaeche (26.11.26). "Largura" ist die BREITE (wie franz. "largeur"),
+  // nicht die spanische Laenge "largo".
+  for (const t of ["9 caixas 250x80x30 não empilháveis", "9 caixas 250x80x30 nao empilhavel", "2 caixas 100x80x60 NÃO EMPILHAR", "8 tambores 60x60x90 não remontável"]) assert.strictEqual(eine(t).stackable, false, t);
+  for (const t of ["18 paletes 120x80x110 empilháveis", "piano empilhável 150x60x110", "6 caixas 60x40x40, 12 kg"]) assert.strictEqual(eine(t).stackable, true, t);
+  for (const t of ["18 paletes 120x80x110, 300 kg, empilhável até 180 cm", "18 paletes 120x80x110 máx. 180 cm", "18 paletes 120x80x110 até 1,8 m"]) {
+    const r = eine(t);
+    assert.deepStrictEqual([r.stackH, ...masse(r)], [180, 120, 80, 110], t);
+    assert.ok(!/\d|at[eé]|m[aá]x|empilh/i.test(r.name), `${t}: der Name traegt Reste — "${r.name}"`);
+  }
+  for (const t of ["2 máquinas 320x145x168 não girar", "2 máquinas 320x145x168 sem girar"]) assert.strictEqual(eine(t).rotatable, false, t);
+  for (const [t, qty] of [["Lote B: 12 caixas 100x80x60 300 quilos", 12], ["Pedido: 10 peças 60x40x40", 10], ["Pedido: 10 unidades 60x40x40", 10], ["Lote C: 7 volumes 60x40x40", 7]]) assert.strictEqual(eine(t).qty, qty, t);
+  for (const [t, kg] of [["12 caixas 100x80x60 300 quilos", 300], ["12 caixas 100x80x60 300 quilogramas", 300], ["2 máquinas 320x145x168 2,4 toneladas", 2400]]) assert.strictEqual(eine(t).weight, kg, t);
+  assert.deepStrictEqual(masse(eine("5 paletes 48x40x55 polegadas 1100 libras")), [121.92, 101.6, 139.7]);
+  assert.strictEqual(eine("5 paletes 48x40x55 polegadas 1100 libras").weight, 498.951607);
+  // Paletten ohne Masse: europeu = 120 x 80, industrial und PBR (Brasilien) = 120 x 100
+  for (const [t, qty, l, w] of [["20 europaletes", 20, 120, 80], ["4 paletes europeus", 4, 120, 80], ["3 paletes industriais", 3, 120, 100], ["3 paletes PBR", 3, 120, 100], ["1 palete PBR", 1, 120, 100]]) {
+    const r = eine(t); assert.deepStrictEqual([r.qty, r.l, r.w, r.h], [qty, l, w, 110], t);
+  }
+  assert.strictEqual(eine("4 paletes europeus 150 cm de altura 400 kg").h, 150);
+  assert.deepStrictEqual(masse(eine("4 paletes 120x100")), [120, 100, 110]);
+  // Beschriftete Masse und die Excel-Liste
+  assert.deepStrictEqual(masse(eine("comprimento 320 largura 145 altura 168 1200 kg")), [320, 145, 168]);
+  assert.deepStrictEqual(masse(eine("largura 145 comprimento 320 altura 168")), [320, 145, 168]);
+  const liste = parseCargoText("Descrição\tQuantidade\tComprimento (cm)\tLargura (cm)\tAltura (cm)\tPeso (kg)\tEmpilhável\nCaixa de peças\t4\t120\t80\t100\t250\tnão\nBobina\t10\t60\t40\t40\t12\tsim");
+  assert.deepStrictEqual(liste.map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.stackable, r.name]), [[4, 120, 80, 100, 250, false, "Caixa de peças"], [10, 60, 40, 40, 12, true, "Bobina"]]);
+  const kurz = parseCargoText("Produto\tQtd.\tCompr.\tLarg.\tAltura\tPeso total (kg)\nCaixas\t20\t60\t40\t40\t240");
+  assert.deepStrictEqual(kurz.map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.name]), [[20, 60, 40, 40, 12, "Caixas"]]);
+});
+
 // ── Excel-Listen ────────────────────────────────────────────────────────────────────────────
 const zeilen = (t) => parseCargoText(t).map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.stackable, r.name]);
 
