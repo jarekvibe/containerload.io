@@ -13,7 +13,7 @@
 //   h.loc    -- das Zahlenformat ("es-ES", oder das des Browsers, wenn er Spanisch spricht)
 //
 // Wortwahl: "palet" und "bulto" (so schreibt und sucht die Branche in Spanien), Anrede "tú" wie im Deutschen das Du.
-// Dokumente (Ladevorschlag, Bild, CSV, VGM) bleiben vorerst Englisch -- sie gehen an Dritte.
+// Die Dokumente sprechen Spanisch (dok weiter unten): Ladevorschlag, Bild-Export und VGM-PDF.
 (function () {
   var S = window.CL_SPRACHE = window.CL_SPRACHE || {};
   S.es = {
@@ -49,7 +49,7 @@
         vm75: "Reparto \xB7 valor orientativo", vmVan: "Furgón \xB7 valor orientativo",
         metaOpenTop: "Techo abierto \xB7 sobrealtura por arriba", metaFlatRack: "Testeros \xB7 sobreancho / sobrealtura",
         metaPlatform: "Solo piso \xB7 sobrelargo", metaReefer: "Aislado \xB7 interior reducido",
-        stVol: "Volumen", stPay: "Carga útil", stDoor: "Puerta", stDeck: "Piso", stOpen: "Abierto",
+        stVol: "Volumen", stPay: "Carga útil", stPayLb: "C. útil (lb)", stDoor: "Puerta", stDeck: "Piso", stOpen: "Abierto",
         openRoof: "techo", openSides: "laterales", openAll: "todos los lados", ftUnit: "pies", adjHint: function (u) { return u + " \xB7 medidas propias → cambia a «A medida»"; },
         cargo: "Carga",
         itemDefault: "Bulto",
@@ -263,6 +263,114 @@
           kopf: ["Contenedor", "Bulto", "Cantidad", "Largo_cm", "Ancho_cm", "Alto_cm", "Peso_kg_ud", "Peso_kg_total", "Apilable", "Giro_90", "Introducido"],
           ja: "sí", nein: "no", bis: function (cm) { return "hasta " + cm + " cm"; }, max: function (n) { return "máx. " + n; }, offen: "pendiente", pos: function (n) { return "Bulto " + n; }
         },
+        // Die DOKUMENTE in dieser Sprache (Ladevorschlag mit Stauplan, Reihenfolgen, Gewicht,
+        // VGM-Vorbereitung, Quittung). Je Baustein ein Woerterbuch -- oder eine Funktion, wenn
+        // Zahlen im Satz stehen (w). Es liegt ueber dem englischen (dokMit in app.html); die
+        // Schluessel vergleicht test/dokumente-sprachen.test.mjs. Die Texte gehen roh ins HTML
+        // des Dokuments: "&" als &amp; schreiben, kein "<" ausser den Tags, die auch im
+        // Englischen stehen (<br>, <b>). Spalten und Kopfzeilen sind eng -- kurz bleiben.
+        dok: {
+          loc: "es-ES",
+          row: { ja: "SÍ", nein: "NO", dg: "MM.PP.", pos: "Bulto " },
+          stau: {
+            top: "VISTA EN PLANTA", topSub: "superficie", topHint: "desde arriba",
+            side: "VISTA LATERAL", sideSub: "altura y apilado", sideHint: "de lado",
+            len: "Largo", wid: "Ancho", hei: "Alto", front: "PARED FRONTAL", door: "◂ PUERTA",
+            title: "PLAN DE ESTIBA", h2: "Carga esquemática",
+            note: "Vista esquemática de la disposición calculada. Estiba, giro y apilado exactos en el plan 3D interactivo (QR). Puramente geométrico: la carga por eje, el centro de gravedad y la sujeción de la carga deben comprobarse aparte.",
+            multi: function (n) { return "El dibujo muestra el contenedor 1 de " + n + "; los demás, en el plan 3D."; },
+            c1: "SUELO OCUPADO", c2: "ALTURA MÁX. DE APILADO", c3: "NIVELES DE APILADO", clear: "holgura",
+            stack: "apilable", nostack: "no apilable"
+          },
+          page: function (w) {
+            return {
+              kicker: "PROPUESTA DE CARGA", h1: "Plan de carga<br>no vinculante",
+              cont: "CONTENEDOR", inner: "MEDIDAS INT.", payload: "CARGA ÚTIL MÁX.",
+              discK: "PROPUESTA NO VINCULANTE — COMPRUÉBALA",
+              discBody: "Propuesta basada en las medidas y los pesos introducidos. Cálculo puramente geométrico, sin comprobar el peso real, la carga por eje, el centro de gravedad ni la sujeción de la carga. La carga, el reparto del peso y la sujeción deben comprobarse por cuenta propia antes del transporte. No es un documento oficial.",
+              kPos: "PARTIDAS", colliTot: w.COLLI + " bultos en total",
+              kVol: "VOLUMEN", volUnit: "m³", util: w.VOLPCT + " % de ocupación",
+              kWeight: "PESO · INTRODUCIDO", ofPay: w.WTPCT + " % de la carga útil",
+              fitsIn: "CABE EN",
+              tPos: "PARTIDAS", entries: w.POSCOUNT + " PARTIDAS · " + w.COLLI + " BULTOS",
+              thPos: "N.º", thDesc: "Descripción", thQty: "Cant.", thDims: "Medidas L×An×Al", thWpc: "Peso/ud", thTot: "Total kg", thVol: "Vol. m³", thStk: "Apil.",
+              orderCol: "Orden", orderNote: "El orden es una sugerencia (primero lo pesado y lo que va abajo); no es una instrucción de carga obligatoria.",
+              sum: "Total",
+              notesK: "NOTAS", nonbind: "· NO VINCULANTE",
+              hints: [
+                "Coloca los palets pesados abajo y repartidos de forma uniforme.",
+                "Los bultos no apilables van en el suelo: no se coloca nada encima.",
+                "Comprueba aparte la carga por eje, el centro de gravedad y la sujeción de la carga.",
+                "Pesos = tus datos, no verificados por la herramienta."
+              ],
+              promoK: "PLAN 3D INTERACTIVO", promoH: "Gira y revisa el plan en 3D",
+              promoB: "Escanea el QR → mira la carga en 3D, ajústala y compártela. Sin registro, directamente en el navegador.",
+              qrAlt: "Código QR del plan 3D", linkLabel: "O abre el enlace en el ordenador:",
+              footer: "No es un documento oficial · propuesta no vinculante basada en tus datos · no sustituye la comprobación profesional de la sujeción de la carga, la carga por eje ni el reparto del peso.",
+              page: "Página 1 / 1",
+              datum: "FECHA", absender: "REMITENTE", empfaenger: "DESTINATARIO", hint: "haz clic y rellena"
+            };
+          },
+          sequenz: {
+            titel: "ORDEN DE CARGA", h2: "Carga en este orden",
+            sub: "Primero la pared frontal, la puerta al final. Abajo antes que arriba. Marca cada paso al cargar.",
+            ab: "desde la pared frontal",
+            mehr: function (n) { return "+ " + n + " pasos más: el detalle completo, en el plan 3D (QR)"; },
+            pos: "Bulto "
+          },
+          stopps: {
+            titel: "ORDEN DE DESCARGA", h2: "Descarga en este orden",
+            sub: "Según la estiba: la parada 1 queda en la puerta y se descarga primero. La mercancía sin parada queda en la pared frontal y sigue cargada hasta el final.",
+            stopp: function (n) { return "Parada " + n; }, ohne: "Sin parada", ohneSub: "sigue cargado", pos: "N.º",
+            stk: function (n) { return n + " uds"; }, ab: "desde la pared frontal"
+          },
+          gewicht: function (w) {
+            return {
+              titel: "PESO Y CENTRO DE GRAVEDAD · VALOR ORIENTATIVO", wand: "PARED FRONTAL", tuer: "PUERTA",
+              zeile: "Peso de la carga <b>" + w.kg + " kg</b> · centro de gravedad a <b>" + w.m + " m</b> de la pared frontal (" + w.pct + " % de la longitud) · mitad delantera " + w.vorn + " % / mitad trasera " + w.hinten + " %",
+              sub: "A partir de tus pesos, suponiendo masa homogénea por bulto. No sustituye al pesaje; comprueba aparte la carga por eje y la sujeción."
+            };
+          },
+          vgm: function (w) {
+            return {
+              titel: "MASA BRUTA (PREPARACIÓN DE LA VGM) · VALOR ORIENTATIVO", ladung: "Carga", tar: "tara del contenedor", brutto: "bruto",
+              typ: w.hatTara ? "(típica de " + w.typ + ": manda la placa CSC del contenedor)" : "(léela en la placa CSC del contenedor)",
+              sub: "No es una VGM. La masa bruta verificada exige el pesaje (método 1) o un cálculo certificado (método 2) según SOLAS VI/2; esta cifra es un valor orientativo a partir de tus datos sin verificar, y el campo de la tara se puede rellenar antes de imprimir."
+            };
+          },
+          quittung: {
+            wer: "Cargado por (nombre)", wann: "Fecha / hora", unterschrift: "Firma",
+            sub: "Solo confirma la carga según esta propuesta. No confirma la sujeción de la carga, la carga por eje ni los pesos."
+          },
+          uebersicht: {
+            titel: "POR CONTENEDOR", h2: "Cómo se reparte el envío", cont: "Contenedor", typ: "Tipo", stk: "Cargado", vol: "Volumen", kg: "Peso", voll: "Lleno",
+            note: "Una línea por contenedor. Cada uno se posiciona, se pesa y se transporta por separado; las páginas siguientes muestran un plan de estiba cada una."
+          },
+          doc: {
+            titel: "Propuesta de carga", druck: "Guardar como PDF / imprimir", zu: "Cerrar",
+            felder: "Los campos con línea discontinua (REF, remitente, destinatario) se pueden rellenar antes de imprimir; no salen de esta página."
+          },
+          vgmpdf: {
+            titel: "Declaración VGM", unter: "Masa bruta verificada (Verified Gross Mass) según el Convenio SOLAS, capítulo VI, regla 2",
+            verlader: "Embarcador", person: "Persona autorizada", ort: "Lugar", buchung: "N.º de reserva / B/L", datum: "Fecha de pesaje", erstellt: "Emitido el",
+            sp: ["N.º", "N.º contenedor", "Tipo", "N.º precinto", "Tara", "Carga", "Embalaje", "VGM"], kg: "kg", summe: "Total",
+            methode: "Método utilizado",
+            m1: "Método 1", m1t: "Se ha pesado el contenedor lleno y precintado.",
+            m2: "Método 2", m2t: "Todos los bultos, incluidos palets, material de estiba y de sujeción, se han pesado uno a uno y se han sumado a la tara del contenedor.",
+            erkl: "Por la presente se confirma que la masa bruta indicada arriba para cada contenedor se ha obtenido por el método indicado arriba.",
+            name: "Nombre en mayúsculas", unterschrift: "Firma", ortDatum: "Lugar, fecha", notiz: "Observaciones",
+            fuss: "Todos los datos proceden del embarcador — ContainerLoad no pesa ni verifica los pesos.", mit: "Creado con ContainerLoad · containerload.io",
+            seite: function (a, b) { return "Página " + a + " / " + b; }
+          },
+          bild: { ausl: "OCUPACIÓN", geladen: "CARGADO", gewicht: "PESO", volumen: "VOLUMEN", stk: " UDS", mehr: "MÁS" },
+          bau: {
+            eigen: "Medidas propias", geo: "comprobado geométricamente", empf: "recomendado", empf2: "recomendación",
+            gross: "bulto demasiado grande", schwer: "bulto demasiado pesado", seite: "Página ", gebucht: "VOLUMEN CONTRATADO",
+            gefahr: "Bultos marcados MM.PP.: solo es la marca de tus datos; no hay comprobación de mercancías peligrosas ni reglas de segregación o estiba. La clasificación y la admisibilidad siguen siendo responsabilidad del expedidor.",
+            contVon: function (i, n) { return "contenedor " + i + " de " + n; }
+          }
+        },
+        importNamen: { pos: "Bulto", pal: "Palet", ep: "Europalet" },
         exportFail: "No se ha podido exportar", popups: "Permite las ventanas emergentes", posWort: "Bulto", farbBlau: "Azul", farbRot: "Rojo", logoOk: "Logo subido",
         shotBtn: "Imagen",
         shotExportTitle: "Exportar imagen",

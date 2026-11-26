@@ -84,7 +84,7 @@ test("nur deutsche Seiten zeigen auf die deutschen Rechtsseiten", () => {
   const alle = [];
   const lauf = (rel) => { for (const e of fs.readdirSync(path.join(dir, "..", rel), { withFileTypes: true })) { if (e.name === "test" || e.name === "node_modules") continue; const p = rel ? rel + "/" + e.name : e.name; if (e.isDirectory()) lauf(p); else if (e.name.endsWith(".html")) alle.push(p); } };
   lauf("");
-  const deutsch = (p) => !/^(en|es|fr|zh|nl)\//.test(p);
+  const deutsch = (p) => !/^(en|es|fr|zh|nl|pt)\//.test(p);
   let fremd = 0;
   for (const p of alle) {
     const s = lies(p);

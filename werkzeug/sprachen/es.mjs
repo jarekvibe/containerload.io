@@ -126,7 +126,7 @@ export default {
     imp_toolong: 'La lista es demasiado larga. Pégala directamente en la herramienta con «Excel / texto».',
     imp_ph: 'Pega aquí tu lista de bultos desde Excel …',
     imp_demo: 'Insertar ejemplo',
-    imp_demo_data: 'Bulto\tuds\tL\tAn\tAl\tkg\nBloque de motor\t4\t120\t80\t95\t310\nCaja de cambios\t6\t110\t75\t80\t240\nCajas de accesorios\t18\t60\t40\t40\t12',
+    imp_demo_data: 'Bulto\tUds.\tLargo\tAncho\tAlto\tkg\nBloque de motor\t4\t120\t80\t95\t310\nCaja de cambios\t6\t110\t75\t80\t240\nCajas de accesorios\t18\t60\t40\t40\t12',
     tab_cbm: 'Calculadora de CBM',
     tab_imp: 'Lista de bultos desde Excel',
     hero_trust: '<span>Gratis, sin límite</span><span>Sin registro</span><span>Sin cookies ni avisos</span>',
@@ -232,6 +232,10 @@ export default {
     '/ratgeber/europaletten-20-fuss-container': '/es/guia/europalets-contenedor-20-pies',
     '/ratgeber/europaletten-40-fuss-container': '/es/guia/europalets-contenedor-40-pies',
     '/ratgeber/container-volumen-cbm': '/es/guia/metros-cubicos-contenedor',
-    '/ratgeber/container-masse-innenmasse': '/es/guia/medidas-contenedor'
+    '/ratgeber/container-masse-innenmasse': '/es/guia/medidas-contenedor',
+    '/ratgeber/cbm-berechnen': '/es/guia/calcular-cubicaje-cbm',
+    '/ratgeber/container-zuladung-gewicht': '/es/guia/peso-contenedor-carga-maxima',
+    '/ratgeber/us-paletten-20-fuss-container': '/es/guia/pallets-48x40-contenedor-20-pies',
+    '/ratgeber/us-paletten-40-fuss-container': '/es/guia/pallets-48x40-contenedor-40-pies'
   }
 };

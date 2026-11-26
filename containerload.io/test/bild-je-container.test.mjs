@@ -88,8 +88,14 @@ test("die Beschriftungen sind auf beiden Untergruenden lesbar", () => {
 });
 
 test("die Sprache stimmt in beiden Faellen", () => {
-  for (const [de, en] of [["VOLUMEN", "VOLUME"], ["GEWICHT", "WEIGHT"], [" STK", " PCS"], ["WEITERE", "MORE"]]) {
-    assert.ok(new RegExp(`en \\? "${en}" : "${de}"`).test(roh),
-      `"${de}"/"${en}" fehlt oder ist nicht zweisprachig`);
+  // Die Woerter der Karte stehen in EINEM Woerterbuch mit zwei Zweigen (BT) -- ueber dokMit,
+  // damit eine Sprachdatei sie stellen kann (dok.bild; test/dokumente-sprachen vergleicht).
+  const m = /const BT = dokMit\(DOKLANG, "bild", en\n\s*\? (\{[^\n]*\})\n\s*: (\{[^\n]*\})\);/.exec(roh);
+  assert.ok(m, "das Woerterbuch der Karte (BT) wurde nicht gefunden");
+  const EN = new Function("return " + m[1])(), DE = new Function("return " + m[2])();
+  for (const [k, de, en] of [["volumen", "VOLUMEN", "VOLUME"], ["gewicht", "GEWICHT", "WEIGHT"], ["stk", " STK", " PCS"], ["mehr", "WEITERE", "MORE"]]) {
+    assert.strictEqual(DE[k], de, `"${de}" fehlt`);
+    assert.strictEqual(EN[k], en, `"${en}" fehlt`);
+    assert.ok(roh.includes("BT." + k), `die Karte benutzt BT.${k} nicht`);
   }
 });

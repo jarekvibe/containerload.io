@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<!-- Erzeugt von werkzeug/teilen-seiten.mjs aus share.html -- nicht von Hand aendern. -->
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ver el plan de carga — ContainerLoad</title>
+<meta name="description" content="Alguien te ha enviado un plan de carga. Ábrelo para ver en 3D cómo cabe la carga en el contenedor, sin registro." />
+<!-- Diese Seite existiert nur, um 450 ms lang zu zeigen, wer da schickt, und dann nach
+     /app weiterzuleiten. Ein canonical gehoert trotzdem hierher: sonst gilt jede der
+     unendlich vielen ?c=-Adressen als eigene Seite. -->
+<link rel="canonical" href="https://containerload.io/es/share" />
+<meta name="robots" content="noindex,follow" />
+<!-- Die Vorschau-Karte in der Sprache dieser Seite. Die deutsche Seite /share ist zweisprachig
+     (Deutsch · Englisch); sie ist die Quelle dieser Datei. -->
+<meta property="og:title" content="Han compartido contigo un plan de carga" />
+<meta property="og:description" content="Mira en 3D cómo cabe la carga en el contenedor: sin registro, directamente en el navegador." />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:url" content="https://containerload.io/es/share" />
+<meta property="og:image" content="https://containerload.io/share-og-es.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Han compartido contigo un plan de carga: míralo en 3D." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Han compartido contigo un plan de carga" />
+<meta name="twitter:description" content="Mira en 3D cómo cabe la carga en el contenedor: sin registro, directamente en el navegador." />
+<meta name="twitter:image" content="https://containerload.io/share-og-es.png" />
+<meta name="theme-color" content="#0E1116" />
+<!-- Verweist auf die Markendateien statt das Zeichen hier noch einmal einzubacken.
+     Eingebackene Kopien laufen auseinander — genau das war hier passiert. -->
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<style>
+  /* Grundton, Akzent, Radien und Gewichte wie im Rechner und auf der Startseite.
+     Hier standen vorher ein eigener Grundton (#070a0f), ein eigener Akzent (#2f9bff),
+     zwei Farbverlaeufe und Schriftgewicht 800 — vier Abweichungen auf einer Seite,
+     die nur eine halbe Sekunde zu sehen ist. */
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0E1116;color:#E9F0F7;
+    font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+    min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .wrap{text-align:center;padding:24px;max-width:440px}
+  .logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px}
+  .mark{width:40px;height:40px;border-radius:12px;background:#2E8FFF;display:flex;align-items:center;justify-content:center}
+  .word{font-size:21px;font-weight:700;letter-spacing:-.02em}
+  .word-load{color:#2E8FFF}
+  .eyebrow{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.14em;
+    text-transform:uppercase;color:#7689A0;margin-bottom:14px}
+  h1{font-size:27px;font-weight:700;letter-spacing:-.02em;line-height:1.15;margin-bottom:12px}
+  p{color:#9DB0C2;font-size:15px;line-height:1.55;margin-bottom:26px}
+  .spin{width:26px;height:26px;border:3px solid rgba(46,143,255,.25);border-top-color:#2E8FFF;
+    border-radius:50%;animation:sp .7s linear infinite;margin:0 auto 22px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .btn{display:inline-flex;align-items:center;gap:8px;background:#2E8FFF;color:#04121A;font-weight:700;
+    font-size:15px;padding:13px 26px;border-radius:12px;text-decoration:none;transition:filter .15s}
+  .btn:hover{filter:brightness(1.08)}
+  .btn:focus-visible{outline:2px solid #2E8FFF;outline-offset:3px}
+  .foot{margin-top:22px;font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;color:#7689A0}
+  @media (prefers-reduced-motion:reduce){.spin{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <span class="mark"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+    <span class="word">Container<span class="word-load">Load</span></span>
+  </div>
+  <div class="eyebrow" id="s-ey">Plan de carga compartido</div>
+  <h1 id="s-h1">Han compartido contigo<br>un plan de carga.</h1>
+  <p id="s-p">Enseguida verás en 3D cómo cabe la carga en el contenedor: interactivo y sin registro.</p>
+  <div class="spin" id="spin"></div>
+  <a class="btn" id="go" href="/app?lang=es">Abrir el plan →</a>
+  <div class="foot">containerload.io</div>
+</div>
+<script>
+  (function () {
+    var search = window.location.search || "";
+    // Sprache: Der Rechner haengt beim Teilen &lang=… an, wenn der Absender nicht deutsch
+    // arbeitet. Diese Seite spricht JEDE Sprache des Rechners -- sonst begruesst sie den
+    // Empfaenger eines chinesischen Plans auf Deutsch (so war es bis 25.11.26: nur de/en).
+    // Der Query-String wandert unveraendert weiter nach /app, dort liest LANG dasselbe
+    // ?lang= wieder aus. Kommt eine Sprache im Rechner dazu (CL_SPRACHEN in app.html),
+    // gehoert sie auch hierher -- test/teilen-seite.test.mjs vergleicht beide Listen.
+    //
+    // Aus DIESER Datei entstehen die Sprachseiten /en/share, /es/share ... (werkzeug/
+    // teilen-seiten.mjs): dieselbe Seite, aber Kopf und Text stehen schon im Markup in der
+    // Sprache -- denn die Vorschau-Karte von WhatsApp, Teams oder Slack liest nur den Kopf
+    // und fuehrt kein Skript aus. desc / og / ogText / alt sind die Texte dieser Karte.
+    // Nach jeder Aenderung hier: node werkzeug/teilen-seiten.mjs
+    var TEXTE = {
+      en: {
+        titel: "View stowage plan — ContainerLoad",
+        ey: "Shared stowage plan",
+        h1: "A loading plan<br>was shared with you.",
+        p: "You are about to see in 3D how the load fits into the container — interactive, no sign-up.",
+        go: "Open the plan →",
+        ns: "Please enable JavaScript or click “Open the plan”.",
+        desc: "Someone sent you a load plan. Open it to see in 3D how the cargo fits into the container – no sign-up.",
+        og: "A load plan was shared with you",
+        ogText: "See in 3D how the cargo fits into the container – no sign-up, right in the browser.",
+        alt: "A load plan was shared with you – view it in 3D."
+      },
+      es: {
+        titel: "Ver el plan de carga — ContainerLoad",
+        ey: "Plan de carga compartido",
+        h1: "Han compartido contigo<br>un plan de carga.",
+        p: "Enseguida verás en 3D cómo cabe la carga en el contenedor: interactivo y sin registro.",
+        go: "Abrir el plan →",
+        ns: "Activa JavaScript o pulsa «Abrir el plan».",
+        desc: "Alguien te ha enviado un plan de carga. Ábrelo para ver en 3D cómo cabe la carga en el contenedor, sin registro.",
+        og: "Han compartido contigo un plan de carga",
+        ogText: "Mira en 3D cómo cabe la carga en el contenedor: sin registro, directamente en el navegador.",
+        alt: "Han compartido contigo un plan de carga: míralo en 3D."
+      },
+      fr: {
+        titel: "Voir le plan de chargement — ContainerLoad",
+        ey: "Plan de chargement partagé",
+        h1: "Un plan de chargement<br>a été partagé avec vous.",
+        p: "Vous allez voir en 3D comment la marchandise tient dans le conteneur — interactif, sans inscription.",
+        go: "Ouvrir le plan →",
+        ns: "Activez JavaScript ou cliquez sur « Ouvrir le plan ».",
+        desc: "Quelqu’un vous a envoyé un plan de chargement. Ouvrez-le pour voir en 3D comment la marchandise tient dans le conteneur, sans inscription.",
+        og: "Un plan de chargement a été partagé avec vous",
+        ogText: "Voyez en 3D comment la marchandise tient dans le conteneur – sans inscription, directement dans le navigateur.",
+        alt: "Un plan de chargement a été partagé avec vous – à voir en 3D."
+      },
+      zh: {
+        titel: "查看装载方案 — ContainerLoad",
+        ey: "分享的装载方案",
+        h1: "有人与你分享了<br>一份装载方案。",
+        p: "马上以 3D 查看货物如何装入集装箱 — 可交互，无需注册。",
+        go: "打开方案 →",
+        ns: "请启用 JavaScript，或点击“打开方案”。",
+        desc: "有人给你发来一份装载方案。打开即可以 3D 查看货物如何装入集装箱，无需注册。",
+        og: "有人与你分享了一份装载方案",
+        ogText: "以 3D 查看货物如何装入集装箱 — 无需注册，直接在浏览器中打开。",
+        alt: "有人与你分享了一份装载方案 — 以 3D 查看。"
+      },
+      nl: {
+        titel: "Laadplan bekijken — ContainerLoad",
+        ey: "Gedeeld laadplan",
+        h1: "Er is een laadplan<br>met je gedeeld.",
+        p: "Je ziet zo in 3D hoe de lading in de container past — interactief, zonder account.",
+        go: "Plan openen →",
+        ns: "Schakel JavaScript in of klik op “Plan openen”.",
+        desc: "Iemand heeft je een laadplan gestuurd. Open het om in 3D te zien hoe de lading in de container past, zonder account.",
+        og: "Er is een laadplan met je gedeeld",
+        ogText: "Bekijk in 3D hoe de lading in de container past – zonder account, direct in de browser.",
+        alt: "Er is een laadplan met je gedeeld – bekijk het in 3D."
+      },
+      pt: {
+        titel: "Ver o plano de carga — ContainerLoad",
+        ey: "Plano de carga compartilhado",
+        h1: "Um plano de carga foi<br>compartilhado com você.",
+        p: "Em instantes você vê em 3D como a carga cabe no contêiner — interativo, sem cadastro.",
+        go: "Abrir o plano →",
+        ns: "Ative o JavaScript ou clique em “Abrir o plano”.",
+        desc: "Alguém enviou um plano de carga para você. Abra para ver em 3D como a carga cabe no contêiner, sem cadastro.",
+        og: "Um plano de carga foi compartilhado com você",
+        ogText: "Veja em 3D como a carga cabe no contêiner – sem cadastro, direto no navegador.",
+        alt: "Um plano de carga foi compartilhado com você – veja em 3D."
+      }
+    };
+    // Die Sprache der Seite selbst: leer auf /share (deutsch), das Kuerzel auf den erzeugten
+    // Sprachseiten. Der Link schlaegt sie, sie schlaegt die gemerkte Wahl.
+    var SEITE = "es";
+    var k = "";
+    try {
+      k = (new URLSearchParams(search).get("lang") || "").toLowerCase().slice(0, 2);
+      if (!k) k = SEITE;
+      if (!k) k = (window.localStorage.getItem("cl_lang") || "").toLowerCase().slice(0, 2);
+    } catch (e) {}
+    var t = TEXTE[k];
+    if (t) {
+      document.documentElement.lang = k;
+      document.title = t.titel;
+      var setze = function (id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; };
+      setze("s-ey", t.ey); setze("s-h1", t.h1); setze("s-p", t.p); setze("go", t.go);
+      var ns = document.getElementById("s-noscript");
+      if (ns) ns.textContent = t.ns;
+    }
+    var target = "/app" + search;
+    // Eine Sprachseite ohne ?lang= im Link (von Hand gekuerzt): der Rechner soll trotzdem in
+    // der Sprache der Seite aufgehen. Der Rechner selbst haengt ?lang= immer an.
+    if (SEITE && !/[?&]lang=/.test(search)) target += (search ? "&" : "?") + "lang=" + SEITE;
+    var go = document.getElementById("go");
+    if (go) go.setAttribute("href", target);
+    // give the branded screen a brief moment, then forward into the tool
+    setTimeout(function () {
+      try { window.location.replace(target); } catch (e) { window.location.href = target; }
+    }, 450);
+  })();
+</script>
+<noscript><div id="s-noscript" style="position:fixed;bottom:16px;left:0;right:0;text-align:center;color:#9DB0C2;font-size:13px">Activa JavaScript o pulsa «Abrir el plan».</div></noscript>
+</body>
+</html>

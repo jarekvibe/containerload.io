@@ -44,6 +44,13 @@ const CLUSTER = [
 // Je Welle: Ordner, og:locale, und woran man erkennt, dass fremder Text stehengeblieben ist.
 // Die Fremdwort-Liste nennt nur Woerter, die es in der Sprache der Seite NICHT gibt.
 const WELLEN = {
+  // Die aelteste Welle (26.10.26). Bis 26.11.26 fuehrte sie in den ENGLISCHEN Rechner, weil es
+  // keinen niederlaendischen gab -- seitdem gelten fuer sie dieselben Regeln wie fuer die anderen.
+  nl: {
+    ordner: "nl/gids", locale: "nl_NL",
+    fremd: /\b(und|nicht|Paletten|how many|the|with|combien|avec|conteneur|cuántos|caben|palets|contenedor)\b/gi,
+    nurEnDe: /in het Engels of Duits/i,
+  },
   es: {
     ordner: "es/guia", locale: "es_ES",
     fremd: /\b(passen|hoeveel|de calculator|niet|één|und|nicht|Paletten|pallets passen|how many|the|with|combien|avec|conteneur)\b/gi,
@@ -55,8 +62,22 @@ const WELLEN = {
     nurEnDe: /(qu’|uniquement |seulement )en anglais (ou|et) en allemand/i,
   },
 };
+// Themen, die es NICHT in allen fuenf Sprachen gibt, bilden ihr eigenes, kleineres Netz -- mit
+// denselben Regeln (hreflang auf allen Fassungen, Menue ab drei Sprachen, Sitemap). Die Palette
+// 48 x 40 Zoll (Nordamerika; in Mexiko "tarima"): Deutsch, Englisch, Spanisch.
+const TEIL_CLUSTER = [
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-20-fuss-container", "en/guide/pallets-20ft-container", "es/guia/pallets-48x40-contenedor-20-pies"] },
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-40-fuss-container", "en/guide/pallets-40ft-container", "es/guia/pallets-48x40-contenedor-40-pies"] },
+  // CBM berechnen ("cubicaje" -- so heisst die Rechnung in Lateinamerika), mit dem CBM-Rechner
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm"] },
+  // Gewicht und Zuladung -- die meistgesehene deutsche Seite, mit dem Gewichts-Check
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/container-zuladung-gewicht", "en/guide/container-payload-weight", "es/guia/peso-contenedor-carga-maxima"] },
+];
+const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
 const seiten = (k) => CLUSTER.map((c) => c[spalte(k)]);
+// Was eine Welle ueber ihre vier Themen hinaus traegt (in der Reihenfolge von TEIL_CLUSTER).
+const mehr = (k) => TEIL_CLUSTER.filter((n) => n.spalten.includes(k)).map((n) => n.seiten[n.spalten.indexOf(k)]);
 
 for (const [k, W] of Object.entries(WELLEN)) {
   const [s20, s40, sM3, sMass] = seiten(k);
@@ -114,7 +135,7 @@ for (const [k, W] of Object.entries(WELLEN)) {
   });
 
   test(`${K}: Suchergebnis -- Titel mit Zahl oder Thema, Laengen im Schnitt, og/twitter gleichlautend`, () => {
-    for (const f of [...seiten(k), W.ordner + "/index"]) {
+    for (const f of [...seiten(k), ...mehr(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const titel = /<title>(.*?)<\/title>/.exec(s)[1], desc = /<meta name="description" content="([^"]*)"/.exec(s)[1];
       assert.ok(titel.length <= 60, `${f}: Titel ${titel.length} Zeichen`);
@@ -138,10 +159,12 @@ for (const [k, W] of Object.entries(WELLEN)) {
     // die englischen Rechtsseiten -- die deutschen sind fuer nicht-deutsche Seiten tabu
     // (test/rechtsseiten-en).
     const baum = new RegExp(`^/${k}/|^/en/guide/$|^/en/imprint$|^/en/privacy$`);
-    for (const f of [...seiten(k), W.ordner + "/index"]) {
+    for (const f of [...seiten(k), ...mehr(k), W.ordner + "/index"]) {
       const s = lese(f + ".html");
       const koerper = s.slice(s.indexOf("<body"));
-      const text = koerper.replace(/<details class="langmenu">[\s\S]*?<\/details>/, " ").replace(/<svg[\s\S]*?<\/svg>/g, " ")
+      // Skripte sind kein sichtbarer Text (der CBM-Rechner traegt deutsche Kommentare und
+      // steht auf jeder Seite woertlich gleich -- test/cbm-widget).
+      const text = koerper.replace(/<details class="langmenu">[\s\S]*?<\/details>/, " ").replace(/<svg[\s\S]*?<\/svg>/g, " ").replace(/<script[\s\S]*?<\/script>/g, " ")
         .replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
       const fremd = text.match(W.fremd) || [];
       assert.deepStrictEqual([...new Set(fremd)], [], `${f}: fremde Woerter im Text`);
@@ -154,7 +177,7 @@ for (const [k, W] of Object.entries(WELLEN)) {
     }
     // Uebersicht und Rueckweg
     const ix = lese(W.ordner + "/index.html");
-    for (const p of seiten(k)) {
+    for (const p of [...seiten(k), ...mehr(k)]) {
       assert.ok(ix.includes(`href="/${p}"`), `${K}-Uebersicht verlinkt ${p} nicht`);
       assert.ok(lese(p + ".html").includes(`href="/${W.ordner}/"`), `${p}: Rueckweg zur Uebersicht fehlt`);
     }
@@ -167,9 +190,164 @@ for (const [k, W] of Object.entries(WELLEN)) {
   });
 }
 
+// ── Die Palette 48 x 40 Zoll auf Spanisch ──────────────────────────────────────────────────
+// Dritte Fassung der US-Seiten (test/wissen-zahlen rechnet die deutsche und die englische).
+// Der eigene Kern der spanischen: mit "palet americano" ist in Spanien oft die Palette
+// 1200 x 1000 mm gemeint -- im 20-Fuss ergibt das dieselbe Zahl, im 40-Fuss 22 statt 20.
+// Beide Zahlen kommen aus dem Packer; der Namensgebrauch selbst ist nicht gerechnet.
+test("ES: die Seiten zur Palette 48 x 40 Zoll -- Packer, Draufsicht, Knopf und der Vergleich mit 1200 x 1000", () => {
+  const PL = 121.92, PW = 101.6;
+  assert.deepStrictEqual([48 * 2.54, 40 * 2.54], [PL, PW]);
+  const [s20, s40] = mehr("es");
+  const faelle = [
+    [s20, "20' GP", "20' HC", 9, 8, 18, null, 9],
+    [s40, "40' GP", "40' HC", 20, 18, 40, "40gp", 22],
+  ];
+  for (const [f, gp, hc, lage, ohne, zwei, cont, iso] of faelle) {
+    const C = PRESETS[gp], H = PRESETS[hc];
+    assert.strictEqual(makeFloorPacker(PL, PW, true)(C.l, C.w).count, lage);
+    assert.strictEqual(makeFloorPacker(PL, PW, false)(C.l, C.w).count, ohne);
+    assert.strictEqual(makeFloorPacker(PL, PW, true)(H.l, H.w).count, lage, "High Cube: derselbe Boden");
+    assert.strictEqual(makeFloorPacker(120, 100, true)(C.l, C.w).count, iso, "die Palette 1200 x 1000");
+    assert.strictEqual(zwei, 2 * lage);
+    const s = lese(f + ".html");
+    for (const z of [lage, ohne, zwei]) assert.ok(new RegExp(`<b>${z}( (pallets|huecos)[^<]*)?</b>`).test(s), `${f}: die Zahl ${z} steht nicht hervorgehoben im Text`);
+    // Das genaue Mass, nicht die Rundung auf ganze Zentimeter
+    assert.ok(/121,92&nbsp;×&nbsp;101,6&nbsp;cm/.test(s) && !/122&nbsp;×&nbsp;102/.test(s), `${f}: das genaue Mass fehlt`);
+    // Tabelle: Innenmass aus PRESETS, Stellzahl, und zwei Lagen passen wirklich unter die Decke
+    const zeilen = [...s.matchAll(/<tr><td>([^<]*)<\/td><td class="num">(\d+) × (\d+) cm<\/td><td class="num">(\d+)<\/td><td class="num">(\d+) cm por pallet<\/td><\/tr>/g)];
+    assert.strictEqual(zeilen.length, 2, `${f}: Tabelle`);
+    zeilen.forEach((z, i) => {
+      const P = i ? H : C;
+      assert.deepStrictEqual([+z[2], +z[3], +z[4]], [P.l, P.w, lage], `${f}: Tabellenzeile ${z[1]}`);
+      assert.ok(2 * +z[5] <= P.h, `${f}: zwei Lagen zu ${z[5]} cm passen nicht in ${P.h} cm`);
+      assert.ok(s.includes(`<b>${z[5]}&nbsp;cm (`), `${f}: die Hoehe ${z[5]} cm steht nicht im Text`);
+    });
+    // Draufsicht: ein Rechteck je Stellplatz plus Umriss
+    const m = s.match(/<figure class="stau">([\s\S]*?)<\/figure>/);
+    assert.ok(m, `${f}: keine Draufsicht`);
+    assert.strictEqual((m[1].match(/<rect /g) || []).length, lage + 1, `${f}: SVG-Stellplaetze`);
+    // Der Knopf: durch den echten Parser genau diese Ladung, metrisch geoeffnet, im richtigen Container
+    const links = [...s.matchAll(/href="\/app\?lang=es&q=([^"&]+)(?:&cont=([a-z0-9]+))?"/g)];
+    assert.strictEqual(links.length, 2, `${f}: Rechner-Knoepfe`);
+    for (const [, q, c] of links) {
+      const rows = parseCargoText(decodeURIComponent(q));
+      assert.strictEqual(rows.length, 1);
+      assert.deepStrictEqual([rows[0].qty, rows[0].l, rows[0].w], [lage, PL, PW], `${f}: der Knopf laedt eine andere Ladung`);
+      assert.ok(rows[0].weight > 0 && 2 * rows[0].h > C.h, `${f}: die Beispielladung ginge in zwei Lagen -- der Rechner zeigte eine andere Zahl`);
+      assert.strictEqual(c || null, cont, `${f}: der Knopf waehlt den falschen Container vor`);
+    }
+    assert.ok(!/href="\/app\?[^"]*u=in/.test(s) && s.includes("selector «in»"), `${f}: metrisch oeffnen, mit Hinweis auf den Schalter`);
+    // FAQ-Schema: gueltig, die erste Antwort nennt die Zahl der Seite
+    const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+    assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 2 && new RegExp(`^${lage} pallets`).test(ld.mainEntity[0].acceptedAnswer.text), `${f}: die erste Antwort beginnt nicht mit ${lage}`);
+    assert.ok(/\d/.test(/<title>(.*?)<\/title>/.exec(s)[1]), `${f}: Titel ohne Zahl`);
+  }
+  // Warum nicht 10: die Rechnung der 20-Fuss-Seite
+  const C20 = PRESETS["20' GP"], C40 = PRESETS["40' GP"], t20 = lese(s20 + ".html"), t40 = lese(s40 + ".html");
+  assert.ok(5 * PL > C20.l && 2 * PL > C20.w, "zehn passten doch");
+  for (const z of [Math.round(5 * PL), C20.l, Math.round(2 * PL), C20.w]) assert.ok(t20.includes(`<b>${z}&nbsp;cm</b>`), `${s20}: ${z} cm fehlt in der Rechnung`);
+  assert.ok(t20.includes("también 9"), `${s20}: der Vergleich mit 1200 × 1000 fehlt`);
+  // 20 gegen 22: die Rechnung der 40-Fuss-Seite
+  assert.deepStrictEqual([Math.floor(C40.l / PW), Math.floor(C40.l / PL), Math.floor(C40.l / 100), Math.floor(C40.l / 120)], [11, 9, 12, 10]);
+  assert.ok(t40.includes("<b>12 atravesados y 10 a lo largo, 22</b>") && t40.includes("<b>11 y 9, 20</b>") && t40.includes("11 pallets atravesados junto a una pared y 9 a lo largo"), `${s40}: die zwei Muster`);
+  assert.strictEqual(C40.l - 12 * 100, 3);
+  assert.ok(t40.includes("<b>3&nbsp;cm</b>"), `${s40}: der knappe Rest der 22 fehlt`);
+  assert.ok(t40.includes(`${Math.round(12 * PW)} cm y el interior mide ${C40.l} cm`), `${s40}: warum keine 12 quer`);
+  assert.deepStrictEqual([Math.round(PL * 10 - 1200), Math.round(PW * 10 - 1000)], [19, 16]);
+  for (const t of [t20, t40]) assert.ok(/19&nbsp;mm más corto y 16&nbsp;mm más estrecho/.test(t), "der Unterschied in Millimetern");
+  // Gewicht: Zuladung aus PRESETS, die US-Grenze umgerechnet
+  assert.ok(t40.includes(`<b>${(C40.payload / 1000).toFixed(1).replace(".", ",")}&nbsp;t</b>`), `${s40}: Zuladung`);
+  assert.ok(t40.includes(`(unas ${(80000 * 0.45359237 / 1000).toFixed(1).replace(".", ",")}&nbsp;t)`), `${s40}: 80.000 Pfund in Tonnen`);
+  assert.ok(t20.includes(`${18 * 500 / 1000}&nbsp;t de unas ${Math.round(C20.payload / 1000)}&nbsp;t`), `${s20}: Gewichtsrechnung`);
+  assert.strictEqual(PRESETS["40' HC"].h - C40.h, 31);
+  assert.ok(t40.includes("31&nbsp;cm de más"), `${s40}: Mehrhoehe High Cube`);
+  // Die Uebersicht verspricht den Stoff nicht mehr dem englischen Guide
+  assert.ok(!/palets americanos/.test(lese("es/guia/index.html")), "die Uebersicht schickt fuer diese Palette noch auf den englischen Guide");
+});
+
+test("ES: die Seite zum Cubicaje (CBM) -- Beispielrechnung, Containervolumen aus PRESETS, Knopf durch den Parser", () => {
+  const f = mehr("es")[2];
+  assert.strictEqual(f, "es/guia/calcular-cubicaje-cbm");
+  const s = lese(f + ".html");
+  // Die Beispielrechnung: 10 Kartons 60 x 40 x 40 cm
+  const je = 0.6 * 0.4 * 0.4, sp = (n, d) => n.toFixed(d).replace(".", ",");
+  for (const t of [`<td class="num">0,6 × 0,4 × 0,4</td><td class="num">${sp(je, 3)} m³</td>`, `<td class="num">${sp(je, 3)} × 10</td><td class="num">${sp(je * 10, 2)} CBM</td>`]) assert.ok(s.includes(t), `${f}: Beispielrechnung — ${t}`);
+  const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+  assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 2 && ld.mainEntity[0].acceptedAnswer.text.includes(`${sp(je, 3)} m³ por caja × 10 = ${sp(je * 10, 2)} CBM`), `${f}: die erste Antwort rechnet anders als die Seite`);
+  // Containervolumen: dieselben Zahlen wie die spanische Volumen-Seite, aus PRESETS
+  for (const name of ["20' GP", "40' GP", "40' HC"]) {
+    const P = PRESETS[name], m3 = sp(P.l * P.w * P.h / 1e6, 1);
+    assert.ok(s.includes(`${m3}&nbsp;m³`), `${f}: ${name} = ${m3} m³ fehlt`);
+    assert.ok(lese("es/guia/metros-cubicos-contenedor.html").includes(`${m3} m³`), "die Volumen-Seite nennt eine andere Zahl");
+  }
+  assert.ok(ld.mainEntity[2].acceptedAnswer.text.includes("33,1 m³") && ld.mainEntity[2].acceptedAnswer.text.includes("67,6 m³"));
+  // Der Knopf laedt genau das Beispiel
+  const links = [...s.matchAll(/href="\/app\?lang=es&q=([^"&]+)"/g)];
+  assert.strictEqual(links.length, 2, `${f}: Rechner-Knoepfe`);
+  for (const [, q] of links) {
+    const rows = parseCargoText(decodeURIComponent(q));
+    assert.strictEqual(rows.length, 1);
+    assert.deepStrictEqual([rows[0].qty, rows[0].l, rows[0].w, rows[0].h], [10, 60, 40, 40], `${f}: der Knopf laedt ein anderes Beispiel`);
+  }
+  // Die Uebersicht, die Volumen-Seite und die Startseite fuehren hierher
+  for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
+});
+
+// ── Gewicht und Zuladung auf Spanisch ──────────────────────────────────────────────────────
+// Dritte Fassung der Zuladungs-Seite. Den Gewichts-Check selbst haelt test/gewicht-check
+// (Rechenkern woertlich gleich), die Tabelle Brutto - Tara = Zuladung test/wissen-vertiefung.
+// Hier: jede Zahl im FLIESSTEXT gegen PRESETS und TARA, die Strassen-Rechnung, das Netz.
+test("ES: die Seite zum Container-Gewicht -- Tara, Zuladung, Strasse und Dichte aus dem Rechner", () => {
+  const f = mehr("es")[3];
+  assert.strictEqual(f, "es/guia/peso-contenedor-carga-maxima");
+  const s = lese(f + ".html");
+  const TARA = new Function("return " + app.match(/var TARA = (\{[^}]+\})/)[1])();
+  const kg = (n) => Math.round(n).toLocaleString("de-DE"), t1 = (n) => (n / 1000).toFixed(1).replace(".", ",");
+  const P = (n) => PRESETS[n].payload, T = (n) => TARA[n];
+  // Einleitung: Zuladung und Leergewicht
+  const lead = /<p class="lead"[^>]*>([\s\S]*?)<\/p>/.exec(s)[1];
+  for (const z of [`${Math.round(P("20' GP") / 1000)} toneladas`, `${t1(P("40' GP"))} toneladas`, `${t1(T("20' GP"))} toneladas`, `${t1(T("40' GP"))} toneladas`]) assert.ok(lead.includes(`<b>${z}</b>`), `${f}: "${z}" fehlt in der Einleitung`);
+  // Leergewicht: Tonnen und Kilogramm je Typ, im Text und in der ersten FAQ-Antwort
+  const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+  assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 4);
+  const leer = ld.mainEntity[0].acceptedAnswer.text;
+  for (const n of ["20' GP", "40' GP", "40' HC"]) {
+    const t = `${t1(T(n))} toneladas (${kg(T(n))} kg)`;
+    assert.ok(leer.includes(t) && s.split(t).length - 1 >= 2, `${f}: Leergewicht ${n} -- "${t}" fehlt im Text oder im Schema`);
+  }
+  // Zuladung in den Antworten
+  assert.ok(ld.mainEntity[1].acceptedAnswer.text.includes(`${t1(P("20' GP"))} toneladas: ${kg(P("20' GP") + T("20' GP"))} kg de peso bruto permitido menos unos ${kg(T("20' GP"))} kg de tara`), `${f}: die 20-Fuss-Antwort rechnet anders`);
+  const a40 = ld.mainEntity[2].acceptedAnswer.text;
+  for (const z of [t1(P("40' GP")), t1(P("40' HC")), t1(P("45' HC")), t1(T("40' GP") - T("20' GP"))]) assert.ok(a40.includes(`${z} toneladas`), `${f}: ${z} t fehlt in der 40-Fuss-Antwort`);
+  // Warum der kleine mehr traegt: gleiches Brutto, 1,6 t mehr Stahl
+  assert.strictEqual(P("20' GP") + T("20' GP"), P("40' GP") + T("40' GP"));
+  assert.ok(s.includes(`(${kg(P("20' GP") + T("20' GP"))}&nbsp;kg)`) && s.includes(`<b>${t1(T("40' GP") - T("20' GP"))} toneladas</b> más de acero`), `${f}: die Erklaerung zum Bruttogewicht`);
+  // Die Strasse: 40.000 / 44.000 - 12.000 - Tara 40' HC
+  const frei = (zug) => zug - 12000 - T("40' HC");
+  assert.ok(s.includes(`<td class="num">${kg(frei(40000))} kg</td><td class="num">${kg(frei(44000))} kg</td>`), `${f}: die Strassen-Rechnung`);
+  assert.ok(s.includes(`unas ${Math.round(frei(40000) / 1000)} toneladas en lugar de ${t1(P("40' HC"))}`), `${f}: der Satz zur Strasse`);
+  // Dichte: Zuladung / Volumen des 40-Fuss, zwei 20-Fuss gegen einen 40-Fuss
+  const C40 = PRESETS["40' GP"], m3 = Math.round(C40.l * C40.w * C40.h / 1e6);
+  assert.strictEqual(Math.round(P("40' GP") / m3 / 10) * 10, 390);
+  assert.ok(s.includes(`<b>390 kg/m³</b> (${t1(P("40' GP"))}&nbsp;t ÷ ${m3} m³)`) && s.includes(`juntos cargan ${t1(2 * P("20' GP"))} toneladas; el de 40 pies, solo ${t1(P("40' GP"))}`), `${f}: die Dichte-Rechnung`);
+  // Volumen-Spalte der Tabelle: gerundet aus PRESETS
+  for (const n of ["20' GP", "20' HC", "40' GP", "40' HC", "45' HC"]) {
+    const C = PRESETS[n];
+    assert.ok(s.includes(`<td class="num">${kg(P(n))} kg</td><td class="num">≈ ${Math.round(C.l * C.w * C.h / 1e6)} m³</td>`), `${f}: ${n} -- Zuladung oder Volumen in der Tabelle`);
+  }
+  // Ehrlichkeit: die Summe ist noch keine VGM, und die Verantwortung bleibt beim Absender
+  assert.ok(/<b>Todavía no es una VGM:<\/b>/.test(s) && /la responsabilidad de la declaración sigue siendo del expedidor/.test(s), `${f}: der VGM-Vorbehalt fehlt`);
+  assert.ok(/no es asesoramiento jurídico/.test(s) && /lo vinculante es la placa CSC/.test(s), `${f}: der Hinweis ohne Gewaehr`);
+  // Zahlen fuer einzelne Laender ausserhalb der EU stehen NICHT da (unbelegt)
+  assert.ok(!/\b(Perú|México|Colombia|Chile|Argentina)\b/.test(s), `${f}: nennt ein Land, fuer das es keine belegte Grenze gibt`);
+  // Die Uebersicht, die Nachbarseiten und die Startseite fuehren hierher
+  for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/guia/calcular-cubicaje-cbm.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
+});
+
 test("jedes Cluster ist ein sauberes Netz: hreflang auf ALLEN Fassungen, in beide Richtungen", () => {
-  const zeilen = SPALTEN.length + 1;                                           // jede Sprache + x-default
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
+    const zeilen = SPALTEN.length + 1;                                         // jede Sprache + x-default
     for (const f of c) {
       const s = lese(f + ".html");
       for (const [k, ziel] of [...SPALTEN.map((k, i) => [k, c[i]]), ["x-default", c[0]]]) {
@@ -185,7 +363,7 @@ test("die Sprachwahl dieser Seiten ist ein Aufklapp-Menue -- und zeigt auf die U
   // Fuenf Kuerzel nebeneinander lasen sich wie ein Code (Jarek zur Reihe im Rechner: "sieht
   // ultra weird aus ... am besten waere doch ein Drop-down"). Ein Knopf zeigt das Kuerzel der
   // aktuellen Sprache, darunter stehen die vollen Namen.
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
     c.forEach((f, i) => {
       const s = lese(f + ".html");
       const m = /<details class="langmenu"><summary aria-label="[^"]+">[\s\S]*?<span class="langcur">([A-Z]{2})<\/span>[\s\S]*?<\/summary><div class="lang" role="group" aria-label="[^"]+">([\s\S]*?)<\/div><\/details>/.exec(s);
@@ -213,7 +391,7 @@ test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und da
       if (menue) menues++; else reihen++;
     }
   }
-  assert.ok(menues >= CLUSTER.length * SPALTEN.length && reihen > 0, `Menues ${menues}, Reihen ${reihen}`);
+  assert.ok(menues >= NETZE.reduce((n, x) => n + x.seiten.length, 0) && reihen > 0, `Menues ${menues}, Reihen ${reihen}`);
   // Die Uebersichten der drei Wellen zeigen aufeinander
   for (const [f, k] of [["nl/gids/index.html", "nl"], ["es/guia/index.html", "es"], ["fr/guide/index.html", "fr"]]) {
     const s = lese(f);
@@ -232,10 +410,10 @@ test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und da
   assert.ok(!/fetch|XMLHttpRequest|localStorage|cookie/.test(js), "das Menue-Skript tut mehr als auf- und zuklappen");
 });
 
-test("Sitemap: jede Fassung gelistet, jeder Block der vier Themen traegt alle Sprachzeilen", () => {
+test("Sitemap: jede Fassung gelistet, jeder Block eines Netzes traegt alle seine Sprachzeilen", () => {
   const sm = lese("sitemap.xml");
-  const zeilen = SPALTEN.length + 1;
-  for (const c of CLUSTER) {
+  for (const { spalten: SPALTEN, seiten: c } of NETZE) {
+    const zeilen = SPALTEN.length + 1;
     for (const pfad of c) {
       const i = sm.indexOf(`<loc>${B}/${pfad}</loc>`);
       assert.ok(i > 0, `Sitemap: ${pfad} fehlt`);

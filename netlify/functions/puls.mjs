@@ -31,7 +31,7 @@ export default async (req, context) => {
       await Promise.all(pulsAlt(blobs.map((b) => b.key), jetzt.getTime()).slice(0, 300).map((k) => store.delete(k)));
     } catch {}
   }
-  return new Response("", { status: 204 });
+  return new Response(null, { status: 204 });
 };
 
 export const config = { path: "/api/puls" };

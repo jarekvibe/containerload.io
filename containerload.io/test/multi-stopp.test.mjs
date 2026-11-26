@@ -142,7 +142,15 @@ const cutFn = (von) => {
   assert.ok(j > i, `Funktionsende nicht gefunden: ${von}`);
   return L.slice(i, j + 1).join("\n");
 };
-const { LV_STOPPS } = new Function(cutFn("var LV_STOPPS = (placed") + "\nreturn { LV_STOPPS };")();
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
+const { LV_STOPPS } = new Function(DOK_HELFER + cutFn("var LV_STOPPS = (placed") + "\nreturn { LV_STOPPS };")();
 
 test("LV_STOPPS: Stopp 1 zuerst, ohne Stopp zuletzt, mit Bereich in Metern", () => {
   const cargo = [{ stop: 2 }, { stop: 1 }, {}];

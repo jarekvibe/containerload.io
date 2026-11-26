@@ -25,6 +25,10 @@
 # Saubere Pfade intern auf die Dateien mappen (200 = Rewrite, URL bleibt)
 /app           /app.html           200
 /share         /share.html         200
+# Die Teilen-Seite je Sprache (/en/share, /es/share ...): eigene Dateien mit eigener
+# Vorschau-Karte, erzeugt von werkzeug/teilen-seiten.mjs. Der Rechner gibt jeden Link, der
+# nicht deutsch ist, ueber diese Adresse heraus.
+/:lang/share   /:lang/share.html   200
 /impressum     /impressum.html     200
 /datenschutz   /datenschutz.html   200
 /admin         /admin.html         200

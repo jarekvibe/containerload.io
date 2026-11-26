@@ -54,7 +54,12 @@ const FAELLE = [
   // mit demselben Mass, sonst widersprueche der ?q=-Knopf dem Text. Die Umrechnung selbst
   // wird unten eigens festgenagelt.
   ["us-paletten-20-fuss-container.html", "US-Paletten im 20'", "20' GP", [121.92, 101.6], 9],
-  ["us-paletten-40-fuss-container.html", "US-Paletten im 40'", "40' GP", [121.92, 101.6], 20]
+  ["us-paletten-40-fuss-container.html", "US-Paletten im 40'", "40' GP", [121.92, 101.6], 20],
+  // Die Palette 1100x1100 mm (Japan/Suedkorea "T11", in Asien verbreitet): eine Seite fuer
+  // beide Containerlaengen -- quadratisch, deshalb schlicht Reihen zu je zwei.
+  ["paletten-1100x1100-container.html", "1100er-Paletten im 20'", "20' GP", [110, 110], 10],
+  ["paletten-1100x1100-container.html", "1100er-Paletten im 40'", "40' GP", [110, 110], 20],
+  ["paletten-1100x1100-container.html", "1100er-Paletten im 45' HC", "45' HC", [110, 110], 24]
 ];
 
 test("die genannten Stellzahlen stimmen mit dem Packer ueberein", () => {
@@ -87,7 +92,10 @@ const EN_FAELLE = [
   ["big-bags-container.html", "Big bags in 20'", "20' GP", [90, 90], 12],
   ["big-bags-container.html", "Big bags in 40'", "40' GP", [90, 90], 26],
   ["pallets-20ft-container.html", "US pallets in 20'", "20' GP", [121.92, 101.6], 9],
-  ["pallets-40ft-container.html", "US pallets in 40'", "40' GP", [121.92, 101.6], 20]
+  ["pallets-40ft-container.html", "US pallets in 40'", "40' GP", [121.92, 101.6], 20],
+  ["pallets-1100x1100-container.html", "1100 pallets in 20'", "20' GP", [110, 110], 10],
+  ["pallets-1100x1100-container.html", "1100 pallets in 40'", "40' GP", [110, 110], 20],
+  ["pallets-1100x1100-container.html", "1100 pallets in 45' HC", "45' HC", [110, 110], 24]
 ];
 
 test("die englische Fassung nennt dieselben gerechneten Zahlen", () => {
@@ -104,7 +112,8 @@ test("die Beispielladung hinter dem Knopf passt zur genannten Zahl", () => {
     "industrial-pallets-container.html": 22, "wire-mesh-pallets-container.html": 11,
     "loading-metre-calculator.html": 34, "ibc-totes-container.html": 9,
     "drums-container.html": 27, "big-bags-container.html": 12,
-    "pallets-20ft-container.html": 9, "pallets-40ft-container.html": 20 };
+    "pallets-20ft-container.html": 9, "pallets-40ft-container.html": 20,
+    "pallets-1100x1100-container.html": 10 };
   for (const [datei, menge] of Object.entries(erwartet)) {
     const m = enSeite(datei).match(/href="\/app\?lang=en&q=([^"]+)"/);
     assert.ok(m, `${datei}: kein ?q=-Link`);
@@ -219,6 +228,8 @@ const AUSBAU = [
   ["big-bags-container.html", "big-bags-container.html", "20' GP", [90, 90], 12, null, null, false],
   ["us-paletten-20-fuss-container.html", "pallets-20ft-container.html", "20' GP", [121.92, 101.6], 9, 8, 18, true],
   ["us-paletten-40-fuss-container.html", "pallets-40ft-container.html", "40' GP", [121.92, 101.6], 20, 18, 40, true],
+  // quadratisch: Drehen aendert nichts (die Seite sagt es), die Draufsicht kennt kein Quer
+  ["paletten-1100x1100-container.html", "pallets-1100x1100-container.html", "20' GP", [110, 110], 10, null, 20, false],
 ];
 
 test("Warum- und Stapelzahlen: nachgerechnet, und auf beiden Sprachfassungen", () => {
@@ -267,7 +278,8 @@ test("die neuen Passt-rein-Paare haengen im Netz: Sitemap, Uebersichten, GUIDE, 
   const PAARE = [["ibc-container", "ibc-totes-container"], ["faesser-container", "drums-container"],
     ["big-bags-container", "big-bags-container"],
     ["us-paletten-20-fuss-container", "pallets-20ft-container"],
-    ["us-paletten-40-fuss-container", "pallets-40ft-container"]];
+    ["us-paletten-40-fuss-container", "pallets-40ft-container"],
+    ["paletten-1100x1100-container", "pallets-1100x1100-container"]];
   const sm = fs.readFileSync(path.join(dir, "..", "sitemap.xml"), "utf8");
   const start = fs.readFileSync(path.join(dir, "..", "index.html"), "utf8");
   for (const [de, en] of PAARE) {

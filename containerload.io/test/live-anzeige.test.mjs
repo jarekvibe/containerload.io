@@ -177,7 +177,7 @@ test("gesendet wird ein Wort je Minute -- das erste nach acht Sekunden", () => {
 
 test("die Art der Seite folgt aus dem Pfad -- und nichts vom Pfad geht mit", () => {
   const art = (pfad) => { const r = lauf({ pfad }); r.vor(9000); return r.gesendet[0][1]; };
-  for (const [p, a] of [["/", "start"], ["/index.html", "start"], ["/en/", "start"], ["/zh/", "start"], ["/fr/index.html", "start"],
+  for (const [p, a] of [["/", "start"], ["/index.html", "start"], ["/en/", "start"], ["/zh/", "start"], ["/nl/", "start"], ["/pt/", "start"], ["/fr/index.html", "start"],
     ["/app", "rechner"], ["/app.html", "rechner"],
     ["/ratgeber/", "wissen"], ["/ratgeber/ibc-container", "wissen"], ["/en/guide/pallets-40ft-container", "wissen"], ["/nl/gids/cbm-container", "wissen"], ["/es/guia/", "wissen"], ["/fr/guide/volume-conteneur-m3", "wissen"],
     ["/irgendwas", "sonst"], ["/apple", "sonst"]]) assert.strictEqual(art(p), a, p);

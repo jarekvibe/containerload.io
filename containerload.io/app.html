@@ -16,6 +16,8 @@
 <link rel="alternate" hreflang="es" href="https://containerload.io/app?lang=es" />
 <link rel="alternate" hreflang="fr" href="https://containerload.io/app?lang=fr" />
 <link rel="alternate" hreflang="zh" href="https://containerload.io/app?lang=zh" />
+<link rel="alternate" hreflang="nl" href="https://containerload.io/app?lang=nl" />
+<link rel="alternate" hreflang="pt" href="https://containerload.io/app?lang=pt" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/app" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta property="og:image:width" content="1200" />
@@ -116,7 +118,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // im Menue). Geladen wird sie nur, wenn sie gewaehlt ist -- und zwar hier, VOR dem Rechner,
   // weil der sein Woerterbuch beim Start einmal liest. document.write ist dafuer der eine Weg
   // ohne Build-Schritt, der die Reihenfolge haelt (gleiche Herkunft, eine kleine Datei).
-  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"] };
+  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"], nl: ["Nederlands", "Schakel de interface naar het Nederlands"], pt: ["Portugu\u00eas", "Mudar a interface para portugu\u00eas"] };
   (function () {
     try {
       var q = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase().slice(0, 2);
@@ -726,9 +728,52 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var PALLET_PRESETS = [
     // \bepal\b statt epal: "Industri-EPAL-etten" -- der Substring steckt mitten in
     // "Industriepaletten" und griff sich dort das falsche Grundmass.
-    { re: /euro\s*-?\s*palette|eur\s*-?\s*palette|europalette|\bepal\b/i, l: 120, w: 80 },
-    { re: /industrie\s*-?\s*palette|industrial\s*pallet|industriepalette/i, l: 120, w: 100 }
+    // Seit 26.11.26 auch in den uebrigen Sprachen der Oberflaeche: euro pallet / europallet
+    // (en, nl), europalet / palé europeo (es), palette Europe (fr), 欧标托盘 (zh); Industrie:
+    // palet industrial, palette industrielle, blokpallet, palete PBR (Brasilien, 1000 x 1200).
+    // Portugiesisch: palete europeu / europalete. "Palet americano" steht NICHT da:
+    // in Spanien meint es 1200 x 1000, in Lateinamerika 48 x 40 Zoll (siehe es/guia).
+    { re: /euro\s*-?\s*pal(?:ette|let|et|é)|eur\s*-?\s*pal(?:ette|let)|\bepal\b|pal(?:ette|ete|let|et|é)s?\s+(?:euro(?:p[eé][a-zé]*)?|eur)(?![a-zà-ÿ])|欧标托盘|欧洲托盘|欧式托盘/i, l: 120, w: 80 },
+    { re: /industrie\s*-?\s*pal(?:ette|let)|industrial\s*pallet|pal(?:ette|ete|let|et|é)s?\s+industri|\bblokpallet|\bpal(?:ete|let)s?\s+pbr\b|工业托盘/i, l: 120, w: 100 }
   ];
+  // Die Woerter des Text-Imports in den Sprachen der Oberflaeche (26.11.26). Bis dahin
+  // verstand der lokale Parser nur Deutsch und Englisch: "9 bultos 250x80x30 no apilables"
+  // ergab neun STAPELBARE Stuecke. Er liest ?q=-Links, die Import-Box der Startseite, lange
+  // Listen (ueber 6.000 Zeichen) und alles, wenn die KI nicht erreichbar ist.
+  // Drei Regeln fuer jedes neue Wort:
+  //   1. Es heisst in KEINER dieser Sprachen etwas anderes (span. "nombre" = Name, franz.
+  //      "nombre" = Anzahl; niederl. "dozen" = Kartons, engl. "dozen" = Dutzend; engl. "high"
+  //      steht in "high cube" -- sie stehen deshalb nicht oder nicht allein da).
+  //   2. Eine Verneinung beginnt an einer Wortgrenze ("piano apilable" ist kein "no apilable"),
+  //      ein neues Zaehlwort endet an einer ("12 Futterkisten" sind keine "12 fut").
+  //   3. Kein Lookbehind: aeltere Safari-Fassungen kennen es nicht, und die Seite bliebe stehen.
+  var IMPORT_WORT = {
+    nichtStapelbar: /nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel|\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apila|remonta)|\bsin\s+apilar|\b(?:non|pas)[-\s]?(?:gerb|empil)|\bniet[-\s]?stapel|\bonstapelbaar|\bn[aã]o\s+(?:(?:[eé]|s[aã]o|podem?\s+ser)\s+)?(?:empilh|remont|sobrepo)|不可堆|不能堆|禁止堆|不可叠|不能叠/i,
+    nichtDrehbar: /nicht\s*drehbar|not\s*rotat|no\s*rotat|\bno\s+(?:se\s+pueden?\s+)?(?:gira|rota)|\bsin\s+(?:gira|rota)|\bne\s+pas\s+(?:tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\brotation\s+interdite|\bniet[-\s]?draai|\bn[aã]o\s+(?:gir|rotac)|\bsem\s+gir|不可旋转|不能旋转|禁止旋转/i,
+    // "stapelbar bis 180 cm" -- das Schluesselwort vor der Hoehe
+    bis: "(?:bis|m[aá]x\\.?|maximal|maximaal|m[aá]ximo|up\\s*to|hasta|jusqu['’]?\\s*[àa]|\\btot|\\bat[eé]|限高|最高|不超过|至)",
+    // Zaehlwoerter, die mit der Zahl verschwinden ("12 Stück") -- alt und neu getrennt, weil
+    // die neuen an einer Wortgrenze enden muessen (Regel 2)
+    stk: "x\\b|×|stk\\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?",
+    stkNeu: "uds?\\b\\.?|unidades?|unid\\b\\.?|un\\b\\.?|pe[cç]as?|piezas?|pzas?\\b\\.?|pi[eè]ces?|unit[eé]s?|stuks?|个|件",
+    // Ware, die als Name stehen bleibt ("12 Kisten" -> "Kisten")
+    ware: "paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?",
+    wareNeu: "europaletes?|paletes?|caixas?|caixotes?|volumes|fardos?|rolos?|bombonas?|engradados?|europalets?|palets?|pal[eé]s|palé|tarimas?|cajas?|cajones|bultos?|bidones|tambores|sacos?|rollos?|bobinas?|colis|caisses?|f[uû]ts?|sacs?|rouleaux|bobines?|europallets?|blokpallets?|vaten|kratten|zakken|rollen|balen|托盘|托|箱|桶|卷|包|台|捆",
+    gewicht: "kgs?|kilo[a-z]*|quilo[a-z]*|toneladas?|tonnes|tonnen?|to\\b|t\\b|lbs?\\b|pounds?\\b|libras?\\b|公斤|千克|吨",
+    // Was nach dem Lesen aus dem NAMEN verschwindet (Deutsch und Englisch raeumt die Zeile selbst)
+    wortWeg: /\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apilables?|apilar|remontables?)|\bsin\s+apilar|\bapilables?|\bremontables?|\b(?:non|pas)[-\s]?(?:gerbables?|empilables?)|\bgerbables?|\bempilables?|\bniet[-\s]?stapelbaar|\bniet\s+stapelen|\bstapelbaar|\bno\s+(?:se\s+pueden?\s+)?(?:girar|girables?|rotar|rotables?)|\bsin\s+girar|\bne\s+pas\s+(?:gerber|empiler|tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\bniet[-\s]?draai(?:baar|en)|\bn[aã]o\s+(?:empilh[aá]ve(?:l|is)|empilhar|remont[aá]ve(?:l|is))|\bempilh[aá]ve(?:l|is)|\bn[aã]o\s+girar|\bsem\s+girar|不可堆叠|不可堆放|不能堆叠|可堆叠|可堆放|不可旋转|不能旋转/ig
+  };
+  var IMPORT_RE = (function () {
+    var W = IMPORT_WORT, ende = "(?![a-zà-ÿ])";
+    return {
+      menge: new RegExp("(\\d+)\\s*(?:" + W.stk + "|" + W.ware + "|(?:" + W.stkNeu + "|" + W.wareNeu + ")" + ende + ")", "i"),
+      stk: new RegExp("(\\d+)\\s*(?:" + W.stk + "|(?:" + W.stkNeu + ")" + ende + "(?:\\s+(?:de\\s+|d['’]\\s*|van\\s+))?)", "i"),
+      ware: new RegExp("(\\d+)\\s*(" + W.ware + "|(?:" + W.wareNeu + ")" + ende + ")", "i"),
+      gewicht: new RegExp("(\\d+(?:[.,]\\d+)?)\\s*(" + W.gewicht + ")", "i"),
+      bis: new RegExp(W.bis + "\\s*(\\d+(?:[.,]\\d+)?)\\s*(mm|cm|m)\\b", "i"),
+      bisWeg: new RegExp(W.bis + "\\s*\\d+(?:[.,]\\d+)?\\s*(?:mm|cm|m)\\b", "ig")
+    };
+  })();
   // DE-robuster Zahlen-Parser fuer TSV-Zellen:
   // "1.200,50" -> 1200.5 | "1200.5" -> 1200.5 | "1200,5" -> 1200.5 | "1 200" -> 1200
   var toNumDE = (x) => {
@@ -742,7 +787,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Bewusst Modul-Variable statt Zusatzfeld in den rows: der parseCargoText-Vertrag
   // (rows = {qty,l,w,h,weight,stackable,rotatable,name}) bleibt unangetastet (QIMPORT!).
   var LAST_TSV_MAP = null;
-  // Excel-Copy-Paste (TSV): Kopfzeilen-Erkennung DE/EN, Einheiten aus dem Header
+  // Wie eine Position heisst, die OHNE Namen ankommt ("12 x 120x80x100", ein ?q=-Link ohne
+  // Wort davor). Die Vorgabe des Parsers ist deutsch; der Rechner setzt hier die Woerter
+  // seiner Sprache ein, sobald das Woerterbuch steht (T.importNamen). Ein einzelner Aufruf
+  // kann sie mit opts.namen ueberstimmen. Vorher hiess so eine Position in jeder Sprache
+  // "Position", "Palette" oder "Europalette" -- auch im englischen Rechner.
+  var PARSER_NAMEN = null;
+  var parserNamen = (opts) => (opts && opts.namen) || (typeof PARSER_NAMEN !== "undefined" && PARSER_NAMEN) || {};
+  // Excel-Copy-Paste (TSV): Kopfzeilen-Erkennung in den Sprachen der Oberflaeche (DE, EN,
+  // seit 26.11.26 ES, FR, NL, ZH, PT -- Regeln siehe IMPORT_WORT), Einheiten aus dem Header
   // (mm/10, m*100, t*1000 – pro Spalte), positionaler Fallback ohne Header.
   // Ehrlichkeit: OHNE Einheit im Header wird cm angenommen – keine Magnitude-Heuristik.
   function parseTSV(text, opts) {
@@ -753,20 +806,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Dreierkette "120x80x95" -- auch als ZELLE einer kombinierten Masse-Spalte. Ohne
     // diese Lesart verwarf der Parser jede Zeile solcher Listen, und die sind in
     // Speditionslisten Standard ("Masse (LxBxH)").
-    const KETTE = /(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?/i;
+    const KETTE = /(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?/i;
     const KEYS = [
-      ["qty", /anzahl|menge|stk|stück|qty|quantity|pcs|colli|kartons/i],
-      ["l", /länge|laenge|length|^l$|^l\s*\(/i],
-      ["w", /breite|width|^b$|^w$|^b\s*\(|^w\s*\(/i],
-      ["h", /höhe|hoehe|height|^h$|^h\s*\(/i],
+      // "Bultos", "Colis" zaehlen nur am ANFANG der Zelle oder hinter "Nº (de)": in
+      // "Descripción de los bultos" sind sie die Beschreibung. Franz. "Nombre" nur mit dem,
+      // was gezaehlt wird ("Nombre de colis") -- allein ist es der spanische NAME.
+      ["qty", /anzahl|menge|stk|stück|qty|quantity|pcs|colli|kartons|cantidad|^cant\b|(?:^|n[uú]m(?:ero)?\.?\s+(?:de\s+)?|n[º°]\.?\s*(?:de\s+)?)(?:bultos|piezas|unidades|uds?\b|colis\b|cajas\b|palets\b)|quantit[eé]|^qt[eé](?![a-zà-ÿ])|^nbr?e?\b|nombre\s+de\s+(?:colis|palettes?|cartons|caisses|pi[eè]ces|unit[eé]s)|aantal|stuks|quantidade|^qtde?\b|^volumes\b|数量|件数|箱数/i],
+      ["l", /länge|laenge|length|^l$|^l\s*\(|\blargo\b|\blongitud\b|longueur|lengte|comprimento|^compr\b|^长度?\s*(?:$|[(（\[])/i],
+      ["w", /breite|width|^b$|^w$|^b\s*\(|^w\s*\(|\banch(?:o|ura)\b|largeur|breedte|largura|^larg\b|^宽度?\s*(?:$|[(（\[])/i],
+      ["h", /höhe|hoehe|height|^h$|^h\s*\(|\balt(?:o|ura)\b|hauteur|hoogte|^高度?\s*(?:$|[(（\[])/i],
       // "Maße"/"Abmessungen"/"LxBxH" VOR dem Gewicht pruefen: "Masse (LxBxH)" ist eine
       // Massspalte, "Masse (kg)" bleibt Gewicht. Das nackte "Maße" (mit ß) ist eindeutig
       // eine Massspalte; das nackte "Masse" bleibt beim Gewicht.
-      ["dims", /abmessung|dimensions?\b|^maße$|ma(?:ß|ss)e\s*\(\s*(?:mm|cm|m\b|lxbxh|l\s*[x×])|l\s*[x×]\s*b\s*[x×]\s*h|lxbxh/i],
-      ["weight", /gewicht|weight|^kg$|kg\/|masse\b|brutto|netto/i],
-      ["stackable", /stapel|stack/i],
-      ["name", /bezeichnung|artikel|beschreibung|name|description|item|ware|inhalt|position/i]
+      ["dims", /abmessung|dimensions?\b|^maße$|ma(?:ß|ss)e\s*\(\s*(?:mm|cm|m\b|lxbxh|l\s*[x×])|l\s*[x×]\s*b\s*[x×]\s*h|lxbxh|dimensiones|dimens[oõ]es|\bmedidas\b|afmetingen|^maten\b|尺寸|规格/i],
+      ["weight", /gewicht|weight|^kg$|kg\/|masse\b|brutto|netto|\bpeso\b|poids|重量|毛重|净重/i],
+      ["stackable", /stapel|stack|apilable|remontable|gerbable|empilable|empilh|堆叠|堆放|叠放/i],
+      // Bewusst NICHT dabei: "Referencia", "Référence", "Article" -- das ist meist die
+      // Artikelnummer, und die erste passende Spalte gewinnt den Namen.
+      ["name", /bezeichnung|artikel|beschreibung|name|description|item|ware|inhalt|position|descripci[oó]n|art[ií]culo|producto|mercanc[ií]a|\bnombre\b|d[eé]signation|produit|marchandise|libell[eé]|omschrijving|\bnaam\b|goederen|^bulto$|descri[cç][aã]o|produto|mercadoria|\bnome\b|品名|名称|货物|描述/i]
     ];
+    // Eine Kopfzelle, die ZWEI der drei Kanten nennt ("Länge x Breite x Höhe", "Medidas
+    // (largo x ancho x alto)"), ist die kombinierte Mass-Spalte -- nicht die Laenge. Vorher
+    // griff sich die Laengen-Regel solche Spalten, und jede Zeile der Liste fiel weg.
+    const kanten = (c) => ["l", "w", "h"].filter((k) => KEYS.find(([n]) => n === k)[1].test(c)).length;
     const isNumCell = (c) => Number.isFinite(toNumDE(c));
     // Kopfzeile: >= 2 Keyword-Treffer UND < 2 reine Zahlen in Zeile 0.
     const head = grid[0] || [];
@@ -775,23 +837,27 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const map = {}, unitF = {};
     if (hasHeader) {
       head.forEach((c, i) => {
-        for (const [k, re] of KEYS) {
+        // Franzoesisch schreibt "L | l | H": grosses L = longueur, kleines l = largeur. Ohne
+        // diese Lesart blieb die Breite leer, und die Beispiel-Liste der franzoesischen
+        // Startseite kam im Rechner als "nichts erkannt" an.
+        if (c === "l" && map.l !== void 0 && map.w === void 0) { map.w = i; return; }
+        for (const [k, re] of map.dims === void 0 && kanten(c) >= 2 ? [["dims", /(?:)/]] : KEYS) {
           if (map[k] === void 0 && re.test(c)) { // erster Treffer gewinnt (z. B. Brutto vor Netto)
             map[k] = i;
             if (k === "l" || k === "w" || k === "h" || k === "dims") {
-              if (/mm/i.test(c)) unitF[i] = 0.1;
+              if (/mm|millim|mil[ií]m|毫米/i.test(c)) unitF[i] = 0.1;
               // Ausdruecklich cm (bzw. kg) heisst Faktor 1 -- und nicht "keine Angabe": sonst
               // griffe die Grundeinheit der Oberflaeche (mm, Zoll) auf eine Spalte, die ihre
               // Einheit selbst nennt.
-              else if (/cm/i.test(c)) unitF[i] = 1;
+              else if (/cm|centim|cent[ií]m|厘米/i.test(c)) unitF[i] = 1;
               // Zoll nur, wenn es als EINHEIT dasteht -- "(in)", "inch", "Zoll", Zollzeichen.
               // Ein blankes "in" waere auch das deutsche/englische Wort ("Laenge in cm").
-              else if (/[(\[]\s*in(?:ch(?:es)?)?\.?\s*[)\]]|\binch(?:es)?\b|\bzoll\b|["\u2033]/i.test(c)) unitF[i] = ZOLL;
-              else if (/\bm\b|\(m\)/i.test(c)) unitF[i] = 100;
+              else if (/[(\[]\s*in(?:ch(?:es)?)?\.?\s*[)\]]|\binch(?:es)?\b|\bzoll\b|["\u2033]|\bpulgadas?\b|\bpulg\b|\bpouces?\b|\bpolegadas?\b|英寸/i.test(c)) unitF[i] = ZOLL;
+              else if (/\bm\b|\(m\)|\b(?:meters?|metros?|m[eè]tres?)\b|[(（]\s*米\s*[)）]/i.test(c)) unitF[i] = 100;
             } else if (k === "weight") {
-              if (/\bt\b|tonnen/i.test(c)) unitF[i] = 1e3;
-              else if (/\blbs?\b|pounds?|pfund/i.test(c)) unitF[i] = PFUND;
-              else if (/\bkg\b|kilo/i.test(c)) unitF[i] = 1;
+              if (/\bt\b|tonnen|toneladas?|tonnes?|吨/i.test(c)) unitF[i] = 1e3;
+              else if (/\blbs?\b|pounds?|pfund|libras?|磅/i.test(c)) unitF[i] = PFUND;
+              else if (/\bkg\b|kilo|quilo|公斤|千克/i.test(c)) unitF[i] = 1;
             }
             break;
           }
@@ -839,7 +905,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     let einheitenZeile = false;
     if (hasHeader && grid[1]) {
       const belegt = grid[1].filter((c) => c !== "");
-      const istEinheit = (c) => /^\(?\s*(mm|cm|m|in|inch|inches|kg|lbs?|to?|stk\.?|stück|pcs)\s*\)?$/i.test(c);
+      const istEinheit = (c) => /^\(?\s*(mm|cm|m|in|inch|inches|kg|lbs?|to?|stk\.?|stück|pcs|uds?\.?|unid\.?|pzas?\.?|stuks?|pi[eè]ces?|个|件)\s*\)?$/i.test(c);
       if (belegt.length && belegt.every(istEinheit) && belegt.some((c) => /mm|cm|^\(?\s*(m|in|inch|inches)\s*\)?$/i.test(c))) {
         einheitenZeile = true;
         grid[1].forEach((c, i) => {
@@ -856,7 +922,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     }
     // "Gesamtgewicht"/"Total" meint die ganze Position, nicht das Stueck -- sonst wiegt
     // jeder von 20 Kartons die kompletten 240 kg.
-    const gewichtGesamt = hasHeader && map.weight !== void 0 && /gesamt|total/i.test(head[map.weight]);
+    const gewichtGesamt = hasHeader && map.weight !== void 0 && /gesamt|tota+l|总/i.test(head[map.weight]);
     // Angeforderte Grundeinheit (mm-Vorschlag aus dem Import-Dialog): gilt nur fuer
     // Massspalten OHNE eigene Einheit im Kopf -- beschriftete Spalten wissen es besser.
     // "in" ist die Eingabe-Einheit Zoll der Oberflaeche -- dort heissen Gewichte ohne
@@ -900,9 +966,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       if (!Number.isFinite(weight) || weight < 0) weight = 0;
       if (gewichtGesamt && qty > 1) weight = weight / qty;
       let stackable = true;
-      if (map.stackable !== void 0 && /^(nein|no|0|false|✗|x)$/i.test(String(cell("stackable")).trim())) stackable = false;
+      // Die Zelle sagt "nein" -- als Wort der Sprache oder ausgeschrieben ("no apilable",
+      // "nicht stapelbar": das stand vorher als STAPELBAR in der Liste).
+      const stapelZelle = map.stackable !== void 0 ? String(cell("stackable")).trim() : "";
+      if (/^(nein|no|non|nee|n[aã]o|0|false|falso|faux|✗|x|否|不|不可|不能|不可以)$/i.test(stapelZelle) || IMPORT_WORT.nichtStapelbar.test(stapelZelle)) stackable = false;
       let name = String(cell("name") || "").replace(/\s+/g, " ").trim();
-      if (!name) name = "Position";
+      if (!name) name = parserNamen(opts).pos || "Position";
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
       // Metrische Listen werden wie eh und je auf ganze cm und kg gerundet. Zoll und Pfund
@@ -946,7 +1015,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const toNum = toNumDE;
     // Masse OHNE Einheit: cm -- ausser die Oberflaeche steht auf mm oder Zoll ("in").
     const grundU = opts.einheit === "mm" ? "mm" : opts.einheit === "in" ? "inch" : "";
-    const lines = text.split(/[\n;]+/).map((x) => x.trim()).filter(Boolean);
+    const lines = text.split(/[\n;；]+/).map((x) => x.trim()).filter(Boolean);
     for (const line of lines) {
       const low = line.toLowerCase();
       let l = null, w = null, h = null, zoll = false, pfund = false;
@@ -954,8 +1023,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Anfrage-Schreibweise "5x 120x80x100"). Muss VOR dem 3er-Match laufen,
       // sonst frisst der sich die ersten drei Zahlen. Erster Trenner bewusst
       // NUR [x×*] ohne "/" – sonst wuerde "120/80/100" als 3er-Kette mit Anzahl gelesen.
-      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
-      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i);
+      // Die LETZTE Einheit einer Kette muss an einem Wortende stehen: bis 26.11.26 frass die
+      // Kette das "m" des naechsten Wortes als Meter -- "5 Kisten 120x80x100 mit Deckel" waren
+      // 12000 x 8000 x 10000 cm, ebenso "... Maschinenteile", "... machine parts", "... max".
+      const dim4 = line.match(/(\d+)\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i);
+      const dim = dim4 ? null : line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i);
       if (dim4) {
         l = toNum(dim4[2]);
         w = toNum(dim4[4]);
@@ -1009,8 +1081,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // Industrie) zaehlt NUR mit Massen in der Zeile -- ohne sie waere das Grundmass
       // geraten, die Presets bringen ihres dagegen selbst mit.
       let dim2 = null;
-      if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b/i.test(low))) {
-        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?(?!\s*[x×\*\/])/i);
+      if (!dim4 && !dim && (pal || /\bpaletten?\b|\bpallets?\b|\bpalettes?\b|\bpalets?\b|\bpalés?(?![a-zà-ÿ])|\bpales\b|\btarimas?\b|\bpaletes?\b|托盘/i.test(low))) {
+        dim2 = line.match(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?(?!\s*[x×\*\/])/i);
       }
       // Beschriftete Masse ("Länge 320 Breite 145 Höhe 168"): die Prosa-Form ohne
       // x-Kette. Nur wenn alle drei Angaben da sind -- zwei plus Raten waere erfunden.
@@ -1022,9 +1094,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           const v = toNum(m[1]), u = (m[2] || "").toLowerCase();
           return u === "m" ? v * 100 : u === "mm" ? v / 10 : v;
         };
-        const L2 = teil(/l(?:änge|aenge|ength)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
-        const B2 = teil(/(?:breite|width)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
-        const H2 = teil(/h(?:öhe|oehe|eight)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b/i);
+        const L2 = teil(/(?:l(?:änge|aenge|ength)|\blargo|\blongitud|\blongueur|\blengte|\bcomprimento|长度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
+        const B2 = teil(/(?:breite|width|\banch(?:o|ura)|\blargeur|\bbreedte|\blargura|宽度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
+        const H2 = teil(/(?:h(?:öhe|oehe|eight)|\balt(?:o|ura)|\bhauteur|\bhoogte|高度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b/i);
         if (L2 > 0 && B2 > 0 && H2 > 0) { lbl = true; l = L2; w = B2; h = H2; }
       }
       if (!dim4 && !dim && !pal && !dim2 && !lbl) continue;
@@ -1043,7 +1115,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         h = 110;
         // Steht die Hoehe in Worten dabei ("Höhe 132cm", "95cm hoch"), schlaegt sie den
         // Standardwert -- eine genannte Zahl zu ignorieren waere schlechter als raten.
-        const hm = line.match(/h(?:öhe|oehe|eight)\s*:?\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\b|(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*hoch\b/i);
+        // ("high" steht bewusst nicht da: "40 high cube" waere sonst eine Hoehe von 40 cm.)
+        const hm = line.match(/(?:h(?:öhe|oehe|eight)|\balt(?:o|ura)|\bhauteur|\bhoogte|高度?)\s*[:：]?\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m)(?![a-zà-ÿ]))?\b|(\d+(?:[.,]\d+)?)\s*(mm|cm|m)?\s*(?:hoch|hoog|de\s+alt(?:o|ura)|de\s+haut(?:eur)?)\b/i);
         if (hm) {
           const v = toNum(hm[1] || hm[3]), u3 = (hm[2] || hm[4] || "").toLowerCase();
           const cm = u3 === "m" ? v * 100 : u3 === "mm" ? v / 10 : v;
@@ -1058,7 +1131,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // Menge NICHT in der Masskette suchen: "2,40 x 1,60" gab sonst die
         // Nachkommastellen als Stueckzahl her ("40 x" -> 40 Stueck).
         const rest = dim ? line.replace(dim[0], " ") : dim2 ? line.replace(dim2[0], " ") : line;
-        const qm = rest.match(/(\d+)\s*(?:x\b|×|stk\.?|stück|paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|colli|packst(?:ü|ue)cke?|boxes?|pcs|units?)/i);
+        const qm = rest.match(IMPORT_RE.menge);
         if (qm) qty = parseInt(qm[1], 10);
         else {
           const lead = rest.match(/^\s*(\d+)\b/);
@@ -1067,32 +1140,32 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       if (!Number.isFinite(qty) || qty < 1) qty = 1;
       let weight = 0;
-      const wm = line.match(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i);
+      const wm = line.match(IMPORT_RE.gewicht);
       if (wm) {
         weight = toNum(wm[1]);
-        if (/^(t|to|tonn)/i.test(wm[2])) weight *= 1e3;
-        else if (/^(lb|pound)/i.test(wm[2])) { weight *= PFUND; pfund = true; }
+        if (/^(t|to|tonn|吨)/i.test(wm[2])) weight *= 1e3;
+        else if (/^(lb|pound|libra)/i.test(wm[2])) { weight *= PFUND; pfund = true; }
       }
       let stackable = true;
-      if (/nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel/i.test(low)) stackable = false;
+      if (IMPORT_WORT.nichtStapelbar.test(low)) stackable = false;
       // "stapelbar bis 180 cm" -- die Angabe, wie sie in Anfragen steht. Bewusst an ein
-      // Schluesselwort gebunden (bis / max / up to) UND an eine Laengeneinheit: sonst
+      // Schluesselwort gebunden (bis / max / up to / hasta / jusqu'à / tot) UND an eine Laengeneinheit: sonst
       // frisst der Ausdruck das Stueckgewicht ("max 100 kg") oder eine der Kantenlaengen.
       let stackH = null;
-      const shm = line.match(/(?:bis|max\.?|maximal|up\s*to)\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m)\b/i);
+      const shm = line.match(IMPORT_RE.bis);
       if (shm && stackable) {
         const v = toNum(shm[1]), u = (shm[2] || "cm").toLowerCase();
         const cm = u === "m" ? v * 100 : u === "mm" ? v / 10 : v;
         if (cm > 0) stackH = Math.round(cm * 10) / 10;
       }
       let rotatable = true;
-      if (/nicht\s*drehbar|not\s*rotat|no\s*rotat/i.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?)?/i, "")).replace(/(\d+(?:[.,]\d+)?)\s*(kg|kilo|tonnen?|to\b|t\b|lbs?\b|pounds?\b)/i, "").replace(/(\d+)\s*(x\b|×|stk\.?|stück|colli|packst(?:ü|ue)cke?|pcs|units?)/i, "").replace(/(\d+)\s*(paletten?|pallets?|industriepaletten?|europaletten?|kartons?|cartons?|crates?|kisten?|gitterboxen?|f(?:ä|ae)sser|maschinen|trommeln|boxes?)/i, "$2").replace(/(?:bis|max\.?|maximal|up\s*to)\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m)\b/ig, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      if (IMPORT_WORT.nichtDrehbar.test(low)) rotatable = false;
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i, "")).replace(IMPORT_RE.gewicht, "").replace(IMPORT_RE.stk, "").replace(IMPORT_RE.ware, "$2").replace(IMPORT_RE.bisWeg, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(IMPORT_WORT.wortWeg, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/\b(?:m[aá]x\.?|m[aá]ximo|maximaal)\b/ig, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (dim2) name = name.replace(dim2[0], "").trim();
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
-      name = name.replace(/(?:^|\s)(?:je|à|each)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,\-–|:]+|[\s,\-–|:]+$/g, "").replace(/\s+/g, " ").trim();
-      if (!name) name = pal ? pal.w === 80 ? "Europalette" : "Palette" : dim2 ? "Palette" : "Position";
+      name = name.replace(/(?:^|\s)(?:je|à|each|c\/u|cada\s+u(?:n[oa]|ma?)|cada|chacune?|la\s+pi[eè]ce|l['’]unit[eé]|por\s+(?:unidade?|bulto|pieza|pe[cç]a|volume|item)|par\s+colis|per\s+stuk|per\s+collo)(?=\s|,|$)/ig, " ").replace(/\/\s*(?:st(?:ü|ue)ck|stk\.?|pc|piece|ud|unidade?|un|pza|pe[cç]a|pi[eè]ce|stuk|collo|colis)\b/ig, "").replace(/^pos\.?\s*\d+\s*[:.\-]?\s*/i, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/\s+/g, " ").trim();
+      if (!name) { const NM = parserNamen(opts); name = pal ? pal.w === 80 ? NM.ep || "Europalette" : NM.pal || "Palette" : dim2 ? NM.pal || "Palette" : NM.pos || "Position"; }
       name = name.charAt(0).toUpperCase() + name.slice(1);
       if (name.length > 22) name = name.slice(0, 22);
       // Zoll und Pfund bleiben genau (48 in = 121,92 cm), metrische Angaben werden wie
@@ -3600,13 +3673,38 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Englisch: sie gehen an Dritte, und Englisch ist dort die gemeinsame Sprache. Jede weitere
   // Oberflaechen-Sprache bekommt deshalb englische Dokumente -- nie deutsche.
   var DOKLANG = LANG === "de" ? "de" : "en";
+  // Dokumente in WEITEREN Sprachen (seit 25.11.26; Jarek: "Wir muessen wirklich alles
+  // uebersetzen dann auf die jeweiligen Sprachen"). Deutsch und Englisch stehen in den
+  // Bausteinen selbst -- je Baustein ein Woerterbuch mit zwei Zweigen. Jede weitere Sprache
+  // liefert ihre Sprachdatei: texte(h).dok, je Baustein ein Objekt, oder eine Funktion, wenn
+  // Zahlen in den Saetzen stehen. Es liegt UEBER dem englischen Woerterbuch (dokMit) -- fehlt
+  // ein Text, steht dort Englisch statt nichts, wie bei der Oberflaeche. Bringt die Datei kein
+  // "dok" mit, bleibt DOKLANG Englisch. Gesetzt wird das weiter unten, sobald das Woerterbuch
+  // der Sprache steht.
+  var DOK_MEHR = {};
+  var dokLoc = (lang) => lang === "de" ? "de-DE" : DOK_MEHR[lang] && DOK_MEHR[lang].loc || "en-US";
+  var dokMit = (lang, teil, grund, werte) => {
+    const d = DOK_MEHR[lang] && DOK_MEHR[lang][teil];
+    return d ? Object.assign(grund, typeof d === "function" ? d(werte || {}) : d) : grund;
+  };
+  // In welchen Sprachen der LADEVORSCHLAG zu haben ist: in der der Oberflaeche (wenn es sie als
+  // Dokument gibt) und auf Englisch. Das Dokument geht an Dritte -- der Kunde eines spanischen
+  // Verladers liest nicht unbedingt Spanisch, der eines deutschen nicht unbedingt Deutsch.
+  // Vorher gab es diese Wahl nur ueber das Umstellen der ganzen Oberflaeche. Gewaehlt wird im
+  // Dokument-Fenster selbst (Umschalter in der Leiste von LV_DOC). Leer = keine Wahl (Englisch,
+  // oder eine Sprache ohne eigene Dokumente).
+  var dokWahl = () => {
+    const eigen = LANG === "de" || DOK_MEHR[LANG] ? LANG : null;
+    return eigen && eigen !== "en" ? [[eigen, (SPRACH_LISTE.find(([k]) => k === eigen) || [eigen, eigen.toUpperCase()])[1]], ["en", "English"]] : [];
+  };
+  var LV_LETZTE_REF = null;
   // Die Auswahl: [Kuerzel, Name, Satz im Menue] -- auch fuer Sprachen, die gerade NICHT geladen sind.
   var SPRACH_LISTE = [["de", "Deutsch", "Oberfl\xE4che auf Deutsch"], ["en", "English", "Switch the interface to English"]]
     .concat(Object.entries((typeof window !== "undefined" && window.CL_SPRACHEN) || {}).map(([k, v]) => [k, v[0], v[1]]));
   // In welchen Sprachen der KI-Brief geschrieben werden kann: jede Sprache der Oberflaeche,
-  // dazu Niederlaendisch (Wissensseiten gibt es dort, eine Oberflaeche noch nicht). Der Server
+  // und nur in diesen (bis 25.11.26 kam Niederlaendisch von Hand dazu). Der Server
   // fuehrt dieselbe Liste (BRIEF_SPRACHEN in lib/ki.mjs) -- test/sprachen prueft beide.
-  var BRIEF_SPRACHEN_UI = [["de", "Deutsch"], ["en", "English"], ["nl", "Nederlands"]].concat(SPRACH_LISTE.slice(2).map(([k, n]) => [k, n]));
+  var BRIEF_SPRACHEN_UI = SPRACH_LISTE.map(([k, n]) => [k, n]);
   try {
     document.documentElement.lang = LANG;
     document.title = LANG === "en" ? "3D load calculator for containers & trucks — ContainerLoad" : LANG === "de" ? "3D-Laderechner für Container & LKW — ContainerLoad" : SPRACHE_MEHR[LANG].titel;
@@ -3638,7 +3736,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       vm75: "Verteiler \xB7 Richtwert", vmVan: "Kastenwagen \xB7 Richtwert",
       metaOpenTop: "Dach offen \xB7 \xDCberh\xF6he von oben", metaFlatRack: "Stirnw\xE4nde \xB7 \xDCberbreite / -h\xF6he",
       metaPlatform: "Nur Deck \xB7 \xDCberl\xE4nge", metaReefer: "Isoliert \xB7 reduzierte Innenma\xDFe",
-      stVol: "Volumen", stPay: "Nutzlast", stDoor: "T\xFCr\xF6ffn.", stDeck: "Deck", stOpen: "Offen",
+      stVol: "Volumen", stPay: "Nutzlast", stPayLb: "Nutzlast (lb)", stDoor: "T\xFCr\xF6ffn.", stDeck: "Deck", stOpen: "Offen",
       openRoof: "Dach", openSides: "Seiten", openAll: "rundum", ftUnit: "Fu\xDF", adjHint: (u) => `${u} \xB7 eigene Ma\xDFe → schaltet auf „Custom“`,
       cargo: "Ladung",
       // Vorgabename einer neuen Position. NICHT identisch mit V2_DEFAULT_NAME: das ist eine
@@ -3849,6 +3947,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       exportDone: "Ladeliste exportiert",
       // Die deutsche CSV-Fassung ist die Vorgabe in buildCargoCSV -- hier bewusst leer.
       csv: null,
+      // Ebenso die Namen namenloser Import-Positionen: Deutsch ist die Vorgabe des Parsers.
+      importNamen: null,
+      // Die Dokument-Texte stehen fuer Deutsch und Englisch in den Bausteinen selbst (LV_*);
+      // "dok" bringt nur eine Sprachdatei mit (siehe DOK_MEHR im LANG-Block).
+      dok: null,
       shotBtn: "Bild",
       shotExportTitle: "Bild exportieren",
       shotExportDesc: "Sauberes Ansichtsbild f\xFCr Kunden/Agenten – immer aus dem perfekten Winkel.",
@@ -4142,7 +4245,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       vm75: "Distribution \xB7 guide value", vmVan: "Panel van \xB7 guide value",
       metaOpenTop: "Open roof \xB7 over-height from top", metaFlatRack: "End walls \xB7 over-width / -height",
       metaPlatform: "Deck only \xB7 over-length", metaReefer: "Insulated \xB7 reduced inner size",
-      stVol: "Volume", stPay: "Payload", stDoor: "Door", stDeck: "Deck", stOpen: "Open",
+      stVol: "Volume", stPay: "Payload", stPayLb: "Payload (lb)", stDoor: "Door", stDeck: "Deck", stOpen: "Open",
       openRoof: "roof", openSides: "sides", openAll: "all sides", ftUnit: "ft", adjHint: (u) => `${u} \xB7 custom size → switches to “Custom”`,
       cargo: "Cargo",
       itemDefault: "Package",
@@ -4351,6 +4454,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         kopf: ["Container", "Item", "Qty", "Length_cm", "Width_cm", "Height_cm", "Weight_kg_each", "Weight_kg_total", "Stackable", "Rotatable_90", "Entered"],
         ja: "yes", nein: "no", bis: (cm) => "up to " + cm + " cm", max: (n) => "max. " + n, offen: "open", pos: (n) => "Item " + n
       },
+      dok: null,
+      importNamen: { pos: "Item", pal: "Pallet", ep: "Euro pallet" },
       exportFail: "Export failed", popups: "Please allow pop-ups", posWort: "Item", farbBlau: "Blue", farbRot: "Red", logoOk: "Logo uploaded",
       shotBtn: "Image",
       shotExportTitle: "Export image",
@@ -4626,6 +4731,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Text im Rechner, alte Sprachdatei im Zwischenspeicher), steht dort Englisch statt nichts.
   // Die Helfer werden erst beim AUFRUF gebraucht -- plu/fmtDE/LOC stehen weiter unten im Modul.
   if (SPRACHE_MEHR[LANG]) I18N[LANG] = Object.assign({}, I18N.en, SPRACHE_MEHR[LANG].texte({ React: window.React, C, plu: (n, a, b) => plu(n, a, b), fmtDE: (n) => fmtDE(n), loc: () => LOC() }));
+  // Die Dokumente sprechen die Sprache der Oberflaeche, wenn die Sprachdatei sie mitbringt.
+  if (SPRACHE_MEHR[LANG] && I18N[LANG].dok) { DOK_MEHR[LANG] = I18N[LANG].dok; DOKLANG = LANG; }
+  // ... und der Import nennt namenlose Positionen in der Sprache der Oberflaeche.
+  PARSER_NAMEN = (I18N[LANG] && I18N[LANG].importNamen) || null;
   var T = I18N[LANG];
   var EMBEDDED = (() => {
     try {
@@ -4893,6 +5002,14 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // die Vorgabe, und ein Link soll nicht laenger sein, als er sein muss.
     return window.location.origin + "/share?c=" + encodeURIComponent(s) + (LANG === "de" ? "" : "&lang=" + LANG);
   };
+  // Die Adresse, die HERAUSGEGEBEN wird (Teilen, QR-Code, Kopieren): jede Sprache ausser Deutsch
+  // hat ihre eigene Teilen-Seite /<kuerzel>/share. Die Vorschau-Karte von WhatsApp, Teams oder
+  // Slack liest nur den Kopf der Seite und fuehrt kein Skript aus -- ueber /share bekaeme ein
+  // spanischer Plan die deutsch-englische Karte. Die Seiten erzeugt werkzeug/teilen-seiten.mjs
+  // aus share.html; test/teilen-seite.test.mjs verlangt eine fuer jede Sprache des Rechners.
+  // encodePlanURL selbst bleibt, wie es ist: der Rampen-Schluessel hasht diese Adresse, und
+  // ein neuer Pfad haette die Haken aller laufenden Verladungen verworfen.
+  var teilAdresse = (url) => LANG === "de" ? url : url.replace("/share?c=", "/" + LANG + "/share?c=");
   // localStorage-Persistenz fuer "Meine Plaene" – nur lokal im Browser. Alles defensiv: Safari-
   // Privatmodus / Quota koennen werfen; kaputte Eintraege werden uebersprungen; max. 50 Plaene.
   // Der Entwurf: der Arbeitsstand, an dem gerade jemand sitzt. Bis hierher ueberlebte
@@ -5108,23 +5225,24 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return rank;
   }
   var LV_ROW = (it, i, lang, rank) => {
-    const en = lang === "en";
+    const en = lang !== "de", loc = dokLoc(lang);
+    const W = dokMit(lang, "row", en ? { ja: "YES", nein: "NO", dg: "DG", pos: "Item " } : { ja: "JA", nein: "NEIN", dg: "GEFAHRGUT", pos: "Position " });
     const q = Math.max(0, num(it.qty, 1));
     const totKg = q * num(it.weight, 0);
     const volC = q * num(it.l) * num(it.w) * num(it.h) / 1e6;
     const stack = it.stackable !== false;
     const capN = it.stackable === false ? 1 : isFinite(it.stackMax) && +it.stackMax >= 2 ? +it.stackMax : Infinity;
-    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : en ? "YES" : "JA";
-    const dims = `${dimDE(it.l, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.w, en ? "en-US" : "de-DE")} \xD7 ${dimDE(it.h, en ? "en-US" : "de-DE")}`;
-    const nm = escHTML(it.name || (en ? "Item " : "Position ") + (i + 1));
+    const stackTxt = isFinite(+it.stackH) && +it.stackH > 0 ? "≤" + (+it.stackH) + "cm" : isFinite(capN) ? "≤" + capN : W.ja;
+    const dims = `${dimDE(it.l, loc)} \xD7 ${dimDE(it.w, loc)} \xD7 ${dimDE(it.h, loc)}`;
+    const nm = escHTML(it.name || W.pos + (i + 1));
     const pos = String(i + 1).padStart(2, "0");
-    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${stackTxt}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${en ? "NO" : "NEIN"}</span>`;
+    const badge = stack ? `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2); font-weight:600;">${stackTxt}</span>` : `<span style="font-family:'JetBrains Mono',monospace; font-size:9.5px; padding:3px 9px; border-radius:20px; background:#f1f3f5; color:#8492a6; font-weight:600;">${W.nein}</span>`;
     const rk = rank ? String(rank) : "—";
     // Gefahrgut-Marke: NUR Kennzeichnung aus der Eingabe (der Hinweis-Satz
     // unter der Tabelle sagt es) -- UN-Nummer ist an jeder Eintrittsstelle
     // auf Ziffern gefiltert, escHTML trotzdem.
     const gefahr = it.gefahr === true
-      ? `<div style="margin-top:3px;"><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:20px; background:#fff7ed; color:#b45309; border:1px solid #fdba74; white-space:nowrap;">${en ? "DG" : "GEFAHRGUT"}${it.un ? " \xB7 UN " + escHTML(it.un) : ""}</span></div>`
+      ? `<div style="margin-top:3px;"><span style="font-family:'JetBrains Mono',monospace; font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:20px; background:#fff7ed; color:#b45309; border:1px solid #fdba74; white-space:nowrap;">${W.dg}${it.un ? " \xB7 UN " + escHTML(it.un) : ""}</span></div>`
       : "";
     return `<tr style="border-bottom:1px solid #f0f1f4;"><td style="padding:11px 8px 11px 0; text-align:center;"><span style="display:inline-flex; align-items:center; justify-content:center; min-width:20px; height:20px; padding:0 5px; border-radius:20px; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; background:var(--ac-soft,#ecfeff); color:var(--ac-solid,#0891b2);">${rk}</span></td><td style="padding:11px 8px 11px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; color:var(--ac-solid,#0891b2);">${pos}</span></td><td style="padding:11px 8px; font-weight:600;">${nm}${gefahr}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${q}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${dims}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace;">${fmtDE(it.weight)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; font-weight:600;">${fmtDE(totKg)}</td><td style="padding:11px 8px; text-align:right; font-family:'JetBrains Mono',monospace; color:#5b6b80;">${fmt1DE(volC)}</td><td style="padding:11px 0 11px 8px; text-align:center;">${badge}</td></tr>`;
   };
@@ -5168,8 +5286,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const { CL, CW, CH, placed, tiColor, tiPos, legend } = S;
     if (!placed.length || CL <= 0 || CW <= 0 || CH <= 0) return "";
 
-    const _loc = S.LANG === "en" ? "en-US" : "de-DE";
-    const L = S.LANG === "en"
+    const _loc = dokLoc(S.LANG);
+    const L = dokMit(S.LANG, "stau", S.LANG !== "de"
       ? { top: "TOP VIEW", topSub: "footprint", topHint: "from above",
           side: "SIDE VIEW", sideSub: "height & stacking", sideHint: "from the side",
           len: "Length", wid: "Width", hei: "Height", front: "FRONT WALL", door: "◂ DOOR",
@@ -5185,7 +5303,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           note: "Schematische Darstellung der berechneten Anordnung. Exakte Stauung, Drehung und Stapelung im interaktiven 3D-Plan (QR). Rein geometrisch — Achslast, Schwerpunkt und Ladungssicherung sind separat fachlich zu pr\xFCfen.",
           multi: (n) => `Zeichnung zeigt Container 1 von ${n} — weitere im 3D-Plan.`,
           c1: "BODENFL\xC4CHE BELEGT", c2: "MAX. STAPELH\xD6HE", c3: "STAPELEBENEN", clear: "Luft",
-          stack: "stapelbar", nostack: "nicht stapelbar" };
+          stack: "stapelbar", nostack: "nicht stapelbar" });
 
     const MONO = "font-family:'JetBrains Mono',monospace;";
     const round = (n) => Math.round(n);
@@ -5222,7 +5340,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const dyT = oyT + CW + 26;
     top += `<line x1="${oxT}" y1="${dyT}" x2="${oxT + CL}" y2="${dyT}" stroke="#c3cbd6" stroke-width="1"/>`;
     top += `<text x="${oxT + CL / 2}" y="${dyT - 8}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15">${L.len} ${round(CL)} cm</text>`;
-    top += `<text x="${oxT + CL + 34}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15" transform="rotate(90 ${oxT + CL + 34} ${oyT + CW / 2})">${L.wid} ${round(CW)} cm</text>`;
+    // 27 statt 34: hochkant ragen die Buchstaben um ihre Oberlaenge (~11) nach rechts, und der
+    // Rand der Zeichnung liegt bei padRight = 40 -- mit 34 war die Breiten-Angabe halb abgeschnitten.
+    top += `<text x="${oxT + CL + 27}" y="${oyT + CW / 2}" text-anchor="middle" style="${MONO}fill:#5b6b80" font-size="15" transform="rotate(90 ${oxT + CL + 27} ${oyT + CW / 2})">${L.wid} ${round(CW)} cm</text>`;
     top += `</svg>`;
 
     // ---- SEITENANSICHT: Orthografische Projektion x–y, ferne (gro\xDFes z) zuerst zeichnen ----
@@ -5238,7 +5358,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const col = lvDruckfarbe(tiColor[p.ti] || "#8492a6");
       side += `<rect x="${oxS + p.x}" y="${floorY - (p.y + p.dy)}" width="${p.dx}" height="${p.dy}" rx="3" fill="${tint(col)}" stroke="#0c1320" stroke-width="2"/>`;
     });
-    side += `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${L.door.replace("◂ ", "")}</text>`;
+    // Rechts neben dem Container ist Platz fuer vier Zeichen ("DOOR", "TÜR"). Ein laengeres Wort
+    // ("PUERTA", "PORTE") steht deshalb hochkant wie in der Draufsicht -- sonst schneidet der
+    // Rand der Zeichnung es ab.
+    const tuerWort = L.door.replace("◂ ", "");
+    side += tuerWort.length > 4
+      ? `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="end" style="${MONO}fill:#0891b2;font-weight:600" font-size="13" transform="rotate(90 ${oxS + CL + 8} ${floorY - 4})">${tuerWort}</text>`
+      : `<text x="${oxS + CL + 8}" y="${floorY - 4}" text-anchor="start" style="${MONO}fill:#0891b2;font-weight:600" font-size="13">${tuerWort}</text>`;
     side += `</svg>`;
 
     // ---- Legende ----
@@ -5298,8 +5424,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   };
   var LV_PAGE = (D) => {
     const { REF, DATUM, CONTAINER_LABEL, INNENMASS, PAYLOAD, POSCOUNT, COLLI, VOL, VOLBAR, VOLPCT, WEIGHT, WTBAR, WTPCT, PASSTIN, PASSTSUB, ROWS, SUMQTY, SUMKG, SUMVOL, QR, QRURL, STOWAGE, LANG, SEITE, MITTE_LABEL, GEFAHR } = D;
-    const en = DOKLANG === "en";
-    const P = en ? {
+    const en = DOKLANG !== "de";
+    const P = dokMit(DOKLANG, "page", en ? {
       kicker: "LOADING PLAN", h1: "Non-binding<br>Loading Plan",
       cont: "CONTAINER", inner: "INNER DIM.", payload: "MAX. PAYLOAD",
       discK: "NON-BINDING PROPOSAL — PLEASE VERIFY",
@@ -5323,7 +5449,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       promoB: "Scan the QR → view the load in 3D, adjust and share. No login, right in your browser.",
       qrAlt: "QR code 3D plan", linkLabel: "Or open the link on your computer:",
       footer: "Not an official document \xB7 non-binding proposal based on your inputs \xB7 does not replace professional checks of load securing, axle load or weight distribution.",
-      page: "Page 1 / 1"
+      page: "Page 1 / 1",
+      datum: "DATE", absender: "SHIPPER", empfaenger: "CONSIGNEE", hint: "click to fill"
     } : {
       kicker: "LADEVORSCHLAG", h1: "Unverbindlicher<br>Beladungsplan",
       cont: "CONTAINER", inner: "INNENMASS", payload: "MAX. ZULADUNG",
@@ -5348,8 +5475,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       promoB: "QR scannen → Beladung in 3D ansehen, anpassen und teilen. Ohne Login, direkt im Browser.",
       qrAlt: "QR-Code 3D-Plan", linkLabel: "Oder Link am Computer \xF6ffnen:",
       footer: "Kein amtliches Dokument \xB7 unverbindlicher Vorschlag auf Basis der Eingaben \xB7 ersetzt keine fachliche Pr\xFCfung der Ladungssicherung, Achslast oder Gewichtsverteilung.",
-      page: "Seite 1 / 1"
-    };
+      page: "Seite 1 / 1",
+      datum: "DATUM", absender: "ABSENDER", empfaenger: "EMPF\xC4NGER", hint: "klicken &amp; ausf\xFCllen"
+    }, { COLLI, VOLPCT, WTPCT, POSCOUNT });
     const hintRow = (t) => `<div style="display:flex; gap:9px; align-items:flex-start;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ac-solid,#0891b2); margin-top:5px; flex:none;"></span><span style="font-size:11.5px; line-height:1.45; color:#384557;">${t}</span></div>`;
     return `<div class="page" style="width:794px; min-height:1123px; background:#ffffff; box-shadow:0 20px 60px rgba(15,23,42,.18); border-radius:6px; overflow:hidden; position:relative; display:flex; flex-direction:column; color:#0c1320;">
 
@@ -5368,9 +5496,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         </div>
         <div style="text-align:right; font-family:'JetBrains Mono',monospace; font-size:10.5px; line-height:1.9; color:var(--hero-sub,#8a98ad);">
           <div>REF&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" style="color:var(--hero-ink,#fff);">${REF}</span></div>
-          <div>${DOKLANG === "en" ? "DATE" : "DATUM"}&nbsp;&nbsp;<span style="color:var(--hero-ink,#fff);">${DATUM}</span></div>
-          <div>${DOKLANG === "en" ? "SHIPPER" : "ABSENDER"}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${DOKLANG === "en" ? "click to fill" : "klicken &amp; ausf\xFCllen"}" style="color:var(--hero-ink,#fff);"></span></div>
-          <div>${DOKLANG === "en" ? "CONSIGNEE" : "EMPF\xC4NGER"}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${DOKLANG === "en" ? "click to fill" : "klicken &amp; ausf\xFCllen"}" style="color:var(--hero-ink,#fff);"></span></div>
+          <div>${P.datum}&nbsp;&nbsp;<span style="color:var(--hero-ink,#fff);">${DATUM}</span></div>
+          <div>${P.absender}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${P.hint}" style="color:var(--hero-ink,#fff);"></span></div>
+          <div>${P.empfaenger}&nbsp;&nbsp;<span class="cl-edit" contenteditable="true" spellcheck="false" data-hint="${P.hint}" style="color:var(--hero-ink,#fff);"></span></div>
         </div>
       </div>
 
@@ -5517,13 +5645,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // feste Rand am Farb-Chip unten ist die farbunabhaengige Kontur.
   var LV_SEQUENZ = (placed, cargo, lang, tiColor) => {
     if (!placed || placed.length < 2) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
-    const K = en
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
+    const K = dokMit(lang, "sequenz", en
       ? { titel: "LOADING SEQUENCE", h2: "Load in this order", sub: "Front wall first, door last. Bottom before top. Tick each step as you load.",
-          ab: "from front wall", mehr: (n) => `+ ${n} more steps — full detail in the 3D plan (QR)` }
+          ab: "from front wall", mehr: (n) => `+ ${n} more steps — full detail in the 3D plan (QR)`, pos: "Item " }
       : { titel: "BELADE-REIHENFOLGE", h2: "In dieser Reihenfolge laden", sub: "Stirnwand zuerst, Tür zuletzt. Unten vor oben. Kästchen beim Verladen abhaken.",
-          ab: "ab Stirnwand", mehr: (n) => `+ ${n} weitere Schritte — vollständig im 3D-Plan (QR)` };
+          ab: "ab Stirnwand", mehr: (n) => `+ ${n} weitere Schritte — vollständig im 3D-Plan (QR)`, pos: "Position " });
     // Ladereihenfolge: von der Stirnwand (x klein) zur Tuer, im selben Stellplatz von
     // unten nach oben -- dieselbe Ordnung wie loadingOrder fuer den Rang je Position.
     const folge = [...placed].sort((a2, b2) => a2.x - b2.x || a2.y - b2.y || a2.z - b2.z || a2.ti - b2.ti);
@@ -5537,7 +5665,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const MAX = 16;
     const zeilen = schritte.slice(0, MAX).map((sc, i) => {
       const it = cargo[sc.ti] || {};
-      const nm = escHTML(it.name || (en ? "Item " : "Position ") + (sc.ti + 1));
+      const nm = escHTML(it.name || K.pos + (sc.ti + 1));
       return `<div style="display:flex; align-items:baseline; gap:10px; padding:6px 0; border-bottom:1px solid #f0f1f4;">
         <span style="width:11px; height:11px; border:1.5px solid #0c1320; border-radius:2.5px; flex:none; align-self:center;"></span>
         <span style="font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; color:#0c1320; min-width:22px;">${String(i + 1).padStart(2, "0")}</span>
@@ -5565,13 +5693,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length) return "";
     const stopVon = (ti) => { const s = (cargo[ti] || {}).stop; return Number.isInteger(s) && s >= 1 ? s : null; };
     if (!placed.some((p) => stopVon(p.ti) != null)) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
-    const K = en
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
+    const K = dokMit(lang, "stopps", en
       ? { titel: "UNLOADING ORDER", h2: "Unload in this order", sub: "From the stow: stop 1 sits at the door and comes off first. Goods without a stop sit at the front wall and stay loaded until the end.",
           stopp: (n) => `Stop ${n}`, ohne: "No stop", ohneSub: "stays loaded", pos: "Pos", stk: (n) => `${n} pcs`, ab: "from front wall" }
       : { titel: "ENTLADEREIHENFOLGE", h2: "In dieser Reihenfolge entladen", sub: "Aus der Stauung: Stopp 1 liegt an der T\xFCr und kommt zuerst herunter. Ware ohne Stopp liegt an der Stirnwand und bleibt bis zuletzt geladen.",
-          stopp: (n) => `Stopp ${n}`, ohne: "Ohne Stopp", ohneSub: "bleibt geladen", pos: "Pos", stk: (n) => `${n} Stk`, ab: "ab Stirnwand" };
+          stopp: (n) => `Stopp ${n}`, ohne: "Ohne Stopp", ohneSub: "bleibt geladen", pos: "Pos", stk: (n) => `${n} Stk`, ab: "ab Stirnwand" });
     const zonen = new Map();
     for (const p of placed) {
       const st = stopVon(p.ti);
@@ -5616,8 +5744,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length || !(CL > 0)) return "";
     const tis = [...new Set(placed.map((p) => p.ti))];
     if (tis.some((ti) => !(+((cargo[ti] || {}).weight) > 0))) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
     let kg = 0, mx = 0, vorn = 0;
     for (const p of placed) {
       const w = +cargo[p.ti].weight;
@@ -5631,13 +5759,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const x = mx / kg;
     const pct = Math.max(0, Math.min(100, Math.round(x / CL * 100)));
     const vornPct = Math.max(0, Math.min(100, Math.round(vorn / kg * 100)));
-    const K = en
+    const K = dokMit(lang, "gewicht", en
       ? { titel: "WEIGHT &amp; CENTRE OF GRAVITY \xB7 GUIDE VALUE", wand: "FRONT WALL", tuer: "DOOR",
           zeile: `Cargo weight <b>${Math.round(kg).toLocaleString(loc)} kg</b> \xB7 centre of gravity at <b>${(Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</b> from the front wall (${pct} % of length) \xB7 front half ${vornPct} % / rear half ${100 - vornPct} %`,
           sub: "From your weight inputs, homogeneous mass per piece assumed. Not a substitute for weighing; check axle load and securing separately." }
       : { titel: "GEWICHT &amp; SCHWERPUNKT \xB7 RICHTWERT", wand: "STIRNWAND", tuer: "T\xDCR",
           zeile: `Ladungsgewicht <b>${Math.round(kg).toLocaleString(loc)} kg</b> \xB7 Schwerpunkt bei <b>${(Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m</b> ab Stirnwand (${pct} % der L\xE4nge) \xB7 vordere H\xE4lfte ${vornPct} % / hintere H\xE4lfte ${100 - vornPct} %`,
-          sub: "Aus Ihren Gewichtsangaben, homogene Masse je St\xFCck angenommen. Kein Wiegeersatz; Achslast und Sicherung separat pr\xFCfen." };
+          sub: "Aus Ihren Gewichtsangaben, homogene Masse je St\xFCck angenommen. Kein Wiegeersatz; Achslast und Sicherung separat pr\xFCfen." }, { kg: Math.round(kg).toLocaleString(loc), m: (Math.round(x) / 100).toLocaleString(loc, { minimumFractionDigits: 2, maximumFractionDigits: 2 }), pct, vorn: vornPct, hinten: 100 - vornPct });
     return `<div style="margin:14px 44px 0; border:1px solid #eceef2; border-radius:11px; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;">
       <div style="font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.14em; color:#8b96a6; margin-bottom:6px;">${K.titel}</div>
       <div style="font-size:11px; line-height:1.5; color:#0c1320;">${K.zeile}</div>
@@ -5662,20 +5790,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (!placed || !placed.length) return "";
     const tis = [...new Set(placed.map((p) => p.ti))];
     if (tis.some((ti) => !(+((cargo[ti] || {}).weight) > 0))) return "";
-    const en = lang === "en";
-    const loc = en ? "en-US" : "de-DE";
+    const en = lang !== "de";
+    const loc = dokLoc(lang);
     let kg = 0;
     for (const p of placed) kg += +cargo[p.ti].weight;
     if (!(kg > 0)) return "";
     kg = Math.round(kg);
     const hatTara = Number.isFinite(tara) && tara > 0;
-    const K = en
+    const K = dokMit(lang, "vgm", en
       ? { titel: "GROSS MASS (VGM PREPARATION) \xB7 GUIDE VALUE", ladung: "Cargo", tar: "container tare", brutto: "gross",
           typ: hatTara ? `(typical ${typ} — the CSC plate on the container governs)` : "(read from the CSC plate on the container)",
           sub: "Not a VGM. The verified gross mass requires weighing (method 1) or a certified calculation (method 2) under SOLAS VI/2 — this figure is a guide value from your unverified inputs; the tare field can be filled in before printing." }
       : { titel: "BRUTTOMASSE (VGM-VORBEREITUNG) \xB7 RICHTWERT", ladung: "Ladung", tar: "Container-Tara", brutto: "Brutto",
           typ: hatTara ? `(typisch ${typ} — ma\xDFgeblich ist das CSC-Schild am Container)` : "(vom CSC-Schild am Container ablesen)",
-          sub: "Kein VGM-Ersatz. Die Verified Gross Mass verlangt Verwiegung (Methode 1) oder eine zertifizierte Berechnung (Methode 2) nach SOLAS VI/2 — diese Zahl ist ein Richtwert aus Ihren unverifizierten Eingaben, das Tara-Feld ist vor dem Druck anklickbar." };
+          sub: "Kein VGM-Ersatz. Die Verified Gross Mass verlangt Verwiegung (Methode 1) oder eine zertifizierte Berechnung (Methode 2) nach SOLAS VI/2 — diese Zahl ist ein Richtwert aus Ihren unverifizierten Eingaben, das Tara-Feld ist vor dem Druck anklickbar." }, { hatTara, typ });
     const taraTxt = hatTara ? Math.round(tara).toLocaleString(loc) : "";
     const bruttoTxt = hatTara ? "≈ " + (kg + Math.round(tara)).toLocaleString(loc) + " kg" : "—";
     return `<div data-vgm style="margin:14px 44px 0; border:1px solid #eceef2; border-radius:11px; padding:12px 14px; page-break-inside:avoid; break-inside:avoid;">
@@ -5692,12 +5820,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // die Pruefung von Sicherung und Achslast bleibt fachliche Sache, und ein
   // kostenloses Tool darf sie nicht per Unterschriftsfeld einsammeln.
   var LV_QUITTUNG = (lang) => {
-    const en = lang === "en";
-    const K = en
+    const en = lang !== "de";
+    const K = dokMit(lang, "quittung", en
       ? { wer: "Loaded by (name)", wann: "Date / time", unterschrift: "Signature",
           sub: "Confirms loading according to this proposal only. No confirmation of load securing, axle load or weights." }
       : { wer: "Geladen von (Name)", wann: "Datum / Uhrzeit", unterschrift: "Unterschrift",
-          sub: "Best\xE4tigt nur die Verladung nach diesem Vorschlag. Keine Best\xE4tigung von Ladungssicherung, Achslast oder Gewichten." };
+          sub: "Best\xE4tigt nur die Verladung nach diesem Vorschlag. Keine Best\xE4tigung von Ladungssicherung, Achslast oder Gewichten." });
     const feld = (label, breit) => `<div style="flex:${breit};">
       <div style="height:26px; border-bottom:1px solid #0c1320;"></div>
       <div style="font-family:'JetBrains Mono',monospace; font-size:8.5px; letter-spacing:.08em; color:#8b96a6; margin-top:4px;">${label}</div>
@@ -5708,12 +5836,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     </div>`;
   };
   var LV_UEBERSICHT = (reihen, lang) => {
-    const en = lang === "en";
-    const K = en
+    const en = lang !== "de";
+    const K = dokMit(lang, "uebersicht", en
       ? { titel: "PER CONTAINER", h2: "How the shipment is split", cont: "Container", typ: "Type", stk: "Loaded", vol: "Volume", kg: "Weight", voll: "Full",
           note: "One line per container. Each is placed, weighed and shipped on its own \u2014 the pages that follow show one stowage plan each." }
       : { titel: "JE CONTAINER", h2: "Wie sich die Sendung aufteilt", cont: "Container", typ: "Typ", stk: "Verladen", vol: "Volumen", kg: "Gewicht", voll: "Voll",
-          note: "Eine Zeile je Container. Jeder wird einzeln gestellt, gewogen und gefahren \u2014 die Seiten danach zeigen je einen Stauplan." };
+          note: "Eine Zeile je Container. Jeder wird einzeln gestellt, gewogen und gefahren \u2014 die Seiten danach zeigen je einen Stauplan." });
     const th = (t, r) => `<th style="padding:0 8px 8px 0; text-align:${r ? "right" : "left"}; font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:#8492a6; font-weight:600; white-space:nowrap;">${t}</th>`;
     const zeilen = reihen.map((r) => `<tr style="border-bottom:1px solid #f0f1f4;">
       <td style="padding:10px 8px 10px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:700; color:var(--ac-solid,#0891b2);">${escHTML(r.marke)}</span></td>
@@ -5731,13 +5859,29 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       <div style="font-size:10px; line-height:1.45; color:#8492a6; margin-top:9px;">${K.note}</div>
     </div>`;
   };
-  var LV_DOC = (pageHTML, lang) => `<!DOCTYPE html><html lang="${lang === "en" ? "en" : "de"}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${lang === "en" ? "Loading Plan" : "Ladevorschlag"} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${lang === "en" ? "Save as PDF / print" : "Als PDF speichern / drucken"}</button><button class="cl-x" onclick="window.close()">${lang === "en" ? "Close" : "Schlie\xDFen"}</button><span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${lang === "en" ? "Dashed fields (REF, shipper, consignee) can be filled in before printing — they never leave this page." : "Gestrichelte Felder (REF, Absender, Empf\xE4nger) vor dem Druck anklickbar — sie verlassen dieses Blatt nicht."}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+  var LV_DOC = (pageHTML, lang, wahl) => {
+    const K = dokMit(lang, "doc", lang !== "de"
+      ? { titel: "Loading Plan", druck: "Save as PDF / print", zu: "Close", felder: "Dashed fields (REF, shipper, consignee) can be filled in before printing — they never leave this page." }
+      : { titel: "Ladevorschlag", druck: "Als PDF speichern / drucken", zu: "Schlie\xDFen", felder: "Gestrichelte Felder (REF, Absender, Empf\xE4nger) vor dem Druck anklickbar — sie verlassen dieses Blatt nicht." });
+    // Der Sprach-Umschalter (siehe dokWahl): der aktive Knopf tut nichts, der andere laesst den
+    // Rechner dasselbe Blatt in seiner Sprache in DIESES Fenster schreiben. Gleiche Herkunft --
+    // das Fenster ist vom Rechner geoeffnet; ist der Rechner inzwischen zu, passiert nichts.
+    const wahlHTML = Array.isArray(wahl) && wahl.length > 1
+      ? '<span class="cl-sp" role="group">' + wahl.filter(([k]) => /^[a-z]{2}$/.test(k)).map(([k, n]) => k === lang
+        ? `<button class="cl-spk on" aria-pressed="true">${escHTML(n)}</button>`
+        : `<button class="cl-spk" aria-pressed="false" onclick="try{window.opener.__clLadevorschlag(window,'${k}')}catch(e){}">${escHTML(n)}</button>`).join("") + "</span>"
+      : "";
+    return `<!DOCTYPE html><html lang="${lang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${K.titel} \xB7 ContainerLoad</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet"><style>@page{size:A4;margin:0}*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}html,body{background:#fff;font-family:'Manrope',sans-serif}@media screen{body{background:#e6e8ec;display:flex;flex-direction:column;align-items:center;padding:24px 16px 96px}}.cl-tb{position:fixed;bottom:0;left:0;right:0;display:flex;gap:10px;justify-content:center;align-items:center;padding:12px;background:rgba(11,17,25,.96);box-shadow:0 -4px 20px rgba(0,0,0,.3);z-index:99}.cl-tb button{font:600 13px/1 'Manrope',sans-serif;padding:10px 18px;border-radius:9px;border:0;cursor:pointer}.cl-pdf{background:linear-gradient(135deg,#2E8FFF,#2E8FFF);color:#04121A}.cl-x{background:#232C38;color:#cbd5e1}.cl-sp{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:#161D27}.cl-tb .cl-spk{background:transparent;color:#8a98ad;padding:6px 12px;border-radius:7px}.cl-tb .cl-spk.on{background:#232C38;color:#fff;cursor:default}.cl-edit{outline:none;display:inline-block;min-width:110px;padding:0 2px;cursor:text;border-bottom:1px dashed rgba(255,255,255,.4)}.cl-edit:empty::before{content:attr(data-hint);color:rgba(255,255,255,.35);font-style:italic}@media screen{.cl-edit:hover,.cl-edit:focus{background:rgba(46,143,255,.18);border-bottom-style:solid}}@media print{.cl-edit{border-bottom:1px solid rgba(255,255,255,.35)}.cl-edit:empty::before{content:""}}.cl-feld{outline:none;display:inline-block;min-width:64px;padding:0 3px;text-align:center;cursor:text;font-family:'JetBrains Mono',monospace;border-bottom:1px dashed #9aa6b5}@media screen{.cl-feld:hover,.cl-feld:focus{background:rgba(46,143,255,.12);border-bottom-style:solid}}@media print{.cl-feld{border-bottom:1px solid #0c1320}}@media print{.cl-tb{display:none!important}.page{box-shadow:none!important;border-radius:0!important;margin:0!important;break-after:page;page-break-after:always}.page:last-of-type{break-after:auto;page-break-after:auto}}@media screen{.page+.page{margin-top:24px}}</style></head><body>${pageHTML}<div class="cl-tb"><button class="cl-pdf" onclick="window.print()">${K.druck}</button><button class="cl-x" onclick="window.close()">${K.zu}</button>${wahlHTML}<span style="font:400 11px 'Manrope',sans-serif;color:#8a98ad;">${K.felder}</span></div><script>(function(){document.addEventListener("input",function(e){var t=e.target;if(!t||!t.getAttribute||t.getAttribute("data-vgm-tara")==null)return;var w=t.closest("[data-vgm]");if(!w)return;var kg=+t.getAttribute("data-kg")||0;var v=parseInt(String(t.textContent).replace(/[^0-9]/g,""),10)||0;var z=w.querySelector("[data-vgm-brutto]");if(z)z.textContent=v>0?"\\u2248 "+(kg+v).toLocaleString(t.getAttribute("data-loc")||"de-DE")+" kg":"\\u2014";});function g(){try{window.focus();window.print();}catch(e){}}if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(g,300);});}else{window.addEventListener('load',function(){setTimeout(g,600);});}})();<\/script></body></html>`;
+  };
   var QIMPORT = (() => {
     try {
       const q = new URLSearchParams(window.location.search).get("q");
       if (q) {
         const rows = parseCargoText(q);
-        if (rows && rows.length) return rows.map((r) => ({ id: uid(), name: r.name, l: r.l, w: r.w, h: r.h, weight: r.weight, qty: r.qty, stackable: r.stackable, rotatable: r.rotatable }));
+        // stackH ("stapelbar bis 180 cm") reist mit -- bis 26.11.26 las der Parser die Grenze,
+        // und diese Zeile liess sie fallen: ein Link oder die Import-Box der Startseite ergab
+        // einen Plan, der frei stapelte. Dieselbe Uebernahme wie in applyImport.
+        if (rows && rows.length) return rows.map((r) => ({ id: uid(), name: r.name, l: r.l, w: r.w, h: r.h, weight: r.weight, qty: r.qty, stackable: r.stackable, stackH: r.stackH > 0 ? r.stackH : null, rotatable: r.rotatable }));
       }
     } catch (e) {
     }
@@ -6088,6 +6232,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       seite: (a, b) => `Page ${a} / ${b}`
     }
   };
+  // Das Blatt in WEITEREN Sprachen: die Sprachdatei bringt die Texte mit (dok.vgmpdf), und sie
+  // liegen ueber den englischen -- derselbe Weg wie beim Ladevorschlag (dokMit im LANG-Block).
+  // Waehlbar ist im Formular Deutsch, Englisch und, wenn sie das Blatt mitbringt, die Sprache
+  // der Oberflaeche: das Dokument geht an die Reederei, und die liest nicht immer Spanisch.
+  var vgmTexte = (sp) => sp === "de" ? VGM_TXT.de : dokMit(sp, "vgmpdf", Object.assign({}, VGM_TXT.en));
+  var vgmSpGibt = (sp) => sp === "de" || sp === "en" || !!(DOK_MEHR[sp] && DOK_MEHR[sp].vgmpdf);
   // Hoechstens so viele Zeilen traegt eine Seite; die letzte so viele, wie ueber dem Schluss
   // (Summe, Methode, Bemerkung, Erklaerung, Unterschrift) Platz ist -- das rechnet vgmPdf aus.
   var VGM_JE_SEITE = 18, VGM_NOTIZ_ZEILEN = 8;
@@ -6097,10 +6247,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // Wert, fett nur, was die Reederei sucht (Container-Nr., VGM, Methode), und Linien nur in
   // der Tabelle und unter der Unterschrift. Keine Flaechen, kein Kasten ums Markenzeichen.
   function vgmPdf(d) {
-    const X = VGM_TXT[d.sprache === "en" ? "en" : "de"], en = d.sprache === "en";
+    const X = vgmTexte(d.sprache), en = d.sprache !== "de";
     const TINTE = "#10151C", GRAU = "#5B6675", HELL = "#8A94A3", LINIE = "#D9DEE5", MARKE = "#2E8FFF";
     const L = 48, R = PDF_A4[0] - 48, B = R - L, halb = B / 2;
-    const zahl = (n) => Math.round(n).toLocaleString(en ? "en-US" : "de-DE");
+    // "always": Spanisch gruppiert vierstellige Zahlen sonst nicht -- in der Tabelle stuende
+    // "3900" unter "20.000". Fuer Deutsch und Englisch aendert es nichts.
+    const zahl = (n) => Math.round(n).toLocaleString(dokLoc(d.sprache), { useGrouping: "always" });
     const tag = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? (en ? `${m[1]}-${m[2]}-${m[3]}` : `${m[3]}.${m[2]}.${m[1]}`) : ""; };
     const heute = (() => { const t = d.erstellt instanceof Date ? d.erstellt : new Date(); const p2 = (n) => String(n).padStart(2, "0"); return tag(`${t.getFullYear()}-${p2(t.getMonth() + 1)}-${p2(t.getDate())}`); })();
     const nrSchoen = (nr) => { const s = String(nr || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); return s.length === 11 ? s.slice(0, 4) + " " + s.slice(4, 10) + " " + s.slice(10) : s; };
@@ -8118,7 +8270,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // auf ganze, Zoll auf Zehntel): aufgerundet waere die Tuer groesser, als sie ist.
     // Die Einheit steht dann in der Beschriftung, nicht hinter der Zahl: "62,170 lb" passt in
     // der schmalen Spalte nicht in eine Zeile, und eine Einheit, die allein umbricht, liest niemand.
-    const statPay = (kg) => unit === "in" ? stat(T.stPay + " (lb)", fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
+    const statPay = (kg) => unit === "in" ? stat(T.stPayLb, fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
     const statDoor = (d) => unit === "in" ? stat(T.stDoor + " (in)", zollAb(d.w), "\xD7" + zollAb(d.h)) : stat(T.stDoor, d.w, "\xD7" + d.h);
     const name = cur.custom ? T.ctCustom : (cur.kind === "dry" ? (cur.len === "45'" ? "45' " + T.ctHighCube : cur.len + " " + (cur.hv === "HC" ? T.ctHighCube : T.ctStandard)) : cur.len + " " + LAB[cur.kind]);
     const metaTxt = cur.custom ? "" : (MET[cur.kind] || (cur.key === "45' HC" ? "High Cube \xB7 Pallet-Wide" : (P.h >= 270 ? T.ctHighCube : "General Purpose")));
@@ -8180,7 +8332,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // auf ganze, Zoll auf Zehntel): aufgerundet waere die Tuer groesser, als sie ist.
     // Die Einheit steht dann in der Beschriftung, nicht hinter der Zahl: "62,170 lb" passt in
     // der schmalen Spalte nicht in eine Zeile, und eine Einheit, die allein umbricht, liest niemand.
-    const statPay = (kg) => unit === "in" ? stat(T.stPay + " (lb)", fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
+    const statPay = (kg) => unit === "in" ? stat(T.stPayLb, fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
     const statDoor = (d) => unit === "in" ? stat(T.stDoor + " (in)", zollAb(d.w), "\xD7" + zollAb(d.h)) : stat(T.stDoor, d.w, "\xD7" + d.h);
     const name = known ? VEHICLE_LABEL(T)[preset] || preset : T.ctCustom;
     const metaTxt = known ? VEHICLE_META(T)[preset] || "" : "";
@@ -8408,7 +8560,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       setToast(T.plansSaved);
     };
     const openPlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; applyPlan(d, pl.name, pl.pid); onClose(); setToast(T.plansLoaded); };
-    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain) + (PLAN_ID_RE.test(pl.pid || "") ? "&id=" + pl.pid : ""); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
+    const sharePlan = (pl) => { const d = decodePlanState(pl.state); if (!d) return; const url = teilAdresse(encodePlanURL(d.preset, d.container, d.cargo, d.forceCentered, d.domain)) + (PLAN_ID_RE.test(pl.pid || "") ? "&id=" + pl.pid : ""); try { navigator.clipboard.writeText(url); } catch (e) {} setToast(T.plansLinkCopied); };
     const removePlan = (id) => setPlans(deletePlanFromStore(id));
     const startRename = (pl) => { setEditingId(pl.id); setEditName(pl.name); };
     const commitRename = () => {
@@ -8859,7 +9011,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Die Einheit des Absenders faehrt mit, wenn sie Zoll ist: sonst liest der Empfaenger
     // einen in Zoll gebauten Plan in Zentimetern. Eigener Parameter wie die Kennung -- im
     // Plan selbst (?c=) steht weiter cm und kg.
-    const mitId = (url) => url + "&id=" + planId + (unit === "in" ? "&u=in" : "");
+    const mitId = (url) => teilAdresse(url) + "&id=" + planId + (unit === "in" ? "&u=in" : "");
     const fassungJetztMerken = () => { try { fassungMerken(planId, compactEncode(planStateFrom(preset, container, cargo, forceCentered, domain), { presets: PRESETS, vehicles: VEHICLES })); } catch (e) {} };
     // Oeffnet jemand einen Link mit Plan-Kennung, den DIESES Geraet schon in einer anderen
     // Fassung gesehen (oder selbst verschickt) hat, steht oben, was sich geaendert hat.
@@ -9074,12 +9226,16 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Meldungs-Link, die man selbst verschickt.
     const VGM_ABS = "cl-vgm-absender-v1";
     const [vgmAbs, setVgmAbs] = useState(() => {
-      const leer = { ab: "", ps: "", or: "", sp: DOKLANG };
+      const leer = { ab: "", ps: "", or: "", sp: vgmSpGibt(DOKLANG) ? DOKLANG : "en" };
       try {
         const d = JSON.parse(localStorage.getItem(VGM_ABS) || "null");
-        return d && typeof d === "object" ? { ab: String(d.ab || "").slice(0, 80), ps: String(d.ps || "").slice(0, 60), or: String(d.or || "").slice(0, 40), sp: d.sp === "en" || d.sp === "de" ? d.sp : leer.sp } : leer;
+        return d && typeof d === "object" ? { ab: String(d.ab || "").slice(0, 80), ps: String(d.ps || "").slice(0, 60), or: String(d.or || "").slice(0, 40), sp: vgmSpGibt(d.sp) ? d.sp : leer.sp } : leer;
       } catch (e) { return leer; }
     });
+    // Die Sprachen, in denen es das VGM-Blatt gibt: Deutsch, Englisch und -- wenn ihre Sprachdatei
+    // es mitbringt -- die der Oberflaeche. Eine Auswahl, kein Automatismus: das Blatt geht an die
+    // Reederei, und ob die Spanisch liest, weiss nur der Absender.
+    const vgmSprachen = [["de", "Deutsch"], ["en", "English"]].concat(LANG !== "de" && LANG !== "en" && vgmSpGibt(LANG) ? [[LANG, (SPRACH_LISTE.find(([k2]) => k2 === LANG) || [LANG, LANG.toUpperCase()])[1]]] : []);
     const vgmAbsSetzen = (feld, wert) => setVgmAbs((a) => {
       const n = { ...a, [feld]: wert };
       try { localStorage.setItem(VGM_ABS, JSON.stringify(n)); } catch (e) {}
@@ -9839,15 +9995,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const accStops = exportAccentStops(EXPORT_ACCENTS[exportAccent]);
         const MONOF = "'JetBrains Mono', ui-monospace, monospace";
         const SANSF = "'Archivo', system-ui, -apple-system, sans-serif";
-        const en = DOKLANG === "en";
+        const en = DOKLANG !== "de";
+        // Die sechs Woerter der Karte -- wie beim Ladevorschlag ueber dokMit, damit eine
+        // Sprachdatei sie stellen kann (dok.bild).
+        const BT = dokMit(DOKLANG, "bild", en
+          ? { ausl: "UTILIZATION", geladen: "LOADED", gewicht: "WEIGHT", volumen: "VOLUME", stk: " PCS", mehr: "MORE" }
+          : { ausl: "AUSLASTUNG", geladen: "GELADEN", gewicht: "GEWICHT", volumen: "VOLUMEN", stk: " STK", mehr: "WEITERE" });
         const cv = document.createElement("canvas");
         const g = cv.getContext("2d");
         const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
         const metrics = [
-          { l: en ? "UTILIZATION" : "AUSLASTUNG", v: `${Math.round(shotUtil)} %`, grad: true },
-          { l: en ? "LOADED" : "GELADEN", v: `${shotLoaded}/${shotTotal}` },
-          { l: en ? "WEIGHT" : "GEWICHT", v: `${nf(shotWeight / 1000, 1)} t` },
-          { l: en ? "VOLUME" : "VOLUMEN", v: `${nf(+shotVol || 0, 1)} m\xB3` }
+          { l: BT.ausl, v: `${Math.round(shotUtil)} %`, grad: true },
+          { l: BT.geladen, v: `${shotLoaded}/${shotTotal}` },
+          { l: BT.gewicht, v: `${nf(shotWeight / 1000, 1)} t` },
+          { l: BT.volumen, v: `${nf(+shotVol || 0, 1)} m\xB3` }
         ];
         const valF = `700 ${px(22)}px ${MONOF}`, labF = `500 ${px(10)}px ${MONOF}`, gap = px(26);
         let mutedCol = "#4A5C6E"; // Label-/Untertext-Ton; im Transparenz-Modus heller (Kontrast auf hellem BG)
@@ -9938,21 +10099,21 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           g.fillText(" \xB7 " + sr.name, ix + mw, y);
           g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = muted;
           g.textAlign = "right";
-          g.fillText(sr.stueck + (en ? " PCS" : " STK"), ix + iw, y);
+          g.fillText(sr.stueck + BT.stk, ix + iw, y);
         };
         // Die zwei Balken. Zwei, weil zwei Grenzen gelten - Raum und Gewicht - und bei
         // schwerer Ladung die zweite zuerst zuschlaegt. Hoehe: px(50).
         const slotWerte = (sr, ix, yTop, iw, glas) => {
           const muted = glas ? "#BCC9D6" : "#7689A0";
           g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
-          g.fillText(en ? "VOLUME" : "VOLUMEN", ix, yTop + px(8));
+          g.fillText(BT.volumen, ix, yTop + px(8));
           g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = "#C5D4E2";
           g.fillText(`${nf(sr.vol, 1)} / ${nf(sr.cVol, 1)} m\xB3`, ix + iw, yTop + px(8));
           slotBalken(ix, yTop + px(14), iw, sr.cVol > 0 ? sr.vol / sr.cVol * 100 : 0, accStops[0], glas);
           const pPct = sr.pay > 0 ? sr.kg / sr.pay * 100 : 0;
           const kgFarbe = pPct > 100 ? "#FF5D52" : pPct > 90 ? "#F5A524" : accStops[0];
           g.textAlign = "left"; g.font = `500 ${px(10)}px ${MONOF}`; g.fillStyle = muted;
-          g.fillText(en ? "WEIGHT" : "GEWICHT", ix, yTop + px(39));
+          g.fillText(BT.gewicht, ix, yTop + px(39));
           g.textAlign = "right"; g.font = `600 ${px(11)}px ${MONOF}`; g.fillStyle = pPct > 90 ? kgFarbe : "#C5D4E2";
           g.fillText(sr.pay > 0 ? `${nf(sr.kg / 1000, 1)} / ${nf(sr.pay / 1000, 1)} t` : `${nf(sr.kg / 1000, 1)} t`, ix + iw, yTop + px(39));
           slotBalken(ix, yTop + px(45), iw, pPct, kgFarbe, glas);
@@ -9980,7 +10141,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (mehrSlots > 0) {
             g.textAlign = "right"; g.textBaseline = "alphabetic";
             g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = slotMuted;
-            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, sx + sw, sy + stripH + px(16));
+            g.fillText(`+${mehrSlots} ${BT.mehr}`, sx + sw, sy + stripH + px(16));
           }
         };
         const accentLine = (x, y, w) => { const alg = g.createLinearGradient(x, 0, x + w, 0); alg.addColorStop(0, accStops[0]); alg.addColorStop(1, accStops[1]); g.fillStyle = alg; g.fillRect(x, y, w, Math.max(2, px(2.5))); };
@@ -10026,7 +10187,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           if (mehrSlots > 0) {
             g.textAlign = "right"; g.textBaseline = "alphabetic";
             g.font = `500 ${px(11)}px ${MONOF}`; g.fillStyle = glas ? "#BCC9D6" : "#7689A0";
-            g.fillText(`+${mehrSlots} ${en ? "MORE" : "WEITERE"}`, FR + innenW, gy + gitterH + px(16));
+            g.fillText(`+${mehrSlots} ${BT.mehr}`, FR + innenW, gy + gitterH + px(16));
           }
           const fy = gy + gitterH + mehrH, fcy = fy + footH / 2;
           accentLine(FR, fy + px(1), innenW);
@@ -10958,9 +11119,18 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         : tuerKonflikte(cargo, result.chain && result.chain.length ? result.chain : [{ placed: result.placed, preset: container }], doorOpening);
     const doorFails = cargo.filter((_, i) => doorCheck.idx.has(i));
     const oogRows = result.oog ? [["overHeight", T.oogH], ["overWidthL", T.oogWL], ["overWidthR", T.oogWR], ["overLengthFront", T.oogLF], ["overLengthBack", T.oogLB]].filter(([k]) => (result.oog[k] || 0) > 0).map(([k, lbl]) => ({ lbl, v: Math.round(result.oog[k]) })) : [];
-    const buildLadevorschlag = () => {
-      zaehl("ladevorschlag");
-      setTimeout(fbFragen, 4000); // erst, wenn der Vorgang durch ist
+    // dokSprache und fenster kommen NUR vom Sprach-Umschalter im Dokument-Fenster (window.opener.
+    // __clLadevorschlag): dasselbe Blatt noch einmal, in der anderen Sprache, ins selbe Fenster.
+    // Der gewoehnliche Aufruf (Knopf, Menue) bekommt ein Klick-Ereignis -- das ist keine Sprache.
+    const buildLadevorschlag = (dokSprache, fenster) => {
+      const wechsel = typeof dokSprache === "string" && !!(fenster && fenster.document) && dokWahl().some(([k]) => k === dokSprache);
+      if (!wechsel) {
+        zaehl("ladevorschlag");
+        setTimeout(fbFragen, 4000); // erst, wenn der Vorgang durch ist
+      }
+      // Die Bausteine lesen DOKLANG: fuer diesen einen Bau gilt die gewaehlte Sprache.
+      const dokVorher = DOKLANG;
+      if (wechsel) DOKLANG = dokSprache;
       try {
         const items = cargo.filter((c) => num(c.qty, 0) > 0);
         if (!items.length) {
@@ -10995,35 +11165,39 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const pay = num(container.payload, 0);
         const volPct = cVol > 0 ? totVol / cVol * 100 : 0;
         const wtPct = pay > 0 ? totWt / pay * 100 : 0;
-        const enPDF = DOKLANG === "en";
+        const enPDF = DOKLANG !== "de";
+        // Die Texte, die der Zusammenbau selbst beisteuert (alles andere steht in den Bausteinen)
+        const DK = dokMit(DOKLANG, "bau", enPDF
+          ? { eigen: "Custom dimensions", geo: "geometrically checked", empf: "recommended", empf2: "recommendation", gross: "item too large", schwer: "item too heavy", seite: "Page ", gebucht: "BOOKED VOLUME", gefahr: "Items marked DG: marking from your input only — no dangerous-goods check, no segregation or stowage rules. Classification and admissibility remain the shipper's responsibility.", contVon: (i, n) => `container ${i} of ${n}` }
+          : { eigen: "Eigene Ma\xDFe", geo: "geometrisch gepr\xFCft", empf: "empfohlen", empf2: "Empfehlung", gross: "Position zu gro\xDF", schwer: "Position zu schwer", seite: "Seite ", gebucht: "GEBUCHT", gefahr: "Positionen mit GEFAHRGUT-Marke: nur Kennzeichnung aus Ihrer Eingabe — keine Gefahrgut-Pr\xFCfung, keine Trenn- oder Stauvorschriften. Klassifizierung und Zul\xE4ssigkeit bleiben Sache des Versenders.", contVon: (i, n) => `Container ${i} von ${n}` });
         // Im Landfracht-Modus ist preset ein Fahrzeugschluessel und der ist deutsch —
         // im englischen Ladevorschlag stand deshalb "Planensattel" statt "Curtainsider".
-        const pl = preset === "Custom" ? (enPDF ? "Custom dimensions" : "Eigene Ma\xDFe") : (VEHICLE_LABEL(T)[preset] || preset);
+        const pl = preset === "Custom" ? (DK.eigen) : (VEHICLE_LABEL(T)[preset] || preset);
         let passtin, passtsub;
         // Bei einer Kette ist allFit falsch (es zaehlt nur den ersten Container), und ohne
         // diesen Zweig stuende auf dem Deckblatt eine EMPFEHLUNG, die von der gebuchten
         // Kette abweichen kann -- in einem Dokument, das genau diese Kette bucht.
         if (result && result.chain && result.chain.length > 1 && planFit) {
           passtin = kettenLabelVor(result.chain);
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         } else if (allFit) {
           passtin = "1\xD7 " + pl;
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         } else if (sug && sug.type === "single") {
           passtin = "1\xD7 " + sug.name;
-          passtsub = enPDF ? "recommended" : "empfohlen";
+          passtsub = DK.empf;
         } else if (sug && sug.type === "multi" && sug.combo && sug.combo.length) {
           passtin = sug.combo.map((c) => c.count + "\xD7 " + c.name).join(" + ");
-          passtsub = enPDF ? "recommendation" : "Empfehlung";
+          passtsub = DK.empf2;
         } else if (sug && sug.type === "toobig") {
           passtin = "\u2014";
-          passtsub = enPDF ? "item too large" : "Position zu gro\xDF";
+          passtsub = DK.gross;
         } else if (sug && sug.type === "tooheavy") {
           passtin = "\u2014";
-          passtsub = enPDF ? "item too heavy" : "Position zu schwer";
+          passtsub = DK.schwer;
         } else {
           passtin = "1\xD7 " + pl;
-          passtsub = enPDF ? "geometrically checked" : "geometrisch gepr\xFCft";
+          passtsub = DK.geo;
         }
         const now = /* @__PURE__ */ new Date();
         const p2 = (n) => String(n).padStart(2, "0");
@@ -11032,7 +11206,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const datum = enPDF
           ? `${now.getFullYear()}-${p2(now.getMonth() + 1)}-${p2(now.getDate())}`
           : `${p2(now.getDate())}.${p2(now.getMonth() + 1)}.${now.getFullYear()}`;
-        const ref = `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        // Beim Sprachwechsel bleibt die Referenz des Blatts dieselbe
+        const ref = wechsel && LV_LETZTE_REF ? LV_LETZTE_REF : `CL-${String(now.getFullYear()).slice(2)}${p2(now.getMonth() + 1)}${p2(now.getDate())}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+        LV_LETZTE_REF = ref;
         const planURL = mitId(encodePlanURL(preset, container, cargo, forceCentered, domain));
         fassungJetztMerken();
         const qr = makeQR(planURL);
@@ -11049,7 +11225,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         const kette = result && result.chain && result.chain.length ? result.chain : null;
         const mehrere = !!(kette && kette.length > 1);
         const seitenZahl = mehrere ? kette.length + 1 : 1;
-        const seitenText = (k) => (enPDF ? "Page " : "Seite ") + k + " / " + seitenZahl;
+        const seitenText = (k) => (DK.seite) + k + " / " + seitenZahl;
         // Kopfzeile des Deckblatts: die gebuchte Kombination, gezaehlt nach Typ --
         // "2x 40' HC + 1x 20' GP" ist das, was in die Buchung geht.
         const kettenLabel = kettenLabelVor(kette, pl);
@@ -11069,9 +11245,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         // markierte Positionen traegt, und immer mit der Eingrenzung "nur
         // Kennzeichnung": mehr darf das Tool ehrlich nicht behaupten.
         const gefahrHinweis = (its) => its.some((c2) => c2 && c2.gefahr === true)
-          ? `<p style="margin:6px 0 0; font-size:9.5px; line-height:1.5; color:#b45309;">${DOKLANG === "en"
-            ? "Items marked DG: marking from your input only — no dangerous-goods check, no segregation or stowage rules. Classification and admissibility remain the shipper's responsibility."
-            : "Positionen mit GEFAHRGUT-Marke: nur Kennzeichnung aus Ihrer Eingabe — keine Gefahrgut-Pr\xFCfung, keine Trenn- oder Stauvorschriften. Klassifizierung und Zul\xE4ssigkeit bleiben Sache des Versenders."}</p>`
+          ? `<p style="margin:6px 0 0; font-size:9.5px; line-height:1.5; color:#b45309;">${DK.gefahr}</p>`
           : "";
         const deck = LV_PAGE({
           ...grund,
@@ -11081,7 +11255,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           // Zwei Container haben zwei Innenmasse -- ein Gedankenstrich sieht dort aus wie ein
           // Fehler. Auf dem Deckblatt steht deshalb das gebuchte Gesamtvolumen; beim Buchen
           // ist genau das die Zahl.
-          MITTE_LABEL: mehrere ? (enPDF ? "BOOKED VOLUME" : "GEBUCHT") : null,
+          MITTE_LABEL: mehrere ? (DK.gebucht) : null,
           INNENMASS: mehrere ? fmt1DE(planCVol) + " m\xB3" : `${cmTxt(container.l)} \xD7 ${cmTxt(container.w)} \xD7 ${cmTxt(container.h)} cm`,
           PAYLOAD: mehrere ? (planPayload > 0 ? fmtDE(planPayload) : "\u2014") : (pay > 0 ? fmtDE(pay) : "\u2014"),
           POSCOUNT: items.length,
@@ -11138,7 +11312,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               WTBAR: Math.min(100, Math.round(pay2 > 0 ? kg2 / pay2 * 100 : 0)),
               WTPCT: Math.round(pay2 > 0 ? kg2 / pay2 * 100 : 0),
               PASSTIN: escHTML(marke),
-              PASSTSUB: escHTML(enPDF ? `container ${ci + 1} of ${kette.length}` : `Container ${ci + 1} von ${kette.length}`),
+              PASSTSUB: escHTML(DK.contVon(ci + 1, kette.length)),
               ROWS: zeilen.map((z) => LV_ROW({ ...z.it, qty: z.n }, items.indexOf(z.it), DOKLANG, order.get(z.ti))).join(""),
               SUMQTY: sp.length,
               SUMKG: fmtDE(Math.round(kg2)),
@@ -11150,22 +11324,26 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 // qty der Legende ist die Menge IN DIESEM Container. Sonst stuende unter der
               // Zeichnung eines Containers mit zwei Stueck "9x".
               legend: Object.keys(tiC).map((ti) => ({ ti: +ti, pos: tiP[ti], color: tiC[ti], it: { ...cargo[+ti], qty: jeSorte[+ti] } })).sort((a, b) => a.pos - b.pos),
-                LANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, DOKLANG, tiC) + LV_STOPPS(sp, cargo, tiP, DOKLANG) + LV_GEWICHT(sp, cargo, num(cp.l), DOKLANG) + LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, DOKLANG) + LV_QUITTUNG(DOKLANG),
+                LANG: DOKLANG, chainLen: 1 }) + LV_SEQUENZ(sp, cargo, DOKLANG, tiC) + LV_STOPPS(sp, cargo, tiP, DOKLANG) + LV_GEWICHT(sp, cargo, num(cp.l), DOKLANG) + LV_VGM(sp, cargo, TARA[slot.name] || null, slot.name || pl, DOKLANG) + LV_QUITTUNG(DOKLANG),
               SEITE: seitenText(ci + 2)
             }));
           });
         }
         const pageHTML = blaetter.join("");
-        const w = window.open("", "_blank");
+        const w = wechsel ? fenster : window.open("", "_blank");
         if (!w) {
           setToast(T.popups);
           return;
         }
         w.document.open();
-        w.document.write(LV_DOC(pageHTML, DOKLANG));
+        w.document.write(LV_DOC(pageHTML, DOKLANG, dokWahl()));
         w.document.close();
+        // Der Umschalter im Dokument-Fenster ruft hierher zurueck
+        window.__clLadevorschlag = (f, k) => buildLadevorschlag(k, f);
       } catch (e) {
         setToast(T.exportFail);
+      } finally {
+        DOKLANG = dokVorher;
       }
     };
     // Am Schreibtisch ist der Rahmen genau ein Fenster hoch: Kopfzeile, 3D-Ansicht, Statuszeile
@@ -11432,7 +11610,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
             /* @__PURE__ */ React.createElement("input", { type: "date", value: rampeVm.wd || heuteIso(), onChange: (e) => rampeVmSetzen("wd", 0, e.target.value), style: { ...vmFeld, marginTop: SP.xs, fontSize: FS.body, colorScheme: thema === "hell" ? "light" : "dark" } })),
           /* @__PURE__ */ React.createElement("div", { style: { flex: "1 1 200px", minWidth: 0 } },
             /* @__PURE__ */ React.createElement("div", { style: { ...vmLbl, marginBottom: SP.xs } }, T.vgmSprache),
-            /* @__PURE__ */ React.createElement(Seg, { items: [["de", "Deutsch"], ["en", "English"]], value: vgmAbs.sp, onPick: (v2) => vgmAbsSetzen("sp", v2) })))),
+            /* @__PURE__ */ React.createElement(Seg, { items: vgmSprachen, value: vgmAbs.sp, onPick: (v2) => vgmAbsSetzen("sp", v2) })))),
       /* @__PURE__ */ React.createElement("label", { style: vmLbl }, T.vmNotiz,
         /* @__PURE__ */ React.createElement("textarea", { value: rampeVm.n, onChange: (e) => rampeVmSetzen("n", 0, e.target.value.slice(0, 300)), rows: 3, placeholder: T.vmNotizPh, style: { ...vmFeld, marginTop: SP.xs, resize: "vertical", lineHeight: 1.5, fontSize: FS.body } })));
     // DIE AUSGABEN STEHEN IN DER KOPFLEISTE (Jareks Richtung, 23.11.26): Ladevorschlag, Bild und

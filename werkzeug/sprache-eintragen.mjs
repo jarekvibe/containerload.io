@@ -43,11 +43,17 @@ tausche(path.join(W, "app.html"), [
 ]);
 // 2) Server: Statistik und KI-Brief
 tausche(path.join(repo, "netlify/functions/lib/nutzung.mjs"), [[/const SPRACHEN = new Set\(\[[^\]]*\]\);/, (m) => m.replace("]);", `, "${K}"]);`)]]);
-tausche(path.join(repo, "netlify/functions/lib/ki.mjs"), [
-  [/export const BRIEF_SPRACHEN = \[[^\]]*\];/, (m) => m.replace("];", `, "${K}"];`)],
-  [/("Zielsprache ist fakten\.sprache: [^"]*)\.",/, (m, a) => `${a}, ${K} = ${BRIEF}.",`],
-]);
-tausche(path.join(W, "test/ki-import.test.mjs"), [[/assert\.deepEqual\(BRIEF_SPRACHEN, \[[^\]]*\]\);/, (m) => m.replace("]);", `, "${K}"]);`)]]);
+// Den KI-Brief kann es in einer Sprache schon geben, bevor der Rechner sie spricht (so war es
+// mit Niederlaendisch): dann steht sie in BRIEF_SPRACHEN und im Auftrag bereits drin.
+const ki0 = fs.readFileSync(path.join(repo, "netlify/functions/lib/ki.mjs"), "utf8");
+if (new RegExp(`export const BRIEF_SPRACHEN = \\[[^\\]]*"${K}"`).test(ki0)) console.log("KI-Brief kennt", K, "schon");
+else {
+  tausche(path.join(repo, "netlify/functions/lib/ki.mjs"), [
+    [/export const BRIEF_SPRACHEN = \[[^\]]*\];/, (m) => m.replace("];", `, "${K}"];`)],
+    [/("Zielsprache ist fakten\.sprache: [^"]*)\.",/, (m, a) => `${a}, ${K} = ${BRIEF}.",`],
+  ]);
+  tausche(path.join(W, "test/ki-import.test.mjs"), [[/assert\.deepEqual\(BRIEF_SPRACHEN, \[[^\]]*\]\);/, (m) => m.replace("]);", `, "${K}"]);`)]]);
+}
 tausche(path.join(W, "admin.html"), [[/\{ de: "Deutsch", en: "Englisch"[^}]*\}/, (m) => m.replace(" }", `, ${K}: "${DE_NAME}" }`)]]);
 // 3) Startseite: FREMD, hreflang, Menue-Eintraege, Angebot fuer Browser dieser Sprache
 tausche(path.join(W, "index.html"), [

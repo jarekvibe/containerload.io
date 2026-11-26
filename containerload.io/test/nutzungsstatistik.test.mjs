@@ -42,7 +42,9 @@ test("pruefeEvent verwirft, was kein ehrliches Event sein kann", () => {
   assert.strictEqual(pruefeEvent([]), null);
   assert.strictEqual(pruefeEvent({ ...gut(), v: 2 }), null, "unbekannte Version");
   assert.strictEqual(pruefeEvent({ ...gut(), modus: "air" }), null, "unbekannter Modus");
-  assert.strictEqual(pruefeEvent({ ...gut(), sprache: "nl" }), null, "unbekannte Sprache");
+  assert.strictEqual(pruefeEvent({ ...gut(), sprache: "xx" }), null, "unbekannte Sprache");
+  // ... und jede Sprache, die der Rechner spricht, kommt durch (test/sprachen prueft die Liste)
+  assert.strictEqual(pruefeEvent({ ...gut(), sprache: "nl" }).sprache, "nl");
   // Leeres Event (nichts eingegeben, nichts benutzt): kein Befund, kein Eintrag.
   assert.strictEqual(pruefeEvent({ v: 1, modus: "sea", sprache: "de", positionen: [], funktionen: [] }), null);
   // Freitext in funktionen faellt raus (nur kebab-case-Kennungen), Grossbuchstaben auch.

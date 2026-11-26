@@ -30,6 +30,8 @@
 <link rel="alternate" hreflang="es" href="https://containerload.io/es/" />
 <link rel="alternate" hreflang="fr" href="https://containerload.io/fr/" />
 <link rel="alternate" hreflang="zh" href="https://containerload.io/zh/" />
+<link rel="alternate" hreflang="nl" href="https://containerload.io/nl/" />
+<link rel="alternate" hreflang="pt" href="https://containerload.io/pt/" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -425,6 +427,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
           <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
           <a data-lang="fr" href="/fr/" hreflang="fr" class="langbtn">Français</a>
           <a data-lang="zh" href="/zh/" hreflang="zh" class="langbtn">中文</a>
+          <a data-lang="nl" href="/nl/" hreflang="nl" class="langbtn">Nederlands</a>
+          <a data-lang="pt" href="/pt/" hreflang="pt" class="langbtn">Português</a>
         </div>
       </details>
       <a data-i18n="nav_open" href="/app" class="btn btn-primary text-[13px] px-2 sm:px-4 py-2">Tool öffnen</a>
@@ -448,6 +452,8 @@ details[open] .faq-plus{transform:rotate(45deg)}
             <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
             <a data-lang="fr" href="/fr/" hreflang="fr" class="langbtn">Français</a>
             <a data-lang="zh" href="/zh/" hreflang="zh" class="langbtn">中文</a>
+            <a data-lang="nl" href="/nl/" hreflang="nl" class="langbtn">Nederlands</a>
+            <a data-lang="pt" href="/pt/" hreflang="pt" class="langbtn">Português</a>
           </div>
         </details>
         <div class="themaswitch themaswitch-lg ml-auto" role="group">
@@ -963,7 +969,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   // prueft, dass /en/index.html genau das ist, was der Generator daraus macht.
   // SEITE ist die Sprache DIESER Datei: 'de' hier, 'en' auf /en/, 'es' auf /es/ ...
   // FREMD: fuer welche Sprachen es eine eigene Startseite gibt (Ordner /<kuerzel>/).
-  var SEITE=document.documentElement.lang||'de', FREMD=['en','es','fr','zh'];
+  var SEITE=document.documentElement.lang||'de', FREMD=['en','es','fr','zh','nl','pt'];
   // Das Container-Wissen gibt es seit August 2026 in zwei Fassungen mit EIGENEN Adressen
   // (/ratgeber/<deutscher-slug> und /en/guide/<englischer-slug>) statt als ?lang=en-Variante:
   // es sind eigene Seiten mit eigenen Titeln, und genau so sollen sie indexiert werden.
@@ -983,12 +989,13 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     '/ratgeber/cbm-berechnen':'/en/guide/how-to-calculate-cbm',
     '/ratgeber/stellplaetze-container':'/en/guide/container-floor-positions',
     '/ratgeber/stauplan-container':'/en/guide/container-stowage-plan',
+    '/ratgeber/ladeplan-per-link':'/en/guide/load-plan-by-link',
     '/ratgeber/container-gewicht-strasse':'/en/guide/container-road-weight-limits',
     '/ratgeber/ibc-container':'/en/guide/ibc-totes-container',
     '/ratgeber/faesser-container':'/en/guide/drums-container',
     '/ratgeber/big-bags-container':'/en/guide/big-bags-container',
     '/ratgeber/us-paletten-20-fuss-container':'/en/guide/pallets-20ft-container',
-    '/ratgeber/us-paletten-40-fuss-container':'/en/guide/pallets-40ft-container',
+    '/ratgeber/us-paletten-40-fuss-container':'/en/guide/pallets-40ft-container','/ratgeber/paletten-1100x1100-container':'/en/guide/pallets-1100x1100-container',
     '/ratgeber/open-top-container-masse':'/en/guide/open-top-container-dimensions',
     '/ratgeber/flat-rack-container-masse':'/en/guide/flat-rack-container-dimensions',
     '/ratgeber/reefer-container-masse':'/en/guide/reefer-container-dimensions',
@@ -1030,7 +1037,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     var bar=document.getElementById('langbar');
     // Spricht der Browser eine Sprache, fuer die es eine eigene Seite gibt, kommt das Angebot
     // in DIESER Sprache (sonst Englisch, wie es im Markup steht).
-    var br=kennt(navigator.language), ANG={es:['Esta p\u00e1gina est\u00e1 disponible en espa\u00f1ol.','Cambiar a espa\u00f1ol \u2192'],fr:['Cette page existe en fran\u00e7ais.','Passer au fran\u00e7ais \u2192'],zh:['\u672c\u9875\u9762\u63d0\u4f9b\u4e2d\u6587\u7248\u3002','\u5207\u6362\u5230\u4e2d\u6587 \u2192']};
+    var br=kennt(navigator.language), ANG={es:['Esta p\u00e1gina est\u00e1 disponible en espa\u00f1ol.','Cambiar a espa\u00f1ol \u2192'],fr:['Cette page existe en fran\u00e7ais.','Passer au fran\u00e7ais \u2192'],zh:['\u672c\u9875\u9762\u63d0\u4f9b\u4e2d\u6587\u7248\u3002','\u5207\u6362\u5230\u4e2d\u6587 \u2192'],nl:['Deze pagina is er ook in het Nederlands.','Naar het Nederlands \u2192'],pt:['Esta p\u00e1gina existe em portugu\u00eas.','Mudar para portugu\u00eas \u2192']};
     if(bar&&br&&ANG[br]){ var sp=bar.querySelector('span'), al=bar.querySelector('a'); if(sp&&al){ sp.textContent=ANG[br][0]; al.textContent=ANG[br][1]; al.href='/'+br+'/'; al.setAttribute('hreflang',br); al.setAttribute('data-lang',br); } }
     if(bar) bar.classList.add('on');
   }

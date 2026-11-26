@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Open a load plan by link: format for Excel, ERP and AI</title>
+<meta name="description" content="One link opens the 3D calculator with the cargo already entered: /app?q=20 pallets 120x80x110 300kg. Format, parameters and examples for Excel, ERP and AI." />
+<link rel="canonical" href="https://containerload.io/en/guide/load-plan-by-link" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladeplan-per-link" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/load-plan-by-link" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladeplan-per-link" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="article" />
+<meta property="og:locale" content="en_GB" />
+<meta property="og:title" content="Open a load plan by link: format for Excel, ERP and AI" />
+<meta property="og:description" content="One link opens the 3D calculator with the cargo already entered: /app?q=20 pallets 120x80x110 300kg. Format, parameters and examples for Excel, ERP and AI." />
+<meta property="og:url" content="https://containerload.io/en/guide/load-plan-by-link" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Open a load plan by link: format for Excel, ERP and AI" />
+<meta name="twitter:description" content="One link opens the 3D calculator with the cargo already entered: /app?q=20 pallets 120x80x110 300kg. Format, parameters and examples for Excel, ERP and AI." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"How do I open the 3D calculator with cargo already entered?","acceptedAnswer":{"@type":"Answer","text":"With a link of the form https://containerload.io/app?q= followed by the cargo as text, for example “20 pallets 120x80x110 300kg”. Several positions are separated by semicolons. No account or key is needed."}},{"@type":"Question","name":"Can the link preselect the container?","acceptedAnswer":{"@type":"Answer","text":"Yes, with &cont= and a code: 20gp, 20hc, 40gp, 40hc, 45hc, plus open top (20ot, 40ot), flat rack (20fr, 40fr) and reefer (20rf, 40rf). Without it the calculator starts with a 20ft standard container and adds containers as needed."}},{"@type":"Question","name":"Is there an API that returns the result?","acceptedAnswer":{"@type":"Answer","text":"No. The link opens the calculator in the browser of whoever clicks it; the packing runs there. A program does not get a result back."}}]}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/en/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <div class="lang" role="group" aria-label="Language"><a href="/ratgeber/ladeplan-per-link" hreflang="de" title="Deutsch">DE</a><a class="on" href="/en/guide/load-plan-by-link" hreflang="en" title="English">EN</a></div>
+    <a class="btn btn-primary" href="/app?lang=en">Open 3D calculator</a>
+  </div>
+</header>
+<main>
+<article class="wrap">
+    <div class="eyebrow">Container Guide · For Excel, ERP &amp; assistants</div>
+    <h1>Pass cargo by link: how one link opens the finished 3D plan</h1>
+    <div class="answer"><p class="lead" style="margin:0">A link of the form <b>containerload.io/app?q=…</b> opens the 3D calculator with the <b>cargo already entered</b> — no account, no key, no API. The cargo sits in the link as text: one position per line, the way you would write it in an enquiry.</p></div>
+
+    <h2>The shortest link</h2>
+    <div class="formula" data-bsp="kurz">https://containerload.io/app?lang=en&amp;q=20 pallets 120x80x110 300kg</div>
+    <p><a href="/app?lang=en&q=20%20pallets%20120x80x110%20300kg">Open this link →</a></p>
+    <p>That is all it takes. Typed into the address bar, the browser encodes the spaces itself; a program encodes the text like any web address (a space becomes <code>%20</code>). The calculator reads the line, packs the cargo and shows the result in 3D — whoever opens the link can change everything, pass it on or print it as a load proposal.</p>
+
+    <h2>One position, the way you would write it</h2>
+    <div class="tabelle"><table><thead><tr><th>Detail</th><th>How to write it</th><th>Example</th></tr></thead><tbody>
+    <tr><td>Quantity</td><td>number first, or “5x” in front of the dimensions</td><td><code>20 pallets</code> · <code>5x 120x80x100</code></td></tr>
+    <tr><td>Dimensions</td><td>length × width × height, in cm without a unit; with a unit also mm, m or inch</td><td><code>120x80x110</code> · <code>1200x800x1100 mm</code> · <code>48x40x55 inch</code></td></tr>
+    <tr><td>Weight per piece</td><td>kg, t or lbs</td><td><code>300kg</code> · <code>2.4 t</code> · <code>1100 lbs</code></td></tr>
+    <tr><td>Stacking</td><td>freely stackable unless stated</td><td><code>not stackable</code> · <code>stackable up to 180 cm</code></td></tr>
+    <tr><td>Rotation</td><td>rotatable unless stated</td><td><code>not rotatable</code></td></tr>
+    <tr><td>Name</td><td>any other word</td><td><code>engine block</code></td></tr>
+    <tr><td>Pallet without dimensions</td><td>euro pallet = 120 × 80 cm, industrial pallet = 120 × 100 cm; height 110 cm unless one is given</td><td><code>11 euro pallets</code></td></tr>
+    </tbody></table></div>
+    <p>The calculator understands the same details in German, Spanish, French, Dutch, Portuguese and Chinese — for example <code>no apilable</code>, <code>non gerbable</code>, <code>niet stapelbaar</code>, <code>não empilhável</code>, <code>不可堆叠</code>.</p>
+
+    <h2>Several positions</h2>
+    <p>Positions are separated by a <b>semicolon</b> or a line break (<code>%0A</code>). <b>A comma does not separate</b> — in enquiries it too often sits in the middle of a position (“120x80x110, 300 kg”).</p>
+    <div class="formula" data-bsp="zwei">https://containerload.io/app?lang=en&amp;q=8 crates 120x80x100 250kg; 12 cartons 60x40x40 12kg not stackable</div>
+    <p><a href="/app?lang=en&q=8%20crates%20120x80x100%20250kg%3B%2012%20cartons%2060x40x40%2012kg%20not%20stackable">Open this link →</a></p>
+
+    <h2>The parameters</h2>
+    <div class="tabelle"><table><thead><tr><th>Parameter</th><th>Effect</th><th>Values</th></tr></thead><tbody>
+    <tr><td><code>q</code></td><td>the cargo as text — the only required part</td><td>see above</td></tr>
+    <tr><td><code>cont</code></td><td>preselects the container</td><td><code>20gp</code> · <code>20hc</code> · <code>40gp</code> · <code>40hc</code> · <code>45hc</code> · <code>20ot</code> · <code>40ot</code> · <code>20fr</code> · <code>40fr</code> · <code>20rf</code> · <code>40rf</code></td></tr>
+    <tr><td><code>d=road</code></td><td>opens road freight (truck, loading metres) instead of the sea container; <code>fz</code> picks the vehicle</td><td><code>sattel</code> · <code>wb</code> · <code>mw</code> · <code>75t</code> · <code>sprinter</code></td></tr>
+    <tr><td><code>u</code></td><td>unit of the input fields; <code>in</code> means inches and pounds</td><td><code>cm</code> · <code>mm</code> · <code>in</code></td></tr>
+    <tr><td><code>lang</code></td><td>interface language; German without it</td><td><code>en</code> · <code>es</code> · <code>fr</code> · <code>zh</code> · <code>nl</code> · <code>pt</code></td></tr>
+    </tbody></table></div>
+    <p><code>cont</code>, <code>d</code> and <code>fz</code> only work together with <code>q</code>. The vehicle codes stand for curtainsider semi-trailer, swap body, rigid truck, 7.5-tonner and van. <b>Without <code>cont</code></b> the calculator starts with a 20ft standard container, adds containers as needed and suggests a better-fitting size.</p>
+    <p>With a height limit, in a 40ft high cube:</p>
+    <div class="formula" data-bsp="hoch">https://containerload.io/app?lang=en&amp;q=18 pallets 120x80x110 300kg stackable up to 180 cm&amp;cont=40hc</div>
+    <p><a href="/app?lang=en&q=18%20pallets%20120x80x110%20300kg%20stackable%20up%20to%20180%20cm&cont=40hc">Open this link →</a></p>
+    <p>On a truck:</p>
+    <div class="formula" data-bsp="lkw">https://containerload.io/app?lang=en&amp;q=33 euro pallets 120x80x150 400kg not stackable&amp;d=road</div>
+    <p><a href="/app?lang=en&q=33%20euro%20pallets%20120x80x150%20400kg%20not%20stackable&d=road">Open this link →</a></p>
+    <p>In inches and pounds:</p>
+    <div class="formula" data-bsp="zoll">https://containerload.io/app?lang=en&amp;q=9 pallets 48x40x55 inch 1100 lbs&amp;cont=20gp&amp;u=in</div>
+    <p><a href="/app?lang=en&q=9%20pallets%2048x40x55%20inch%201100%20lbs&cont=20gp&u=in">Open this link →</a></p>
+
+    <h2>From Excel: one link per row</h2>
+    <p>With the name (A), quantity (B), length, width, height (C to E) and weight (F) in one row, this formula builds the link:</p>
+    <div class="formula">=HYPERLINK("https://containerload.io/app?lang=en&amp;q=" &amp; ENCODEURL(B2 &amp; " " &amp; A2 &amp; " " &amp; C2 &amp; "x" &amp; D2 &amp; "x" &amp; E2 &amp; " " &amp; F2 &amp; "kg"), "View in 3D")</div>
+    <p>“Engine block · 4 · 120 · 80 · 95 · 310” becomes the line <code>4 Engine block 120x80x95 310kg</code>. <code>ENCODEURL</code> is not available in every Excel version; where it is missing, <code>SUBSTITUTE(…," ","%20")</code> replaces the spaces. For the whole list in <b>one</b> link, join the rows with “; ”. If you only want to transfer a list once, you need no formula: select the cells, copy, and paste them in the calculator under “Excel / text”.</p>
+
+    <h2>From an ERP, TMS or shop</h2>
+    <p>Any system that can put a web address together can produce this link — in the quotation, the order confirmation, the shipping notice. The pattern per position is <code>{quantity} {name} {L}x{W}x{H} {weight}kg</code>, positions joined with “;”, the whole thing encoded as a web address. With one click the recipient sees how their goods sit in the container, and can pass the plan on.</p>
+
+    <h2>For AI assistants</h2>
+    <p>A language model cannot reliably work out how many packages fit into a container. But it can build this link from a description — and <b>the calculator then gives the answer</b>: a real packing run, visible in 3D and open to checking. The same description in short form for assistants is at <a href="/llms.txt">/llms.txt</a>.</p>
+
+    <h2>Limits</h2>
+    <ul>
+      <li><b>Length:</b> up to about 2,000 characters a link works everywhere, including mail and chat. Paste longer lists into the calculator and pass on a compact link from “Share”.</li>
+      <li><b>The link contains the cargo in readable form.</b> Whoever receives it can see it — and like any web address it reaches the server when opened (see <a href="/en/privacy">Privacy</a>).</li>
+      <li><b>No return channel:</b> the link opens a page. A program gets no result back; the packing runs in the browser of whoever opens the link.</li>
+      <li><b>Lines without dimensions</b> are not read — except euro pallets and industrial pallets, whose footprint is fixed.</li>
+    </ul>
+
+    <h2>Link or “Share”?</h2>
+    <div class="tabelle"><table><thead><tr><th></th><th>Link with <code>?q=</code></th><th>Link from “Share”</th></tr></thead><tbody>
+    <tr><td>Created</td><td>by hand, from Excel or by a program</td><td>in the calculator, with a button</td></tr>
+    <tr><td>Contains</td><td>the cargo as readable text</td><td>the finished plan with its container, compactly encoded</td></tr>
+    <tr><td>Meant for</td><td>systems and templates that hand over cargo</td><td>people who pass on a plan</td></tr>
+    </tbody></table></div>
+
+    <div class="cta">
+      <a class="btn btn-primary" href="/app?lang=en&q=8%20crates%20120x80x100%20250kg%3B%2012%20cartons%2060x40x40%2012kg%20not%20stackable&cont=40hc">➜ Open the example in the 3D calculator</a>
+      <a class="btn btn-ghost" href="/en/guide/container-stowage-plan">Create a stowage plan</a>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Two positions, 40ft high cube preselected — everything can be changed afterwards.</p>
+
+    <h2>Related questions</h2>
+    <div class="related"><a href="/en/guide/container-stowage-plan">Create a stowage plan</a><a href="/en/guide/pallet-calculator">Pallet calculator</a><a href="/en/guide/how-to-calculate-cbm">Calculate CBM</a><a href="/en/guide/container-internal-dimensions">Container internal dimensions</a><a href="/en/guide/loading-metre-calculator">Loading metre calculator</a></div>
+
+    <div class="note"><b style="color:var(--dim)">No warranty:</b> The result in the calculator is a purely geometric estimate to prepare a booking. It contains no check of axle load, centre of gravity or load securing, and the sum of the weights is not a VGM. The link format may grow by further details; those described here stay valid.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen, Germany</span>
+    <span><a href="/en/">Calculator</a> · <a href="/en/guide/">Container Guide</a> · <a href="/en/imprint">Imprint</a> · <a href="/en/privacy">Privacy</a></span>
+  </div>
+</footer>
+<script src="/puls.js" defer></script>
+</body>
+</html>

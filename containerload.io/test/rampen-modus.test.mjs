@@ -28,8 +28,17 @@ const { rampenSchritte } = new Function(
   cut("function rampenSchritte(placed", (l, i) => l.trim() === "}" && L[i - 1].includes("return schritte;"))
   + "\nreturn { rampenSchritte };"
 )();
+// Die Dokument-Helfer (dokLoc, dokMit): seit 25.11.26 laeuft jedes Baustein-Woerterbuch darueber,
+// damit eine Sprachdatei weitere Sprachen beisteuern kann. Wortgleich aus app.html geschnitten.
+const DOK_HELFER = (() => {
+  const a = L.findIndex((l) => l.includes("var DOK_MEHR = {};"));
+  const e = L.findIndex((l, i) => i > a && l === "  };");
+  assert.ok(a >= 0 && e > a, "dokMit nicht gefunden");
+  return L.slice(a, e + 1).join("\n") + "\n";
+})();
 const { LV_SEQUENZ } = new Function(
-  'var escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" })[c]);\n'
+  DOK_HELFER
+  + 'var escHTML = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", \'"\': "&quot;" })[c]);\n'
   + cut("var LV_SEQUENZ = (placed", (l, i) => l.trim() === "};" && L[i - 1].includes("</div>`;"))
   + "\nreturn { LV_SEQUENZ };"
 )();

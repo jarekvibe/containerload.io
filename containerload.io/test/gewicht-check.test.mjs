@@ -1,5 +1,5 @@
 // Der Gewichts-Check auf den Zuladungs-Seiten (DE /ratgeber/container-zuladung-gewicht,
-// EN /en/guide/container-payload-weight), November 2026.
+// EN /en/guide/container-payload-weight, ES /es/guia/peso-contenedor-carga-maxima), November 2026.
 //
 // Warum: die Search Console zeigte die Zuladungs-Seite als meistgesehene Seite (2.187
 // Impressionen in 28 Tagen, Position 7,6) mit 15 Klicks. Gesucht wird "Container Gewicht",
@@ -22,8 +22,8 @@ import path from "node:path";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
-const SEITEN = { de: "ratgeber/container-zuladung-gewicht.html", en: "en/guide/container-payload-weight.html" };
-const html = { de: lese(SEITEN.de), en: lese(SEITEN.en) };
+const SEITEN = { de: "ratgeber/container-zuladung-gewicht.html", en: "en/guide/container-payload-weight.html", es: "es/guia/peso-contenedor-carga-maxima.html" };
+const html = Object.fromEntries(Object.entries(SEITEN).map(([k, p]) => [k, lese(p)]));
 const app = lese("app.html");
 const schnitt = (s, von, bis) => {
   const a = s.indexOf(von), b = s.indexOf(bis, a);
@@ -37,8 +37,8 @@ const { gewichtCheck, GW_TYPEN, GW_STRASSE } = new Function(
 
 test("jede Zuladungs-Seite traegt genau einen Gewichts-Check, mit identischem Rechenkern", () => {
   for (const [k, s] of Object.entries(html)) assert.strictEqual((s.match(/data-gewicht-check/g) || []).length, 1, SEITEN[k]);
-  assert.strictEqual(schnitt(html.en, ...KERN).replace(/\s+/g, " "), schnitt(html.de, ...KERN).replace(/\s+/g, " "),
-    "DE und EN rechnen verschieden");
+  for (const k of Object.keys(SEITEN)) assert.strictEqual(schnitt(html[k], ...KERN).replace(/\s+/g, " "), schnitt(html.de, ...KERN).replace(/\s+/g, " "),
+    `${SEITEN[k]} rechnet anders als die deutsche Seite`);
 });
 
 test("Zuladung und Tara kommen aus app.html (PRESETS / TARA)", () => {
@@ -56,7 +56,7 @@ test("das Strassenlimit ist die Rechnung aus der Tabelle der Seite", () => {
   assert.deepStrictEqual(GW_STRASSE, { zug: 40000, kv: 44000, fahrzeug: 12000 });
   // Die Seite rechnet "= moeglich auf der Strasse 24.100 kg" fuer den 40' HC -- der Check muss dasselbe sagen.
   assert.strictEqual(gewichtCheck("40' HC", 1).strasseFrei, 24100);
-  assert.ok(/24\.100 kg/.test(html.de) && /24,100 kg/.test(html.en), "die Tabellen nennen 24.100 kg nicht mehr");
+  assert.ok(/24\.100 kg/.test(html.de) && /24,100 kg/.test(html.en) && /24\.100 kg/.test(html.es), "die Tabellen nennen 24.100 kg nicht mehr");
   assert.ok(html.de.includes("12.000 kg") && html.de.includes("40.000 kg") && html.de.includes("44.000 kg"));
 });
 
@@ -90,15 +90,26 @@ test("Oberflaeche: Labels, Sprache, Sprung in den Rechner, kein Verlauf", () => 
   }
   assert.ok(html.de.includes("toLocaleString('de-DE')") && html.de.includes('href="/app"'));
   assert.ok(html.en.includes("toLocaleString('en-US')") && html.en.includes('href="/app?lang=en"'));
+  // Spanisch: immer gruppiert -- sonst stuende "3900 kg" neben "26.580 kg" (wie im VGM-Blatt).
+  assert.ok(html.es.includes("toLocaleString('es-ES', { useGrouping: 'always' })") && html.es.includes('href="/app?lang=es"'));
+  assert.ok(!/href="\/app(\?lang=en)?"/.test(html.es), "die spanische Seite fuehrt in einen deutschen oder englischen Rechner");
   // Ist schon der Container ueberladen, verspricht der Strassen-Satz nicht "im KV ginge es".
-  assert.ok(html.de.includes("r.kvOk && !r.ueber ?") && html.en.includes("r.kvOk && !r.ueber ?"));
+  for (const [k, t] of Object.entries(html)) assert.ok(t.includes("r.kvOk && !r.ueber ?"), k);
   // Der Strassen-Satz nennt das Fahrzeuggewicht als Richtwert -- sonst klingt er wie eine Zulassung.
-  assert.ok(/Fahrzeug ca\. 12 t/.test(html.de) && /vehicle approx\. 12 t/.test(html.en));
+  assert.ok(/Fahrzeug ca\. 12 t/.test(html.de) && /vehicle approx\. 12 t/.test(html.en) && /vehículo aprox\. 12 t/.test(html.es));
+  // Die spanische Seite wird auch ausserhalb der EU gelesen: der Strassen-Satz sagt, WESSEN Grenze er rechnet.
+  assert.ok(/conjunto de 40 t como en la UE/.test(html.es) && /Fuera de la UE cada país fija su propio límite/.test(html.es));
+  // Kein deutscher oder englischer Rest in den Beschriftungen des spanischen Checks
+  const es = schnitt(html.es, "// GEWICHT_CALC_END", "</script>");
+  // (Schluessel und Stufen-Namen wie "knapp" sind Code, kein Text -- gesucht sind die sichtbaren Saetze.)
+  assert.ok(!/\b(fits|tight|too heavy|kg payload|Gross with tare|Road, German|Enter a weight|zu schwer|Brutto mit Tara|Straße DE)\b|: 'passt'|: 'knapp'/.test(es), "fremde Beschriftung im spanischen Check");
+  assert.ok(/ok: 'cabe', knapp: 'justo'/.test(es) && /Bruto con la tara/.test(es) && /Introduce un peso/.test(es), "die spanischen Beschriftungen fehlen");
 });
 
 test("Titel und Einleitung bedienen die Suche nach dem Gewicht (leer) -- mit stimmigen Zahlen", () => {
-  assert.ok(/<title>Container-Gewicht/.test(html.de) && /<title>Container weight/.test(html.en));
-  assert.ok(/<h1>Was wiegt ein Container/.test(html.de) && /<h1>How much does a container weigh/.test(html.en));
+  assert.ok(/<title>Container-Gewicht/.test(html.de) && /<title>Container weight/.test(html.en) && /<title>Peso de un contenedor/.test(html.es));
+  assert.ok(/<h1>Was wiegt ein Container/.test(html.de) && /<h1>How much does a container weigh/.test(html.en) && /<h1>¿Cuánto pesa un contenedor/.test(html.es));
+  assert.ok(!/3,8 toneladas/.test(html.es), "ES nennt 3,8 t fuer 3.880 kg");
   // 3.880 kg sind gerundet 3,9 t -- die alte Seite sagte an zwei Stellen 3,8.
   assert.ok(!/3,8 Tonnen|rund 3,8 und/.test(html.de), "DE nennt noch 3,8 t fuer 3.880 kg");
   assert.ok(!/3\.8 tonnes|around 3\.8 and/.test(html.en), "EN nennt noch 3.8 t fuer 3,880 kg");

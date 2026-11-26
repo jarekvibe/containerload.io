@@ -153,8 +153,9 @@ test("eine Lage heisst im 3D-Rechner: nicht stapelbar", () => {
   // Lademeter als die Seite. Der Zusatz muss vom Import-Parser in app.html verstanden werden.
   assert.ok(de.includes("flach: ' nicht stapelbar'") && en.includes("flach: ' not stackable'"));
   const app = lies("app.html");
-  const m = app.match(/if \((\/nicht\\s\*stapel[^\n]*?\/i)\.test\(low\)\) stackable = false;/);
-  assert.ok(m, "Stapel-Regel im Import-Parser nicht gefunden");
+  // Die Regel steht seit 26.11.26 im Wort-Register des Imports (alle Sprachen der Oberflaeche).
+  const m = app.match(/nichtStapelbar: (\/nicht\\s\*stapel[^\n]*?\/i),\n/);
+  assert.ok(m && app.includes("if (IMPORT_WORT.nichtStapelbar.test(low)) stackable = false;"), "Stapel-Regel im Import-Parser nicht gefunden");
   const re = new Function("return " + m[1])();
   assert.ok(re.test("26x 120x80x100 300kg nicht stapelbar") && re.test("26x 120x80x100 300kg not stackable"));
   assert.ok(!re.test("26x 120x80x100 300kg"), "Gegenprobe: ohne Zusatz bleibt es stapelbar");
