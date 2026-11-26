@@ -5876,7 +5876,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       const q = new URLSearchParams(window.location.search).get("q");
       if (q) {
         const rows = parseCargoText(q);
-        if (rows && rows.length) return rows.map((r) => ({ id: uid(), name: r.name, l: r.l, w: r.w, h: r.h, weight: r.weight, qty: r.qty, stackable: r.stackable, rotatable: r.rotatable }));
+        // stackH ("stapelbar bis 180 cm") reist mit -- bis 26.11.26 las der Parser die Grenze,
+        // und diese Zeile liess sie fallen: ein Link oder die Import-Box der Startseite ergab
+        // einen Plan, der frei stapelte. Dieselbe Uebernahme wie in applyImport.
+        if (rows && rows.length) return rows.map((r) => ({ id: uid(), name: r.name, l: r.l, w: r.w, h: r.h, weight: r.weight, qty: r.qty, stackable: r.stackable, stackH: r.stackH > 0 ? r.stackH : null, rotatable: r.rotatable }));
       }
     } catch (e) {
     }

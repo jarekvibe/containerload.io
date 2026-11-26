@@ -560,6 +560,22 @@
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
+    <loc>https://containerload.io/ratgeber/ladeplan-per-link</loc>
+    <lastmod>2026-11-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladeplan-per-link"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/load-plan-by-link"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladeplan-per-link"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/en/guide/load-plan-by-link</loc>
+    <lastmod>2026-11-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/ladeplan-per-link"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/load-plan-by-link"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/ladeplan-per-link"/>
+    <changefreq>monthly</changefreq><priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://containerload.io/ratgeber/stauplan-container</loc>
     <lastmod>2026-08-21</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/stauplan-container"/>
