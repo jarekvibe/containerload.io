@@ -25,7 +25,7 @@ export default {
     st_chip: '✓ P1: máx. 11 un. · não empilhável',
     rg_ey: 'Guia de contêineres',
     rg_h: 'Para consultar',
-    rg_p: 'Cada página leva direto à calculadora 3D. As páginas do guia estão em inglês.',
+    rg_p: 'Cada página leva direto à calculadora 3D.',
     rg0_h: 'Calculadora de paletes',
     rg0_p: 'Quantos paletes cabem em um contêiner ou caminhão?',
     rg7_h: 'Calculadora de metros lineares',
@@ -220,5 +220,11 @@ export default {
     'layer': 'camada',
     'layers': 'camadas'
   },
-  guide: {}
+  guide: {
+    '/ratgeber/': '/pt/guia/',
+    '/ratgeber/europaletten-20-fuss-container': '/pt/guia/paletes-conteiner-20-pes',
+    '/ratgeber/europaletten-40-fuss-container': '/pt/guia/paletes-conteiner-40-pes',
+    '/ratgeber/container-volumen-cbm': '/pt/guia/metros-cubicos-conteiner',
+    '/ratgeber/container-masse-innenmasse': '/pt/guia/medidas-conteiner'
+  }
 };

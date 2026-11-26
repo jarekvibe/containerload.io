@@ -2,8 +2,8 @@
 // dem Muster der NL-Welle. Ohne sie stuende fuer die Sprache nur EINE Seite in der Suche (die
 // Startseite). Dieselben Regeln wie immer: jede Zahl kommt aus dem Packer bzw. aus PRESETS,
 // die Draufsicht zeichnet exakt die Stellplaetze, der Knopf laedt genau die genannte Menge --
-// und das hreflang-Netz ist ein sauberes FUENFER-Cluster (de/en/nl/es/fr + x-default) auf
-// allen Fassungen.
+// und das hreflang-Netz ist ein sauberes Cluster (de/en/nl/es/fr/pt + x-default) auf
+// allen Fassungen. Seit 26.11.26 mit Portugiesisch als sechster Spalte (pt/guia/).
 //
 // Anders als die NL-Seiten fuehren diese in einen Rechner in IHRER Sprache (?lang=es / fr).
 //
@@ -32,14 +32,14 @@ const { parseCargoText } = new Function(L.slice(pa, pb).join("\n") + "\nreturn {
 const lese = (p) => fs.readFileSync(path.join(dir, "..", p), "utf8");
 const B = "https://containerload.io";
 
-// Spalten: de, en, nl, es, fr. Zeilen: 20-Fuss-Paletten, 40-Fuss-Paletten, Kubikmeter, Masse.
-const SPALTEN = ["de", "en", "nl", "es", "fr"];
-const NAMEN = { de: "Deutsch", en: "English", nl: "Nederlands", es: "Español", fr: "Français" };
+// Spalten: de, en, nl, es, fr, pt. Zeilen: 20-Fuss-Paletten, 40-Fuss-Paletten, Kubikmeter, Masse.
+const SPALTEN = ["de", "en", "nl", "es", "fr", "pt"];
+const NAMEN = { de: "Deutsch", en: "English", nl: "Nederlands", es: "Español", fr: "Français", pt: "Português" };
 const CLUSTER = [
-  ["ratgeber/europaletten-20-fuss-container", "en/guide/euro-pallets-20ft-container", "nl/gids/europallets-20ft-container", "es/guia/europalets-contenedor-20-pies", "fr/guide/europalettes-conteneur-20-pieds"],
-  ["ratgeber/europaletten-40-fuss-container", "en/guide/euro-pallets-40ft-container", "nl/gids/europallets-40ft-container", "es/guia/europalets-contenedor-40-pies", "fr/guide/europalettes-conteneur-40-pieds"],
-  ["ratgeber/container-volumen-cbm", "en/guide/container-volume-cbm", "nl/gids/cbm-container", "es/guia/metros-cubicos-contenedor", "fr/guide/volume-conteneur-m3"],
-  ["ratgeber/container-masse-innenmasse", "en/guide/container-internal-dimensions", "nl/gids/container-afmetingen", "es/guia/medidas-contenedor", "fr/guide/dimensions-conteneur"],
+  ["ratgeber/europaletten-20-fuss-container", "en/guide/euro-pallets-20ft-container", "nl/gids/europallets-20ft-container", "es/guia/europalets-contenedor-20-pies", "fr/guide/europalettes-conteneur-20-pieds", "pt/guia/paletes-conteiner-20-pes"],
+  ["ratgeber/europaletten-40-fuss-container", "en/guide/euro-pallets-40ft-container", "nl/gids/europallets-40ft-container", "es/guia/europalets-contenedor-40-pies", "fr/guide/europalettes-conteneur-40-pieds", "pt/guia/paletes-conteiner-40-pes"],
+  ["ratgeber/container-volumen-cbm", "en/guide/container-volume-cbm", "nl/gids/cbm-container", "es/guia/metros-cubicos-contenedor", "fr/guide/volume-conteneur-m3", "pt/guia/metros-cubicos-conteiner"],
+  ["ratgeber/container-masse-innenmasse", "en/guide/container-internal-dimensions", "nl/gids/container-afmetingen", "es/guia/medidas-contenedor", "fr/guide/dimensions-conteneur", "pt/guia/medidas-conteiner"],
 ];
 // Je Welle: Ordner, og:locale, und woran man erkennt, dass fremder Text stehengeblieben ist.
 // Die Fremdwort-Liste nennt nur Woerter, die es in der Sprache der Seite NICHT gibt.
@@ -60,6 +60,13 @@ const WELLEN = {
     ordner: "fr/guide", locale: "fr_FR",
     fremd: /\b(passen|hoeveel|de calculator|niet|één|und|nicht|Paletten|pallets passen|how many|the|with|cuántos|caben|palets|contenedor)\b/gi,
     nurEnDe: /(qu’|uniquement |seulement )en anglais (ou|et) en allemand/i,
+  },
+  // Brasilianisches Portugiesisch (26.11.26). Die Palettenseiten nennen NEBEN der Europalette
+  // die PBR-Palette (1,00 x 1,20 m, das brasilianische Normmass) -- siehe den eigenen Test unten.
+  pt: {
+    ordner: "pt/guia", locale: "pt_BR",
+    fremd: /\b(passen|hoeveel|niet|één|und|nicht|Paletten|how many|the|with|combien|avec|conteneur|cuántos|caben|palets|contenedor|contenedores|pies|ancho)\b/gi,
+    nurEnDe: /(só|somente|apenas) em inglês (ou|e) (em )?alemão/i,
   },
 };
 // Themen, die es NICHT in allen fuenf Sprachen gibt, bilden ihr eigenes, kleineres Netz -- mit
@@ -100,7 +107,9 @@ for (const [k, W] of Object.entries(WELLEN)) {
       assert.ok(m, `${f}: keine Draufsicht`);
       assert.strictEqual((m[1].match(/<rect /g) || []).length, lage + 1, `${f}: SVG-Stellplaetze`);
       // Der Knopf: durch den echten Parser genau die genannte Menge Europaletten, im richtigen Container
-      const links = [...s.matchAll(new RegExp(`href="/app\\?lang=${k}&q=([^"&]+)(?:&cont=([a-z0-9]+))?"`, "g"))];
+      // (Eine Seite darf daneben eine WEITERE Palette zeigen -- die portugiesische die PBR-Palette;
+      // deren Knopf prueft der eigene Test weiter unten.)
+      const links = [...s.matchAll(new RegExp(`href="/app\\?lang=${k}&q=([^"&]+)(?:&cont=([a-z0-9]+))?"`, "g"))].filter(([, q]) => !/pbr/i.test(decodeURIComponent(q)));
       assert.ok(links.length >= 2, `${f}: Rechner-Knoepfe fehlen`);
       for (const [, q, c] of links) {
         const rows = parseCargoText(decodeURIComponent(q));
@@ -345,6 +354,48 @@ test("ES: die Seite zum Container-Gewicht -- Tara, Zuladung, Strasse und Dichte 
   for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/guia/calcular-cubicaje-cbm.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
 });
 
+// ── Die PBR-Palette auf Portugiesisch ──────────────────────────────────────────────────────
+// In Brasilien ist nicht die Europalette das uebliche Mass, sondern die PBR-Palette
+// (1,00 x 1,20 m; Handbuch "Palete PBR-1" der ABRAS -- nachgeschlagen 26.11.26, nicht gerechnet).
+// Die portugiesischen Palettenseiten nennen deshalb beide. Die Zahlen der PBR-Palette kommen
+// aus dem Packer: 9 im 20-Fuss (nicht 10), 22 im 40-Fuss.
+test("PT: die PBR-Palette (1,00 x 1,20 m) -- Zahlen aus dem Packer, eigene Draufsicht, eigener Knopf", () => {
+  const C20 = PRESETS["20' GP"], C40 = PRESETS["40' GP"];
+  const [s20, s40] = seiten("pt");
+  for (const [f, C, lage, ohne, zwei, cont, laengs] of [[s20, C20, 9, 8, 18, null, 8], [s40, C40, 22, 20, 44, "40gp", 10]]) {
+    const r = makeFloorPacker(120, 100, true)(C.l, C.w);
+    assert.strictEqual(r.count, lage, `${f}: PBR im Packer`);
+    assert.strictEqual(makeFloorPacker(120, 100, false)(C.l, C.w).count, ohne);
+    assert.strictEqual(zwei, 2 * lage);
+    assert.ok(2 * 115 <= C.h, "zwei Lagen zu 115 cm passen nicht unter die Decke");
+    assert.strictEqual(r.rects.filter((x) => x.dx > x.dz).length, laengs, `${f}: das Muster im Text stimmt nicht mit dem Packer`);
+    const s = lese(f + ".html");
+    const text = s.replace(/<svg[\s\S]*?<\/svg>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ");
+    assert.ok(new RegExp(`<b>${lage} paletes PBR</b>`).test(s) && new RegExp(`<b>${zwei}( paletes PBR)?</b>`).test(s), `${f}: die PBR-Zahlen ${lage} und ${zwei} fehlen`);
+    assert.ok(/padrão brasileiro/.test(text) && /1,00 × 1,20 m/.test(text), `${f}: die PBR-Palette ist nicht erklaert`);
+    // Zwei Draufsichten: erst die Europalette (die prueft der Wellen-Test), dann die PBR-Palette
+    const bilder = [...s.matchAll(/<figure class="stau">([\s\S]*?)<\/figure>/g)];
+    assert.strictEqual(bilder.length, 2, `${f}: zwei Draufsichten erwartet`);
+    assert.strictEqual((bilder[1][1].match(/<rect /g) || []).length, lage + 1, `${f}: die PBR-Draufsicht zeichnet nicht genau die Stellplaetze`);
+    assert.strictEqual((bilder[1][1].match(/fill="#2E8FFF"/g) || []).length, laengs, `${f}: Farben der PBR-Draufsicht`);
+    // Der Knopf: durch den echten Parser genau diese Menge PBR-Paletten, im richtigen Container
+    const knopf = [...s.matchAll(/href="\/app\?lang=pt&q=([^"&]+)(?:&cont=([a-z0-9]+))?"/g)].filter(([, q]) => /pbr/i.test(decodeURIComponent(q)));
+    assert.strictEqual(knopf.length, 1, `${f}: genau ein PBR-Knopf erwartet`);
+    const rows = parseCargoText(decodeURIComponent(knopf[0][1]));
+    assert.deepStrictEqual([rows.length, rows[0].qty, rows[0].l, rows[0].w, rows[0].stackable], [1, lage, 120, 100, true], `${f}: der PBR-Knopf laedt eine andere Ladung`);
+    assert.strictEqual(knopf[0][2] || null, cont);
+  }
+  // Warum nicht 10 im 20-Fuss: zwei mit der 1,20-m-Seite quer brauchen 2,40 m
+  assert.ok(2 * 120 > C20.w && 5 * 120 > C20.l && /precisariam de 2,40&nbsp;m, e a largura interna é de 2,35&nbsp;m/.test(lese(s20 + ".html")));
+  // 40-Fuss: 12 quer + 10 laengs, und die Rechnung im Text
+  assert.ok(12 * 100 <= C40.l && 13 * 100 > C40.l && 100 + 120 <= C40.w && /12&nbsp;×&nbsp;1,00&nbsp;m = 12,00&nbsp;m dos 12,03&nbsp;m internos/.test(lese(s40 + ".html")));
+  // Der Parser kennt die Palette auch ohne Masse ("paletes PBR")
+  assert.deepStrictEqual(parseCargoText("9 paletes PBR").map((r) => [r.qty, r.l, r.w]), [[9, 120, 100]]);
+  // Die Uebersicht nennt dieselben Zahlen
+  const ix = lese("pt/guia/index.html");
+  assert.ok(/25 europaletes ou 22 paletes PBR/.test(ix) && /11 europaletes ou 9 paletes PBR/.test(ix) && /50 ou 44/.test(ix));
+});
+
 test("jedes Cluster ist ein sauberes Netz: hreflang auf ALLEN Fassungen, in beide Richtungen", () => {
   for (const { spalten: SPALTEN, seiten: c } of NETZE) {
     const zeilen = SPALTEN.length + 1;                                         // jede Sprache + x-default
@@ -380,7 +431,7 @@ test("die Sprachwahl dieser Seiten ist ein Aufklapp-Menue -- und zeigt auf die U
 
 test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und das Menue geht wieder zu", () => {
   let menues = 0, reihen = 0;
-  for (const ordner of ["ratgeber", "en/guide", "nl/gids", "es/guia", "fr/guide"]) {
+  for (const ordner of ["ratgeber", "en/guide", "nl/gids", "es/guia", "fr/guide", "pt/guia"]) {
     for (const f of fs.readdirSync(path.join(dir, "..", ordner)).filter((x) => x.endsWith(".html"))) {
       const s = lese(`${ordner}/${f}`);
       const m = /<div class="lang"[^>]*>([\s\S]*?)<\/div>/.exec(s);
@@ -392,10 +443,10 @@ test("Menue ab drei Sprachen, Reihe bei zweien -- auf JEDER Wissensseite, und da
     }
   }
   assert.ok(menues >= NETZE.reduce((n, x) => n + x.seiten.length, 0) && reihen > 0, `Menues ${menues}, Reihen ${reihen}`);
-  // Die Uebersichten der drei Wellen zeigen aufeinander
-  for (const [f, k] of [["nl/gids/index.html", "nl"], ["es/guia/index.html", "es"], ["fr/guide/index.html", "fr"]]) {
+  // Die Uebersichten der Wellen zeigen aufeinander
+  for (const [f, k] of [["nl/gids/index.html", "nl"], ["es/guia/index.html", "es"], ["fr/guide/index.html", "fr"], ["pt/guia/index.html", "pt"]]) {
     const s = lese(f);
-    for (const [kk, h] of [["de", "/ratgeber/"], ["en", "/en/guide/"], ["nl", "/nl/gids/"], ["es", "/es/guia/"], ["fr", "/fr/guide/"]]) {
+    for (const [kk, h] of [["de", "/ratgeber/"], ["en", "/en/guide/"], ["nl", "/nl/gids/"], ["es", "/es/guia/"], ["fr", "/fr/guide/"], ["pt", "/pt/guia/"]]) {
       assert.ok(s.includes(`href="${h}" hreflang="${kk}"`), `${f}: ${kk} fehlt in der Sprachwahl`);
     }
     assert.ok(new RegExp(`<span class="langcur">${k.toUpperCase()}</span>`).test(s), `${f}: Knopf zeigt nicht ${k}`);
