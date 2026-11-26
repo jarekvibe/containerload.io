@@ -76,7 +76,8 @@ const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-20-fuss-container", "en/guide/pallets-20ft-container", "es/guia/pallets-48x40-contenedor-20-pies"] },
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-40-fuss-container", "en/guide/pallets-40ft-container", "es/guia/pallets-48x40-contenedor-40-pies"] },
   // CBM berechnen ("cubicaje" -- so heisst die Rechnung in Lateinamerika), mit dem CBM-Rechner
-  { spalten: ["de", "en", "es"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm"] },
+  // Seit 26.11.26 mit Portugiesisch ("cubagem") als vierter Sprache
+  { spalten: ["de", "en", "es", "pt"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm", "pt/guia/calculo-cubagem-cbm"] },
   // Gewicht und Zuladung -- die meistgesehene deutsche Seite, mit dem Gewichts-Check
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/container-zuladung-gewicht", "en/guide/container-payload-weight", "es/guia/peso-contenedor-carga-maxima"] },
   // Der Stauplan ("plan de estiba") -- die Seite, die das Werkzeug selbst beschreibt
@@ -415,6 +416,63 @@ test("ES: die Seite zum Stauplan (plan de estiba) -- Dreh-Zahlen aus dem Packer,
   assert.ok(lese("es/guia/peso-contenedor-carga-maxima.html").includes('href="/es/guia/plan-de-estiba-contenedor"'), "die Gewichts-Seite verlinkt sie nicht");
   const gen = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "sprachen", "es.mjs"), "utf8");
   assert.ok(gen.includes("'/ratgeber/stauplan-container': '/es/guia/plan-de-estiba-contenedor'"), "werkzeug/sprachen/es.mjs: guide-Eintrag fehlt");
+});
+
+// ── Cubagem (CBM) auf Portugiesisch ─────────────────────────────────────────────────────────
+// Vierte Fassung der CBM-Seite. Den Rechner selbst haelt test/cbm-widget (Rechenkern woertlich
+// gleich). Hier: die Beispielrechnung, der eigene Kern -- der "fator de cubagem" je
+// Verkehrstraeger, danach wird in Brasilien gesucht --, die Containervolumen und der Knopf.
+test("PT: die Seite zur Cubagem (CBM) -- Beispiel, Peso cubado je Verkehrstraeger, Volumen aus PRESETS, Knopf", () => {
+  const f = mehr("pt")[0];
+  assert.strictEqual(f, "pt/guia/calculo-cubagem-cbm");
+  const s = lese(f + ".html");
+  const text = s.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+  const sp = (n, d) => n.toFixed(d).replace(".", ",");
+
+  // Die Beispielrechnung: 10 Kartons 60 x 40 x 40 cm
+  const je = 0.6 * 0.4 * 0.4, vol = je * 10;
+  for (const t of [`<td class="num">0,6 × 0,4 × 0,4</td><td class="num">${sp(je, 3)} m³</td>`, `<td class="num">${sp(je, 3)} × 10</td><td class="num">${sp(vol, 2)} m³</td>`]) assert.ok(s.includes(t), `${f}: Beispielrechnung — ${t}`);
+  const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+  assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length === 4);
+  assert.ok(ld.mainEntity[0].acceptedAnswer.text.includes(`${sp(je, 3)} m³ por caixa × 10 = ${sp(vol, 2)} m³`), `${f}: die erste Antwort rechnet anders als die Seite`);
+
+  // Peso cubado = Volumen x Faktor. Die Faktoren sind NACHGESCHLAGEN (Websuche 26.11.26), nicht
+  // gerechnet -- wer sie aendert, braucht eine Quelle. Gerechnet ist, was daraus fuer das Beispiel folgt.
+  const FAKTOR = [["Marítimo (LCL)", "1.000 kg por m³", 1000], ["Rodoviário", "300 kg por m³", 300], ["Aéreo", "166,7 kg por m³", 166.7]];
+  const real = 10 * 15;
+  for (const [modal, wort, faktor] of FAKTOR) {
+    const zeile = `<tr><td>${modal}</td><td class="num">${wort}</td><td class="num">${Math.round(vol * faktor)} kg</td></tr>`;
+    assert.ok(s.includes(zeile), `${f}: Zeile fehlt oder rechnet anders — ${zeile}`);
+    assert.ok(vol * faktor > real, `${modal}: im Beispiel waere das wirkliche Gewicht groesser -- der Satz darunter stimmte nicht`);
+  }
+  assert.ok(text.includes(`As 10 caixas pesam ${real} kg (15 kg cada). Nos três modais o peso cubado é maior`), `${f}: der Satz zum Beispiel fehlt`);
+  // Ehrlich: es sind uebliche Werte, kein Tarif -- und die Seite sagt, welche Regel ihr Rechner anwendet.
+  assert.match(text, /cada transportadora define o seu/);
+  assert.match(text, /confirme sempre na tabela de frete/);
+  assert.match(text, /A calculadora acima usa a regra do marítimo, 1 m³ = 1\.000 kg/);
+  const faq = ld.mainEntity.map((e) => e.acceptedAnswer.text).join(" ");
+  assert.ok(/300 kg por m³/.test(faq) && /166,7 kg por m³/.test(faq) && /1\.000 kg por m³/.test(faq) && /Cada transportadora define o seu fator/.test(faq), "das FAQ-Schema nennt andere Faktoren als die Tabelle oder verschweigt den Vorbehalt");
+
+  // Containervolumen: dieselben Zahlen wie die portugiesische Volumen-Seite, aus PRESETS
+  for (const name of ["20' GP", "40' GP", "40' HC"]) {
+    const P = PRESETS[name], m3 = sp(P.l * P.w * P.h / 1e6, 1);
+    assert.ok(text.includes(`${m3} m³`), `${f}: ${name} = ${m3} m³ fehlt`);
+    assert.ok(lese("pt/guia/metros-cubicos-conteiner.html").replace(/&nbsp;/g, " ").includes(`${m3} m³`), "die Volumen-Seite nennt eine andere Zahl");
+  }
+  assert.ok(ld.mainEntity[3].acceptedAnswer.text.includes("33,1 m³") && ld.mainEntity[3].acceptedAnswer.text.includes("67,6 m³"));
+
+  // Der Knopf laedt genau das Beispiel -- in portugiesischen Worten, durch den echten Parser
+  const links = [...s.matchAll(/href="\/app\?lang=pt&q=([^"&]+)"/g)];
+  assert.strictEqual(links.length, 2, `${f}: Rechner-Knoepfe`);
+  for (const [, q] of links) {
+    const rows = parseCargoText(decodeURIComponent(q));
+    assert.strictEqual(rows.length, 1);
+    assert.deepStrictEqual([rows[0].qty, rows[0].l, rows[0].w, rows[0].h, rows[0].weight], [10, 60, 40, 40, 15], `${f}: der Knopf laedt ein anderes Beispiel`);
+  }
+  // Die Uebersicht, die Volumen-Seite und die Startseite fuehren hierher -- und die Startseite
+  // sagt nicht mehr, die Erklaerung stehe auf Englisch.
+  for (const p of ["pt/guia/index.html", "pt/guia/metros-cubicos-conteiner.html", "pt/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
+  assert.ok(!/calculo-cubagem-cbm"[^>]*>[^<]*ingl[êe]s/.test(lese("pt/index.html")), "die Startseite nennt die portugiesische Seite englisch");
 });
 
 test("PT: die PBR-Palette (1,00 x 1,20 m) -- Zahlen aus dem Packer, eigene Draufsicht, eigener Knopf", () => {

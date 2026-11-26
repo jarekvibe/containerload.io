@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Cálculo de cubagem (CBM): fórmula, exemplo e calculadora</title>
+<meta name="description" content="Cubagem (CBM) = comprimento × largura × altura em metros × quantidade. Fórmula, exemplo, fator de cubagem por modal e calculadora de m³ e peso." />
+<link rel="canonical" href="https://containerload.io/pt/guia/calculo-cubagem-cbm" />
+<link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/cbm-berechnen" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/how-to-calculate-cbm" />
+<link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/calcular-cubicaje-cbm" />
+<link rel="alternate" hreflang="pt" href="https://containerload.io/pt/guia/calculo-cubagem-cbm" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/cbm-berechnen" />
+<meta name="robots" content="index,follow" />
+<meta property="og:type" content="article" />
+<meta property="og:locale" content="pt_BR" />
+<meta property="og:title" content="Cálculo de cubagem (CBM): fórmula, exemplo e calculadora" />
+<meta property="og:description" content="Cubagem (CBM) = comprimento × largura × altura em metros × quantidade. Fórmula, exemplo, fator de cubagem por modal e calculadora de m³ e peso." />
+<meta property="og:url" content="https://containerload.io/pt/guia/calculo-cubagem-cbm" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="Cálculo de cubagem (CBM): fórmula, exemplo e calculadora" />
+<meta name="twitter:description" content="Cubagem (CBM) = comprimento × largura × altura em metros × quantidade. Fórmula, exemplo, fator de cubagem por modal e calculadora de m³ e peso." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="stylesheet" href="/ratgeber/wissen.css" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Como calcular a cubagem (CBM)?","acceptedAnswer":{"@type":"Answer","text":"CBM (metros cúbicos) = comprimento × largura × altura em metros, multiplicado pela quantidade. Exemplo: 10 caixas de 60×40×40 cm = 0,6 × 0,4 × 0,4 = 0,096 m³ por caixa × 10 = 0,96 m³."}},{"@type":"Question","name":"O que é peso cubado?","acceptedAnswer":{"@type":"Answer","text":"É o volume da carga multiplicado pelo fator de cubagem do modal. A transportadora compara o peso cubado com o peso real e cobra o frete pelo maior dos dois."}},{"@type":"Question","name":"Qual é o fator de cubagem?","acceptedAnswer":{"@type":"Answer","text":"Os valores mais usados são 300 kg por m³ no transporte rodoviário, 166,7 kg por m³ no aéreo e 1.000 kg por m³ no marítimo. Cada transportadora define o seu fator; confirme na tabela de frete."}},{"@type":"Question","name":"Quantos m³ cabem em um contêiner?","acceptedAnswer":{"@type":"Answer","text":"Um contêiner de 20 pés tem 33,1 m³ e um de 40 pés 67,6 m³. Na prática raramente se aproveita mais de 80 a 85 por cento."}}]}</script>
+</head>
+<body>
+<header class="nav">
+  <div class="nav-in">
+    <a class="brand" href="/pt/"><span class="mark"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46" /><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780" /><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60" /></svg></span><span class="brand-name">Container<span class="brand-load">Load</span></span></a>
+    <details class="langmenu"><summary aria-label="Idioma"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span class="langcur">PT</span><svg class="langpfeil" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary><div class="lang" role="group" aria-label="Idioma"><a href="/ratgeber/cbm-berechnen" hreflang="de" title="Deutsch">Deutsch</a><a href="/en/guide/how-to-calculate-cbm" hreflang="en" title="English">English</a><a href="/es/guia/calcular-cubicaje-cbm" hreflang="es" title="Español">Español</a><a class="on" href="/pt/guia/calculo-cubagem-cbm" hreflang="pt" title="Português">Português</a></div></details><a class="btn btn-primary" href="/app?lang=pt&q=10%20caixas%2060x40x40%2015kg%20empilh%C3%A1vel">Abrir a calculadora 3D</a>
+  </div>
+</header>
+<main>
+  <article class="wrap">
+    <div class="eyebrow">Guia de contêineres · Cálculo do frete</div>
+    <h1>Como calcular a cubagem (CBM): os metros cúbicos de uma carga</h1>
+    <div class="answer"><p class="lead" style="margin:0">A <b>cubagem</b> ou <b>CBM</b> (metros cúbicos) = <b>comprimento × largura × altura</b> em metros, vezes a <b>quantidade</b>. É o espaço que a sua carga ocupa: a base das cotações de frete marítimo (LCL) e da ocupação do contêiner.</p></div>
+
+    <div class="cbm-calc" data-cbm-widget>
+      <div id="cbmRows"></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="cbmAdd" class="cbm-add">+</button>
+        <a id="cbmZur3d" class="cbm-open" hidden href="/app?lang=pt"></a>
+      </div>
+      <div class="cbm-calc-result" id="cbmResult"></div>
+    </div>
+    <script>
+    (function(){
+    // CBM_CALC_START
+    function cbmBerechnen(l, w, h, qty) {
+      var L = Number(l), W = Number(w), H = Number(h), Q = Number(qty);
+      if (!(L > 0) || !(W > 0) || !(H > 0) || !(Q > 0)) return null;
+      var stueck = (L * W * H) / 1000000;
+      return { stueck: stueck, gesamt: stueck * Q, menge: Q };
+    }
+    function cbmSumme(zeilen) {
+      var vol = 0, stk = 0, kg = 0, alleKg = true, gueltig = 0;
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = cbmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].h, zeilen[i].qty);
+        if (!r) continue;
+        gueltig++;
+        vol += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig nach der Faustregel 1 cbm = 1.000 kg (W/M) -- aber nur, wenn JEDE
+      // gueltige Zeile ein Gewicht traegt. Ein halb gewogenes Maximum waere eine falsche Zahl.
+      return { vol: vol, stk: stk, kg: kg, frachtKg: alleKg ? Math.max(vol * 1000, kg) : null, zeilen: gueltig };
+    }
+    // CBM_CALC_END
+    var cbmCfg = {
+      t: function () { return { l: 'Compr. (cm)', w: 'Largura (cm)', h: 'Altura (cm)', q: 'Unidades', g: 'kg/un. · opcional', weg: 'Remover item', plus: '+ item', stk: 'itens', stk1: 'item', wm: 'taxável (W/M)', leer: 'Informe comprimento, largura e altura. O volume aparece na hora.', zur3d: 'Ver na calculadora 3D →' }; },
+      loc: function () { return 'pt-BR'; },
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q) + '&lang=pt'; }
+    };
+    // CBM_UI_START
+    var rows = document.getElementById('cbmRows'), out = document.getElementById('cbmResult'),
+        add = document.getElementById('cbmAdd'), zur3d = document.getElementById('cbmZur3d'), nId = 0;
+    function feld(id, key, opts) {
+      var t = cbmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'cbm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '110' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '300' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + cbmCfg.t().weg + '">\u00d7</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = cbmCfg.t(), loc = cbmCfg.loc();
+      // Beschriftungen der stehenden Zeilen mitziehen -- die Startseite wechselt die
+      // Sprache ohne Neuladen, und dynamische Zeilen kennt ihr Woerterbuch nicht.
+      [].forEach.call(rows.querySelectorAll('label'), function (lb) {
+        var inp = document.getElementById(lb.getAttribute('for'));
+        if (inp) lb.textContent = t[inp.getAttribute('data-k')];
+      });
+      add.textContent = t.plus;
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.setAttribute('aria-label', t.weg); b.title = t.weg;
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = cbmSumme(daten);
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f3 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f3(s.vol) + ' m\u00b3</b>', s.stk + ' ' + (s.stk === 1 && t.stk1 ? t.stk1 : t.stk)];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      out.innerHTML = teile.join(' \u00b7 ');
+      // Der Sprung in den echten Rechner: dieselben Zeilen als ?q=-Import. Dort gibt es
+      // die 3D-Ansicht, die Stellplaetze und die Container-Auslastung -- nichts davon
+      // wird hier nachgebaut.
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = cbmBerechnen(z.l, z.w, z.h, z.qty);
+        if (!r) return;
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : ''));
+      });
+      zur3d.href = cbmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    zeileNeu();
+    zeichnen();
+    window.__cbmNeu = zeichnen;
+    // CBM_UI_END
+    })();
+    </script>
+
+    <h2>A fórmula</h2>
+    <div class="formula">CBM = comprimento (m) × largura (m) × altura (m) × quantidade</div>
+    <p>Importante: todas as medidas em <b>metros</b>. Divida antes os centímetros por 100 (60&nbsp;cm = 0,6&nbsp;m).</p>
+    <h2>Exemplo</h2>
+    <p>10 caixas de 60 × 40 × 40&nbsp;cm cada:</p>
+    <div class="tabelle"><table><thead><tr><th>Passo</th><th>Cálculo</th><th>Resultado</th></tr></thead><tbody>
+    <tr><td>Cubagem por caixa</td><td class="num">0,6 × 0,4 × 0,4</td><td class="num">0,096 m³</td></tr>
+    <tr><td>× quantidade</td><td class="num">0,096 × 10</td><td class="num">0,96 m³</td></tr>
+    </tbody></table></div>
+    <h2>Peso cubado: o fator de cubagem por modal</h2>
+    <p>O frete é cobrado pelo <b>peso real</b> ou pelo <b>peso cubado</b>, o que for maior. O peso cubado é a cubagem multiplicada pelo <b>fator de cubagem</b> do modal. Com os 0,96&nbsp;m³ do exemplo:</p>
+    <div class="tabelle"><table><thead><tr><th>Modal</th><th>Fator de cubagem usual</th><th>Peso cubado do exemplo</th></tr></thead><tbody>
+    <tr><td>Marítimo (LCL)</td><td class="num">1.000 kg por m³</td><td class="num">960 kg</td></tr>
+    <tr><td>Rodoviário</td><td class="num">300 kg por m³</td><td class="num">288 kg</td></tr>
+    <tr><td>Aéreo</td><td class="num">166,7 kg por m³</td><td class="num">160 kg</td></tr>
+    </tbody></table></div>
+    <p>As 10 caixas pesam 150&nbsp;kg (15&nbsp;kg cada). Nos três modais o peso cubado é maior, então o frete seria cobrado por ele. Esses são os fatores mais usados no Brasil, mas <b>cada transportadora define o seu</b> (no rodoviário fracionado é comum 250&nbsp;kg por m³): confirme sempre na tabela de frete. A calculadora acima usa a regra do marítimo, 1&nbsp;m³ = 1.000&nbsp;kg; a calculadora 3D mostra, além disso, como a carga fica dentro do contêiner.</p>
+    <h2>Quanta cubagem cabe em um contêiner?</h2>
+    <p>Um contêiner de 20 pés tem <b>33,1&nbsp;m³</b> e um de 40 pés <b>67,6&nbsp;m³</b> (o de 40 pés high cube, 76,3&nbsp;m³). Na prática raramente se aproveita mais de 80 a 85 por cento: as caixas não se encaixam sem folgas, e o que não pode ser empilhado deixa ar por cima. Por isso a cubagem só diz se a carga <b>poderia</b> caber; se cabe de verdade, você vê na hora de arrumá-la. Todos os valores estão em <a href="/pt/guia/metros-cubicos-conteiner">Quantos metros cúbicos tem um contêiner?</a></p>
+    <div class="cta">
+      <a class="btn btn-primary" href="/app?lang=pt&q=10%20caixas%2060x40x40%2015kg%20empilh%C3%A1vel">➜ A cubagem ao vivo na calculadora 3D</a>
+      <a class="btn btn-ghost" href="/pt/guia/">Guia de contêineres</a>
+    </div>
+    <p style="font-size:13px;color:var(--faint);margin-top:6px">Informe os seus itens: a calculadora soma cubagem e peso e mostra a ocupação em 3D.</p>
+
+    <h2>Perguntas relacionadas</h2>
+    <div class="related"><a href="/pt/guia/metros-cubicos-conteiner">Quantos m³ cabem?</a><a href="/pt/guia/medidas-conteiner">Medidas de contêineres</a><a href="/pt/guia/paletes-conteiner-40-pes">Paletes em um 40 pés</a><a href="/pt/guia/paletes-conteiner-20-pes">Paletes em um 20 pés</a><a href="/app?lang=pt">Para a calculadora 3D</a></div>
+
+    <div class="note"><b style="color:var(--dim)">Sem garantia:</b> A cubagem é o espaço geométrico que a carga ocupa. O frete real, o fator de cubagem e as quantidades mínimas são definidos pela transportadora, pelo armador ou pelo agente de cargas. A ferramenta calcula de forma puramente geométrica e não substitui uma cotação de frete.</div>
+  </article>
+</main>
+<footer>
+  <div class="wrap">
+    <span>© ContainerLoad · Bremen, Alemanha</span>
+    <span><a href="/pt/">Calculadora</a> · <a href="/pt/guia/">Guia de contêineres</a> · <a href="/en/imprint">Aviso legal</a> · <a href="/en/privacy">Privacidade</a></span>
+  </div>
+</footer>
+<script src="/ratgeber/langmenu.js" defer></script>
+<script src="/puls.js" defer></script>
+</body>
+</html>

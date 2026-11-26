@@ -72,7 +72,7 @@ export default {
     cbm_ey: 'Ferramentas',
     cbm_h: 'Calcule os metros cúbicos.<br><span style="color:var(--dim)">Cole uma lista de itens.</span>',
     cbm_p: 'Vários itens, CBM e peso ao mesmo tempo. No LCL vale o maior dos dois.',
-    cbm_link: 'Como se calcula o CBM está explicado no guia de contêineres (em inglês).',
+    cbm_link: 'Como se calcula a cubagem (CBM) está explicado no guia de contêineres.',
     feat_ey: 'Também inclui',
     f1_h: 'Vista 3D',
     f1_p: 'Gire, aproxime, confira: peça por peça.',
@@ -225,6 +225,7 @@ export default {
     '/ratgeber/europaletten-20-fuss-container': '/pt/guia/paletes-conteiner-20-pes',
     '/ratgeber/europaletten-40-fuss-container': '/pt/guia/paletes-conteiner-40-pes',
     '/ratgeber/container-volumen-cbm': '/pt/guia/metros-cubicos-conteiner',
-    '/ratgeber/container-masse-innenmasse': '/pt/guia/medidas-conteiner'
+    '/ratgeber/container-masse-innenmasse': '/pt/guia/medidas-conteiner',
+    '/ratgeber/cbm-berechnen': '/pt/guia/calculo-cubagem-cbm'
   }
 };
