@@ -25,8 +25,9 @@ const e = bis(s, (l, i) => l.trim() === "}" && L[i - 1].trim() === "return out;"
 assert.ok(pp >= 0 && tn >= 0 && s >= 0 && e > s, "Ausschnitte nicht gefunden");
 const { parseCargoText } = new Function([
   "var LAST_TSV_MAP = null; var parseTSV = () => [];",
-  L.slice(pp, bis(pp, (l) => l.trim() === "];") + 1).join("\n"),
-  L.slice(tn, bis(tn, (l) => l.trim() === "};") + 1).join("\n"),
+  // Von der Paletten-Vorwahl bis zum Zahlen-Leser in EINEM Stueck: dazwischen steht das
+  // Wort-Register des Imports (IMPORT_WORT / IMPORT_RE), das der Parser braucht.
+  L.slice(pp, bis(tn, (l) => l.trim() === "};") + 1).join("\n"),
   L.slice(s, e + 1).join("\n"),
   "return { parseCargoText };"
 ].join("\n"))();
