@@ -70,6 +70,8 @@ const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/us-paletten-40-fuss-container", "en/guide/pallets-40ft-container", "es/guia/pallets-48x40-contenedor-40-pies"] },
   // CBM berechnen ("cubicaje" -- so heisst die Rechnung in Lateinamerika), mit dem CBM-Rechner
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/cbm-berechnen", "en/guide/how-to-calculate-cbm", "es/guia/calcular-cubicaje-cbm"] },
+  // Gewicht und Zuladung -- die meistgesehene deutsche Seite, mit dem Gewichts-Check
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/container-zuladung-gewicht", "en/guide/container-payload-weight", "es/guia/peso-contenedor-carga-maxima"] },
 ];
 const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
@@ -290,6 +292,57 @@ test("ES: die Seite zum Cubicaje (CBM) -- Beispielrechnung, Containervolumen aus
   }
   // Die Uebersicht, die Volumen-Seite und die Startseite fuehren hierher
   for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
+});
+
+// ── Gewicht und Zuladung auf Spanisch ──────────────────────────────────────────────────────
+// Dritte Fassung der Zuladungs-Seite. Den Gewichts-Check selbst haelt test/gewicht-check
+// (Rechenkern woertlich gleich), die Tabelle Brutto - Tara = Zuladung test/wissen-vertiefung.
+// Hier: jede Zahl im FLIESSTEXT gegen PRESETS und TARA, die Strassen-Rechnung, das Netz.
+test("ES: die Seite zum Container-Gewicht -- Tara, Zuladung, Strasse und Dichte aus dem Rechner", () => {
+  const f = mehr("es")[3];
+  assert.strictEqual(f, "es/guia/peso-contenedor-carga-maxima");
+  const s = lese(f + ".html");
+  const TARA = new Function("return " + app.match(/var TARA = (\{[^}]+\})/)[1])();
+  const kg = (n) => Math.round(n).toLocaleString("de-DE"), t1 = (n) => (n / 1000).toFixed(1).replace(".", ",");
+  const P = (n) => PRESETS[n].payload, T = (n) => TARA[n];
+  // Einleitung: Zuladung und Leergewicht
+  const lead = /<p class="lead"[^>]*>([\s\S]*?)<\/p>/.exec(s)[1];
+  for (const z of [`${Math.round(P("20' GP") / 1000)} toneladas`, `${t1(P("40' GP"))} toneladas`, `${t1(T("20' GP"))} toneladas`, `${t1(T("40' GP"))} toneladas`]) assert.ok(lead.includes(`<b>${z}</b>`), `${f}: "${z}" fehlt in der Einleitung`);
+  // Leergewicht: Tonnen und Kilogramm je Typ, im Text und in der ersten FAQ-Antwort
+  const ld = JSON.parse(/<script type="application\/ld\+json">(.*?)<\/script>/s.exec(s)[1]);
+  assert.ok(ld["@type"] === "FAQPage" && ld.mainEntity.length >= 4);
+  const leer = ld.mainEntity[0].acceptedAnswer.text;
+  for (const n of ["20' GP", "40' GP", "40' HC"]) {
+    const t = `${t1(T(n))} toneladas (${kg(T(n))} kg)`;
+    assert.ok(leer.includes(t) && s.split(t).length - 1 >= 2, `${f}: Leergewicht ${n} -- "${t}" fehlt im Text oder im Schema`);
+  }
+  // Zuladung in den Antworten
+  assert.ok(ld.mainEntity[1].acceptedAnswer.text.includes(`${t1(P("20' GP"))} toneladas: ${kg(P("20' GP") + T("20' GP"))} kg de peso bruto permitido menos unos ${kg(T("20' GP"))} kg de tara`), `${f}: die 20-Fuss-Antwort rechnet anders`);
+  const a40 = ld.mainEntity[2].acceptedAnswer.text;
+  for (const z of [t1(P("40' GP")), t1(P("40' HC")), t1(P("45' HC")), t1(T("40' GP") - T("20' GP"))]) assert.ok(a40.includes(`${z} toneladas`), `${f}: ${z} t fehlt in der 40-Fuss-Antwort`);
+  // Warum der kleine mehr traegt: gleiches Brutto, 1,6 t mehr Stahl
+  assert.strictEqual(P("20' GP") + T("20' GP"), P("40' GP") + T("40' GP"));
+  assert.ok(s.includes(`(${kg(P("20' GP") + T("20' GP"))}&nbsp;kg)`) && s.includes(`<b>${t1(T("40' GP") - T("20' GP"))} toneladas</b> más de acero`), `${f}: die Erklaerung zum Bruttogewicht`);
+  // Die Strasse: 40.000 / 44.000 - 12.000 - Tara 40' HC
+  const frei = (zug) => zug - 12000 - T("40' HC");
+  assert.ok(s.includes(`<td class="num">${kg(frei(40000))} kg</td><td class="num">${kg(frei(44000))} kg</td>`), `${f}: die Strassen-Rechnung`);
+  assert.ok(s.includes(`unas ${Math.round(frei(40000) / 1000)} toneladas en lugar de ${t1(P("40' HC"))}`), `${f}: der Satz zur Strasse`);
+  // Dichte: Zuladung / Volumen des 40-Fuss, zwei 20-Fuss gegen einen 40-Fuss
+  const C40 = PRESETS["40' GP"], m3 = Math.round(C40.l * C40.w * C40.h / 1e6);
+  assert.strictEqual(Math.round(P("40' GP") / m3 / 10) * 10, 390);
+  assert.ok(s.includes(`<b>390 kg/m³</b> (${t1(P("40' GP"))}&nbsp;t ÷ ${m3} m³)`) && s.includes(`juntos cargan ${t1(2 * P("20' GP"))} toneladas; el de 40 pies, solo ${t1(P("40' GP"))}`), `${f}: die Dichte-Rechnung`);
+  // Volumen-Spalte der Tabelle: gerundet aus PRESETS
+  for (const n of ["20' GP", "20' HC", "40' GP", "40' HC", "45' HC"]) {
+    const C = PRESETS[n];
+    assert.ok(s.includes(`<td class="num">${kg(P(n))} kg</td><td class="num">≈ ${Math.round(C.l * C.w * C.h / 1e6)} m³</td>`), `${f}: ${n} -- Zuladung oder Volumen in der Tabelle`);
+  }
+  // Ehrlichkeit: die Summe ist noch keine VGM, und die Verantwortung bleibt beim Absender
+  assert.ok(/<b>Todavía no es una VGM:<\/b>/.test(s) && /la responsabilidad de la declaración sigue siendo del expedidor/.test(s), `${f}: der VGM-Vorbehalt fehlt`);
+  assert.ok(/no es asesoramiento jurídico/.test(s) && /lo vinculante es la placa CSC/.test(s), `${f}: der Hinweis ohne Gewaehr`);
+  // Zahlen fuer einzelne Laender ausserhalb der EU stehen NICHT da (unbelegt)
+  assert.ok(!/\b(Perú|México|Colombia|Chile|Argentina)\b/.test(s), `${f}: nennt ein Land, fuer das es keine belegte Grenze gibt`);
+  // Die Uebersicht, die Nachbarseiten und die Startseite fuehren hierher
+  for (const p of ["es/guia/index.html", "es/guia/metros-cubicos-contenedor.html", "es/guia/calcular-cubicaje-cbm.html", "es/index.html"]) assert.ok(lese(p).includes(`href="/${f}"`), `${p} verlinkt die Seite nicht`);
 });
 
 test("jedes Cluster ist ein sauberes Netz: hreflang auf ALLEN Fassungen, in beide Richtungen", () => {

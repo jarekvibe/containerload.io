@@ -234,6 +234,7 @@ export default {
     '/ratgeber/container-volumen-cbm': '/es/guia/metros-cubicos-contenedor',
     '/ratgeber/container-masse-innenmasse': '/es/guia/medidas-contenedor',
     '/ratgeber/cbm-berechnen': '/es/guia/calcular-cubicaje-cbm',
+    '/ratgeber/container-zuladung-gewicht': '/es/guia/peso-contenedor-carga-maxima',
     '/ratgeber/us-paletten-20-fuss-container': '/es/guia/pallets-48x40-contenedor-20-pies',
     '/ratgeber/us-paletten-40-fuss-container': '/es/guia/pallets-48x40-contenedor-40-pies'
   }

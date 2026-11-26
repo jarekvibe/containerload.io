@@ -78,7 +78,7 @@ for (const [datei, sprache] of [["ratgeber/stellplaetze-container.html", "deutsc
 // ── Zuladung: Brutto − Tara = die Zuladung aus app.html ──────────────────────
 const CONT_ZEILEN = [["20′ Standard", "20' GP"], ["20′ High Cube", "20' HC"],
   ["40′ Standard", "40' GP"], ["40′ High Cube", "40' HC"], ["45′ High Cube", "45' HC"]];
-for (const [datei, sprache] of [["ratgeber/container-zuladung-gewicht.html", "deutsch"], ["en/guide/container-payload-weight.html", "englisch"]]) {
+for (const [datei, sprache] of [["ratgeber/container-zuladung-gewicht.html", "deutsch"], ["en/guide/container-payload-weight.html", "englisch"], ["es/guia/peso-contenedor-carga-maxima.html", "spanisch"]]) {
   test(`Zuladung (${sprache}): Brutto minus Tara ergibt genau die Zuladung des Rechners`, () => {
     // Die Seite erklaert die Zuladung als Differenz. Wenn die drei Zahlen nicht aufgehen,
     // widerlegt sich die Tabelle selbst — und die dritte Spalte widerspricht dem Rechner.
