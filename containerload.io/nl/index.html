@@ -1,0 +1,1968 @@
+<!DOCTYPE html>
+<!-- Erzeugt von werkzeug/startseite-en.mjs aus index.html -- nicht von Hand aendern. -->
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gratis 3D-laadcalculator voor containers | ContainerLoad</title>
+<meta name="description" content="Gratis 3D-laadcalculator voor containers en vrachtwagens: belading op de pallet nauwkeurig, containeradvies en een laadplan als link. Zonder account." />
+<meta property="og:title" content="ContainerLoad — Elke lading in de juiste container." />
+<meta property="og:description" content="Past je lading? In welke container? ContainerLoad rekent het live uit in 3D." />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://containerload.io/nl/" />
+<meta property="og:site_name" content="ContainerLoad" />
+<meta property="og:image" content="https://containerload.io/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="ContainerLoad — Elke lading in de juiste container." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="ContainerLoad — Elke lading in de juiste container." />
+<meta name="twitter:description" content="Past je lading? In welke container? ContainerLoad rekent het live uit in 3D." />
+<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="theme-color" content="#0E1116" />
+<!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch, /en/
+     ist englisch -- eine eigene Datei, erzeugt von werkzeug/startseite-en.mjs aus dieser
+     (nicht von Hand aendern, nach jeder Aenderung hier neu erzeugen). Beide zeigen per
+     hreflang aufeinander; die alte Adresse /?lang=en leitet _redirects mit 301 um. -->
+<link rel="canonical" href="https://containerload.io/nl/" />
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ContainerLoad","alternateName":"ContainerLoad, 3D-laadcalculator","url":"https://containerload.io/nl/","applicationCategory":"BusinessApplication","applicationSubCategory":"Laadplanning","operatingSystem":"Web","browserRequirements":"JavaScript en WebGL","inLanguage":["de","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Gratis 3D-laadcalculator voor containers en vrachtwagens: op de pallet nauwkeurig, met containeradvies, laadmeters en het plan als link. In de browser, zonder account.","featureList":["3D-laadplan voor containers en vrachtwagens","Containeradvies en ketens van meerdere containers","Laadmeters en schatting van de aslasten voor de oplegger","Het plan delen als link, zonder account voor de ontvanger","Laadvoorstel als pdf met QR-code","Paklijsten lezen uit Excel, tekst of foto"],"screenshot":"https://containerload.io/og.png","publisher":{"@type":"Organization","name":"ContainerLoad","url":"https://containerload.io/"}}</script>
+<link rel="alternate" hreflang="de" href="https://containerload.io/" />
+<link rel="alternate" hreflang="en" href="https://containerload.io/en/" />
+<link rel="alternate" hreflang="es" href="https://containerload.io/es/" />
+<link rel="alternate" hreflang="fr" href="https://containerload.io/fr/" />
+<link rel="alternate" hreflang="zh" href="https://containerload.io/zh/" />
+<link rel="alternate" hreflang="nl" href="https://containerload.io/nl/" />
+<link rel="alternate" hreflang="x-default" href="https://containerload.io/" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<!-- cdnjs liefert Three.js fuer die Hero-Animation (lazy, nur Desktop) --
+     der fruehe Handshake spart den Verbindungsaufbau, wenn sie startet. -->
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin />
+<!-- Die Font-CSS laedt asynchron (media-Swap): display=swap zeichnet den Text
+     sofort in der Systemschrift, Archivo kommt nach. Ohne das war die CSS ein
+     Render-Blocker -- der groesste vermeidbare Posten im mobilen PageSpeed. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" media="print" onload="this.media='all'" />
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" /></noscript>
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+(function(){
+  var t="dunkel";
+  try{
+    var m=localStorage.getItem("cl_theme");
+    if(m==="hell"||m==="dunkel")t=m;
+    else if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches)t="hell";
+  }catch(e){}
+  document.documentElement.dataset.theme=t;
+})();
+</script>
+<style>
+/* ============================================================
+   ContainerLoad — Landingpage
+   Ein Akzent, feste Flaechenstufen, Bewegung nur wo sie etwas erklaert.
+   Der Akzent (#2E8FFF) und die Schrift (Archivo) sind identisch mit app.html,
+   damit Landingpage und Rechner wie ein Produkt wirken.
+   ============================================================ */
+:root{
+  /* Flaechen: vom Grund nach oben, jede Stufe eine Spur heller */
+  --bg:#0E1116; --card:#151A21; --card2:#1A212A; --menu-schatten:0 14px 36px rgba(0,0,0,.5);
+  --line:#232B35; --line2:#303A46;
+  /* Text: drei Stufen, mehr braucht es nicht */
+  /* --faint war #6D7784 = 4,16:1 auf --bg und damit unter der Lesbarkeitsgrenze
+     von 4,5:1 (WCAG AA). #767F8C liegt bei 4,67:1 und bleibt genauso zurueckhaltend. */
+  --text:#E9ECF1; --dim:#9BA5B2; --faint:#767F8C;
+  /* EIN Akzent — kein Verlauf, kein zweiter Markenton */
+  --accent:#2E8FFF; --accent-soft:rgba(46,143,255,.10); --accent-line:rgba(46,143,255,.34);
+  /* Diese drei tragen Bedeutung und werden nie als Dekoration verwendet */
+  --good:#35BE87; --warn:#DDA24C; --bad:#E4636F;
+  /* Kompatibilitaet: Das EN-Woerterbuch und Alt-Markup referenzieren --teal
+     und --grad noch. Beide zeigen jetzt auf den einen Akzent statt auf einen
+     Verlauf — dadurch bleibt die englische Fassung unveraendert lauffaehig. */
+  --teal:#2E8FFF; --grad:#2E8FFF;
+  --onacc:#08111C; --accent-hov:#4CA2FF; --nav:rgba(14,17,22,.92);
+  --mono:'JetBrains Mono',ui-monospace,SFMono-Regular,monospace;
+  --r-s:6px; --r-m:10px; --r-l:14px;
+}
+/* Der helle Satz (UI-Umbau, Entwurf B2) — WOERTLICH die Werte von C_HELL in app.html,
+   damit Startseite und Rechner auch im Hellen wie EIN Produkt wirken. Der Akzent ist
+   eine Stufe tiefer (#1273E6): #2E8FFF kommt auf Weiss nur auf 3,2:1 (WCAG). */
+:root[data-theme="hell"]{
+  --bg:#EEF1F6; --card:#FFFFFF; --card2:#F6F8FB; --menu-schatten:0 12px 30px rgba(16,24,40,.14);
+  --line:#E3E8F0; --line2:#C6D0DD;
+  --text:#1C2733; --dim:#46566A; --faint:#5B6B7E;
+  --accent:#1273E6; --accent-soft:rgba(18,115,230,.10); --accent-line:rgba(18,115,230,.34);
+  --good:#177A4C; --warn:#A94E08; --bad:#C9271B;
+  --teal:#1273E6; --grad:#1273E6;
+  --onacc:#FFFFFF; --accent-hov:#0E63CC; --nav:rgba(255,255,255,.92);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+section[id],header[id]{scroll-margin-top:96px}
+body{margin:0;background:var(--bg);color:var(--text);
+  font-family:'Archivo',ui-sans-serif,system-ui,-apple-system,sans-serif;
+  font-weight:400;line-height:1.55;overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+h1,h2,h3{font-weight:700;letter-spacing:-.021em;line-height:1.16;margin:0}
+/* Zahlen und Masse laufen ueberall in gleicher Breite — sonst zappeln Tabellen */
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* Sichtbarer Fokus fuer Tastatur- und Screenreader-Bedienung */
+a:focus-visible,button:focus-visible,summary:focus-visible,textarea:focus-visible{
+  outline:2px solid var(--accent);outline-offset:3px;border-radius:var(--r-s)}
+
+/* --- Flaechen: Tiefe entsteht durch Kante und Helligkeit, nicht durch Unschaerfe --- */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-l)}
+a.card{text-decoration:none;display:block;transition:border-color .14s,background-color .14s}
+a.card:hover{border-color:var(--line2);background:var(--card2)}
+
+/* Die Namen grad-text/grad-bg bleiben (das EN-Woerterbuch setzt sie per innerHTML),
+   tragen aber keinen Verlauf mehr — nur noch den einen Akzent. */
+.grad-text{color:var(--accent);-webkit-text-fill-color:var(--accent)}
+.grad-bg{background:var(--accent)}
+
+/* --- Schaltflaechen --- */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
+  font-weight:600;border-radius:var(--r-m);cursor:pointer;white-space:nowrap;
+  text-decoration:none;transition:background-color .14s,border-color .14s,color .14s}
+.btn-primary{background:var(--accent);color:var(--onacc);border:1px solid var(--accent)}
+.btn-primary:hover{background:var(--accent-hov);border-color:var(--accent-hov)}
+.btn-ghost{background:transparent;border:1px solid var(--line2);color:var(--text)}
+.btn-ghost:hover{background:var(--card2);border-color:var(--faint)}
+
+/* --- Bewegung: einmal beim Erscheinen, kurz, nur nach oben --- */
+.reveal{opacity:0;transform:translateY(10px);transition:opacity .42s ease,transform .42s ease}
+.reveal.in{opacity:1;transform:none}
+
+/* Traegt den Namen aus dem EN-Woerterbuch weiter, pulsiert aber nicht mehr:
+   ein Punkt, der nichts misst, darf auch nicht so tun als wuerde er es. */
+.live-dot{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--accent)}
+
+/* --- Kopfleiste --- */
+.glass-nav{background:var(--nav);border:1px solid var(--line)}
+.glass-nav.scrolled{background:var(--bg);border-color:var(--line2)}
+.navlink{color:var(--dim);font-size:14px;font-weight:500;transition:color .14s;text-decoration:none}
+.navlink:hover{color:var(--text)}
+/* Sprachumschalter — dieselbe Form wie im Rechner: ein weiches Segmentfeld,
+   keine Flaggen. Eine Flagge bezeichnet ein Land, keine Sprache; der Partner in
+   Rotterdam oder Singapur liest Englisch, ist aber weder Brite noch Amerikaner.
+   Ohne die beiden bunten Fahnen ist die Navigationsleiste ausserdem wieder
+   einfarbig, und "Tool oeffnen" bleibt das einzige gefuellte Element darin. */
+/* Sprachwahl als Aufklapp-Menue (25.11.26, Jarek: drei Knoepfe nebeneinander "sehen ultra
+   weird aus" -- und mit jeder weiteren Sprache waere die Reihe laenger geworden). Ein Knopf
+   zeigt die aktuelle Sprache, darunter klappt die Liste mit vollen Namen auf. <details>
+   braucht dafuer kein Skript; Klick daneben und Esc schliessen es (unten, drei Zeilen). */
+.langmenu{position:relative}
+.langmenu summary{list-style:none;display:flex;align-items:center;gap:6px;padding:6px 9px;border-radius:8px;
+  background:var(--card2);border:1px solid var(--line);font-size:11px;font-weight:700;line-height:1;
+  color:var(--dim);cursor:pointer;user-select:none;transition:color .15s}
+.langmenu summary::-webkit-details-marker{display:none}
+.langmenu summary:hover,.langmenu[open] summary{color:var(--text)}
+.langmenu[open] summary{box-shadow:inset 0 0 0 1px var(--accent-line)}
+.langmenu .langpfeil{transition:transform .15s}
+.langmenu[open] .langpfeil{transform:rotate(180deg)}
+.langlist{position:absolute;top:calc(100% + 6px);right:0;z-index:60;min-width:148px;padding:4px;border-radius:8px;
+  display:flex;flex-direction:column;gap:2px;background:var(--card);border:1px solid var(--line2);box-shadow:var(--menu-schatten)}
+.langbtn{display:block;padding:8px 10px;border-radius:5px;font-size:13px;font-weight:500;line-height:1.2;
+  color:var(--dim);background:transparent;cursor:pointer;text-decoration:none;white-space:nowrap;
+  transition:color .15s,background-color .15s}
+.langbtn:hover{text-decoration:none;background:var(--card2)}
+/* Groessere Variante fuers Mobilmenue: dort ist mehr Platz und der Finger braucht ihn.
+   Die Liste oeffnet dort nach links buendig -- der Knopf steht am linken Rand. */
+.langmenu-lg summary{padding:9px 12px;font-size:13px}
+.langmenu-lg .langlist{left:0;right:auto}
+.langmenu-lg .langbtn{padding:10px 12px}
+/* Hell/Dunkel-Umschalter: gleiche Pille wie der Sprachumschalter. Der aktive Knopf
+   haengt REIN am data-theme des <html> — kein Zustand im Skript noetig. */
+.themaswitch{display:flex;gap:2px;padding:3px;border-radius:8px;background:var(--card2);border:1px solid var(--line)}
+.themabtn{display:flex;align-items:center;justify-content:center;width:26px;height:22px;border-radius:5px;
+  color:var(--faint);background:transparent;border:0;cursor:pointer;padding:0;transition:color .15s,background-color .15s}
+:root:not([data-theme="hell"]) .themabtn[data-thema="dunkel"],
+:root[data-theme="hell"] .themabtn[data-thema="hell"]{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.18)}
+/* Hinweis fuer englischsprachige Besucher. Bewusst ein Angebot statt automatischem
+   Umschalten: dieselbe Adresse muss immer dieselbe Sprache zeigen, sonst raet Google
+   sich die Sprache der Startseite zusammen. Unten angesetzt, weil die Navigation oben
+   fixiert ist. */
+.langbar{display:none;position:fixed;left:12px;right:12px;margin:0 auto;width:max-content;bottom:18px;z-index:60;
+  align-items:center;gap:12px;padding:10px 14px;border-radius:10px;
+  background:var(--card2);border:1px solid var(--line2);box-shadow:0 8px 24px rgba(0,0,0,.45);
+  font-size:13.5px;color:var(--dim);max-width:calc(100vw - 24px)}
+.langbar.on{display:flex}
+.langbar a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.langbar a:hover{text-decoration:underline}
+.langbar button{color:var(--faint);background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 2px}
+.langbar button:hover{color:var(--text)}
+.langbtn.on{color:var(--text);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent-line);font-weight:600;cursor:default}
+.langbtn:hover{color:var(--text)}
+
+/* Die Marke baut sich beim Laden auf: erst die beiden Seitenflaechen, dann der Deckel.
+   Dieselbe Idee wie vorher (Ladung geht rein), jetzt am richtigen Zeichen — die drei
+   Flaechen des Wuerfels sind das Markenzeichen aus favicon.svg und logo-icon.svg.
+   Die Regel fuer reduzierte Bewegung weiter unten schaltet das automatisch ab. */
+@keyframes clface{from{opacity:0;transform:translateY(2.4px)}to{opacity:1;transform:none}}
+.cl-face{transform-box:fill-box;animation:clface .42s cubic-bezier(.2,.8,.2,1) both}
+.cl-face.f2{animation-delay:.08s}.cl-face.f3{animation-delay:.16s}
+
+/* --- Kleinteile --- */
+.eyebrow{font-size:12.5px;font-weight:600;color:var(--faint);letter-spacing:0}
+.feature-ic{width:34px;height:34px;border-radius:var(--r-s);display:flex;align-items:center;
+  justify-content:center;border:1px solid var(--line2);color:var(--accent)}
+details>summary{list-style:none;cursor:pointer}
+details>summary::-webkit-details-marker{display:none}
+details[open] .faq-plus{transform:rotate(45deg)}
+.faq-plus{transition:transform .18s;color:var(--faint);font-weight:400}
+/* ===== Tool-Showcase: drei Karten, je ein Schritt des Ablaufs ===== */
+.sc-grid{margin-top:40px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+@media (max-width:900px){.sc-grid{grid-template-columns:1fr}}
+.sc-vig{background:var(--card);border:1px solid var(--line);border-radius:var(--r-l);
+  overflow:hidden;display:flex;flex-direction:column;transition:border-color .16s}
+.sc-vig:hover{border-color:var(--line2)}
+.sc-visual{height:230px;position:relative;background:var(--bg);border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;overflow:hidden}
+.sc-vig-body{padding:18px 20px 20px}
+.sc-vig-h{margin:0;font-size:17px;font-weight:600;letter-spacing:-.015em}
+.sc-vig-p{margin:7px 0 0;font-size:13.5px;line-height:1.6;color:var(--dim)}
+.sc-tag{position:absolute;top:12px;left:14px;font-size:11px;font-weight:500;color:var(--faint);
+  border:1px solid var(--line);border-radius:var(--r-s);padding:3px 8px;background:var(--card);z-index:3}
+/* Karte 1 · Eingabe — Monospace hier bewusst: das sind echte Masse */
+.sc-form{width:82%;display:flex;flex-direction:column;gap:8px}
+.sc-fm-row{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--r-s);background:var(--card2);padding:9px 12px}
+.sc-ic{width:14px;height:14px;border-radius:3px;flex:none}
+.sc-nm{font-size:12.5px;font-weight:500;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-dims{font-family:var(--mono);font-size:11px;color:var(--dim);white-space:nowrap;font-variant-numeric:tabular-nums}
+.sc-qty{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums}
+.sc-paste{border:1px dashed var(--line2);border-radius:var(--r-s);padding:8px 12px;display:flex;align-items:center;gap:8px;font-size:11px;color:var(--faint)}
+.sc-paste b{color:var(--dim);font-weight:600;white-space:nowrap}
+/* Karte 2 · Ergebnis-Zeile */
+.sc-pill{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:inline-flex;
+  align-items:center;gap:7px;font-family:var(--mono);font-size:10.5px;font-weight:500;padding:5px 10px;
+  border-radius:var(--r-s);background:var(--card);border:1px solid var(--line);color:var(--dim);
+  white-space:nowrap;z-index:3;font-variant-numeric:tabular-nums}
+.sc-pill-d{width:5px;height:5px;border-radius:50%;background:var(--good)}
+/* Karte 3 · Teilen & PDF */
+.sc-share{width:82%;display:flex;flex-direction:column;gap:10px;align-items:center}
+.sc-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line2);background:var(--card2);
+  border-radius:var(--r-s);padding:8px 13px;font-family:var(--mono);font-size:10.5px;color:var(--dim);max-width:100%}
+.sc-lk{color:var(--text)}
+/* Das PDF ist bewusst weiss: es ist ein Ausdruck, kein Bildschirmelement */
+.sc-pdf{display:flex;gap:12px;border-radius:var(--r-s);background:#fff;color:#0b1320;padding:12px 14px;width:100%}
+.sc-pdf-txt{flex:1;min-width:0}
+.sc-pdf-h{font-weight:700;font-size:11.5px;letter-spacing:-.01em}
+.sc-l{height:5px;border-radius:2px;background:#dbe2ec;margin-top:6px}
+.sc-l.s{width:70%}.sc-l.xs{width:45%}
+.sc-pdf-meta{margin-top:8px;font-size:9px;color:#8b96a6}
+.sc-qr{width:56px;height:56px;flex:none;display:grid;grid-template-columns:repeat(7,1fr);grid-template-rows:repeat(7,1fr);gap:1.5px;padding:4px;background:#fff;border:1px solid #dbe2ec;border-radius:4px}
+.sc-qr i{background:#0b1320;border-radius:1px}
+.sc-qr i.o{background:transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:5px}
+::-webkit-scrollbar-thumb:hover{background:var(--faint)}
+/* --- Hero-Animation "Re-Solve" (clh-*) ---
+   Die Animation selbst bleibt: sie zeigt, was das Werkzeug tut (laden → passt
+   nicht → groesserer Container → passt). Was weggefallen ist, ist die Deko
+   drumherum — Schweben, Glueh-Schatten, Weichzeichner. */
+.clh-stage{position:relative;width:100%;aspect-ratio:1.18/1;min-height:380px}
+@media(max-width:920px){.clh-stage{aspect-ratio:1.05/1}}
+/* Auf dem Telefon MUSS die Mindesthoehe weg. Zusammen mit dem Seitenverhaeltnis
+   bestimmt sie naemlich die BREITE: 380 px hoch bei 1,05 macht 399 px breit — mehr,
+   als ein 390 px schmales Telefon hergibt. Die Buehne hat damit die ganze Startseite
+   seitlich hinausgeschoben, auf jedem Geraet unter rund 440 px. Ohne Mindesthoehe
+   folgt die Breite der Spalte und die Hoehe dem Verhaeltnis, wie es gedacht war. */
+@media(max-width:560px){.clh-stage{min-height:0}}
+#clhScene{position:absolute;inset:0;width:100%;height:100%;display:none}
+.clh-poster{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:6% 4%}
+/* Statuszeile: sagt in Worten, was die Animation gerade zeigt */
+.clh-status{display:flex;align-items:center;gap:12px;max-width:480px;
+  border:1px solid var(--line);border-radius:var(--r-m);padding:11px 13px;
+  background:var(--card);transition:border-color .3s}
+.clh-status .clh-ic{width:26px;height:26px;border-radius:var(--r-s);display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;font-weight:600;font-size:14px;transition:background-color .3s}
+.clh-status .clh-txt{font-size:13.5px;font-weight:600;line-height:1.3;transition:color .3s}
+.clh-status .clh-meta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* ===== Startseite nach dem Umbau (01.11.26): weniger Kaesten, mehr Luft =====
+   Jarek: "wirkt ein bisschen packed". Statt neun gleich lauter Abschnitte mit Karten
+   gibt es jetzt Linien, Listen und ein einziges farbiges Band (Stevie). */
+
+/* Kopf auf dem Telefon: Sprach- und Theme-Schalter sitzen im Menue. Eigene Regel
+   statt Tailwinds "hidden sm:flex" -- .langswitch{display:flex} steht weiter oben und
+   hat je nach Reihenfolge gegen "hidden" gewonnen; dann wurde "Tool oeffnen" abgeschnitten. */
+@media(max-width:639px){.nav-sm-hide{display:none!important}}
+.themaswitch-lg .themabtn{width:40px;height:32px;border-radius:6px}
+
+/* Standbild der Buehne (Telefon, reduzierte Bewegung): Farben aus den Variablen */
+.clh-poster .pp-c{stroke:var(--good)}
+.clh-poster .pp-b rect{fill:var(--accent);stroke:var(--card)}
+.clh-poster .pp-g{stroke:var(--line2)}
+/* Telefon: dort laeuft keine 3D-Animation, nur das Standbild. Die Buehne wird so flach wie
+   das Bild, und die Statuszeile faellt weg -- sie beschreibt eine Animation, die hier nicht laeuft. */
+@media(max-width:560px){.clh-stage{aspect-ratio:1.9/1}.clh-status{display:none}}
+
+/* Die drei Schritte auf dem Telefon: nebeneinander zum Wischen statt drei Bildschirme
+   untereinander. Die naechste Karte schaut rechts hervor, damit man sieht, dass es weitergeht. */
+@media(max-width:560px){
+  .sc-grid{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:12px;
+    margin-left:-20px;margin-right:-20px;padding:0 20px 6px;scroll-padding:0 20px;scrollbar-width:none}
+  .sc-grid::-webkit-scrollbar{display:none}
+  .sc-vig{flex:0 0 84%;scroll-snap-align:start}
+}
+
+/* Kennzahlen: eine Leiste zwischen zwei Linien statt drei Karten */
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.kpi{display:flex;align-items:baseline;gap:14px;padding:20px 22px}
+.kpi+.kpi{border-left:1px solid var(--line)}
+.kpi>.mono{min-width:2ch}
+@media(max-width:820px){.kpis{grid-template-columns:1fr}.kpi{padding:16px 4px}.kpi+.kpi{border-left:0;border-top:1px solid var(--line)}}
+
+/* "Ausserdem drin": Funktionen als ruhige Liste, Symbol links, keine Karte */
+.feat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:26px 36px}
+@media(max-width:900px){.feat-row{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.feat-row{grid-template-columns:1fr;gap:20px}}
+.feat{display:flex;gap:14px;align-items:flex-start}
+.feat .feature-ic{flex:none}
+.hero-trust span+span::before{content:"·";margin:0 9px;color:var(--line2)}
+/* Der Suchbegriff steht IN der Hauptueberschrift (Suchmaschinen gewichten die h1), aber
+   leise darueber -- der Haken "11 Paletten statt 8" bleibt die grosse Zeile. */
+.hero-kicker{display:block;font-size:15px;line-height:1.35;font-weight:600;letter-spacing:0;color:var(--accent);margin-bottom:14px}
+
+/* Stevie-Band: Stevie-Gelb in beiden Themen, Tinte darauf (wie im Vorstellvideo) */
+.sv-band{background:#FFB020;color:#1a0f08}
+.sv-band h2{color:#1a0f08}
+.sv-dim{color:rgba(26,15,8,.6)}
+.sv-ok{color:#1a0f08;font-weight:700;margin-right:2px}
+.btn-ink{background:#1a0f08;color:#FFF7E6;border:1px solid #1a0f08}
+.btn-ink:hover{background:#3a2614;border-color:#3a2614}
+.btn-ink:focus-visible{outline-color:#1a0f08}
+.sv-card{background:#FFF8EA;border-radius:22px;box-shadow:0 1px 0 rgba(90,50,0,.08),0 24px 48px -20px rgba(90,50,0,.45)}
+.sv-q{background:#1273E6;color:#fff}
+.sv-a{background:#fff;color:#1a0f08;border:1px solid rgba(26,15,8,.1)}
+.sv-chip{display:inline-block;background:#E3F4EA;color:#177A4C}
+
+/* Werkzeuge: zwei Reiter, ein Kasten */
+.tabs{display:inline-flex;gap:2px;padding:4px;border-radius:12px;background:var(--card2);border:1px solid var(--line)}
+.tab{border:0;background:transparent;color:var(--dim);font:inherit;font-size:14px;font-weight:600;
+  padding:8px 16px;border-radius:9px;cursor:pointer;transition:color .14s,background-color .14s}
+.tab:hover{color:var(--text)}
+.tab[aria-selected="true"]{background:var(--card);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.16)}
+.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media(max-width:420px){.tab{padding:8px 11px;font-size:13px}}
+
+/* FAQ und Container-Wissen: Listen mit Trennlinien */
+.faq-list{border-top:1px solid var(--line)}
+.faq-list .faq-i{border-bottom:1px solid var(--line);padding:16px 2px}
+.wlist{border-top:1px solid var(--line)}
+.wlist a{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 2px;
+  border-bottom:1px solid var(--line);text-decoration:none;transition:background-color .14s}
+.wlist a:hover h3{color:var(--accent)!important}
+
+/* Wer im Betriebssystem weniger Bewegung eingestellt hat, bekommt keine. */
+@media (prefers-reduced-motion: reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;
+    transition-duration:.01ms !important}
+  .reveal{opacity:1;transform:none}
+}
+
+/* ── CBM-Schnellrechner (#cbm): dieselben Flaechen wie die Karten der Seite ── */
+.cbmw .cbm-calc-zeile{display:grid;grid-template-columns:repeat(5,1fr) 28px;gap:10px;align-items:end;padding:6px 0}
+.cbmw .field{display:flex;flex-direction:column;gap:5px}
+.cbmw label{font-size:11.5px;color:var(--faint)}
+.cbmw input{font-family:var(--mono,monospace);font-size:14px;color:var(--text);background:var(--card2);border:1px solid var(--line2);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.cbmw input:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.cbmw .cbm-weg{border:0;background:var(--card2);color:var(--dim);border-radius:8px;height:37px;cursor:pointer;font-size:15px}
+.cbmw .cbm-calc-fuss{display:flex;gap:12px;align-items:center;margin-top:12px;flex-wrap:wrap}
+.cbmw .cbm-add{border:0;background:var(--card2);color:var(--text);border-radius:8px;padding:9px 14px;cursor:pointer;font-size:13px;font-weight:600}
+.cbmw .cbm-open{margin-left:auto;color:var(--accent);font-size:13px;font-weight:600;text-decoration:none}
+.cbmw .cbm-calc-result{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:15px;color:var(--dim)}
+.cbmw .cbm-calc-result b{color:var(--text);font-family:var(--mono,monospace);font-weight:700}
+@media(max-width:560px){.cbmw .cbm-calc-zeile{grid-template-columns:repeat(3,1fr)}.cbmw .cbm-weg{grid-column:3;justify-self:end;width:37px}}
+
+/* Einfuegefeld: Platzhalter klar als Platzhalter, nicht wie fertiger Inhalt */
+#impPaste::placeholder{color:var(--faint);opacity:1}
+.imp-demo{border:0;background:none;padding:0;color:var(--dim);font-size:11.5px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.imp-demo:hover{color:var(--text)}
+</style>
+</head>
+<body>
+<!-- Sprachhinweis: wird nur eingeblendet, wenn der Browser nicht auf Deutsch steht
+     und der Besucher noch nie selbst umgeschaltet hat. Der Text ist fest englisch —
+     er richtet sich ja gerade an Leute, die kein Deutsch lesen. -->
+<div id="langbar" class="langbar" role="region" aria-label="Language">
+  <span>This page is available in English.</span>
+  <a href="/en/" hreflang="en" data-lang="en">Switch to English →</a>
+  <button id="langbarX" type="button" aria-label="Dismiss">&times;</button>
+</div>
+<!-- NAV -->
+<div class="fixed top-3 inset-x-0 z-50 px-2 sm:px-3">
+  <nav id="nav" class="max-w-6xl mx-auto flex items-center justify-between gap-3 rounded-xl glass-nav pl-2 sm:pl-3.5 pr-1 sm:pr-2 py-2">
+    <a href="#top" class="brandlogo flex items-center gap-2.5" style="text-decoration:none;color:var(--text)">
+      <span class="w-8 h-8 rounded-md grad-bg flex items-center justify-center">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polygon class="cl-face f3" points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon class="cl-face f1" points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon class="cl-face f2" points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg>
+      </span>
+      <span class="font-bold text-[16px] tracking-tight">Container<span class="grad-text">Load</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-1">
+      <a href="#demo" class="navlink px-3 py-1.5 rounded-md">Tool</a>
+      <a data-i18n="nav_stevie" href="#stevie" class="navlink px-3 py-1.5 rounded-md">Stevie (AI)</a>
+      <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink px-3 py-1.5 rounded-md">Containerkennis</a>
+      <a href="#faq" class="navlink px-3 py-1.5 rounded-md">FAQ</a>
+    </div>
+    <div class="flex items-center gap-1 sm:gap-2">
+      <!-- Echte Links, keine Knoepfe: nur so kann eine Suchmaschine die englische
+           Fassung ueberhaupt finden. Der Klick wird abgefangen und schaltet ohne
+           Neuladen um, die Adresse zieht per replaceState mit. -->
+      <div class="themaswitch nav-sm-hide" role="group">
+        <button type="button" data-thema="hell" class="themabtn" aria-label="Lichte modus" title="Lichte modus"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
+        <button type="button" data-thema="dunkel" class="themabtn" aria-label="Donkere modus" title="Donkere modus"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
+      <details class="langmenu nav-sm-hide">
+        <summary aria-label="Sprache / Language"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span class="langcur">NL</span><svg class="langpfeil" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+        <div class="langlist">
+          <a data-lang="de" href="/" hreflang="de" class="langbtn">Deutsch</a>
+          <a data-lang="en" href="/en/" hreflang="en" class="langbtn">English</a>
+          <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
+          <a data-lang="fr" href="/fr/" hreflang="fr" class="langbtn">Français</a>
+          <a data-lang="zh" href="/zh/" hreflang="zh" class="langbtn">中文</a>
+          <a data-lang="nl" href="/nl/" hreflang="nl" class="langbtn on">Nederlands</a>
+        </div>
+      </details>
+      <a data-i18n="nav_open" href="/app?lang=nl" class="btn btn-primary text-[13px] px-2 sm:px-4 py-2">Tool openen</a>
+      <button id="burger" class="md:hidden p-1.5" style="color:var(--dim)">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </nav>
+  <div id="mobileMenu" class="md:hidden hidden max-w-6xl mx-auto mt-2 rounded-xl glass-nav px-4 py-3">
+    <div class="flex flex-col gap-0.5">
+      <a href="#demo" class="navlink py-2">Tool</a>
+      <a data-i18n="nav_stevie" href="#stevie" class="navlink py-2">Stevie (AI)</a>
+      <a data-i18n="nav_ratgeber" href="#ratgeber" class="navlink py-2">Containerkennis</a>
+      <a href="#faq" class="navlink py-2">FAQ</a>
+      <div class="flex items-center gap-2 mt-2 pt-2.5" style="border-top:1px solid var(--line)">
+        <details class="langmenu langmenu-lg">
+          <summary aria-label="Sprache / Language"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/></svg><span class="langcur">NL</span><svg class="langpfeil" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></summary>
+          <div class="langlist">
+            <a data-lang="de" href="/" hreflang="de" class="langbtn">Deutsch</a>
+            <a data-lang="en" href="/en/" hreflang="en" class="langbtn">English</a>
+            <a data-lang="es" href="/es/" hreflang="es" class="langbtn">Español</a>
+            <a data-lang="fr" href="/fr/" hreflang="fr" class="langbtn">Français</a>
+            <a data-lang="zh" href="/zh/" hreflang="zh" class="langbtn">中文</a>
+            <a data-lang="nl" href="/nl/" hreflang="nl" class="langbtn on">Nederlands</a>
+          </div>
+        </details>
+        <div class="themaswitch themaswitch-lg ml-auto" role="group">
+        <button type="button" data-thema="hell" class="themabtn" aria-label="Lichte modus" title="Lichte modus"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4m0-14.2-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg></button>
+        <button type="button" data-thema="dunkel" class="themabtn" aria-label="Donkere modus" title="Donkere modus"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HERO: Ueberschrift, ein Satz, ein Knopf. Rechts die Animation mit EINER Statuszeile
+     darunter -- die schwebenden Pillen und die Schrittleiste sind weg, sie erzaehlten
+     dasselbe ein zweites und drittes Mal (Umbau 01.11.26, Jareks Befund "zu packed"). -->
+<header id="top" class="relative z-10 max-w-7xl mx-auto px-5 pt-32 md:pt-40 pb-10">
+  <div class="grid lg:grid-cols-2 gap-10 lg:gap-14 items-center">
+    <div class="text-center lg:text-left">
+      <h1 data-i18n="hero_h1" class="font-bold leading-[1.04] tracking-tight text-[38px] sm:text-[44px] md:text-[60px]"><span class="hero-kicker">3D-laadcalculator voor containers en vrachtwagens</span>11 pallets in plaats van 8<br><span style="color:var(--dim)">in dezelfde container.</span></h1>
+      <p data-i18n="hero_sub" class="mt-6 text-[17px] md:text-[19px] leading-relaxed max-w-[540px] mx-auto lg:mx-0" style="color:var(--dim)">De gratis 3D-calculator voor containerbelading draait pallets waar dat past, en dan klopt een 20ft met de tabellen van expediteurs. Voer de maten in, controleer in 3D en deel het als link.</p>
+      <div class="mt-9 flex flex-wrap items-center gap-x-7 gap-y-3 justify-center lg:justify-start">
+        <a data-i18n="hero_cta1" href="/app?lang=nl" class="btn btn-primary text-[16px] px-7 py-3.5">Tool gratis openen</a>
+        <a data-i18n="hero_cta2" href="#demo" class="navlink text-[15px] font-semibold">Even rondkijken <span style="color:var(--faint)">↓</span></a>
+      </div>
+      <!-- Die drei Zusagen bleiben, nur leiser: ein bezahltes Produkt kann sie nicht geben
+           (Trial-Limit, Anmeldung fuer den Empfaenger, Einwilligungsbanner). -->
+      <div data-i18n="hero_trust" class="hero-trust mt-6 flex flex-wrap items-center gap-y-1 justify-center lg:justify-start text-[13px]" style="color:var(--faint)"><span>Gratis, onbeperkt</span><span>Zonder account</span><span>Geen cookies, geen banner</span></div>
+    </div>
+    <div>
+      <div class="clh-stage reveal">
+      <!-- SVG-Standbild (Telefon und reduzierte Bewegung): Farben aus den Variablen,
+           damit es im Hellen nicht als dunkler Klotz dasteht -->
+      <div class="clh-poster" id="clhPoster" aria-hidden="true">
+        <svg viewBox="95 125 435 190" width="100%" height="100%" preserveAspectRatio="xMidYMid meet">
+          <g class="pp-c" fill="none" stroke-width="2" stroke-linejoin="round">
+            <path d="M120 300 L120 175 L470 175 L470 300 Z"/>
+            <path d="M120 175 L165 140 L515 140 L470 175"/>
+            <path d="M470 175 L515 140 L515 265 L470 300"/>
+          </g>
+          <g class="pp-b" stroke-width="1.6">
+            <rect x="150" y="235" width="62" height="60"/>
+            <rect x="218" y="235" width="62" height="60"/>
+            <rect x="150" y="200" width="62" height="34"/>
+            <rect x="286" y="235" width="62" height="60"/>
+            <rect x="218" y="200" width="62" height="34"/>
+          </g>
+          <line class="pp-g" x1="105" y1="300" x2="500" y2="300" stroke-width="2"/>
+        </svg>
+      </div>
+      <canvas id="clhScene"></canvas>
+      </div>
+      <!-- Statuszeile: laeuft synchron zur 3D-Animation (Texte vom clh-Modul gesetzt, kein data-i18n) -->
+      <div class="clh-status mx-auto mt-3" id="clhStatus" style="border-color:var(--line)">
+        <div class="clh-ic" id="clhStatusIc" style="background:var(--good);color:var(--onacc)">✓</div>
+        <div>
+          <div class="clh-txt" id="clhStatusTxt" style="color:var(--good)">Alles verstaut</div>
+          <div class="clh-meta" id="clhStatusMeta">1× 40′ GP · gelöst</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Kennzahlen als schlanke Leiste statt drei Karten. Die Zahlen kommen aus PRESETS,
+       VEHICLES und CARRIERS in app.html; test/startseite-zahlen.test.mjs rechnet sie nach. -->
+  <div class="kpis mt-16 reveal">
+    <div class="kpi"><div class="mono font-bold tracking-tight text-[28px] leading-none" style="color:var(--text)">18</div><div data-i18n="kpi1" class="text-[13.5px] leading-snug" style="color:var(--dim)">Container- en voertuigtypen: open top, flat rack, platform en reefer inbegrepen.</div></div>
+    <div class="kpi"><div class="mono font-bold tracking-tight text-[28px] leading-none" style="color:var(--text)">8</div><div data-i18n="kpi2" class="text-[13.5px] leading-snug" style="color:var(--dim)">Rederijen met echte binnenmaten, tot op de millimeter, elk met bron.</div></div>
+    <div class="kpi"><div class="mono font-bold tracking-tight text-[28px] leading-none" style="color:var(--text)">0</div><div data-i18n="kpi3" class="text-[13.5px] leading-snug" style="color:var(--dim)">Registraties. Het plan gaat als link de deur uit en opent direct in 3D.</div></div>
+  </div>
+</header>
+
+<!-- SO GEHT'S: die drei Schritte bleiben der staerkste Block. Darunter die Funktionen als
+     ruhige Liste -- vorher sechs grosse Karten in einem eigenen Abschnitt, die die drei
+     Schritte, Stevie und den Import ein zweites Mal erzaehlten. -->
+<section id="demo" class="relative z-10 max-w-7xl mx-auto px-5 py-20">
+  <div class="reveal text-center max-w-2xl mx-auto mb-4">
+    <div data-i18n="tool_ey" class="eyebrow mb-3">De calculator</div>
+    <h2 data-i18n="tool_h" class="font-bold text-[32px] md:text-[44px] tracking-tight">Zo werkt de calculator</h2>
+    <p data-i18n="tool_p" class="mt-3 text-[16px]" style="color:var(--dim)">Invoeren, in 3D controleren, delen. Zonder account en zonder iets te installeren.</p>
+  </div>
+
+  <div class="sc-grid">
+
+    <!-- 1 · Eingabe -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc1_tag">Invoer</span>
+        <div class="sc-form">
+          <div class="sc-fm-row">
+            <span class="sc-ic" style="background:#2E8FFF"></span>
+            <span class="sc-nm" data-i18n="sc1_row1">Europallet</span>
+            <span class="sc-dims">120×80×105</span>
+            <span class="sc-qty">×22</span>
+          </div>
+          <div class="sc-fm-row">
+            <span class="sc-ic" style="background:#2E8FFF"></span>
+            <span class="sc-nm" data-i18n="sc1_row2">Kist, motoronderdelen</span>
+            <span class="sc-dims">240×110×95</span>
+            <span class="sc-qty">×2</span>
+          </div>
+          <div class="sc-paste">⚡ <b>Excel / Text</b>&nbsp;<span data-i18n="sc1_paste">· plak je paklijst</span></div>
+        </div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc1_h">Voer de maten in</h3>
+        <p class="sc-vig-p" data-i18n="sc1_p">Voer de colli één voor één in of plak je lijst uit Excel. Aantal, maten en gewicht, alles in centimeters.</p>
+      </div>
+    </div>
+
+    <!-- 2 · 3D-Ergebnis -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc2_tag">3D-resultaat</span>
+        <svg id="sc-iso" viewBox="0 0 520 300" width="94%" style="max-height:90%" xmlns="http://www.w3.org/2000/svg"></svg>
+        <div class="sc-pill"><span class="sc-pill-d"></span><span data-i18n="sc2_pill">Alles geladen · 91% · 14,3 t</span></div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc2_h">De lading in 3D</h3>
+        <p class="sc-vig-p" data-i18n="sc2_p">Je ziet meteen hoe de lading in de container staat. Draaien, inzoomen, controleren. Bij één soort pallet klopt de berekening op de pallet nauwkeurig. Bij gemengde lading zoekt een algoritme de beste stuwage.</p>
+      </div>
+    </div>
+
+    <!-- 3 · Teilen & PDF -->
+    <div class="sc-vig reveal">
+      <div class="sc-visual">
+        <span class="sc-tag" data-i18n="sc3_tag">Delen en pdf</span>
+        <div class="sc-share">
+          <div class="sc-chip">🔗 <span class="sc-lk">containerload.io/share?c=a~120…</span></div>
+          <div class="sc-pdf">
+            <div class="sc-pdf-txt">
+              <div class="sc-pdf-h" data-i18n="sc3_pdf_h">Laadplan · 20′ GP</div>
+              <div class="sc-l"></div><div class="sc-l s"></div><div class="sc-l xs"></div>
+              <div class="sc-pdf-meta" data-i18n="sc3_pdf_meta">QR → interactief 3D-plan</div>
+            </div>
+            <div class="sc-qr" id="sc-qr"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sc-vig-body">
+        <h3 class="sc-vig-h" data-i18n="sc3_h">Delen en afdrukken</h3>
+        <p class="sc-vig-p" data-i18n="sc3_p">Geef de lading door als link. De ontvanger ziet hem meteen in 3D, zonder account. Of als pdf met een QR-code die terugleidt naar het plan.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal" style="margin-top:56px">
+    <div data-i18n="feat_ey" class="eyebrow mb-5">Ook inbegrepen</div>
+    <div class="feat-row">
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.6 21 7.2v9.6L12 21.4 3 16.8V7.2z"/><path d="M3 7.2l9 4.6 9-4.6"/><path d="M12 11.8v9.6"/></svg></div>
+      <div><h3 data-i18n="f1_h" class="font-semibold text-[15px]">3D-weergave</h3><p data-i18n="f1_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Draaien, inzoomen, controleren: stuk voor stuk.</p></div>
+    </div>
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="3" width="7.6" height="7.6" rx="1"/><rect x="3" y="13.4" width="7.6" height="7.6" rx="1"/><rect x="13.4" y="13.4" width="7.6" height="7.6" rx="1"/></svg></div>
+      <div><h3 data-i18n="f2_h" class="font-semibold text-[15px]">Op de pallet nauwkeurig</h3><p data-i18n="f2_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Gedraaide patronen: <b style="color:var(--text)">25 europallets in plaats van 20</b> in een 40ft.</p></div>
+    </div>
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="15.5" width="18" height="5" rx="1"/><rect x="5.5" y="9" width="6.2" height="5.2" rx="1"/><rect x="13" y="9" width="5.5" height="5.2" rx="1"/><rect x="7.5" y="3.2" width="9" height="4.6" rx="1"/></svg></div>
+      <div><h3 data-i18n="f6_h" class="font-semibold text-[15px]">Dozen op pallets</h3><p data-i18n="f6_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Van doosmaten naar lagenpatroon en aantal pallets.</p></div>
+    </div>
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8" width="8.5" height="8" rx="1"/><rect x="13" y="8" width="8.5" height="8" rx="1"/><path d="M6.75 8V5.5M17.25 8V5.5"/></svg></div>
+      <div><h3 data-i18n="f3_h" class="font-semibold text-[15px]">Meer dan één container</h3><p data-i18n="f3_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Hoeveel er nodig zijn, welke combinatie het goedkoopst is en wat waarin gaat.</p></div>
+    </div>
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12a8.5 8.5 0 1 1-2.5-6"/><path d="M20.5 3.5v6h-6"/></svg></div>
+      <div><h3 data-i18n="f4_h" class="font-semibold text-[15px]">Draai- en stapelregels</h3><p data-i18n="f4_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Per collo: niet stapelbaar, stapelbaar tot een hoogte, 90° draaibaar.</p></div>
+    </div>
+    <div class="feat">
+      <div class="feature-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v17"/><path d="M5.5 7.5h13"/><path d="M8.5 20.5h7"/><path d="M5.5 7.5 2.5 14a3 3 0 0 0 6 0z"/><path d="M18.5 7.5 21.5 14a3 3 0 0 1-6 0z"/></svg></div>
+      <div><h3 data-i18n="f5_h" class="font-semibold text-[15px]">Gewicht en laadvermogen</h3><p data-i18n="f5_p" class="mt-1 text-[13.5px] leading-snug" style="color:var(--dim)">Het laadvermogen per container, met een waarschuwing vóór overbelading.</p></div>
+    </div>
+    </div>
+  </div>
+</section>
+
+<!-- STEVIE: das gelbe Band. In beiden Themen dieselbe Flaeche -- Stevie-Gelb ist das
+     Signal der KI, wie im Rechner (STEVIE.gelb) und im Vorstellvideo. Die Texte darin
+     sind Tinte auf Gelb, nicht die Theme-Farben. -->
+<section id="stevie" class="relative z-10 sv-band">
+  <div class="max-w-7xl mx-auto px-5 py-20 md:py-24 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+    <div class="reveal">
+      <div data-i18n="st_ey" class="eyebrow mb-3" style="color:rgba(26,15,8,.72)">Nieuw · AI aan boord</div>
+      <h2 data-i18n="st_h" class="font-bold text-[40px] md:text-[56px] tracking-tight leading-[1.04]">Vraag het Stevie.<br><span class="sv-dim">De AI in de calculator.</span></h2>
+      <p data-i18n="st_p" class="mt-5 text-[16.5px] leading-relaxed max-w-[500px]" style="color:rgba(26,15,8,.8)">Hij leest paklijsten, rekent na en past je plan aan als je dat vraagt. Gerekend wordt altijd in de 3D-calculator: Stevie verzint nooit cijfers.</p>
+      <div class="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-2.5 text-[14.5px] max-w-[580px]">
+        <span data-i18n="st_c1"><span class="sv-ok">✓</span> Leest paklijsten uit tekst, Excel, foto’s en screenshots</span>
+        <span data-i18n="st_c2"><span class="sv-ok">✓</span> Rekent na, met de voorwaarden uit je vraag</span>
+        <span data-i18n="st_c3"><span class="sv-ok">✓</span> Wijzigt container, aantallen en stapelen als je dat vraagt</span>
+        <span data-i18n="st_c4"><span class="sv-ok">✓</span> Spreekt jouw taal, en Ctrl+Z draait alles terug</span>
+      </div>
+      <a data-i18n="st_cta" href="/app?lang=nl" class="btn btn-ink text-[15px] px-6 py-3 mt-8">Ontmoet Stevie in de calculator</a>
+    </div>
+    <div class="sv-card p-6 md:p-8 reveal">
+      <div class="flex justify-center pb-5">
+        <svg width="190" height="150" viewBox="0 0 190 150" fill="none" aria-hidden="true">
+          <ellipse cx="95" cy="139" rx="52" ry="7" fill="rgba(90,50,0,.16)"/>
+          <g transform="translate(35,8) scale(2.5)">
+            <path d="M11 17a13 13 0 0 1 26 0z" fill="#F5A524"/>
+            <rect x="7" y="16" width="34" height="4.5" rx="2.25" fill="#D98D1D"/>
+            <rect x="10" y="23" width="28" height="19" rx="5" fill="#165780"/>
+            <rect x="14" y="26.5" width="2" height="12" rx="1" fill="#0F3C60"/>
+            <rect x="32" y="26.5" width="2" height="12" rx="1" fill="#0F3C60"/>
+            <rect x="19" y="28" width="4" height="6.5" rx="2" fill="#BFE3FF"/>
+            <rect x="25" y="28" width="4" height="6.5" rx="2" fill="#BFE3FF"/>
+            <rect x="20.5" y="37" width="7" height="2.2" rx="1.1" fill="#BFE3FF"/>
+          </g>
+        </svg>
+      </div>
+      <div class="flex flex-col gap-2.5">
+        <div data-i18n="st_b1" class="sv-q text-[14px] leading-relaxed px-4 py-2.5" style="align-self:flex-end;max-width:88%;border-radius:16px 16px 4px 16px">Hoeveel europallets passen in een 20′ GP als ze niet stapelbaar zijn?</div>
+        <div data-i18n="st_b2" class="sv-a text-[14px] leading-relaxed px-4 py-2.5" style="align-self:flex-start;max-width:88%;border-radius:16px 16px 16px 4px">Volgens de berekening passen er 11: op de vloer, gedraaid waar dat past.</div>
+        <div style="align-self:flex-start"><span data-i18n="st_chip" class="sv-chip text-[12px] font-semibold px-2.5 py-1" style="border-radius:8px">✓ P1: max. 11 st. · niet stapelbaar</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WERKZEUGE: CBM-Rechner und Excel-Import als EIN Block mit zwei Reitern statt zwei
+     ganzer Abschnitte. Beide Inhalte stehen im Dokument (auch fuer Suchmaschinen), der
+     zweite ist nur versteckt. Das CBM-Widget ist Wort fuer Wort dasselbe wie auf den
+     Ratgeber-Seiten (test/cbm-widget.test.mjs). -->
+<section id="cbm" class="relative z-10 max-w-5xl mx-auto px-5 py-20">
+  <div class="reveal text-center max-w-2xl mx-auto">
+    <div data-i18n="cbm_ey" class="eyebrow mb-3">Hulpmiddelen</div>
+    <h2 data-i18n="cbm_h" class="font-bold text-[32px] md:text-[44px] tracking-tight leading-tight">Bereken de kubieke meters.<br><span style="color:var(--dim)">Plak een paklijst.</span></h2>
+    <div class="tabs mt-8" role="tablist">
+      <button type="button" class="tab" role="tab" id="tabCbm" aria-controls="panelCbm" aria-selected="true" data-i18n="tab_cbm">CBM-calculator</button>
+      <button type="button" class="tab" role="tab" id="tabImp" aria-controls="panelImp" aria-selected="false" tabindex="-1" data-i18n="tab_imp">Paklijst uit Excel</button>
+    </div>
+  </div>
+  <div id="panelCbm" role="tabpanel" aria-labelledby="tabCbm" class="mt-8">
+    <p data-i18n="cbm_p" class="text-[15px] text-center max-w-[620px] mx-auto" style="color:var(--dim)">Meerdere colli, CBM en gewicht tegelijk. Bij LCL telt de hoogste van de twee.</p>
+  <div class="card p-6 mt-6 cbmw">
+    <div class="cbm-calc" data-cbm-widget>
+      <div id="cbmRows"></div>
+      <div class="cbm-calc-fuss">
+        <button type="button" id="cbmAdd" class="cbm-add">+</button>
+        <a id="cbmZur3d" class="cbm-open" hidden href="/app?lang=nl"></a>
+      </div>
+      <div class="cbm-calc-result" id="cbmResult"></div>
+    </div>
+  </div>
+    <p class="mt-4 text-[13px] text-center" style="color:var(--faint)"><a data-i18n="cbm_link" href="/en/guide/how-to-calculate-cbm" class="navlink" style="text-decoration:underline">Hoe je CBM berekent, lees je in de containerkennis.</a></p>
+  <script>
+  (function(){
+    // CBM_CALC_START
+    function cbmBerechnen(l, w, h, qty) {
+      var L = Number(l), W = Number(w), H = Number(h), Q = Number(qty);
+      if (!(L > 0) || !(W > 0) || !(H > 0) || !(Q > 0)) return null;
+      var stueck = (L * W * H) / 1000000;
+      return { stueck: stueck, gesamt: stueck * Q, menge: Q };
+    }
+    function cbmSumme(zeilen) {
+      var vol = 0, stk = 0, kg = 0, alleKg = true, gueltig = 0;
+      for (var i = 0; i < zeilen.length; i++) {
+        var r = cbmBerechnen(zeilen[i].l, zeilen[i].w, zeilen[i].h, zeilen[i].qty);
+        if (!r) continue;
+        gueltig++;
+        vol += r.gesamt;
+        stk += r.menge;
+        var g = Number(zeilen[i].kg);
+        if (g > 0) kg += g * r.menge; else alleKg = false;
+      }
+      if (!gueltig) return null;
+      // Frachtpflichtig nach der Faustregel 1 cbm = 1.000 kg (W/M) -- aber nur, wenn JEDE
+      // gueltige Zeile ein Gewicht traegt. Ein halb gewogenes Maximum waere eine falsche Zahl.
+      return { vol: vol, stk: stk, kg: kg, frachtKg: alleKg ? Math.max(vol * 1000, kg) : null, zeilen: gueltig };
+    }
+    // CBM_CALC_END
+    var cbmCfg = {
+      // Texte als de/en-Paare: 'en' ist der Platz fuer die Sprache der Seite -- auf /en/ steht dort
+      // Englisch, auf jeder weiteren Sprachseite setzt der Generator die Uebersetzung ein.
+      t: function () { var L = document.documentElement.lang === 'de' ? 'de' : 'en'; return {
+        l: { de: 'L\u00e4nge (cm)', en:'Lengte (cm)' }[L],
+        w: { de: 'Breite (cm)', en:'Breedte (cm)' }[L],
+        h: { de: 'H\u00f6he (cm)', en:'Hoogte (cm)' }[L],
+        q: { de: 'St\u00fcck', en:'Aantal' }[L],
+        g: { de: 'kg/St\u00fcck \u00b7 optional', en:'kg/stuk · optioneel' }[L],
+        weg: { de: 'Position entfernen', en:'Collo verwijderen' }[L],
+        plus: { de: '+ Position', en:'+ collo' }[L],
+        stk: { de: 'Packst\u00fccke', en:'colli' }[L],
+        stk1: { de: 'Packst\u00fcck', en:'collo' }[L],
+        wm: { de: 'frachtpflichtig (W/M)', en:'tariefbepalend (W/M)' }[L],
+        leer: { de: 'L\u00e4nge, Breite und H\u00f6he eingeben. Das Volumen erscheint sofort.', en:'Voer lengte, breedte en hoogte in. Het volume verschijnt meteen.' }[L],
+        zur3d: { de: 'Im 3D-Rechner ansehen \u2192', en:'Bekijken in de 3D-calculator →' }[L]
+      }; },
+      loc: function () { return { de: 'de-DE', en:'nl-NL' }[document.documentElement.lang === 'de' ? 'de' : 'en']; },
+      qhref: function (q) { return '/app?q=' + encodeURIComponent(q) + (document.documentElement.lang === 'de' ? '' : '&lang=' + document.documentElement.lang); }
+    };
+    // CBM_UI_START
+    var rows = document.getElementById('cbmRows'), out = document.getElementById('cbmResult'),
+        add = document.getElementById('cbmAdd'), zur3d = document.getElementById('cbmZur3d'), nId = 0;
+    function feld(id, key, opts) {
+      var t = cbmCfg.t();
+      return '<div class="field"><label for="' + id + '">' + t[key] + '</label>' +
+        '<input type="number" id="' + id + '" data-k="' + key + '" inputmode="' + (opts.int ? 'numeric' : 'decimal') + '" min="' + (opts.int ? 1 : 0) + '" step="' + (opts.int ? '1' : 'any') + '"' + (opts.val ? ' value="' + opts.val + '"' : '') + (opts.ph ? ' placeholder="' + opts.ph + '"' : '') + ' /></div>';
+    }
+    function zeileNeu() {
+      var id = 'cbm' + (nId++);
+      var div = document.createElement('div');
+      div.className = 'cbm-calc-grid cbm-calc-zeile';
+      div.innerHTML =
+        feld(id + 'L', 'l', { ph: '120' }) +
+        feld(id + 'W', 'w', { ph: '80' }) +
+        feld(id + 'H', 'h', { ph: '110' }) +
+        feld(id + 'Q', 'q', { int: true, val: 1 }) +
+        feld(id + 'G', 'g', { ph: '300' }) +
+        '<button type="button" class="cbm-weg" aria-label="' + cbmCfg.t().weg + '">\u00d7</button>';
+      div.querySelector('.cbm-weg').addEventListener('click', function () { div.remove(); zeichnen(); });
+      [].forEach.call(div.querySelectorAll('input'), function (el) { el.addEventListener('input', zeichnen); });
+      rows.appendChild(div);
+    }
+    function lesen() {
+      return [].map.call(rows.querySelectorAll('.cbm-calc-zeile'), function (z) {
+        var v = {};
+        [].forEach.call(z.querySelectorAll('input'), function (el) { v[el.getAttribute('data-k')] = el.value; });
+        return { l: v.l, w: v.w, h: v.h, qty: v.q, kg: v.g };
+      });
+    }
+    function zeichnen() {
+      var t = cbmCfg.t(), loc = cbmCfg.loc();
+      // Beschriftungen der stehenden Zeilen mitziehen -- die Startseite wechselt die
+      // Sprache ohne Neuladen, und dynamische Zeilen kennt ihr Woerterbuch nicht.
+      [].forEach.call(rows.querySelectorAll('label'), function (lb) {
+        var inp = document.getElementById(lb.getAttribute('for'));
+        if (inp) lb.textContent = t[inp.getAttribute('data-k')];
+      });
+      add.textContent = t.plus;
+      var alle = rows.querySelectorAll('.cbm-calc-zeile');
+      [].forEach.call(rows.querySelectorAll('.cbm-weg'), function (b) {
+        b.setAttribute('aria-label', t.weg); b.title = t.weg;
+        b.style.visibility = alle.length > 1 ? 'visible' : 'hidden';
+      });
+      var daten = lesen();
+      var s = cbmSumme(daten);
+      if (!s) { out.textContent = t.leer; zur3d.hidden = true; return; }
+      var f3 = function (n) { return n.toLocaleString(loc, { minimumFractionDigits: 3, maximumFractionDigits: 3 }); };
+      var f0 = function (n) { return Math.round(n).toLocaleString(loc); };
+      var teile = ['<b>' + f3(s.vol) + ' m\u00b3</b>', s.stk + ' ' + (s.stk === 1 && t.stk1 ? t.stk1 : t.stk)];
+      if (s.kg > 0) teile.push(f0(s.kg) + ' kg');
+      if (s.frachtKg !== null && s.kg > 0) teile.push(t.wm + ': <b>' + f0(s.frachtKg) + ' kg</b>');
+      out.innerHTML = teile.join(' \u00b7 ');
+      // Der Sprung in den echten Rechner: dieselben Zeilen als ?q=-Import. Dort gibt es
+      // die 3D-Ansicht, die Stellplaetze und die Container-Auslastung -- nichts davon
+      // wird hier nachgebaut.
+      var qs = [];
+      daten.forEach(function (z) {
+        var r = cbmBerechnen(z.l, z.w, z.h, z.qty);
+        if (!r) return;
+        qs.push(r.menge + 'x ' + Number(z.l) + 'x' + Number(z.w) + 'x' + Number(z.h) + (Number(z.kg) > 0 ? ' ' + Number(z.kg) + 'kg' : ''));
+      });
+      zur3d.href = cbmCfg.qhref(qs.join('\n'));
+      zur3d.textContent = t.zur3d;
+      zur3d.hidden = false;
+    }
+    add.addEventListener('click', function () { zeileNeu(); zeichnen(); });
+    zeileNeu();
+    zeichnen();
+    window.__cbmNeu = zeichnen;
+    // CBM_UI_END
+  })();
+  </script>
+  </div>
+  <div id="panelImp" role="tabpanel" aria-labelledby="tabImp" class="mt-8" hidden>
+    <p data-i18n="imp_p" class="text-[15px] text-center max-w-[620px] mx-auto" style="color:var(--dim)">Selecteer je paklijst in Excel, kopieer hem en plak hem hier: de calculator vindt zelf de kolommen, maten en gewichten.</p>
+    <div class="card p-5 mt-6 max-w-3xl mx-auto">
+      <div class="flex items-center gap-2 mb-3">
+        <span data-i18n="imp_box_h" class="text-[13.5px] font-semibold">Paklijst plakken</span>
+        <button id="impDemo" data-i18n="imp_demo" type="button" class="imp-demo ml-auto">Voorbeeld invoegen</button>
+        <span data-i18n="imp_kbd" class="mono text-[11px]" style="color:var(--faint)">Ctrl+V</span>
+      </div>
+      <textarea id="impPaste" rows="6" class="w-full p-3 mono" style="background:var(--card2);border:1px solid var(--line2);border-radius:var(--r-s);color:var(--text);font-size:11.5px;line-height:1.8;resize:vertical;outline:none" placeholder="Plak hier je paklijst uit Excel …"></textarea>
+      <button id="impGo" class="btn btn-primary w-full justify-center mt-3 text-[14px] py-3" data-i18n="imp_cta" disabled style="opacity:.5;cursor:default">Openen in de 3D-calculator →</button>
+      <p id="impHintLine" data-i18n="imp_hint" class="mt-2.5 text-center text-[11.5px]" style="color:var(--faint)">wordt in de tool gecontroleerd. Maten in cm, tenzij anders aangegeven</p>
+    </div>
+  </div>
+</section>
+
+<!-- FRAGEN UND NACHSCHLAGEN nebeneinander: FAQ als ruhige Liste, das Container-Wissen
+     als Linkliste statt sechs Karten. Die Links bleiben (interne Verlinkung, GUIDE-Tabelle). -->
+<div class="relative z-10 max-w-6xl mx-auto px-5 py-20 grid lg:grid-cols-[1.25fr_1fr] gap-14 lg:gap-16">
+  <section id="faq">
+    <div class="reveal mb-4">
+      <div class="eyebrow mb-3">FAQ</div>
+      <h2 data-i18n="faq_h" class="font-bold text-[30px] md:text-[36px] tracking-tight">Veelgestelde vragen</h2>
+    </div>
+    <div class="faq-list">
+    <details class="reveal faq-i"><summary data-i18n="q1_s" class="flex items-center justify-between gap-4 font-semibold text-[15.5px]">Is de calculator echt gratis?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q1_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Ja, helemaal. De 3D-calculator, inclusief containeradvies, is gratis en werkt zonder account. Openen en beginnen.</p></details>
+    <details class="reveal faq-i"><summary data-i18n="q2_s" class="flex items-center justify-between gap-4 font-semibold text-[15.5px]">Hoe nauwkeurig is de berekening?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q2_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Bij één soort pallet rekent de tool op de pallet nauwkeurig (bijv. 11 europallets in een 20ft, zoals in de tabellen van expediteurs). Bij gemengde lading zoekt een algoritme de beste stuwage. Gewichtsverdeling en zwaartepunt worden als schatting getoond; bij de oplegger ook de lasten op koningspen en assen. Het is geen garantie voor de werkelijke gewichtsverdeling of de ladingzekering: controleer voertuiggegevens en zekering zelf.</p></details>
+    <details class="reveal faq-i"><summary data-i18n="q3_s" class="flex items-center justify-between gap-4 font-semibold text-[15.5px]">Heb ik een account nodig?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q3_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Nee. Je opent de tool en begint. Niets installeren, niets registreren.</p></details>
+    <details class="reveal faq-i"><summary data-i18n="q4_s" class="flex items-center justify-between gap-4 font-semibold text-[15.5px]">Werkt het op de telefoon?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q4_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Ja, de tool past zich aan en werkt in de browser van je telefoon. Voor het invoeren van veel colli is een groot scherm prettiger.</p></details>
+    <details class="reveal faq-i"><summary data-i18n="q5_s" class="flex items-center justify-between gap-4 font-semibold text-[15.5px]">Hoeveel dozen passen op een pallet?<span class="faq-plus text-[22px]">+</span></summary><p data-i18n="q5_a" class="mt-3 text-[14px] leading-relaxed" style="color:var(--dim)">Dat rekent de tool uit: voer doosmaten, gewicht en totaal aantal in, kies europallet (120×80) of industriepallet (120×100) en de maximale stapelhoogte. Je krijgt het lagenpatroon van boven gezien, de dozen per laag, het aantal lagen en het totale aantal pallets, inclusief de laatste, niet-volle pallet. Het werkt ook met meerdere doosmaten, gescheiden of laag voor laag op een mixpallet. De berekening is puur geometrisch: zonder verbandpatroon of ladingzekering, en het gewicht en draagvermogen van de pallet zijn richtwaarden.</p></details>
+    </div>
+  </section>
+  <section id="ratgeber">
+    <div class="reveal mb-4">
+      <div data-i18n="rg_ey" class="eyebrow mb-3">Containerkennis</div>
+      <h2 data-i18n="rg_h" class="font-bold text-[30px] md:text-[36px] tracking-tight">Om na te slaan</h2>
+      <p data-i18n="rg_p" class="mt-2 text-[14px]" style="color:var(--dim)">Elke pagina brengt je direct naar de 3D-calculator.</p>
+    </div>
+    <div class="wlist reveal">
+      <a href="/en/guide/pallet-calculator"><span><h3 data-i18n="rg0_h" class="font-semibold text-[15px]" style="color:var(--text)">Palletcalculator</h3><p data-i18n="rg0_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Hoeveel pallets passen in een container of vrachtwagen?</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/en/guide/loading-metre-calculator"><span><h3 data-i18n="rg7_h" class="font-semibold text-[15px]" style="color:var(--text)">Laadmetercalculator</h3><p data-i18n="rg7_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Laadmeters voor vrachtwagen en huif, met stapelen.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/nl/gids/europallets-20ft-container"><span><h3 data-i18n="rg1_h" class="font-semibold text-[15px]" style="color:var(--text)">Europallets in een 20ft container</h3><p data-i18n="rg1_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Zo’n 11 op de vloer, gestapeld meer.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/nl/gids/europallets-40ft-container"><span><h3 data-i18n="rg2_h" class="font-semibold text-[15px]" style="color:var(--text)">Europallets in een 40ft container</h3><p data-i18n="rg2_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Precies 25 in één laag.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/nl/gids/cbm-container"><span><h3 data-i18n="rg3_h" class="font-semibold text-[15px]" style="color:var(--text)">Containervolume in m³</h3><p data-i18n="rg3_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">20ft ≈ 33 m³, 40ft ≈ 68 m³.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/en/guide/container-payload-weight"><span><h3 data-i18n="rg4_h" class="font-semibold text-[15px]" style="color:var(--text)">Laadvermogen en maximaal gewicht</h3><p data-i18n="rg4_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Hoeveel mag een container laden?</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/nl/gids/container-afmetingen"><span><h3 data-i18n="rg5_h" class="font-semibold text-[15px]" style="color:var(--text)">Binnenmaten van containers</h3><p data-i18n="rg5_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">20′, 40′ en 45′ in één oogopslag.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+      <a href="/en/guide/how-to-calculate-cbm"><span><h3 data-i18n="rg6_h" class="font-semibold text-[15px]" style="color:var(--text)">CBM berekenen (zeevracht)</h3><p data-i18n="rg6_p" class="mt-0.5 text-[13px]" style="color:var(--dim)">Formule, voorbeeld en calculator.</p></span><span aria-hidden="true" style="color:var(--faint)">→</span></a>
+    </div>
+    <a data-i18n="rg_all" href="/nl/gids/" class="btn btn-ghost text-[14px] px-5 py-2.5 mt-6">Alle pagina’s bekijken →</a>
+  </section>
+</div>
+
+<!-- SCHLUSS -->
+<section class="relative z-10 max-w-5xl mx-auto px-5 pb-20">
+  <div class="reveal text-center pt-14" style="border-top:1px solid var(--line)">
+    <h2 data-i18n="cta_h" class="font-bold text-[32px] md:text-[44px] tracking-tight">Plan je volgende lading</h2>
+    <p data-i18n="cta_p" class="mt-3 text-[16px]" style="color:var(--dim)">Voer de maten in. Dan weet je of het past, en in welke container.</p>
+    <a data-i18n="cta_a" href="/app?lang=nl" class="btn btn-primary text-[15px] px-7 py-3.5 mt-7">Tool gratis openen</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="relative z-10" style="border-top:1px solid var(--line)">
+  <div class="max-w-7xl mx-auto px-5 py-12 grid md:grid-cols-4 gap-8">
+    <div class="md:col-span-1">
+      <div class="brandlogo flex items-center gap-2.5 mb-3">
+        <span class="w-7 h-7 rounded-md grad-bg flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none"><polygon points="12,3.4 19.6,7.8 12,12.2 4.4,7.8" fill="#0A2B46"/><polygon points="4.4,7.8 12,12.2 12,20.6 4.4,16.2" fill="#165780"/><polygon points="19.6,7.8 12,12.2 12,20.6 19.6,16.2" fill="#0F3C60"/></svg></span>
+        <span class="font-bold text-[15px]">Container<span class="grad-text">Load</span></span>
+      </div>
+      <p class="text-[13px] leading-relaxed" data-i18n="footer_tag" style="color:var(--faint)">Geen Excel. Geen giswerk.<br>Gewoon de juiste container.<br><span style="white-space:nowrap">Bremen, Duitsland <svg width="14" height="10" viewBox="0 0 5 3" style="display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px"><rect width="5" height="3" fill="#FFCE00"/><rect width="5" height="2" fill="#D00"/><rect width="5" height="1" fill="#000"/></svg></span></p>
+    </div>
+    <div><div data-i18n="footer_prod" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Product</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_open" href="/app?lang=nl" class="navlink">Tool openen</a><a data-i18n="fl_demo2" href="#demo" class="navlink">De calculator</a><a data-i18n="nav_stevie" href="#stevie" class="navlink">Stevie (AI)</a><a href="#faq" class="navlink">FAQ</a></div></div>
+    <div><div data-i18n="footer_res" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Naslag</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_ratgeber" href="/nl/gids/" class="navlink">Containerkennis</a><a data-i18n="cbm_nav" href="#cbm" class="navlink">CBM-calculator</a><a data-i18n="tab_imp" href="#cbm" data-tab="tabImp" class="navlink">Paklijst uit Excel</a></div></div>
+    <div><div data-i18n="footer_legal" class="text-[12.5px] font-semibold mb-3" style="color:var(--text)">Juridisch</div><div class="flex flex-col gap-2 text-[14px]" style="color:var(--dim)"><a data-i18n="fl_imp" href="/en/imprint" class="navlink">Colofon</a><a data-i18n="fl_priv" href="/en/privacy" class="navlink">Privacy</a><a data-i18n="fl_contact" href="mailto:info@containerload.io" class="navlink">Contact</a></div></div>
+  </div>
+  <div class="max-w-7xl mx-auto px-5 py-5 flex flex-col sm:flex-row items-center justify-between gap-2" style="border-top:1px solid var(--line);color:var(--faint)">
+    <span class="text-[12px]">© 2026 ContainerLoad · Maße nach ISO 668 · cm · kg</span>
+    <span data-i18n="foot_disc" class="text-[12px]">geometrische schatting · geen garantie voor aslasten</span>
+  </div>
+</footer>
+
+<script>
+// nav scroll state
+const nav=document.getElementById('nav');
+addEventListener('scroll',()=>{nav.classList.toggle('scrolled',scrollY>20);});
+// mobile menu
+const burger=document.getElementById('burger'),mm=document.getElementById('mobileMenu');
+burger.addEventListener('click',()=>mm.classList.toggle('hidden'));
+mm.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>mm.classList.add('hidden')));
+// reveal on scroll
+const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.12});
+document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+// clean anchor scrolling (kein # in der Adressleiste)
+document.querySelectorAll('a[href^="#"]').forEach(function(a){
+  a.addEventListener('click',function(e){
+    var id=a.getAttribute('href').slice(1);
+    var el=id?document.getElementById(id):null;
+    e.preventDefault();
+    var y=el?(el.getBoundingClientRect().top+window.pageYOffset-80):0;
+    window.scrollTo({top:Math.max(0,y),behavior:'smooth'});
+    if(history.replaceState)history.replaceState(null,'',location.pathname+location.search);
+  });
+});
+// Werkzeuge: zwei Reiter (CBM-Rechner / Packliste aus Excel). Beide Inhalte stehen im
+// Dokument, der inaktive ist nur versteckt. Pfeiltasten wechseln wie bei einer echten Tableiste.
+(function(){
+  var tabs=[].slice.call(document.querySelectorAll('#cbm [role="tab"]'));
+  if(!tabs.length) return;
+  function zeig(t,fokus){
+    tabs.forEach(function(x){
+      var an=x===t;
+      x.setAttribute('aria-selected',an?'true':'false');
+      x.tabIndex=an?0:-1;
+      var p=document.getElementById(x.getAttribute('aria-controls'));
+      if(p) p.hidden=!an;
+    });
+    if(fokus) t.focus();
+  }
+  tabs.forEach(function(t,i){
+    t.addEventListener('click',function(){zeig(t);});
+    t.addEventListener('keydown',function(e){
+      var d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;
+      if(!d) return;
+      e.preventDefault();
+      zeig(tabs[(i+d+tabs.length)%tabs.length],true);
+    });
+  });
+  // Footer-Link "Packliste aus Excel": springt zum Block und schaltet gleich den Reiter um
+  document.querySelectorAll('a[data-tab]').forEach(function(a){
+    a.addEventListener('click',function(){var t=document.getElementById(a.getAttribute('data-tab')); if(t) zeig(t);});
+  });
+})();
+
+</script>
+
+<script>
+(function(){
+  var EN={"thema_hell":"Lichte modus","thema_dunkel":"Donkere modus","nav_ratgeber":"Containerkennis","nav_open":"Tool openen","nav_stevie":"Stevie (AI)","st_ey":"Nieuw · AI aan boord","st_h":"Vraag het Stevie.<br><span class=\"sv-dim\">De AI in de calculator.</span>","st_p":"Hij leest paklijsten, rekent na en past je plan aan als je dat vraagt. Gerekend wordt altijd in de 3D-calculator: Stevie verzint nooit cijfers.","st_c1":"<span class=\"sv-ok\">✓</span> Leest paklijsten uit tekst, Excel, foto’s en screenshots","st_c2":"<span class=\"sv-ok\">✓</span> Rekent na, met de voorwaarden uit je vraag","st_c3":"<span class=\"sv-ok\">✓</span> Wijzigt container, aantallen en stapelen als je dat vraagt","st_c4":"<span class=\"sv-ok\">✓</span> Spreekt jouw taal, en Ctrl+Z draait alles terug","st_cta":"Ontmoet Stevie in de calculator","st_b1":"Hoeveel europallets passen in een 20′ GP als ze niet stapelbaar zijn?","st_b2":"Volgens de berekening passen er 11: op de vloer, gedraaid waar dat past.","st_chip":"✓ P1: max. 11 st. · niet stapelbaar","rg_ey":"Containerkennis","rg_h":"Om na te slaan","rg_p":"Elke pagina brengt je direct naar de 3D-calculator.","rg0_h":"Palletcalculator","rg0_p":"Hoeveel pallets passen in een container of vrachtwagen?","rg7_h":"Laadmetercalculator","rg7_p":"Laadmeters voor vrachtwagen en huif, met stapelen.","rg1_h":"Europallets in een 20ft container","rg1_p":"Zo’n 11 op de vloer, gestapeld meer.","rg2_h":"Europallets in een 40ft container","rg2_p":"Precies 25 in één laag.","rg3_h":"Containervolume in m³","rg3_p":"20ft ≈ 33 m³, 40ft ≈ 68 m³.","rg4_h":"Laadvermogen en maximaal gewicht","rg4_p":"Hoeveel mag een container laden?","rg5_h":"Binnenmaten van containers","rg5_p":"20′, 40′ en 45′ in één oogopslag.","rg6_h":"CBM berekenen (zeevracht)","rg6_p":"Formule, voorbeeld en calculator.","rg_all":"Alle pagina’s bekijken →","hero_h1":"<span class=\"hero-kicker\">3D-laadcalculator voor containers en vrachtwagens</span>11 pallets in plaats van 8<br><span style=\"color:var(--dim)\">in dezelfde container.</span>","hero_sub":"De gratis 3D-calculator voor containerbelading draait pallets waar dat past, en dan klopt een 20ft met de tabellen van expediteurs. Voer de maten in, controleer in 3D en deel het als link.","hero_cta1":"Tool gratis openen","hero_cta2":"Even rondkijken <span style=\"color:var(--faint)\">↓</span>","tool_ey":"De calculator","tool_h":"Zo werkt de calculator","tool_p":"Invoeren, in 3D controleren, delen. Zonder account en zonder iets te installeren.","sc1_tag":"Invoer","sc1_row1":"Europallet","sc1_row2":"Kist, motoronderdelen","sc1_paste":"· plak je paklijst","sc1_h":"Voer de maten in","sc1_p":"Voer de colli één voor één in of plak je lijst uit Excel. Aantal, maten en gewicht, alles in centimeters.","sc2_tag":"3D-resultaat","sc2_pill":"Alles geladen · 91% · 14,3 t","sc2_h":"De lading in 3D","sc2_p":"Je ziet meteen hoe de lading in de container staat. Draaien, inzoomen, controleren. Bij één soort pallet klopt de berekening op de pallet nauwkeurig. Bij gemengde lading zoekt een algoritme de beste stuwage.","sc3_tag":"Delen en pdf","sc3_pdf_h":"Laadplan · 20′ GP","sc3_pdf_meta":"QR → interactief 3D-plan","sc3_h":"Delen en afdrukken","sc3_p":"Geef de lading door als link. De ontvanger ziet hem meteen in 3D, zonder account. Of als pdf met een QR-code die terugleidt naar het plan.","kpi1":"Container- en voertuigtypen: open top, flat rack, platform en reefer inbegrepen.","kpi2":"Rederijen met echte binnenmaten, tot op de millimeter, elk met bron.","kpi3":"Registraties. Het plan gaat als link de deur uit en opent direct in 3D.","cbm_nav":"CBM-calculator","cbm_ey":"Hulpmiddelen","cbm_h":"Bereken de kubieke meters.<br><span style=\"color:var(--dim)\">Plak een paklijst.</span>","cbm_p":"Meerdere colli, CBM en gewicht tegelijk. Bij LCL telt de hoogste van de twee.","cbm_link":"Hoe je CBM berekent, lees je in de containerkennis.","feat_ey":"Ook inbegrepen","f1_h":"3D-weergave","f1_p":"Draaien, inzoomen, controleren: stuk voor stuk.","f2_h":"Op de pallet nauwkeurig","f2_p":"Gedraaide patronen: <b style=\"color:var(--text)\">25 europallets in plaats van 20</b> in een 40ft.","f3_h":"Meer dan één container","f3_p":"Hoeveel er nodig zijn, welke combinatie het goedkoopst is en wat waarin gaat.","f4_h":"Draai- en stapelregels","f4_p":"Per collo: niet stapelbaar, stapelbaar tot een hoogte, 90° draaibaar.","f5_h":"Gewicht en laadvermogen","f5_p":"Het laadvermogen per container, met een waarschuwing vóór overbelading.","f6_h":"Dozen op pallets","f6_p":"Van doosmaten naar lagenpatroon en aantal pallets.","faq_h":"Veelgestelde vragen","q1_s":"Is de calculator echt gratis?<span class=\"faq-plus text-[22px]\">+</span>","q1_a":"Ja, helemaal. De 3D-calculator, inclusief containeradvies, is gratis en werkt zonder account. Openen en beginnen.","q2_s":"Hoe nauwkeurig is de berekening?<span class=\"faq-plus text-[22px]\">+</span>","q2_a":"Bij één soort pallet rekent de tool op de pallet nauwkeurig (bijv. 11 europallets in een 20ft, zoals in de tabellen van expediteurs). Bij gemengde lading zoekt een algoritme de beste stuwage. Gewichtsverdeling en zwaartepunt worden als schatting getoond; bij de oplegger ook de lasten op koningspen en assen. Het is geen garantie voor de werkelijke gewichtsverdeling of de ladingzekering: controleer voertuiggegevens en zekering zelf.","q3_s":"Heb ik een account nodig?<span class=\"faq-plus text-[22px]\">+</span>","q3_a":"Nee. Je opent de tool en begint. Niets installeren, niets registreren.","q4_s":"Werkt het op de telefoon?<span class=\"faq-plus text-[22px]\">+</span>","q4_a":"Ja, de tool past zich aan en werkt in de browser van je telefoon. Voor het invoeren van veel colli is een groot scherm prettiger.","q5_s":"Hoeveel dozen passen op een pallet?<span class=\"faq-plus text-[22px]\">+</span>","q5_a":"Dat rekent de tool uit: voer doosmaten, gewicht en totaal aantal in, kies europallet (120×80) of industriepallet (120×100) en de maximale stapelhoogte. Je krijgt het lagenpatroon van boven gezien, de dozen per laag, het aantal lagen en het totale aantal pallets, inclusief de laatste, niet-volle pallet. Het werkt ook met meerdere doosmaten, gescheiden of laag voor laag op een mixpallet. De berekening is puur geometrisch: zonder verbandpatroon of ladingzekering, en het gewicht en draagvermogen van de pallet zijn richtwaarden.","cta_h":"Plan je volgende lading","cta_p":"Voer de maten in. Dan weet je of het past, en in welke container.","cta_a":"Tool gratis openen","footer_prod":"Product","footer_res":"Naslag","footer_legal":"Juridisch","fl_open":"Tool openen","fl_demo2":"De calculator","fl_ratgeber":"Containerkennis","fl_imp":"Colofon","fl_priv":"Privacy","fl_contact":"Contact","foot_disc":"geometrische schatting · geen garantie voor aslasten","footer_tag":"Geen Excel. Geen giswerk.<br>Gewoon de juiste container.<br><span style=\"white-space:nowrap\">Bremen, Duitsland <svg width=\"14\" height=\"10\" viewBox=\"0 0 5 3\" style=\"display:inline-block;vertical-align:middle;border-radius:1px;margin-left:1px\"><rect width=\"5\" height=\"3\" fill=\"#FFCE00\"/><rect width=\"5\" height=\"2\" fill=\"#D00\"/><rect width=\"5\" height=\"1\" fill=\"#000\"/></svg></span>","imp_p":"Selecteer je paklijst in Excel, kopieer hem en plak hem hier: de calculator vindt zelf de kolommen, maten en gewichten.","imp_box_h":"Paklijst plakken","imp_kbd":"Ctrl+V","imp_cta":"Openen in de 3D-calculator →","imp_hint":"wordt in de tool gecontroleerd. Maten in cm, tenzij anders aangegeven","imp_toolong":"De lijst is te lang. Plak hem rechtstreeks in de tool met “Excel / tekst”.","imp_ph":"Plak hier je paklijst uit Excel …","imp_demo":"Voorbeeld invoegen","imp_demo_data":"Artikel\tColli\tL\tB\tH\tkg\nMotorblok\t4\t120\t80\t95\t310\nVersnellingsbak\t6\t110\t75\t80\t240\nDozen accessoires\t18\t60\t40\t40\t12","tab_cbm":"CBM-calculator","tab_imp":"Paklijst uit Excel","hero_trust":"<span>Gratis, onbeperkt</span><span>Zonder account</span><span>Geen cookies, geen banner</span>","meta_t":"Gratis 3D-laadcalculator voor containers | ContainerLoad","meta_d":"Gratis 3D-laadcalculator voor containers en vrachtwagens: belading op de pallet nauwkeurig, containeradvies en een laadplan als link. Zonder account.","meta_ot":"ContainerLoad — Elke lading in de juiste container.","meta_od":"Past je lading? In welke container? ContainerLoad rekent het live uit in 3D.","ld_name":"ContainerLoad, 3D-laadcalculator","ld_sub":"Laadplanning","ld_browser":"JavaScript en WebGL","ld_d":"Gratis 3D-laadcalculator voor containers en vrachtwagens: op de pallet nauwkeurig, met containeradvies, laadmeters en het plan als link. In de browser, zonder account.","ld_features":"3D-laadplan voor containers en vrachtwagens|Containeradvies en ketens van meerdere containers|Laadmeters en schatting van de aslasten voor de oplegger|Het plan delen als link, zonder account voor de ontvanger|Laadvoorstel als pdf met QR-code|Paklijsten lezen uit Excel, tekst of foto"};
+  // Seit 20.11.26 gibt es die englische Startseite als EIGENE Datei unter /en/ -- erzeugt
+  // von werkzeug/startseite-en.mjs aus DIESER Datei: Text, Kopfdaten, Schema und Links
+  // stehen dort schon englisch im HTML (vorher war /?lang=en dasselbe HTML, per Skript
+  // uebersetzt, und die Suche zeigte es mit dem deutschen Titel). Zur Laufzeit wird nichts
+  // mehr umgeschaltet: die Sprachknoepfe sind gewoehnliche Links. Das EN-Woerterbuch oben
+  // und die GUIDE-Tabelle unten sind die Quelle fuer den Generator; test/startseite-en
+  // prueft, dass /en/index.html genau das ist, was der Generator daraus macht.
+  // SEITE ist die Sprache DIESER Datei: 'de' hier, 'en' auf /en/, 'es' auf /es/ ...
+  // FREMD: fuer welche Sprachen es eine eigene Startseite gibt (Ordner /<kuerzel>/).
+  var SEITE=document.documentElement.lang||'de', FREMD=['en','es','fr','zh','nl'];
+  // Das Container-Wissen gibt es seit August 2026 in zwei Fassungen mit EIGENEN Adressen
+  // (/ratgeber/<deutscher-slug> und /en/guide/<englischer-slug>) statt als ?lang=en-Variante:
+  // es sind eigene Seiten mit eigenen Titeln, und genau so sollen sie indexiert werden.
+  // Deshalb muss die Sprachumschaltung die Links mit umhaengen — sonst schickt die
+  // englische Startseite ihre Besucher auf deutsche Seiten.
+  var GUIDE={'/ratgeber/':'/en/guide/',
+    '/ratgeber/europaletten-40-fuss-container':'/en/guide/euro-pallets-40ft-container',
+    '/ratgeber/europaletten-20-fuss-container':'/en/guide/euro-pallets-20ft-container',
+    '/ratgeber/industriepaletten-container':'/en/guide/industrial-pallets-container',
+    '/ratgeber/gitterboxen-container':'/en/guide/wire-mesh-pallets-container',
+    '/ratgeber/lademeter-rechner':'/en/guide/loading-metre-calculator',
+    '/ratgeber/palettenrechner':'/en/guide/pallet-calculator',
+    '/ratgeber/lkw-beladen':'/en/guide/how-to-load-a-truck',
+    '/ratgeber/container-masse-innenmasse':'/en/guide/container-internal-dimensions',
+    '/ratgeber/container-volumen-cbm':'/en/guide/container-volume-cbm',
+    '/ratgeber/container-zuladung-gewicht':'/en/guide/container-payload-weight',
+    '/ratgeber/cbm-berechnen':'/en/guide/how-to-calculate-cbm',
+    '/ratgeber/stellplaetze-container':'/en/guide/container-floor-positions',
+    '/ratgeber/stauplan-container':'/en/guide/container-stowage-plan',
+    '/ratgeber/container-gewicht-strasse':'/en/guide/container-road-weight-limits',
+    '/ratgeber/ibc-container':'/en/guide/ibc-totes-container',
+    '/ratgeber/faesser-container':'/en/guide/drums-container',
+    '/ratgeber/big-bags-container':'/en/guide/big-bags-container',
+    '/ratgeber/us-paletten-20-fuss-container':'/en/guide/pallets-20ft-container',
+    '/ratgeber/us-paletten-40-fuss-container':'/en/guide/pallets-40ft-container','/ratgeber/paletten-1100x1100-container':'/en/guide/pallets-1100x1100-container',
+    '/ratgeber/open-top-container-masse':'/en/guide/open-top-container-dimensions',
+    '/ratgeber/flat-rack-container-masse':'/en/guide/flat-rack-container-dimensions',
+    '/ratgeber/reefer-container-masse':'/en/guide/reefer-container-dimensions',
+    '/ratgeber/containerhaefen':'/en/guide/container-ports'};
+  var GUIDE_ZURUECK={}; for(var _g in GUIDE) GUIDE_ZURUECK[GUIDE[_g]]=_g;
+
+  function merken(lang){try{localStorage.setItem('cl_lang',lang);}catch(e){}}
+  // Ein Klick auf einen Sprachlink merkt die Wahl -- navigiert wird ganz normal
+  [].slice.call(document.querySelectorAll('a[data-lang]')).forEach(function(a){
+    a.addEventListener('click',function(){ merken(a.getAttribute('data-lang')); });
+  });
+  // Sprach-Menue: Klick daneben oder Esc schliesst es wieder
+  var LM=[].slice.call(document.querySelectorAll('details.langmenu'));
+  document.addEventListener('click',function(e){LM.forEach(function(d){if(d.open&&!d.contains(e.target))d.open=false;});});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')LM.forEach(function(d){d.open=false;});});
+  var _ip=document.getElementById('impPaste'); if(_ip&&SEITE!=='de'){ _ip.placeholder=EN.imp_ph; }
+
+  // Sprachwahl: Die ADRESSE hat Vorrang, dann die eigene fruehere Wahl, sonst Deutsch --
+  // NIE die Browsersprache (Googles Renderer meldet en-US; dieselbe Adresse darf nicht je
+  // nach Besucher die Sprache wechseln). Umgeleitet wird nur von der deutschen Seite aus:
+  //   * /?lang=en ist die alte Adresse der englischen Seite. Netlify leitet sie mit 301 auf
+  //     /en/ um (_redirects); lokal geoeffnet tut es dieses Skript.
+  //   * Wer frueher selbst Englisch gewaehlt hat, landet auf /en/ (Suchmaschinen haben
+  //     keinen gemerkten Wert und sehen deshalb immer die Seite, die sie aufrufen).
+  function kennt(l){l=String(l||'').toLowerCase().slice(0,2);return FREMD.indexOf(l)>=0?l:null;}
+  function urlLang(){var m=/[?&]lang=([A-Za-z-]+)/.exec(location.search);return m?(kennt(m[1])||'de'):null;}
+  var erzwungen=urlLang(), gemerkt=null;
+  try{var sv=localStorage.getItem('cl_lang'); if(sv==='de'||kennt(sv)) gemerkt=sv==='de'?'de':kennt(sv);}catch(e){}
+  var ziel=erzwungen||gemerkt;
+  if(SEITE==='de'&&ziel&&ziel!=='de'){ try{location.replace('/'+ziel+'/'+location.hash);}catch(e){} return; }
+  // Netlify haengt beim 301 von /?lang=en die Abfrage an: /en/?lang=en. Auf der englischen
+  // Seite ist sie ueberfluessig -- weg damit, damit kopierte Links sauber sind (canonical
+  // zeigt ohnehin auf /en/). Andere Parameter bleiben stehen.
+  if(SEITE!=='de'&&erzwungen){ try{var rest=location.search.replace(/([?&])lang=[^&]*(&|$)/,'$1').replace(/[?&]$/,''); history.replaceState(null,'',location.pathname+rest+location.hash);}catch(e){} }
+
+  // Kein automatisches Umschalten, sondern ein Angebot -- nur auf der deutschen Seite, nur
+  // fuer Leute, deren Browser nicht auf Deutsch steht und die noch nie selbst gewaehlt haben.
+  if(SEITE==='de'&&!erzwungen&&!gemerkt&&(navigator.language||'').toLowerCase().indexOf('de')!==0){
+    var bar=document.getElementById('langbar');
+    // Spricht der Browser eine Sprache, fuer die es eine eigene Seite gibt, kommt das Angebot
+    // in DIESER Sprache (sonst Englisch, wie es im Markup steht).
+    var br=kennt(navigator.language), ANG={es:['Esta p\u00e1gina est\u00e1 disponible en espa\u00f1ol.','Cambiar a espa\u00f1ol \u2192'],fr:['Cette page existe en fran\u00e7ais.','Passer au fran\u00e7ais \u2192'],zh:['\u672c\u9875\u9762\u63d0\u4f9b\u4e2d\u6587\u7248\u3002','\u5207\u6362\u5230\u4e2d\u6587 \u2192'],nl:['Deze pagina is er ook in het Nederlands.','Naar het Nederlands \u2192']};
+    if(bar&&br&&ANG[br]){ var sp=bar.querySelector('span'), al=bar.querySelector('a'); if(sp&&al){ sp.textContent=ANG[br][0]; al.textContent=ANG[br][1]; al.href='/'+br+'/'; al.setAttribute('hreflang',br); al.setAttribute('data-lang',br); } }
+    if(bar) bar.classList.add('on');
+  }
+  var barX=document.getElementById('langbarX');
+  if(barX) barX.addEventListener('click',function(){
+    var bar=document.getElementById('langbar'); if(bar) bar.classList.remove('on');
+    merken('de'); // einmal weggeklickt heisst: nicht wieder fragen
+  });
+  // Packlisten-Import-Box: KEIN Parser hier — kanonisches Parsing passiert NUR in
+  // app.html (?q= -> parseCargoText). Die Landingpage reicht den Text nur durch.
+  var impTa=document.getElementById('impPaste'), impGo=document.getElementById('impGo'), impHint=document.getElementById('impHintLine');
+  if(impTa&&impGo){
+    var impSync=function(){var has=!!impTa.value.trim(); impGo.disabled=!has; impGo.style.opacity=has?1:.5; impGo.style.cursor=has?'pointer':'default';};
+    impTa.addEventListener('input',impSync); impSync();
+    // "Beispiel einfuegen" schreibt echten Inhalt ins Feld (kein Platzhalter-Trick):
+    // der Knopf darunter wird aktiv, und ein Klick weiter steht die Liste im 3D-Rechner.
+    var impDemo=document.getElementById('impDemo');
+    if(impDemo) impDemo.addEventListener('click',function(){
+      impTa.value = SEITE!=='de' ? EN.imp_demo_data : 'Bezeichnung\tStk\tL\tB\tH\tkg\nMotorblock\t4\t120\t80\t95\t310\nGetriebe\t6\t110\t75\t80\t240\nKartons Zubehör\t18\t60\t40\t40\t12';
+      impSync(); impTa.focus();
+    });
+    impGo.addEventListener('click',function(){
+      var t=impTa.value;
+      if(!t.trim())return;
+      var enc=encodeURIComponent(t);
+      // URL-Laengen-Guard: ehrlicher Hinweis statt stillem Abschneiden.
+      if(enc.length>6000){ if(impHint){ impHint.textContent = SEITE!=='de' ? EN.imp_toolong : 'Liste zu lang. Bitte direkt im Tool über „Excel / Text“ einfügen.'; impHint.style.color='var(--warn, #DDA24C)'; } return; }
+      window.location.href='/app?q='+enc+(SEITE==='de'?'':'&lang='+SEITE);
+    });
+  }
+})();
+</script>
+<!-- Hero-Animation: eigenstaendiges Modul, laedt Three.js r128 lazy -->
+<script>
+/* ContainerLoad — Hero-Animation, drei Akte im Wechsel (production module)
+   Selbststaendig, kein Build-Step. Three.js r128 wird lazy nachgeladen.
+   Greift NICHT in ?p=, app.html oder die i18n-Logik ein.
+
+   AUFBAU: Ein Regisseur, drei Akte. Jeder Akt bringt seine eigenen Phasen, seine
+   eigenen Texte und seine eigene Kamera mit; Renderer, Szene, Statuszeile, Pillen
+   und Fortschrittsleiste teilen sich alle. Ist ein Akt durch, kommt der naechste,
+   nach dem letzten wieder der erste.
+
+     1 Re-Solve   — Ladung passt nicht, groesserer Container, passt.
+     2 Ueberhoehe — Maschine zu hoch fuer jeden Standardcontainer, Open Top,
+                    Verladung von oben mit dem Kran.
+     3 Palette    — Kartons zum Lagenmuster, Lagen zur Palette, Paletten in den
+                    Container.
+
+   Die Zahlen in den Texten sind KEINE Erfindung: sie stammen aus denselben
+   Funktionen, mit denen der Rechner arbeitet, und werden von
+   test/hero-animation.test.mjs nachgerechnet. Wer hier eine Zahl aendert, muss
+   sie dort nachweisen koennen. */
+(function(){
+  "use strict";
+  var canvas=document.getElementById('clhScene');
+  var poster=document.getElementById('clhPoster');
+  if(!canvas) return;
+
+  var REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Kein WebGL bei reduzierter Bewegung oder auf echten Handys (Akku/Performance) -> SVG-Standbild.
+  // Touch allein (pointer: coarse) schliesst sonst auch leistungsfaehige Tablets wie das iPad aus.
+  // Tablet/Desktop von Handy unterscheiden ueber die KLEINERE Viewport-Kante (orientierungs-
+  // unabhaengig): iPad-Hochformat >= 768, iPhone <= ~430. Schwelle 600 trennt beide sauber.
+  var MINSIDE = Math.min(window.innerWidth || 0, window.innerHeight || 0);
+  if(REDUCED || MINSIDE < 600) return;
+
+  // Zwei Plaetze: 'de' und 'en'. Der en-Platz traegt die Sprache der SEITE -- auf /es/ hat der
+  // Generator dort Spanisch eingesetzt. Deshalb fragt lang() nur, ob die Seite deutsch ist.
+  function lang(){ return (document.documentElement.lang==='de')?'de':'en'; }
+
+  // ====================== gemeinsame Rechenhilfen ======================
+  function clamp01(x){return x<0?0:x>1?1:x;}
+  function lerp(a,b,t){return a+(b-a)*t;}
+  function smooth(t){t=clamp01(t);return t*t*(3-2*t);}
+  function easeOutBack(x){var c1=1.70158,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);}
+  function easeInOut(x){return x<0.5?2*x*x:1-Math.pow(-2*x+2,2)/2;}
+  function gravityBounce(x){x=clamp01(x); if(x<0.86){var t=x/0.86;return t*t*(3-2*t);} var u=(x-0.86)/0.14; return 1-Math.sin(u*Math.PI)*0.025;}
+
+  // Farbfuehrung aller drei Akte: Akzent = arbeitet, Gelb = Konflikt, Gruen = geloest.
+  // Ein Markenton, kein zweiter — dieselbe Regel wie im Rechner.
+  var C_TEAL=0x2E8FFF,C_GOOD=0x35BE87,C_WARN=0xDDA24C,C_BLUEEDGE=0x5AA9FF,C_WOOD=0x8A674A;
+  var F_IDLE=0x1B2E45, F_WARN=0x453620, F_GOOD=0x1B3B31;
+  // Hell/Dunkel (Jareks Befund: „die Animation ist noch auf darkmode"): Die Szene setzt
+  // ihre Farben in JEDEM Akt-Update neu (tone()/CONT.setColor()) — es genuegt, diese
+  // Konstanten umzuschreiben, und die Animation faerbt sich live um. Im Dunkeln dunkle
+  // Fuellung + leuchtende Kante; im Hellen umgekehrt: kraeftige Fuellung + dunkle Kante,
+  // wie die Kisten im Rechner. Signal-Toene (C_GOOD/C_WARN als Kante) bleiben.
+  var HERO_T={
+    // hell: weniger Umgebungslicht, damit Deckel und Seiten verschieden hell werden, und eine
+    // tiefere Kante -- sonst verschmolzen gestapelte Kartons zu einem einzigen blauen Block.
+    // schatten: der Bodenschatten ist auf hellem Grund ein grauer Fleck; dort halb so stark.
+    dunkel:{idle:0x1B2E45,warn:0x453620,good:0x1B3B31,edge:0x5AA9FF,amb:0.6,schatten:1},
+    hell:{idle:0x3875C9,warn:0xE2A64A,good:0x2FA876,edge:0x0E2C57,amb:0.62,schatten:0.5}
+  };
+  var heroAmb=null,heroThemaMats=[],HERO_SCHATTEN=1;
+  window.clHeroThema=function(t){
+    var s=HERO_T[t==='hell'?'hell':'dunkel'];
+    F_IDLE=s.idle; F_WARN=s.warn; F_GOOD=s.good; C_BLUEEDGE=s.edge; HERO_SCHATTEN=s.schatten;
+    if(heroAmb) heroAmb.intensity=s.amb;
+    var k=(t==='hell'?'hell':'dunkel');
+    heroThemaMats.forEach(function(e){e[0].color.setHex(e[1][k]);});
+  };
+  window.clHeroThema(document.documentElement.dataset.theme);
+
+  // ====================== Texte ======================
+  // Jeder Akt liefert STA (Zustaende) und TL (vier Beschriftungen der Leiste).
+  // Platzhalter in geschweiften Klammern werden aus dem vars-Objekt gefuellt;
+  // {dots} laeuft immer mit und macht aus "rechnet" ein wanderndes "rechnet…".
+  var ACT_TEXT=[
+  { // ---- 1 Re-Solve ----
+    tl:[{de:'Laden',en:'Laden'},{de:'Konflikt',en:'Conflict'},{de:'Lösen',en:'Oplossen'},{de:'Gelöst',en:'Opgelost'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_WARN,
+        txt:{de:'Ladung wird vorbereitet…',en:'Lading wordt klaargezet…'},
+        meta:{de:'20′ GP · live',en:'20′ GP · live'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'prüfe…',en:'controleren…'}},
+      pack:{ic:'▣',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Packe in den 20′ GP…',en:'De 20′ GP wordt geladen…'},
+        meta:{de:'{n} / {T} verstaut',en:'{n} / {T} gestuwd'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'lädt…',en:'laden…'}},
+      over:{ic:'✕',col:0xE4636F,tl:1,fitCol:0xE4636F,
+        txt:{de:'{O} Packstücke passen nicht',en:'{O} colli passen niet'},
+        meta:{de:'20′ GP · zu klein',en:'20′ GP · te klein'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'✕ {O} außerhalb',en:'✕ {O} buiten'}},
+      solve:{ic:'⟳',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Passender Container wird gesucht',en:'De juiste container zoeken'},
+        meta:{de:'rechnet{dots}',en:'berekenen{dots}'}, type:{de:'rechnet…',en:'berekenen…'}, fit:{de:'⟳ vermesse',en:'⟳ meten'}},
+      repack:{ic:'→',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Container wird zum 40′ GP',en:'De container wordt een 40′ GP'},
+        meta:{de:'{n} / {T} verstaut',en:'{n} / {T} gestuwd'}, type:{de:"40′ GP",en:'40′ GP'}, fit:{de:'passt rein…',en:'inpassen…'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'Alles verstaut',en:'Alles gestuwd'},
+        meta:{de:'1× 40′ GP · gelöst',en:'1× 40′ GP · opgelost'}, type:{de:"40′ GP",en:'40′ GP'}, fit:{de:'✓ passt',en:'✓ past'}}
+    }},
+  { // ---- 2 Ueberhoehe / Open Top ----
+    tl:[{de:'Messen',en:'Meten'},{de:'Überhöhe',en:'Overhoogte'},{de:'Open Top',en:'Open Top'},{de:'Verladen',en:'Geladen'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Maschine steht bereit',en:'Machine staat klaar'},
+        meta:{de:'{L} × {W} × {H} cm',en:'{L} × {W} × {H} cm'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'prüfe…',en:'controleren…'}},
+      measure:{ic:'⟳',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'Höhe wird geprüft{dots}',en:'Hoogte controleren{dots}'},
+        meta:{de:'{H} cm gegen 270 cm',en:'{H} cm tegenover 270 cm'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'⟳ vermesse',en:'⟳ meten'}},
+      over:{ic:'✕',col:C_WARN,tl:1,fitCol:C_WARN,
+        txt:{de:'{U} cm zu hoch für jeden Standardcontainer',en:'{U} cm te hoog voor elke standaardcontainer'},
+        meta:{de:'höchster Standard: 270 cm',en:'hoogste standaard: 270 cm'}, type:{de:"20′ GP",en:'20′ GP'}, fit:{de:'✕ Überhöhe {U} cm',en:'✕ overhoogte {U} cm'}},
+      swap:{ic:'⇪',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Open Top: das Dach kommt ab',en:'Open Top: het dak gaat eraf'},
+        meta:{de:'Plane und Dachspriegel abnehmbar',en:'zeil en dakspanten afneembaar'}, type:{de:"20′ Open Top",en:'20′ Open Top'}, fit:{de:'Dach offen',en:'dak open'}},
+      crane:{ic:'⇩',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Verladung von oben',en:'Laden van bovenaf'},
+        meta:{de:'Kran statt Stapler{dots}',en:'kraan in plaats van heftruck{dots}'}, type:{de:"20′ Open Top",en:'20′ Open Top'}, fit:{de:'⇩ hebt ein',en:'⇩ laten zakken'}},
+      set:{ic:'▣',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Maschine steht auf dem Deck',en:'Machine staat op de vloer'},
+        meta:{de:'{R} cm ragen über den Rahmen',en:'{R} cm boven het frame'}, type:{de:"20′ Open Top",en:'20′ Open Top'}, fit:{de:'Überhöhe {U} cm',en:'overhoogte {U} cm'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'1× 20′ Open Top',en:'1× 20′ Open Top'},
+        meta:{de:'Überhöhe {U} cm · anmeldepflichtig',en:'overhoogte {U} cm · moet worden opgegeven'}, type:{de:"20′ Open Top",en:'20′ Open Top'}, fit:{de:'✓ Equipment passt',en:'✓ het equipment past'}}
+    }},
+  { // ---- 3 Palette bauen ----
+    tl:[{de:'Kartons',en:'Dozen'},{de:'Lage',en:'Laag'},{de:'Stapeln',en:'Stapelen'},{de:'Paletten',en:'Pallets'}],
+    sta:{
+      intro:{ic:'…',col:C_TEAL,tl:0,fitCol:C_TEAL,
+        txt:{de:'{Q} Kartons, sonst nichts',en:'{Q} dozen, verder niets'},
+        meta:{de:'{cl} × {cw} × {ch} cm · je {ckg} kg',en:'{cl} × {cw} × {ch} cm · {ckg} kg per stuk'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'prüfe…',en:'controleren…'}},
+      layer:{ic:'▦',col:C_TEAL,tl:1,fitCol:C_TEAL,
+        txt:{de:'Lagenmuster wird gelegt',en:'Het lagenpatroon wordt gebouwd'},
+        meta:{de:'{n} / {P} je Lage · quer und längs',en:'{n} / {P} per laag · gekruist'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'▦ {P} je Lage',en:'▦ {P} per laag'}},
+      stack:{ic:'▤',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Lagen werden gestapelt',en:'De lagen worden gestapeld'},
+        meta:{de:'{n} / {S} Lagen',en:'{n} / {S} lagen'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'▤ {nL}',en:'▤ {nL}'}},
+      measure:{ic:'⟳',col:C_TEAL,tl:2,fitCol:C_TEAL,
+        txt:{de:'Palette ist voll',en:'De pallet is vol'},
+        meta:{de:'{HD} cm hoch · {KG} kg',en:'{HE} cm hoog · {KG} kg'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'{PP} Kartons',en:'{PP} dozen'}},
+      rest:{ic:'▣',col:C_TEAL,tl:3,fitCol:C_TEAL,
+        txt:{de:'Der Rest kommt auf eine zweite',en:'De rest gaat op een tweede pallet'},
+        meta:{de:'{R} Kartons · {RL} Lagen',en:'{R} dozen · {RL} lagen'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'angebrochen',en:'niet vol'}},
+      done:{ic:'✓',col:C_GOOD,tl:3,fitCol:C_GOOD,
+        txt:{de:'{Q} Kartons → {N} Paletten',en:'{Q} dozen → {N} pallets'},
+        meta:{de:'1 volle, 1 angebrochene',en:'1 vol, 1 niet vol'}, type:{de:'EUR 120×80',en:'EUR 120×80'}, fit:{de:'✓ {N} Paletten',en:'✓ {N} pallets'}}
+    }}
+  ];
+
+  // ====================== Statuszeile, Pillen, Leiste ======================
+  var statusBox=document.getElementById('clhStatus'),statusIc=document.getElementById('clhStatusIc'),
+      statusTxt=document.getElementById('clhStatusTxt'),statusMeta=document.getElementById('clhStatusMeta'),
+      pillType=document.getElementById('clhPillType'),pillFit=document.getElementById('clhPillFit'),tlSteps=[];
+  document.querySelectorAll('#clhTimeline .clh-step').forEach(function(s){tlSteps.push(s);});
+  var lastKey='',lastLang='',lastActTL=-1;
+  function hex(c){return '#'+('000000'+c.toString(16)).slice(-6);}
+  // DOM-Texte und -Chips laufen ueber die CSS-Variablen, damit der helle Satz greift
+  // (#35BE87 auf weisser Karte waere zu blass; var(--good) ist dort das dunklere #177A4C).
+  // Die Three-Materialien brauchen ZAHLEN und bleiben bei hex() — die Zeichnung ist ein Bild.
+  function cssCol(c){return c===C_GOOD?'var(--good)':c===C_WARN?'var(--warn)':c===C_TEAL?'var(--accent)':hex(c);}
+  function setTimeline(active,doneCol){
+    tlSteps.forEach(function(st,i){
+      var on=(i===active);st.classList.toggle('on',on);
+      var sd=st.querySelector('.clh-sd'); if(sd) sd.style.background= on?cssCol(doneCol):'var(--line2)';
+    });
+  }
+  function applyStatus(act,key,vars,t){
+    var L=lang(),T=ACT_TEXT[act],s=T.sta[key],dots='.'.repeat(1+Math.floor((t*3)%3));
+    function fill(x){ return x.replace(/\{(\w+)\}/g,function(m,k){ return k==='dots'?dots:(vars&&vars[k]!==undefined?vars[k]:m); }); }
+    if(statusTxt) statusTxt.textContent=fill(s.txt[L]);
+    if(statusMeta) statusMeta.textContent=fill(s.meta[L]);
+    if(pillType&&pillType.lastChild) pillType.lastChild.textContent=' '+fill(s.type[L]);
+    if(pillFit) pillFit.innerHTML='<span class="clh-dot" style="background:'+cssCol(s.fitCol)+'"></span> '+fill(s.fit[L]);
+    var id=act+':'+key;
+    if(id!==lastKey){
+      var col=cssCol(s.col);
+      if(statusTxt) statusTxt.style.color=col;
+      if(statusIc){statusIc.textContent=s.ic; statusIc.style.background=col; statusIc.style.color='var(--onacc)';}
+      if(statusBox){statusBox.style.borderColor=col;}
+      if(pillType){var d=pillType.querySelector('.clh-dot'); if(d)d.style.background=col;}
+      setTimeline(s.tl,s.col); lastKey=id;
+    }
+    // Beschriftungen der Leiste haengen am Akt UND an der Sprache — beides kann sich
+    // aendern, ohne dass der Zustandsschluessel wechselt.
+    if(L!==lastLang||act!==lastActTL){
+      tlSteps.forEach(function(st,i){var sl=st.querySelector('.clh-sl'); if(sl&&T.tl[i])sl.textContent=T.tl[i][L];});
+      lastLang=L; lastActTL=act;
+    }
+  }
+
+  // ====================== gemeinsame Bausteine ======================
+  var renderer,scene,camera,pivot,clock,_ca,_cb,_tmp;
+  function colLerp(target,a,b,t){_ca.setHex(a);_cb.setHex(b);target.copy(_ca).lerp(_cb,clamp01(t));}
+  function lerpV(out,a,b,t){out.set(lerp(a.x,b.x,t),lerp(a.y,b.y,t),lerp(a.z,b.z,t));}
+
+  function shadowTex(){var c=document.createElement('canvas');c.width=c.height=128;var g=c.getContext('2d');
+    var grd=g.createRadialGradient(64,64,0,64,64,64);grd.addColorStop(0,'rgba(0,0,0,.5)');grd.addColorStop(.6,'rgba(0,0,0,.18)');grd.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle=grd;g.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
+  function sweepTex(){var s=96,c=document.createElement('canvas');c.width=c.height=s;var g=c.getContext('2d');
+    var img=g.createImageData(s,s);
+    for(var y=0;y<s;y++){for(var x=0;x<s;x++){var u=Math.abs(x/(s-1)-0.5)*2,v=Math.abs(y/(s-1)-0.5)*2;
+      var au=Math.max(0,1-u*u),av=Math.max(0,1-Math.pow(v,0.6)),a=Math.pow(av,2.2)*au,i=(y*s+x)*4;
+      img.data[i]=120;img.data[i+1]=180;img.data[i+2]=255;img.data[i+3]=Math.round(a*255);}}
+    g.putImageData(img,0,0);return new THREE.CanvasTexture(c);}
+
+  // Bodenschatten unter einem Koerper der Laenge L an der Stelle x.
+  function makeShadow(root){
+    var m=new THREE.Mesh(new THREE.PlaneGeometry(1,3.0),new THREE.MeshBasicMaterial({map:shadowTex(),transparent:true,opacity:0.8,depthWrite:false}));
+    m.rotation.x=-Math.PI/2; m.position.y=-0.004; root.add(m);
+    return {mesh:m,place:function(L,x){m.scale.x=L*1.35;m.position.x=x;},op:function(o){m.material.opacity=0.8*o*HERO_SCHATTEN;}};
+  }
+
+  // Messwinkel um einen Quader: acht Ecken, je drei kurze Arme. Dieselbe Formensprache
+  // wie die Masshilfen im Rechner — und in allen drei Akten dieselbe.
+  function makeBrackets(root,size,arm){
+    var V=[],hx=size.x/2,hy=size.y/2,hz=size.z/2;
+    for(var sx=0;sx<2;sx++)for(var sy=0;sy<2;sy++)for(var sz=0;sz<2;sz++){
+      var X=sx?hx:-hx,Y=sy?hy:-hy,Z=sz?hz:-hz,dx=sx?-1:1,dy=sy?-1:1,dz=sz?-1:1;
+      V.push(X,Y,Z,X+dx*arm,Y,Z, X,Y,Z,X,Y+dy*arm,Z, X,Y,Z,X,Y,Z+dz*arm);
+    }
+    var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(V,3));
+    var mB=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0}),
+        mX=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0});
+    var grp=new THREE.Group();
+    grp.add(new THREE.LineSegments(g,mB));
+    grp.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x,size.y,size.z)),mX));
+    grp.visible=false; root.add(grp);
+    return {grp:grp,mB:mB,mX:mX,
+      show:function(o,scl){grp.visible=o>0.02;mB.opacity=o;mX.opacity=o*0.24;grp.scale.setScalar(scl===undefined?1:scl);},
+      hide:function(){grp.visible=false;mB.opacity=0;mX.opacity=0;},
+      color:function(c){mB.color.setHex(c);mX.color.setHex(c);}};
+  }
+
+  // Senkrechtes Massband mit Endstrichen — traegt in Akt 2 die Ueberhoehe und in
+  // Akt 3 die Palettenhoehe. Ein Bild sagt "zu hoch", diese Linie sagt "wie viel".
+  function makeDimV(root){
+    var mat=new THREE.LineBasicMaterial({color:C_WARN,transparent:true,opacity:0});
+    var g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(18),3));
+    var ls=new THREE.LineSegments(g,mat); ls.visible=false; root.add(ls);
+    var tick=0.08;
+    return {mat:mat,
+      set:function(x,z,y0,y1,o,col){
+        var a=g.attributes.position.array;
+        a[0]=x;a[1]=y0;a[2]=z; a[3]=x;a[4]=y1;a[5]=z;
+        a[6]=x-tick;a[7]=y0;a[8]=z; a[9]=x+tick;a[10]=y0;a[11]=z;
+        a[12]=x-tick;a[13]=y1;a[14]=z; a[15]=x+tick;a[16]=y1;a[17]=z;
+        g.attributes.position.needsUpdate=true;
+        mat.opacity=o; if(col!==undefined)mat.color.setHex(col); ls.visible=o>0.02;
+      },
+      hide:function(){mat.opacity=0;ls.visible=false;}};
+  }
+
+  // Ein Packstueck: Koerper plus Kantenlinien. Ueberall gleich gebaut, damit alle
+  // drei Akte aus demselben Material bestehen.
+  function makeBox(root,l,h,w){
+    var geo=new THREE.BoxGeometry(l,h,w);
+    var mat=new THREE.MeshStandardMaterial({color:F_IDLE,metalness:0.12,roughness:0.6,transparent:true,opacity:1});
+    var m=new THREE.Mesh(geo,mat);
+    var em=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.78});
+    m.add(new THREE.LineSegments(new THREE.EdgesGeometry(geo),em));
+    root.add(m);
+    return {mesh:m,mat:mat,edge:em,
+      tone:function(edgeC,faceC){em.color.setHex(edgeC);mat.color.setHex(faceC);},
+      op:function(o){mat.opacity=o;em.opacity=0.78*o;}};
+  }
+
+  // Containerhuelle als Kantenmodell — in allen drei Akten dieselbe.
+  // Der obere Rahmen bleibt auch am Open Top stehen (das Coaming ist Teil der Box);
+  // abgenommen wird in Akt 2 nur die Plane samt Spriegeln.
+  function makeContainer(root,L0,H,W){
+    var grp=new THREE.Group(); root.add(grp);
+    var edgeMat=new THREE.LineBasicMaterial({color:C_BLUEEDGE,transparent:true,opacity:0.55});
+    var shell=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(L0,H,W)),edgeMat); shell.position.set(0,H/2,0); grp.add(shell);
+    var endMat=new THREE.LineBasicMaterial({color:C_TEAL,transparent:true,opacity:0.6});
+    var end=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(0.01,H,W)),endMat); end.position.set(L0/2,H/2,0); grp.add(end);
+    // Das Raster ist der Containerboden: GridHelper ist quadratisch (L0 x L0) und stand
+    // vorn und hinten weit ueber den Container hinaus -- im Dunkeln kaum zu sehen, im
+    // hellen Design eine eigene graue Platte. In der Tiefe auf W gestaucht; Farbe je Thema
+    // ueber material.color (die Vertexfarben bleiben weiss).
+    var grid=new THREE.GridHelper(L0,5,0xffffff,0xffffff); grid.scale.z=W/L0; grid.material.transparent=true; grid.material.opacity=0.42; grid.position.y=0.002; grp.add(grid);
+    grid.material.color.setHex(0x222A35); heroThemaMats.push([grid.material,{dunkel:0x222A35,hell:0x9AA6B6}]);
+    return {grp:grp,edgeMat:edgeMat,endMat:endMat,gridMat:grid.material,
+      setLength:function(L,cx){grp.scale.x=L/L0; grp.position.x=(cx===undefined?0:cx);},
+      setColor:function(hx){edgeMat.color.setHex(hx); endMat.color.setHex(hx);},
+      setOpacity:function(o){edgeMat.opacity=0.55*o; endMat.opacity=0.6*o; grid.material.opacity=0.42*o;}};
+  }
+
+  // ====================== AKT 1 — Re-Solve ======================
+  // Ladung wird in einen 20′ GP gepackt, drei Stuecke bleiben draussen, der Rechner
+  // vermisst die Ladung und schlaegt den 40′ GP vor, dort passt alles.
+  var ACT1=(function(){
+    var TOTAL=14,OVERFLOW=3;
+    var CAM_BASE={x:0.0,y:1.4,z:6.0,lx:0.0}, CAM_WIDE={x:1.0,y:1.7,z:8.7,lx:1.25};
+    var XL=-1.25,L0=2.5,W=1.0,H=1.16,BL=0.62,BH=0.52,BW=0.46,DROP=5.4;
+    var root,CONT,shadow,sweep,scan,boxes=[],repackRank=[],lbMin,lbMax,bc,bs;
+
+    function packPositions(cx,lengthU,n){
+      var bl=0.62,zc=[-0.26,0.26],yc=[0.28,0.82];
+      var usable=lengthU-0.18,step=bl+0.04,cols=Math.max(1,Math.floor(usable/step)),startX=cx-(cols-1)*step/2,out=[];
+      for(var c=0;c<cols;c++){var x=startX+c*step;for(var l=0;l<2;l++){for(var z=0;z<2;z++){out.push(new THREE.Vector3(x,yc[l],zc[z]));}}}
+      return out.slice(0,n);
+    }
+    return {
+      id:'resolve',
+      PH:[{n:'intro',d:1.1},{n:'pack',d:3.6},{n:'overflow',d:1.5},{n:'solve',d:1.2},
+          {n:'grow',d:1.1},{n:'repack',d:2.4},{n:'success',d:2.0},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r;
+        CONT=makeContainer(root,L0,H,W); CONT.setLength(L0,XL+L0/2);
+        shadow=makeShadow(root);
+        var inside20=packPositions(0,2.5,12).slice(0,11);
+        var over=[new THREE.Vector3(1.80,0.30,-0.22),new THREE.Vector3(2.20,0.30,0.24),new THREE.Vector3(1.98,0.84,0.02)];
+        var final40=packPositions(1.25,5.0,14);
+        for(var i=0;i<TOTAL;i++){
+          var b=makeBox(root,BL,BH,BW);
+          var staged=i<11?inside20[i].clone():over[i-11].clone();
+          b.intro=new THREE.Vector3(staged.x,staged.y+DROP,staged.z);
+          b.staged=staged; b.finalT=final40[i].clone(); b.isOver=(i>=11);
+          boxes.push(b);
+        }
+        var order=boxes.map(function(b,i){return i;}).sort(function(a,b){return (boxes[a].finalT.x-boxes[b].finalT.x)||(boxes[a].finalT.y-boxes[b].finalT.y);});
+        order.forEach(function(idx,rank){repackRank[idx]=rank;});
+        lbMin=new THREE.Vector3(1e9,1e9,1e9); lbMax=new THREE.Vector3(-1e9,-1e9,-1e9);
+        boxes.forEach(function(b){var s=b.staged;
+          lbMin.x=Math.min(lbMin.x,s.x-BL/2);lbMax.x=Math.max(lbMax.x,s.x+BL/2);
+          lbMin.y=Math.min(lbMin.y,s.y-BH/2);lbMax.y=Math.max(lbMax.y,s.y+BH/2);
+          lbMin.z=Math.min(lbMin.z,s.z-BW/2);lbMax.z=Math.max(lbMax.z,s.z+BW/2);});
+        var MG=0.07; lbMin.x-=MG;lbMax.x+=MG;lbMin.y-=MG;lbMax.y+=MG;lbMin.z-=MG;lbMax.z+=MG;
+        bc=new THREE.Vector3().addVectors(lbMin,lbMax).multiplyScalar(0.5);
+        bs=new THREE.Vector3().subVectors(lbMax,lbMin);
+        scan=makeBrackets(root,bs,0.24); scan.grp.position.copy(bc);
+        sweep=new THREE.Mesh(new THREE.PlaneGeometry(bs.x+0.5,0.16),new THREE.MeshBasicMaterial({map:sweepTex(),transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide}));
+        sweep.position.set(bc.x,bc.y,0.05); root.add(sweep);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,dim=1,sweepOp=0,L=L0,placed=0;
+        FR.camX=CAM_BASE.x;FR.camY=CAM_BASE.y;FR.camZ=CAM_BASE.z;FR.camLx=CAM_BASE.lx;FR.camLy=0.5;
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        if(name==='intro'){
+          boxes.forEach(function(b){b.mesh.position.copy(b.intro);b.tone(C_BLUEEDGE,F_IDLE);b.mesh.scale.setScalar(1);});
+          CONT.setColor(C_BLUEEDGE); applyStatus(0,'intro',{n:0,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='pack'){
+          var stag=0.17,dur=1.05,tt=p*3.6;
+          boxes.forEach(function(b,i){var lp=clamp01((tt-i*stag)/dur);
+            b.mesh.position.set(b.staged.x,lerp(b.intro.y,b.staged.y,gravityBounce(lp)),b.staged.z);
+            if(lp>=1&&!b.isOver)placed++; b.mesh.scale.setScalar(1);
+            b.tone(b.isOver&&lp>=1?C_WARN:C_BLUEEDGE, b.isOver&&lp>=1?F_WARN:F_IDLE);});
+          CONT.setColor(C_BLUEEDGE); applyStatus(0,'pack',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='overflow'){
+          var pulse=0.5+0.5*Math.sin(t*5.0);
+          boxes.forEach(function(b){b.mesh.position.copy(b.staged);
+            if(b.isOver){b.mesh.position.y=b.staged.y+pulse*0.05;b.tone(C_WARN,F_WARN);b.mesh.scale.setScalar(1+pulse*0.04);}
+            else{b.tone(C_BLUEEDGE,F_IDLE);b.mesh.scale.setScalar(1);}});
+          CONT.setColor(C_WARN); placed=TOTAL-OVERFLOW; applyStatus(0,'over',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='solve'){
+          dim=lerp(1,0.30,smooth(Math.min(p*1.4,1)));
+          var sp=easeInOut(clamp01(p/0.78)); sweep.position.y=lerp(lbMax.y+0.45,lbMin.y-0.25,sp); sweepOp=Math.sin(clamp01(p/0.78)*Math.PI);
+          var inn=smooth(clamp01(p/0.22)),pl=0.78+0.22*Math.sin(t*5.0);
+          scan.color(C_TEAL); scan.show(inn*pl, lerp(1.16,1.0,smooth(clamp01(p/0.4))));
+          boxes.forEach(function(b){b.mesh.position.copy(b.staged);b.mesh.scale.setScalar(1);
+            b.tone(b.isOver?C_WARN:C_BLUEEDGE, b.isOver?F_WARN:F_IDLE);});
+          CONT.setColor(C_WARN); applyStatus(0,'solve',{n:0,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='grow'||name==='repack'){
+          var growP=name==='grow'?smooth(p):1;
+          if(name==='grow'){var go=1-smooth(clamp01(p/0.3)); scan.show(go*0.8);} else scan.hide();
+          L=lerp(2.5,5.0,growP);
+          FR.camX=lerp(CAM_BASE.x,CAM_WIDE.x,growP);FR.camY=lerp(CAM_BASE.y,CAM_WIDE.y,growP);
+          FR.camZ=lerp(CAM_BASE.z,CAM_WIDE.z,growP);FR.camLx=lerp(CAM_BASE.lx,CAM_WIDE.lx,growP);
+          colLerp(_ca,C_WARN,C_TEAL,growP); CONT.edgeMat.color.copy(_ca); CONT.endMat.color.copy(_ca);
+          var winT=(name==='repack'?1.1:0)+p*(name==='grow'?1.1:2.4),stag2=0.15,dur2=0.6;
+          boxes.forEach(function(b,i){var lp=clamp01((winT-repackRank[i]*stag2)/dur2);
+            lerpV(_tmp,b.staged,b.finalT,smooth(lp)); _tmp.y=lerp(b.staged.y,b.finalT.y,easeOutBack(lp));
+            b.mesh.position.copy(_tmp); b.mesh.scale.setScalar(1);
+            if(lp>=1){b.tone(C_GOOD,F_GOOD);placed++;} else b.tone(b.isOver?C_WARN:C_BLUEEDGE, b.isOver?F_WARN:F_IDLE);});
+          applyStatus(0,'repack',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else if(name==='success'){
+          L=5.0;FR.camX=CAM_WIDE.x;FR.camY=CAM_WIDE.y;FR.camZ=CAM_WIDE.z;FR.camLx=CAM_WIDE.lx;
+          var g=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
+          CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*g)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*g)+0.2;
+          boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.tone(C_GOOD,F_GOOD);b.mesh.scale.setScalar(1);});
+          placed=TOTAL; applyStatus(0,'done',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        } else {
+          L=5.0;FR.camX=CAM_WIDE.x;FR.camY=CAM_WIDE.y;FR.camZ=CAM_WIDE.z;FR.camLx=CAM_WIDE.lx; CONT.setColor(C_GOOD);
+          boxes.forEach(function(b){b.mesh.position.copy(b.finalT);b.tone(C_GOOD,F_GOOD);}); placed=TOTAL;
+          applyStatus(0,'done',{n:placed,T:TOTAL,O:OVERFLOW},t);
+        }
+        CONT.setLength(L,XL+L/2); shadow.place(L,XL+L/2);
+        var f=fade*dim;
+        if(name!=='success')CONT.setOpacity(f); else {CONT.edgeMat.opacity*=fade;CONT.endMat.opacity*=fade;CONT.gridMat.opacity=0.42*fade;}
+        boxes.forEach(function(b){b.op(f);});
+        shadow.op(fade);
+        if(name!=='solve'&&name!=='grow')scan.hide(); else {scan.mB.opacity*=fade;scan.mX.opacity*=fade;}
+        sweep.material.opacity=sweepOp*0.85*fade;
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== AKT 2 — Ueberhoehe / Open Top ======================
+  // Eine Maschine von 240 x 220 x 300 cm. Kein Standardcontainer ist innen hoeher als
+  // 270 cm, also 30 cm Ueberhoehe — genau die Zahl, die suggestEquipment() im Rechner
+  // meldet. Der Weg heisst Open Top: Plane und Spriegel ab, Verladung von oben.
+  // Im 20′ Open Top (239 cm innen) ragt die Maschine 61 cm ueber den Rahmen.
+  var ACT2=(function(){
+    var ML=240,MW=220,MH=300,STD=270,INNER=239;         // cm — die Zahlen der Texte
+    var UEBER=MH-STD, RAHMEN=MH-INNER;                  // 30 cm ueber Standard, 61 ueber den Rahmen
+    var SX=2.5/590, SZ=1.0/235, SY=1.16/239;            // cm -> Szeneneinheiten, je Achse
+    var L0=2.5,W=1.0,H=1.16,XL=-1.25,CX=XL+L0/2;
+    var mL=ML*SX,mW=MW*SZ,mH=MH*SY,yStd=STD*SY;
+    var CAM_BOTH={x:0.75,y:1.95,z:8.90,lx:0.62,ly:0.62},
+        CAM_BOX ={x:0.10,y:1.70,z:7.10,lx:0.02,ly:0.60};
+    function camMix(a,b,t){FR.camX=lerp(a.x,b.x,t);FR.camY=lerp(a.y,b.y,t);
+      FR.camZ=lerp(a.z,b.z,t);FR.camLx=lerp(a.lx,b.lx,t);FR.camLy=lerp(a.ly,b.ly,t);}
+    var X_OUT=2.05, X_IN=CX-0.28;                       // draussen daneben / drinnen auf dem Deck
+    var root,CONT,shadow,crate,roofGrp,roofMat,bowMat,ropes,ropeGeo,spreader,scan,dimA,dimB,ref,refMat;
+
+    function setRopes(sx,sy,sz,cx,cy,cz,hw,hz){
+      var a=ropeGeo.attributes.position.array,i=0;
+      function seg(x1,y1,z1,x2,y2,z2){a[i++]=x1;a[i++]=y1;a[i++]=z1;a[i++]=x2;a[i++]=y2;a[i++]=z2;}
+      seg(sx-0.02,sy,sz-hz,sx-0.02,sy+6.0,sz-hz);       // zwei Hubseile nach oben aus dem Bild
+      seg(sx+0.02,sy,sz+hz,sx+0.02,sy+6.0,sz+hz);
+      seg(sx,sy,sz-hz,cx-hw,cy,cz-hz);                  // vier Anschlagmittel zur Kiste
+      seg(sx,sy,sz+hz,cx-hw,cy,cz+hz);
+      seg(sx,sy,sz-hz,cx+hw,cy,cz-hz);
+      seg(sx,sy,sz+hz,cx+hw,cy,cz+hz);
+      ropeGeo.attributes.position.needsUpdate=true;
+    }
+    return {
+      id:'opentop',
+      PH:[{n:'intro',d:1.0},{n:'measure',d:2.1},{n:'over',d:1.5},{n:'swap',d:1.5},
+          {n:'crane',d:2.9},{n:'set',d:1.6},{n:'success',d:1.8},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r;
+        CONT=makeContainer(root,L0,H,W); CONT.setLength(L0,CX);
+        shadow=makeShadow(root); shadow.place(L0,CX);
+        // Plane und Dachspriegel — das, was am Open Top abgenommen wird.
+        roofGrp=new THREE.Group(); root.add(roofGrp);
+        roofMat=new THREE.MeshBasicMaterial({color:0x202B3A,transparent:true,opacity:0.8,side:THREE.DoubleSide,depthWrite:false}); heroThemaMats.push([roofMat,{dunkel:0x202B3A,hell:0xC9D4E2}]);
+        var tarp=new THREE.Mesh(new THREE.PlaneGeometry(L0,W),roofMat); tarp.rotation.x=-Math.PI/2; tarp.position.set(CX,H,0); roofGrp.add(tarp);
+        var BV=[]; for(var i=1;i<=4;i++){var bx=CX-L0/2+i*L0/5; BV.push(bx,H,-W/2, bx,H,W/2);}
+        BV.push(CX-L0/2,H,0, CX+L0/2,H,0);
+        var bg=new THREE.BufferGeometry(); bg.setAttribute('position',new THREE.Float32BufferAttribute(BV,3));
+        bowMat=new THREE.LineBasicMaterial({color:0x55677D,transparent:true,opacity:0.95});
+        roofGrp.add(new THREE.LineSegments(bg,bowMat));
+        // Die Maschine.
+        crate=makeBox(root,mL,mH,mW);
+        // Kran: Traverse plus Seile. Beides zusammen erklaert, warum es von oben gehen muss.
+        spreader=new THREE.Mesh(new THREE.BoxGeometry(0.10,0.055,mW*1.16),
+          (function(){var fm=new THREE.MeshStandardMaterial({color:0x2A3340,metalness:0.5,roughness:0.5,transparent:true,opacity:1}); heroThemaMats.push([fm,{dunkel:0x2A3340,hell:0x9FB0C4}]); return fm;})());
+        root.add(spreader);
+        ropeGeo=new THREE.BufferGeometry(); ropeGeo.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(36),3));
+        ropes=new THREE.LineSegments(ropeGeo,new THREE.LineBasicMaterial({color:0x6E7F92,transparent:true,opacity:0.9})); root.add(ropes);
+        // Messwerkzeug: Winkel um die Maschine, senkrechtes Mass, waagerechte Grenzlinie.
+        scan=makeBrackets(root,new THREE.Vector3(mL+0.12,mH+0.12,mW+0.12),0.2);
+        dimA=makeDimV(root); dimB=makeDimV(root);
+        refMat=new THREE.LineBasicMaterial({color:C_WARN,transparent:true,opacity:0});
+        var rg=new THREE.BufferGeometry(); rg.setAttribute('position',new THREE.Float32BufferAttribute([XL-0.35,yStd,0, X_OUT+mL/2+0.45,yStd,0],3));
+        ref=new THREE.LineSegments(rg,refMat); ref.visible=false; root.add(ref);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,V={L:ML,W:MW,H:MH,U:UEBER,R:RAHMEN};
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        var cx=X_OUT,cy=mH/2,roofOp=1,refOp=0,scanOp=0,ropeOp=0,sy=0;
+
+        if(name==='intro'){
+          crate.tone(C_BLUEEDGE,F_IDLE); applyStatus(1,'intro',V,t);
+        } else if(name==='measure'){
+          var inn=smooth(clamp01(p/0.3));
+          scanOp=inn*(0.78+0.22*Math.sin(t*5.0)); refOp=inn*0.5;
+          var g=smooth(clamp01((p-0.15)/0.6));
+          dimA.set(cx-mL/2-0.16,0,0,mH*g,inn*0.9,C_TEAL);
+          crate.tone(C_BLUEEDGE,F_IDLE); applyStatus(1,'measure',V,t);
+        } else if(name==='over'){
+          var pu=0.5+0.5*Math.sin(t*5.0);
+          scanOp=0.55+0.35*pu; refOp=0.85; scan.color(C_WARN);
+          dimA.set(cx-mL/2-0.16,0,0,mH,0.5,C_TEAL);
+          dimB.set(cx-mL/2-0.30,0,yStd,mH,0.7+0.3*pu,C_WARN);   // nur das Stueck ueber der Grenze
+          crate.tone(C_WARN,F_WARN); CONT.setColor(C_WARN);
+          applyStatus(1,'over',V,t);
+        } else if(name==='swap'){
+          var o=smooth(p);
+          roofOp=1-o;
+          roofGrp.position.set(o*1.5,o*1.1,0);                   // Plane und Spriegel gehen ab
+          refOp=0.85*(1-o); scanOp=0.5*(1-o);
+          dimA.set(cx-mL/2-0.16,0,0,mH,0.5*(1-o),C_TEAL);
+          dimB.set(cx-mL/2-0.30,0,yStd,mH,0.7*(1-o),C_WARN);
+          colLerp(_ca,C_WARN,C_TEAL,o); CONT.edgeMat.color.copy(_ca); CONT.endMat.color.copy(_ca);
+          crate.tone(C_WARN,F_WARN); applyStatus(1,'swap',V,t);
+        } else if(name==='crane'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0); CONT.setColor(C_TEAL);
+          // Drei Zuege: anheben, hinueberfahren, absetzen.
+          var lift=smooth(clamp01(p/0.30)), move=smooth(clamp01((p-0.28)/0.42)), down=smooth(clamp01((p-0.68)/0.32));
+          var yTop=H+mH/2+0.55;
+          cx=lerp(X_OUT,X_IN,move);
+          cy=lerp(mH/2,yTop,lift); cy=lerp(cy,mH/2,down);
+          ropeOp=1; crate.tone(C_TEAL,F_IDLE); applyStatus(1,'crane',V,t);
+        } else if(name==='set'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0); CONT.setColor(C_TEAL);
+          cx=X_IN;
+          ropeOp=1-smooth(clamp01(p/0.45)); sy=smooth(clamp01(p/0.45))*2.4;   // Seile fahren hoch
+          var m=smooth(clamp01((p-0.25)/0.5));
+          dimB.set(cx-mL/2-0.24,0,H,lerp(H,mH,m),0.9,C_WARN);   // vom Rahmen bis Oberkante
+          refOp=0; crate.tone(C_TEAL,F_IDLE); applyStatus(1,'set',V,t);
+        } else if(name==='success'||name==='outro'){
+          roofOp=0; roofGrp.position.set(1.5,1.1,0);
+          cx=X_IN; ropeOp=0; sy=2.4;
+          var gl=0.6+0.4*(0.5+0.5*Math.sin(t*2.2));
+          CONT.setColor(C_GOOD); CONT.edgeMat.opacity=0.55*(0.6+0.4*gl)+0.2; CONT.endMat.opacity=0.6*(0.6+0.4*gl)+0.2;
+          crate.tone(C_GOOD,F_GOOD);
+          dimB.set(cx-mL/2-0.24,0,H,mH,0.75,C_GOOD);
+          applyStatus(1,'done',V,t);
+        }
+
+        // Der Schwenk beginnt, sobald der Kran die Maschine hinuebertraegt.
+        var heran = name==='crane' ? smooth(clamp01((p-0.24)/0.5))
+                  : (name==='set'||name==='success'||name==='outro') ? 1 : 0;
+        camMix(CAM_BOTH,CAM_BOX,heran);
+
+        crate.mesh.position.set(cx,cy,0);
+        spreader.position.set(cx,cy+mH/2+0.42+sy,0);
+        spreader.material.opacity=ropeOp*fade; spreader.visible=ropeOp*fade>0.02;
+        setRopes(cx,cy+mH/2+0.42+sy,0,cx,cy+mH/2,0,mL/2*0.86,mW/2*0.86);
+        ropes.material.opacity=ropeOp*0.9*fade; ropes.visible=ropes.material.opacity>0.02;
+        scan.grp.position.set(cx,cy,0);
+        if(scanOp>0.02){scan.show(scanOp*fade);} else scan.hide();
+        if(name!=='measure'&&name!=='over'&&name!=='swap') scan.color(C_TEAL);
+        refMat.opacity=refOp*fade; ref.visible=refMat.opacity>0.02;
+        dimA.mat.opacity*=fade; dimB.mat.opacity*=fade;
+        if(name==='intro'||name==='crane'){dimA.hide();dimB.hide();}
+        roofMat.opacity=0.8*roofOp*fade; bowMat.opacity=0.95*roofOp*fade;
+        roofGrp.visible=roofOp*fade>0.02;
+        if(name!=='success'&&name!=='outro')CONT.setOpacity(fade);
+        else {CONT.edgeMat.opacity*=fade;CONT.endMat.opacity*=fade;CONT.gridMat.opacity=0.42*fade;}
+        crate.op(fade); shadow.op(fade);
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== AKT 3 — Palette bauen ======================
+  // 40 Kartons 45 x 30 x 30 cm, sonst nichts — der Fall, mit dem der Palettierer
+  // gebaut wurde. Auf die Europalette gehen sechs je Lage, und zwar VIER laengs und
+  // ZWEI quer: das gemischte Muster ist der Punkt, den der Rechner sehen laesst und
+  // eine Faustregel nicht. Bei 180 cm Maximalhoehe sind das fuenf Lagen, 30 Kartons,
+  // 164,4 cm, 295 kg — und eine zweite, angebrochene Palette fuer die letzten zehn.
+  var ACT3=(function(){
+    var CL=45,CW=30,CH=30,CKG=9,QTY=40;                  // Karton in cm / kg, Gesamtmenge
+    var PLL=120,PLW=80,PLH=14.4,TARE=25;                 // Europalette
+    var PER=6,LAYERS=5,PERPAL=30,REST=10,RESTL=2,PALS=2;
+    var HGES=PLH+LAYERS*CH, KGES=TARE+PERPAL*CKG;        // 164,4 cm · 295 kg
+    // Das Lagenmuster, wie makeFloorPacker es liefert: [x, z, dx, dz] in cm, Ursprung Ecke.
+    var MUSTER=[[0,0,30,45],[30,0,30,45],[60,0,30,45],[90,0,30,45],[0,45,45,30],[45,45,45,30]];
+    var S=0.0125;                                        // cm -> Szeneneinheiten
+    var PX=PLL*S,PZ=PLW*S,PY=PLH*S,CY=CH*S;
+    var CAM_TOP={x:0.0,y:2.55,z:3.95,lx:0.0,ly:0.32},
+        CAM_SIDE={x:0.0,y:2.30,z:5.70,lx:0.0,ly:1.15},
+        CAM_WIDE={x:0.80,y:2.60,z:8.70,lx:0.81,ly:1.00};
+    function camMix(a,b,t){FR.camX=lerp(a.x,b.x,t);FR.camY=lerp(a.y,b.y,t);
+      FR.camZ=lerp(a.z,b.z,t);FR.camLx=lerp(a.lx,b.lx,t);FR.camLy=lerp(a.ly,b.ly,t);}
+    var XA=-0.10, XB=1.72;                               // Standort Palette 1 und 2 (Deck 1,5 breit)
+    // "1 Lagen" liest sich falsch, und zwar in beiden Sprachen.
+    function lagenWort(n){return n+' '+(n===1?{de:'Lage',en:'laag'}:{de:'Lagen',en:'lagen'})[lang()];}
+    var root,shadow,palA,palB,cartons=[],scan,dim;
+
+    // Ein Palettengestell: Deck oben, drei Kloetze darunter. Mehr braucht es nicht,
+    // damit man auf den ersten Blick eine Palette sieht und keine Kiste.
+    function makePallet(x){
+      var g=new THREE.Group(); g.position.x=x; root.add(g);
+      var wood=new THREE.MeshStandardMaterial({color:C_WOOD,roughness:0.85,metalness:0.04,transparent:true,opacity:1});
+      var deck=new THREE.Mesh(new THREE.BoxGeometry(PX,4*S,PZ),wood); deck.position.y=PY-2*S; g.add(deck);
+      var em=new THREE.LineBasicMaterial({color:0xB2895F,transparent:true,opacity:0.5});
+      deck.add(new THREE.LineSegments(new THREE.EdgesGeometry(deck.geometry),em));
+      [-50,0,50].forEach(function(bx){
+        var k=new THREE.Mesh(new THREE.BoxGeometry(12*S,(PLH-4)*S,PZ),wood);
+        k.position.set(bx*S,(PLH-4)*S/2,0); g.add(k);
+      });
+      return {grp:g,mat:wood,edge:em,op:function(o){wood.opacity=o;em.opacity=0.5*o;}};
+    }
+    // Platz Nummer i auf einer Palette: Muster-Rechteck, Lage, Standort.
+    function spot(i,px){
+      var r=MUSTER[i%PER],ly=Math.floor(i/PER);
+      return {x:px+(r[0]+r[2]/2-PLL/2)*S, y:PY+(ly+0.5)*CY, z:(r[1]+r[3]/2-PLW/2)*S, dx:r[2]*S, dz:r[3]*S, layer:ly};
+    }
+    return {
+      id:'palette',
+      PH:[{n:'intro',d:1.0},{n:'layer',d:2.4},{n:'stack',d:3.0},{n:'measure',d:1.6},
+          {n:'rest',d:2.2},{n:'success',d:1.8},{n:'outro',d:0.9}],
+      build:function(r){
+        root=r; shadow=makeShadow(root);
+        palA=makePallet(XA); palB=makePallet(XB);
+        for(var i=0;i<QTY;i++){
+          var voll=i<PERPAL, s=spot(voll?i:i-PERPAL, voll?XA:XB);
+          var b=makeBox(root,s.dx,CY,s.dz);
+          b.at=s; b.voll=voll; b.idx=i;
+          b.from=new THREE.Vector3(s.x,s.y+2.1+(i%PER)*0.10,s.z);
+          cartons.push(b);
+        }
+        scan=makeBrackets(root,new THREE.Vector3(PX+0.06,LAYERS*CY+PY+0.06,PZ+0.06),0.16);
+        scan.grp.position.set(XA,(LAYERS*CY+PY)/2,0);
+        dim=makeDimV(root);
+      },
+      update:function(name,p,ct,t,FR){
+        var fade=1,gezeigt=PERPAL,nLage=0,nStapel=0,restDa=0;
+        var V={Q:QTY,P:PER,S:LAYERS,PP:PERPAL,R:REST,RL:RESTL,N:PALS,KG:KGES,
+               cl:CL,cw:CW,ch:CH,ckg:CKG,
+               HD:HGES.toLocaleString('de-DE',{minimumFractionDigits:1}),
+               HE:HGES.toLocaleString('en-GB',{minimumFractionDigits:1})};
+        if(name==='intro')fade=smooth(p/0.5);
+        if(name==='outro')fade=1-smooth(p);
+        var wide=0;
+
+        if(name==='intro'){
+          cartons.forEach(function(b){b.mesh.position.copy(b.from);b.tone(C_BLUEEDGE,F_IDLE);});
+          scan.hide(); dim.hide(); applyStatus(2,'intro',V,t);
+        } else if(name==='layer'||name==='stack'){
+          // Eine durchgehende Uhr ueber beide Phasen: die erste Lage legt sich langsam
+          // (man soll das Muster lesen koennen), die restlichen vier fallen zuegiger.
+          var tt=(name==='layer'?p*2.4:2.4+p*3.0);
+          cartons.forEach(function(b){
+            if(!b.voll){b.mesh.visible=false;return;}
+            b.mesh.visible=true;
+            var start=b.idx<PER? b.idx*0.34 : 2.4+(b.idx-PER)*0.115;
+            var dur=b.idx<PER?0.55:0.42;
+            var lp=clamp01((tt-start)/dur);
+            b.mesh.position.set(b.at.x,lerp(b.from.y,b.at.y,gravityBounce(lp)),b.at.z);
+            b.mesh.scale.setScalar(1);
+            if(lp>=1){ if(b.at.layer===0)nLage++; nStapel=Math.max(nStapel,b.at.layer+1); }
+            b.tone(lp>=1?C_TEAL:C_BLUEEDGE, F_IDLE);
+          });
+          scan.hide(); dim.hide();
+          if(name==='layer') applyStatus(2,'layer',Object.assign({n:nLage},V),t);
+          else applyStatus(2,'stack',Object.assign({n:nStapel,nL:lagenWort(nStapel)},V),t);
+        } else if(name==='measure'){
+          cartons.forEach(function(b){b.mesh.visible=b.voll; if(b.voll){b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_TEAL,F_IDLE);}});
+          var inn=smooth(clamp01(p/0.3));
+          scan.color(C_TEAL); scan.show(inn*(0.78+0.22*Math.sin(t*5.0)),lerp(1.12,1.0,inn));
+          dim.set(XA-PX/2-0.18,0,0,lerp(0,PY+LAYERS*CY,smooth(clamp01(p/0.7))),inn*0.9,C_TEAL);
+          applyStatus(2,'measure',V,t);
+        } else if(name==='rest'){
+          wide=smooth(p);
+          restDa=1;
+          var ein=smooth(clamp01(p/0.55));
+          cartons.forEach(function(b){
+            b.mesh.visible=true;
+            if(b.voll){b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_TEAL,F_IDLE);}
+            else{
+              var lp=clamp01((p*2.2-0.5-(b.idx-PERPAL)*0.075)/0.5);
+              b.mesh.position.set(b.at.x,lerp(b.from.y,b.at.y,gravityBounce(lp)),b.at.z);
+              b.mesh.visible=lp>0.001;
+              b.tone(lp>=1?C_TEAL:C_BLUEEDGE,F_IDLE);
+            }
+          });
+          palB.op(ein*fade);
+          scan.show(0.5*(1-smooth(clamp01(p/0.35))));
+          dim.set(XA-PX/2-0.18,0,0,PY+LAYERS*CY,0.9*(1-smooth(clamp01(p/0.35))),C_TEAL);
+          applyStatus(2,'rest',V,t);
+        } else {
+          wide=1; restDa=1;
+          cartons.forEach(function(b){b.mesh.visible=true;b.mesh.position.set(b.at.x,b.at.y,b.at.z);b.tone(C_GOOD,F_GOOD);});
+          scan.hide();
+          dim.set(XA-PX/2-0.18,0,0,PY+LAYERS*CY,0.75,C_GOOD);
+          applyStatus(2,'done',V,t);
+        }
+
+        // Der Schwenk erzaehlt mit: Draufsicht auf das Muster, dann Seitenblick auf
+        // den wachsenden Stapel, zuletzt weit genug fuer beide Paletten.
+        if(name==='intro'||name==='layer') camMix(CAM_TOP,CAM_TOP,0);
+        else if(name==='stack') camMix(CAM_TOP,CAM_SIDE,smooth(clamp01(p/0.65)));
+        else if(name==='measure') camMix(CAM_SIDE,CAM_SIDE,0);
+        else camMix(CAM_SIDE,CAM_WIDE,wide);
+        palA.op(fade); if(!restDa)palB.op(0);
+        palB.grp.visible=palB.mat.opacity>0.02;
+        cartons.forEach(function(b){b.op(fade);});
+        shadow.place(PX*(restDa?2.6:1.5),lerp(XA,(XA+XB)/2,wide)); shadow.op(fade*0.7);
+        dim.mat.opacity*=fade; scan.mB.opacity*=fade; scan.mX.opacity*=fade;
+        FR.spin=(name==='success');
+      }
+    };
+  })();
+
+  // ====================== Regisseur ======================
+  var ACTS=[ACT1,ACT2,ACT3];
+  ACTS.forEach(function(a){ a.cycle=a.PH.reduce(function(s,p){return s+p.d;},0); });
+  var TOTAL_CYCLE=ACTS.reduce(function(s,a){return s+a.cycle;},0);
+  function phaseAt(a,ct){var acc=0;for(var i=0;i<a.PH.length;i++){if(ct<acc+a.PH[i].d)return{n:a.PH[i].n,p:(ct-acc)/a.PH[i].d};acc+=a.PH[i].d;}
+    return{n:a.PH[a.PH.length-1].n,p:1};}
+
+  var started=false,raf=0,running=false,elapsed=0,curAct=-1,roots=[];
+  var FR={camX:0,camY:0,camZ:0,camLx:0,camLy:0.5,spin:false};
+
+  // Die drei Punkte in der Leiste: sie sagen, dass es mehr als eine Szene gibt, und
+  // erlauben den Sprung. Ohne sie sieht ein Besucher, der nach zwoelf Sekunden
+  // weiterscrollt, nie, dass es Akt 2 und 3 ueberhaupt gibt.
+  var actDots=[];
+  document.querySelectorAll('#clhActs .clh-ad').forEach(function(d,i){
+    actDots.push(d);
+    d.addEventListener('click',function(){ jumpTo(i); });
+  });
+  function actStart(i){var s=0;for(var k=0;k<i;k++)s+=ACTS[k].cycle;return s;}
+  function jumpTo(i){ elapsed=actStart(i)+0.001; if(started&&!running)resume(); }
+  function markDots(i){ actDots.forEach(function(d,k){ d.classList.toggle('on',k===i); d.setAttribute('aria-current',k===i?'true':'false'); }); }
+
+  function ensureThree(cb){ if(window.THREE) return cb();
+    var s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+    s.async=true; s.onload=cb; s.onerror=function(){}; document.head.appendChild(s); }
+
+  function build(){
+    _ca=new THREE.Color(); _cb=new THREE.Color(); _tmp=new THREE.Vector3();
+    renderer=new THREE.WebGLRenderer({canvas:canvas,antialias:true,alpha:true});
+    renderer.setClearColor(0x000000,0); renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+    scene=new THREE.Scene();
+    camera=new THREE.PerspectiveCamera(42,1,0.1,100);
+    pivot=new THREE.Object3D(); scene.add(pivot);
+    heroAmb=new THREE.AmbientLight(0x9fb6d6,0.6); scene.add(heroAmb);
+    var key=new THREE.DirectionalLight(0xffffff,1.05); key.position.set(4,6,5); scene.add(key);
+    var fillL=new THREE.PointLight(0x2E8FFF,0.7,40); fillL.position.set(-5,2,-2); scene.add(fillL);
+    ACTS.forEach(function(a){ var g=new THREE.Group(); g.visible=false; pivot.add(g); roots.push(g); a.build(g); });
+    // ERST nach dem Bau: die Akte legen ihre themenabhaengigen Materialien (Dach, Traverse,
+    // Bodenraster) beim Bauen in heroThemaMats ab. Vorher aufgerufen blieben sie im hellen
+    // Design dunkel -- das Open-Top-Dach stand als schwarzer Balken ueber dem Container.
+    window.clHeroThema(document.documentElement.dataset.theme);
+    clock=new THREE.Clock(); sizeUp();
+    window.addEventListener('resize',sizeUp);
+    window.addEventListener('pointermove',onMove);
+  }
+  function sizeUp(){var r=canvas.getBoundingClientRect();var w=Math.max(1,r.width),h=Math.max(1,r.height);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
+  var tx=0,ty=0,px=0,py=0;
+  function onMove(e){var nx=(e.clientX/window.innerWidth)*2-1,ny=(e.clientY/window.innerHeight)*2-1;tx=nx*0.14;ty=ny*0.08;}
+
+  // WICHTIG: das Canvas steht bis zum Three-Load auf display:none und hat damit keine
+  // Box -> ein IntersectionObserver darauf wuerde NIE isIntersecting=true melden.
+  // Daher die immer sichtbare Stage beobachten (Wrapper .clh-stage). Und: Canvas erst
+  // sichtbar machen, DANN build() (sizeUp misst die echte Canvas-Groesse).
+  var stage=canvas.parentNode;
+  var io=new IntersectionObserver(function(es){es.forEach(function(e){
+    if(e.isIntersecting){ if(!started){started=true; ensureThree(function(){ if(!window.THREE)return; canvas.style.display='block'; poster&&(poster.style.display='none'); build(); resume(); }); } else resume(); }
+    else pause();
+  });},{threshold:0.12});
+  io.observe(stage);
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) pause(); else if(started) resume(); });
+  function pause(){ running=false; if(raf){cancelAnimationFrame(raf);raf=0;} }
+  function resume(){ if(running||!started)return; running=true; clock&&clock.start(); raf=requestAnimationFrame(loop); }
+
+  function loop(){
+    if(!running)return;
+    var dt=Math.min(clock.getDelta(),0.05); elapsed+=dt;
+    var r=elapsed%TOTAL_CYCLE,i=0;
+    while(i<ACTS.length-1&&r>=ACTS[i].cycle){r-=ACTS[i].cycle;i++;}
+    if(i!==curAct){ roots.forEach(function(g,k){g.visible=(k===i);}); markDots(i); curAct=i; }
+    var ph=phaseAt(ACTS[i],r);
+    px+=(tx-px)*0.06; py+=(ty-py)*0.06;
+    ACTS[i].update(ph.n,ph.p,r,elapsed,FR);
+    pivot.rotation.y=px+(FR.spin?Math.sin(elapsed*0.5)*0.04:0);
+    pivot.rotation.x=py*0.6;
+    camera.position.set(FR.camX,FR.camY,FR.camZ); camera.lookAt(FR.camLx,FR.camLy,0);
+    renderer.render(scene,camera);
+    raf=requestAnimationFrame(loop);
+  }
+})();
+</script>
+<!-- Tool-Showcase: isometrischer Container (reines SVG, kein Three.js) -->
+<script>
+(function(){
+  var svg=document.getElementById('sc-iso'); if(!svg) return;
+  var NS='http://www.w3.org/2000/svg';
+  var VW=520, VH=300;
+  var C=0.866, Sn=0.5;                                   // cos/sin 30°
+  function proj(p){ return [ (p[0]-p[1])*C, (p[0]+p[1])*Sn - p[2] ]; }
+
+  // Container-Maße (angelehnt an 20' GP: ~5.9 × 2.4 × 2.4)
+  var L=5.9, W=2.4, H=2.4;
+  var corners=[[0,0,0],[L,0,0],[L,W,0],[0,W,0],[0,0,H],[L,0,H],[L,W,H],[0,W,H]];
+  var pc=corners.map(proj);
+  var xs=pc.map(function(p){return p[0];}), ys=pc.map(function(p){return p[1];});
+  var minx=Math.min.apply(null,xs), maxx=Math.max.apply(null,xs);
+  var miny=Math.min.apply(null,ys), maxy=Math.max.apply(null,ys);
+  var padX=44, padY=42;
+  var sc=Math.min((VW-2*padX)/(maxx-minx),(VH-2*padY)/(maxy-miny));
+  var ox=(VW-(maxx-minx)*sc)/2 - minx*sc;
+  var oy=(VH-(maxy-miny)*sc)/2 - miny*sc;
+  function P(w){ var q=proj(w); return [ox+q[0]*sc, oy+q[1]*sc]; }
+  function ptsOf(arr){ return arr.map(function(w){var p=P(w);return p[0].toFixed(1)+','+p[1].toFixed(1);}).join(' '); }
+  function poly(arr,fill,stroke,sw,op){
+    var el=document.createElementNS(NS,'polygon');
+    el.setAttribute('points',ptsOf(arr));
+    el.setAttribute('fill',fill||'none');
+    if(stroke){el.setAttribute('stroke',stroke);el.setAttribute('stroke-width',sw||1);el.setAttribute('stroke-linejoin','round');}
+    if(op!=null)el.setAttribute('opacity',op);
+    svg.appendChild(el); return el;
+  }
+  function line(a,b,stroke,sw){
+    var pa=P(a),pb=P(b), el=document.createElementNS(NS,'line');
+    el.setAttribute('x1',pa[0].toFixed(1));el.setAttribute('y1',pa[1].toFixed(1));
+    el.setAttribute('x2',pb[0].toFixed(1));el.setAttribute('y2',pb[1].toFixed(1));
+    el.setAttribute('stroke',stroke);el.setAttribute('stroke-width',sw||1);el.setAttribute('stroke-linecap','round');
+    svg.appendChild(el); return el;
+  }
+
+  // weicher Bodenschatten
+  var defs=document.createElementNS(NS,'defs');
+  var rg=document.createElementNS(NS,'radialGradient'); rg.setAttribute('id','sc-shg');
+  [['0%','.5'],['65%','.16'],['100%','0']].forEach(function(s){
+    var st=document.createElementNS(NS,'stop');
+    st.setAttribute('offset',s[0]); st.setAttribute('stop-color','#000'); st.setAttribute('stop-opacity',s[1]);
+    rg.appendChild(st);
+  });
+  defs.appendChild(rg); svg.appendChild(defs);
+  var fc=P([L/2,W/2,0]);
+  var sh=document.createElementNS(NS,'ellipse');
+  sh.setAttribute('cx',fc[0].toFixed(1)); sh.setAttribute('cy',(fc[1]+8).toFixed(1));
+  sh.setAttribute('rx',(Math.abs(P([L,W,0])[0]-P([0,0,0])[0])/2*1.02).toFixed(1));
+  sh.setAttribute('ry',(Math.abs(P([0,W,0])[1]-P([L,0,0])[1])/2*0.8+9).toFixed(1));
+  sh.setAttribute('fill','url(#sc-shg)'); svg.appendChild(sh);
+
+  var wire='rgba(120,170,230,.55)', wireDim='rgba(120,170,230,.20)';
+  // Boden + Gitter
+  poly([[0,0,0],[L,0,0],[L,W,0],[0,W,0]],'rgba(46,143,255,.05)',wireDim,1);
+  for(var g=1;g<5;g++){ line([L*g/5,0,0],[L*g/5,W,0],wireDim,0.8); }
+  line([0,W/2,0],[L,W/2,0],wireDim,0.8);
+  // hintere Pfosten + hintere Deckenschienen (faint, hinter Ladung)
+  line([0,0,0],[0,0,H],wireDim,1.2);
+  line([L,0,0],[L,0,H],wireDim,1.2);
+  line([0,W,0],[0,W,H],wireDim,1.2);
+  line([0,0,H],[L,0,H],wireDim,1.2);
+  line([0,0,H],[0,W,H],wireDim,1.2);
+
+  // Ladung (Painter's Order: hinten-unten → vorne-oben)
+  var bl=1.30, bw=1.05, bh=0.98, gap=0.06, vgap=0.03, nx=4, ny=2;
+  var usedL=nx*bl+(nx-1)*gap, usedW=ny*bw+(ny-1)*gap;
+  var sx=(L-usedL)/2, sy=(W-usedW)/2;
+  // Zwei Lagen, eine Farbfamilie: die obere Lage heller. Der Unterschied zeigt
+  // die Stapelung an — er ist Information, nicht Dekoration.
+  var blue={top:'#2C6296',left:'#24507B',right:'#1C3F62'};   // untere Lage
+  var teal={top:'#4E9BE8',left:'#3C7EC0',right:'#2F6499'};   // obere Lage
+  var edge='rgba(4,16,31,.5)';
+  var boxes=[];
+  for(var lay=0;lay<2;lay++)
+    for(var ix=0;ix<nx;ix++)
+      for(var iy=0;iy<ny;iy++){
+        if(lay===1 && ix===nx-1) continue;               // vordere Spalte obere Lage weg → Treppenstufe
+        boxes.push({ix:ix,iy:iy,lay:lay});
+      }
+  boxes.sort(function(a,b){ return (a.ix+a.iy+a.lay)-(b.ix+b.iy+b.lay); });
+  boxes.forEach(function(b){
+    var x0=sx+b.ix*(bl+gap), y0=sy+b.iy*(bw+gap), z0=b.lay*(bh+vgap);
+    var x1=x0+bl, y1=y0+bw, z1=z0+bh;
+    var col=(b.lay===0)?blue:teal;
+    poly([[x1,y0,z0],[x1,y1,z0],[x1,y1,z1],[x1,y0,z1]],col.right,edge,0.8); // rechte Fläche
+    poly([[x0,y1,z0],[x1,y1,z0],[x1,y1,z1],[x0,y1,z1]],col.left, edge,0.8); // linke Fläche
+    poly([[x0,y0,z1],[x1,y0,z1],[x1,y1,z1],[x0,y1,z1]],col.top,  edge,0.8); // Deckel
+  });
+
+  // vorderer Rahmen (über der Ladung)
+  line([L,W,0],[L,W,H],wire,1.6);
+  line([L,0,H],[L,W,H],wire,1.4);
+  line([0,W,H],[L,W,H],wire,1.4);
+  line([L,0,0],[L,W,0],wire,1.3);
+  line([0,W,0],[L,W,0],wire,1.3);
+
+  // Deko-QR (statisches Muster, kein echter Code)
+  var q=document.getElementById('sc-qr');
+  if(q){
+    var pat='1111101101011010110010111110000000110101011101001101110100101011111';
+    for(var i=0;i<49;i++){var c=document.createElement('i'); if(pat[i%pat.length]==='0')c.className='o'; q.appendChild(c);}
+  }
+})();
+</script>
+<!-- Besucherzaehler: GoatCounter (kostenlos, ohne Cookies, DSGVO-freundlich) -->
+<!-- Ersetze containerload durch deinen Code von goatcounter.com (z.B. containerload) -->
+<script data-goatcounter="https://containerload.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>
+<!-- Lebenszeichen fuer "gerade online" im Admin: ein Wort je Minute, keine Kennung (Datenschutz, Abschnitt 5) -->
+<script src="/puls.js" defer></script>
+<script>
+/* Hell/Dunkel: Klick merkt die Wahl unter cl_theme (derselbe Schluessel wie im Rechner —
+   EIN Produkt, die Wahl gilt auf beiden Seiten). Ohne gemerkte Wahl folgt die Seite der
+   Systemeinstellung auch live. Die Adressleiste (theme-color) zieht mit. */
+(function(){
+  function setze(t){
+    document.documentElement.dataset.theme=t;
+    var meta=document.querySelector('meta[name="theme-color"]');
+    if(meta) meta.setAttribute('content', t==='hell' ? '#EEF1F6' : '#0E1116');
+    if(window.clHeroThema) window.clHeroThema(t);
+  }
+  [].slice.call(document.querySelectorAll('.themabtn')).forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=b.getAttribute('data-thema');
+      try{localStorage.setItem('cl_theme',t);}catch(e){}
+      setze(t);
+    });
+  });
+  try{
+    var mq=window.matchMedia('(prefers-color-scheme: light)');
+    var folge=function(){
+      try{ if(localStorage.getItem('cl_theme')) return; }catch(e){}
+      setze(mq.matches?'hell':'dunkel');
+    };
+    if(mq.addEventListener) mq.addEventListener('change',folge); else if(mq.addListener) mq.addListener(folge);
+  }catch(e){}
+  setze(document.documentElement.dataset.theme||'dunkel');
+})();
+</script>
+</body>
+</html>

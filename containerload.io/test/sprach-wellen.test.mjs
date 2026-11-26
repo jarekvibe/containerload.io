@@ -44,6 +44,13 @@ const CLUSTER = [
 // Je Welle: Ordner, og:locale, und woran man erkennt, dass fremder Text stehengeblieben ist.
 // Die Fremdwort-Liste nennt nur Woerter, die es in der Sprache der Seite NICHT gibt.
 const WELLEN = {
+  // Die aelteste Welle (26.10.26). Bis 26.11.26 fuehrte sie in den ENGLISCHEN Rechner, weil es
+  // keinen niederlaendischen gab -- seitdem gelten fuer sie dieselben Regeln wie fuer die anderen.
+  nl: {
+    ordner: "nl/gids", locale: "nl_NL",
+    fremd: /\b(und|nicht|Paletten|how many|the|with|combien|avec|conteneur|cuántos|caben|palets|contenedor)\b/gi,
+    nurEnDe: /in het Engels of Duits/i,
+  },
   es: {
     ordner: "es/guia", locale: "es_ES",
     fremd: /\b(passen|hoeveel|de calculator|niet|één|und|nicht|Paletten|pallets passen|how many|the|with|combien|avec|conteneur)\b/gi,

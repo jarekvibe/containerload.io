@@ -98,8 +98,8 @@ test("jeder Baustein des Ladevorschlags laeuft ueber dokMit -- und Deutsch und E
 const OHNE_VGM_BLATT = ["zh"];
 const teileVon = (k) => TEILE.filter((t) => !(t === "vgmpdf" && OHNE_VGM_BLATT.includes(k)));
 
-test("Spanisch, Franzoesisch und Chinesisch bringen ihre Dokumente mit -- Chinesisch ohne das VGM-Blatt", () => {
-  assert.deepStrictEqual(MIT, ["es", "fr", "zh"]);
+test("Spanisch, Franzoesisch, Niederlaendisch und Chinesisch bringen ihre Dokumente mit -- Chinesisch ohne das VGM-Blatt", () => {
+  assert.deepStrictEqual(MIT, ["es", "fr", "nl", "zh"]);
   for (const k of MIT) assert.strictEqual("vgmpdf" in dok(k), !OHNE_VGM_BLATT.includes(k), `${k}: VGM-Blatt`);
   // Was das Blatt nicht in der Sprache hat, bietet das Formular auch nicht an
   const { vgmSpGibt, vgmTexte, DOK_MEHR, VGM_TXT } = new Function(HELFER + app.slice(app.indexOf("  var VGM_TXT = {"), app.indexOf("  var VGM_JE_SEITE")) + "\nreturn { vgmSpGibt, vgmTexte, DOK_MEHR, VGM_TXT };")();
@@ -147,8 +147,12 @@ for (const k of MIT) {
           assert.doesNotMatch(b, /&(?![a-z]+;|#\d+;)/, `${wo}: ein rohes & (als &amp; schreiben)`);
           assert.strictEqual((b.match(/<br>/g) || []).length, (a.match(/<br>/g) || []).length, `${wo}: andere Zeilenumbrueche`);
           assert.strictEqual((b.match(/<b>/g) || []).length, (a.match(/<b>/g) || []).length, `${wo}: andere Hervorhebungen`);
-          // Kein deutscher Rest
-          assert.doesNotMatch(b, /\b(Ladung|Stirnwand|Tür|Gewicht|Seite|Position|stapelbar|Container-Tara|unverbindlich|Vorschlag)\b/i, `${wo}: deutscher Rest — "${b}"`);
+          // Kein deutscher Rest. Niederlaendisch schreibt "gewicht" wie das Deutsche -- dort
+          // stehen dafuer Woerter in der Liste, die es nur im Deutschen gibt.
+          const REST = k === "nl"
+            ? /\b(Ladung|Stirnwand|Tür|Zuladung|Seite|Position|stapelbar|Container-Tara|unverbindlich|Vorschlag|Packstück\w*|Schwerpunkt|Höhe|Breite)\b/i
+            : /\b(Ladung|Stirnwand|Tür|Gewicht|Seite|Position|stapelbar|Container-Tara|unverbindlich|Vorschlag)\b/i;
+          assert.doesNotMatch(b, REST, `${wo}: deutscher Rest — "${b}"`);
         }
       }
     }
@@ -159,6 +163,7 @@ for (const k of MIT) {
     const SATZ = {
       es: { unverb: /no vinculante/i, amtlich: /No es un documento oficial/, keinVgm: /^No es una VGM\./, richtwert: /VALOR ORIENTATIVO/, quittung: /^Solo confirma la carga/, gefahr: /no hay comprobación de mercancías peligrosas/ },
       fr: { unverb: /sans engagement/i, amtlich: /pas un document officiel/, keinVgm: /^Ce n’est pas une VGM\./, richtwert: /VALEUR INDICATIVE/, quittung: /^Atteste uniquement le chargement/, gefahr: /aucun contrôle des marchandises dangereuses/ },
+      nl: { unverb: /vrijblijvend/i, amtlich: /Geen officieel document/, keinVgm: /^Geen VGM\./, richtwert: /RICHTWAARDE/, quittung: /^Bevestigt alleen de belading/, gefahr: /geen controle op gevaarlijke stoffen/ },
       zh: { unverb: /非约束性/, amtlich: /不是正式单证/, keinVgm: /^这不是 VGM。/, richtwert: /参考值/, quittung: /^仅确认已按本方案装载/, gefahr: /不作危险品核查/ }
     }[k];
     assert.ok(SATZ, `${k}: fuer diese Sprache steht die Ehrlichkeitslinie noch nicht im Test`);

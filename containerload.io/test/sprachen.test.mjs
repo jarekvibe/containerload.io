@@ -54,8 +54,8 @@ test("Register und Dateien passen zusammen, und der Server kennt jede Sprache", 
   // KI-Brief: was der Rechner zur Wahl stellt, nimmt der Server auch an -- und umgekehrt
   const ki = fs.readFileSync(path.join(wurzel, "..", "netlify", "functions", "lib", "ki.mjs"), "utf8");
   const briefServer = new Function("return " + /export const BRIEF_SPRACHEN = (\[[^\]]*\]);/.exec(ki)[1])();
-  assert.deepStrictEqual(briefServer.slice().sort(), ["de", "en", "nl", ...dateien].sort(), "BRIEF_SPRACHEN auf dem Server und die Sprachen des Rechners weichen ab");
-  assert.ok(roh.includes('var BRIEF_SPRACHEN_UI = [["de", "Deutsch"], ["en", "English"], ["nl", "Nederlands"]].concat(SPRACH_LISTE.slice(2).map(([k, n]) => [k, n]));'));
+  assert.deepStrictEqual(briefServer.slice().sort(), ["de", "en", ...dateien].sort(), "BRIEF_SPRACHEN auf dem Server und die Sprachen des Rechners weichen ab");
+  assert.ok(roh.includes('var BRIEF_SPRACHEN_UI = SPRACH_LISTE.map(([k, n]) => [k, n]);'));
   assert.ok(!/Seg, \{[^}]*setBriefSprache/.test(roh), "die Brief-Sprachen stehen wieder als Knopfreihe da");
   for (const k of dateien) assert.ok(new RegExp(k + " = [A-Z]").test(/"Zielsprache ist fakten\.sprache: ([^"]*)"/.exec(ki)[1]), `der KI-Brief-Auftrag erklaert "${k}" nicht`);
   for (const k of dateien) {

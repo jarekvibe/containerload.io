@@ -225,11 +225,20 @@ test("jede Sprache traegt die Texte -- und die Fusszeile laesst sich umstellen",
     assert.match(s, /weightPer: function \(u\) \{ return "[^"]*\(" \+ u \+ "\)"; \}/, `${f}: die Gewichts-Beschriftung nennt die Einheit nicht`);
     assert.match(s, /impHint: function \(u\) \{ return "[^"]*" \+ u; \}/, `${f}: der Import-Hinweis nennt die Einheit nicht`);
     assert.ok(!/unitToCm|unitToMm/.test(s), `${f}: alte Schalter-Texte`);
+    // Die Zuladung in der Masskarte: in Pfund steht die Einheit in der Beschriftung, und die
+    // muss in EINE Zeile passen -- sonst wird die Karte 17 px hoeher. Gemessen (26.11.26, 1440
+    // und 1280 px): 13 Zeichen passen ("Nutzlast (lb)"), 14 nicht mehr. "Carga útil (lb)",
+    // "Charge utile (lb)" und "Laadvermogen (lb)" brachen um -- deshalb ein eigener, kurzer Text.
+    const lb = /stPayLb: "([^"]+)"/.exec(s);
+    assert.ok(lb && / \(lb\)$/.test(lb[1]) && lb[1].length <= 13, `${f}: stPayLb fehlt, nennt die Einheit nicht oder ist laenger als 13 Zeichen (${lb && lb[1]})`);
     // Die Fusszeile wird per Ersatz umgestellt -- dafuer muss sie so enden.
     for (const m of s.matchAll(/footL(?:Road)?: "([^"]*)"/g)) assert.ok(m[1].endsWith("cm \\xB7 kg"), `${f}: Fusszeile endet nicht auf 'cm · kg'`);
   }
   for (const m of app.matchAll(/^\s+footL(?:Road)?: "([^"]*)",$/gm)) assert.ok(m[1].endsWith("cm \\xB7 kg"), "app.html: Fusszeile endet nicht auf 'cm · kg'");
   assert.ok(app.includes('.replace(/cm \\xB7 kg$/, zollModus ? "in \\xB7 lb" : "cm \\xB7 kg")'));
+  for (const lb of ['stPayLb: "Nutzlast (lb)"', 'stPayLb: "Payload (lb)"']) assert.ok(app.includes(lb), `app.html: ${lb} fehlt`);
+  assert.strictEqual((app.match(/stat\(T\.stPayLb, fmtDE\(pfundAb\(kg\)\), ""\)/g) || []).length, 2, "die Karte baut die Pfund-Beschriftung wieder selbst zusammen");
+  assert.ok(!app.includes('T.stPay + " (lb)"'), "die Karte haengt die Einheit wieder an das lange Wort");
   assert.ok(app.includes('unitTitel: "Einheit der Eingabe: cm, mm oder Zoll (in \\u2014 Gewichte dann in Pfund)", zollWort: "Zoll",'));
   assert.ok(app.includes('unitTitel: "Input unit: cm, mm or inches (in \\u2014 weights then in pounds)", zollWort: "inches",'));
 });

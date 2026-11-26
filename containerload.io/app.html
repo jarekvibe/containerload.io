@@ -16,6 +16,7 @@
 <link rel="alternate" hreflang="es" href="https://containerload.io/app?lang=es" />
 <link rel="alternate" hreflang="fr" href="https://containerload.io/app?lang=fr" />
 <link rel="alternate" hreflang="zh" href="https://containerload.io/app?lang=zh" />
+<link rel="alternate" hreflang="nl" href="https://containerload.io/app?lang=nl" />
 <link rel="alternate" hreflang="x-default" href="https://containerload.io/app" />
 <meta property="og:image" content="https://containerload.io/og.png" />
 <meta property="og:image:width" content="1200" />
@@ -116,7 +117,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // im Menue). Geladen wird sie nur, wenn sie gewaehlt ist -- und zwar hier, VOR dem Rechner,
   // weil der sein Woerterbuch beim Start einmal liest. document.write ist dafuer der eine Weg
   // ohne Build-Schritt, der die Reihenfolge haelt (gleiche Herkunft, eine kleine Datei).
-  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"] };
+  window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"], nl: ["Nederlands", "Schakel de interface naar het Nederlands"] };
   (function () {
     try {
       var q = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase().slice(0, 2);
@@ -3636,9 +3637,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   var SPRACH_LISTE = [["de", "Deutsch", "Oberfl\xE4che auf Deutsch"], ["en", "English", "Switch the interface to English"]]
     .concat(Object.entries((typeof window !== "undefined" && window.CL_SPRACHEN) || {}).map(([k, v]) => [k, v[0], v[1]]));
   // In welchen Sprachen der KI-Brief geschrieben werden kann: jede Sprache der Oberflaeche,
-  // dazu Niederlaendisch (Wissensseiten gibt es dort, eine Oberflaeche noch nicht). Der Server
+  // und nur in diesen (bis 25.11.26 kam Niederlaendisch von Hand dazu). Der Server
   // fuehrt dieselbe Liste (BRIEF_SPRACHEN in lib/ki.mjs) -- test/sprachen prueft beide.
-  var BRIEF_SPRACHEN_UI = [["de", "Deutsch"], ["en", "English"], ["nl", "Nederlands"]].concat(SPRACH_LISTE.slice(2).map(([k, n]) => [k, n]));
+  var BRIEF_SPRACHEN_UI = SPRACH_LISTE.map(([k, n]) => [k, n]);
   try {
     document.documentElement.lang = LANG;
     document.title = LANG === "en" ? "3D load calculator for containers & trucks — ContainerLoad" : LANG === "de" ? "3D-Laderechner für Container & LKW — ContainerLoad" : SPRACHE_MEHR[LANG].titel;
@@ -3670,7 +3671,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       vm75: "Verteiler \xB7 Richtwert", vmVan: "Kastenwagen \xB7 Richtwert",
       metaOpenTop: "Dach offen \xB7 \xDCberh\xF6he von oben", metaFlatRack: "Stirnw\xE4nde \xB7 \xDCberbreite / -h\xF6he",
       metaPlatform: "Nur Deck \xB7 \xDCberl\xE4nge", metaReefer: "Isoliert \xB7 reduzierte Innenma\xDFe",
-      stVol: "Volumen", stPay: "Nutzlast", stDoor: "T\xFCr\xF6ffn.", stDeck: "Deck", stOpen: "Offen",
+      stVol: "Volumen", stPay: "Nutzlast", stPayLb: "Nutzlast (lb)", stDoor: "T\xFCr\xF6ffn.", stDeck: "Deck", stOpen: "Offen",
       openRoof: "Dach", openSides: "Seiten", openAll: "rundum", ftUnit: "Fu\xDF", adjHint: (u) => `${u} \xB7 eigene Ma\xDFe → schaltet auf „Custom“`,
       cargo: "Ladung",
       // Vorgabename einer neuen Position. NICHT identisch mit V2_DEFAULT_NAME: das ist eine
@@ -4179,7 +4180,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       vm75: "Distribution \xB7 guide value", vmVan: "Panel van \xB7 guide value",
       metaOpenTop: "Open roof \xB7 over-height from top", metaFlatRack: "End walls \xB7 over-width / -height",
       metaPlatform: "Deck only \xB7 over-length", metaReefer: "Insulated \xB7 reduced inner size",
-      stVol: "Volume", stPay: "Payload", stDoor: "Door", stDeck: "Deck", stOpen: "Open",
+      stVol: "Volume", stPay: "Payload", stPayLb: "Payload (lb)", stDoor: "Door", stDeck: "Deck", stOpen: "Open",
       openRoof: "roof", openSides: "sides", openAll: "all sides", ftUnit: "ft", adjHint: (u) => `${u} \xB7 custom size → switches to “Custom”`,
       cargo: "Cargo",
       itemDefault: "Package",
@@ -8201,7 +8202,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // auf ganze, Zoll auf Zehntel): aufgerundet waere die Tuer groesser, als sie ist.
     // Die Einheit steht dann in der Beschriftung, nicht hinter der Zahl: "62,170 lb" passt in
     // der schmalen Spalte nicht in eine Zeile, und eine Einheit, die allein umbricht, liest niemand.
-    const statPay = (kg) => unit === "in" ? stat(T.stPay + " (lb)", fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
+    const statPay = (kg) => unit === "in" ? stat(T.stPayLb, fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
     const statDoor = (d) => unit === "in" ? stat(T.stDoor + " (in)", zollAb(d.w), "\xD7" + zollAb(d.h)) : stat(T.stDoor, d.w, "\xD7" + d.h);
     const name = cur.custom ? T.ctCustom : (cur.kind === "dry" ? (cur.len === "45'" ? "45' " + T.ctHighCube : cur.len + " " + (cur.hv === "HC" ? T.ctHighCube : T.ctStandard)) : cur.len + " " + LAB[cur.kind]);
     const metaTxt = cur.custom ? "" : (MET[cur.kind] || (cur.key === "45' HC" ? "High Cube \xB7 Pallet-Wide" : (P.h >= 270 ? T.ctHighCube : "General Purpose")));
@@ -8263,7 +8264,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // auf ganze, Zoll auf Zehntel): aufgerundet waere die Tuer groesser, als sie ist.
     // Die Einheit steht dann in der Beschriftung, nicht hinter der Zahl: "62,170 lb" passt in
     // der schmalen Spalte nicht in eine Zeile, und eine Einheit, die allein umbricht, liest niemand.
-    const statPay = (kg) => unit === "in" ? stat(T.stPay + " (lb)", fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
+    const statPay = (kg) => unit === "in" ? stat(T.stPayLb, fmtDE(pfundAb(kg)), "") : stat(T.stPay, t(kg), " t");
     const statDoor = (d) => unit === "in" ? stat(T.stDoor + " (in)", zollAb(d.w), "\xD7" + zollAb(d.h)) : stat(T.stDoor, d.w, "\xD7" + d.h);
     const name = known ? VEHICLE_LABEL(T)[preset] || preset : T.ctCustom;
     const metaTxt = known ? VEHICLE_META(T)[preset] || "" : "";

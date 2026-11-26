@@ -42,7 +42,7 @@
         vm75: "Distribution \xB7 valeur indicative", vmVan: "Fourgon tôlé \xB7 valeur indicative",
         metaOpenTop: "Toit ouvert \xB7 hors gabarit en hauteur par le haut", metaFlatRack: "Parois d’extrémité \xB7 hors gabarit en largeur / hauteur",
         metaPlatform: "Plancher seul \xB7 hors gabarit en longueur", metaReefer: "Isotherme \xB7 intérieur réduit",
-        stVol: "Volume", stPay: "Charge utile", stDoor: "Porte", stDeck: "Plancher", stOpen: "Ouvert",
+        stVol: "Volume", stPay: "Charge utile", stPayLb: "CU (lb)", stDoor: "Porte", stDeck: "Plancher", stOpen: "Ouvert",
         openRoof: "toit", openSides: "côtés", openAll: "tous les côtés", ftUnit: "pieds", adjHint: function (u) { return u + " \xB7 dimensions libres → passe à « Sur mesure »"; },
         cargo: "Chargement",
         itemDefault: "Colis",

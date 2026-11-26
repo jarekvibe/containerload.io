@@ -44,7 +44,7 @@
         vm75: "配送车 \xB7 参考值", vmVan: "厢式小货车 \xB7 参考值",
         metaOpenTop: "顶部敞开 \xB7 超高货物从上方装载", metaFlatRack: "仅端壁 \xB7 超宽 / 超高",
         metaPlatform: "仅底板 \xB7 超长", metaReefer: "保温 \xB7 内部尺寸较小",
-        stVol: "容积", stPay: "载重", stDoor: "箱门", stDeck: "底板", stOpen: "敞开",
+        stVol: "容积", stPay: "载重", stPayLb: "载重 (lb)", stDoor: "箱门", stDeck: "底板", stOpen: "敞开",
         openRoof: "顶部", openSides: "两侧", openAll: "四周", ftUnit: "英尺", adjHint: function (u) { return u + " \xB7 自定义尺寸 → 切换为“自定义”"; },
         cargo: "货物",
         itemDefault: "货件",

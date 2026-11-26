@@ -112,9 +112,13 @@ for (const X of SPRACHEN) {
 
   test(`${K}: kein deutscher und kein englischer Fliesstext auf der Seite`, () => {
     const t = sichtbar(seite);
-    const deutsch = t.match(/\b(und|der|die|das|nicht|kostenlos|Ladung|Rechner|Packstück\w*|Paletten|ohne|oder|für|öffnen|Werkzeug|Design|Packliste|einfügen|Dunkles|Helles)\b/g) || [];
+    // Woerter, die es in der Sprache der Seite genauso gibt, sind kein Rest (Niederlaendisch:
+    // "die" und "der" -- "een QR-code die terugleidt").
+    // "pallets" und "calculator" schreibt das Niederlaendische wie das Englische.
+    const GLEICH = { nl: ["die", "der", "pallets", "calculator"] }[K] || [];
+    const deutsch = (t.match(/\b(und|der|die|das|nicht|kostenlos|Ladung|Rechner|Packstück\w*|Paletten|ohne|oder|für|öffnen|Werkzeug|Design|Packliste|einfügen|Dunkles|Helles)\b/g) || []).filter((w) => !GLEICH.includes(w));
     assert.deepStrictEqual([...new Set(deutsch)], [], `${K}: deutsche Woerter im sichtbaren Text`);
-    const englisch = t.match(/\b(the|and|your|free|without|pallets|calculator|loading|share|open|with)\b/gi) || [];
+    const englisch = (t.match(/\b(the|and|your|free|without|pallets|calculator|loading|share|open|with)\b/gi) || []).filter((w) => !GLEICH.includes(w.toLowerCase()));
     assert.deepStrictEqual([...new Set(englisch.map((w) => w.toLowerCase()))], [], `${K}: englische Woerter im sichtbaren Text`);
   });
 

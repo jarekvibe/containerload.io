@@ -19,7 +19,7 @@
 
   var p = location.pathname;
   var art = /^\/app(\.html)?\/?$/.test(p) ? "rechner"
-    : /^\/((en|es|fr|zh)\/)?(index\.html)?$/.test(p) ? "start"
+    : /^\/((en|es|fr|zh|nl)\/)?(index\.html)?$/.test(p) ? "start"
     : /^\/(ratgeber|en\/guide|nl\/gids|es\/guia|fr\/guide)(\/|$)/.test(p) ? "wissen"
     : "sonst";
 

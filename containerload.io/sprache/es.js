@@ -49,7 +49,7 @@
         vm75: "Reparto \xB7 valor orientativo", vmVan: "Furgón \xB7 valor orientativo",
         metaOpenTop: "Techo abierto \xB7 sobrealtura por arriba", metaFlatRack: "Testeros \xB7 sobreancho / sobrealtura",
         metaPlatform: "Solo piso \xB7 sobrelargo", metaReefer: "Aislado \xB7 interior reducido",
-        stVol: "Volumen", stPay: "Carga útil", stDoor: "Puerta", stDeck: "Piso", stOpen: "Abierto",
+        stVol: "Volumen", stPay: "Carga útil", stPayLb: "C. útil (lb)", stDoor: "Puerta", stDeck: "Piso", stOpen: "Abierto",
         openRoof: "techo", openSides: "laterales", openAll: "todos los lados", ftUnit: "pies", adjHint: function (u) { return u + " \xB7 medidas propias → cambia a «A medida»"; },
         cargo: "Carga",
         itemDefault: "Bulto",
