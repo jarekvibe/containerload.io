@@ -1039,8 +1039,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Semikolon-CSV: wer aus einer .csv-Datei statt aus Excel kopiert, hat Semikolons
     // statt Tabs. Erst ab drei Semikolons in JEDER Zeile -- der Freitext benutzt das
     // Semikolon als Positions-Trenner ("120x80x100; 60x40x30"), und der hat nie drei.
+    //
+    // "Der hat nie drei" stimmte nicht: VIER Positionen in einer Zeile haben drei
+    // ("a; b; c; d") -- und genau so schreibt sie ein Link, eine Excel-Formel, ein
+    // KI-Assistent. Bis 26.11.26 wurde daraus EINE Tabellenzeile mit Zufallswerten (aus
+    // "16 Kisten 30x45x52 57kg; 16 ..." wurde eine Position mit 16 kg). Der Unterschied:
+    // in einer CSV-Zeile steht die Masskette hoechstens EINMAL (eine Zelle "120x80x100"),
+    // im Freitext in jeder Position. Zwei Ketten in einer Zeile -- oder lauter Paletten
+    // ohne Masse ("11 Europaletten; 5 Industriepaletten; ...") -- heisst: Freitext.
     const csvZeilen = text.split(/\r?\n/).filter((ln) => ln.trim());
-    if (csvZeilen.length && csvZeilen.every((ln) => (ln.match(/;/g) || []).length >= 3)) {
+    const MASSKETTE = /\d\s*(?:mm|cm|m|zoll|inch(?:es)?|["″])?\s*[x×\*]\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m|zoll|inch(?:es)?|["″])?\s*[x×\*\/]\s*\d/i;
+    const positionenZeile = (ln) => {
+      const t = ln.split(/[;；]/).filter((x) => x.trim());
+      return t.filter((x) => MASSKETTE.test(x)).length >= 2
+        || (t.length >= 2 && t.every((x) => /^\s*\d+\s*[^\d\s]/.test(x) && PALLET_PRESETS.some((pp) => pp.re.test(x))));
+    };
+    if (csvZeilen.length && csvZeilen.every((ln) => (ln.match(/;/g) || []).length >= 3) && !csvZeilen.some(positionenZeile)) {
       return fertig(parseTSV(text.replace(/;/g, "\t"), opts));
     }
     LAST_TSV_MAP = null;

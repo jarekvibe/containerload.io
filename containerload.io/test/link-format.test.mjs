@@ -85,6 +85,21 @@ test("was die Seiten ueber das Schreiben einer Position behaupten, stimmt", () =
   assert.strictEqual(parseCargoText("8 Kisten 120x80x100 250kg, 12 Kartons 60x40x40 12kg").length, 1);
   assert.strictEqual(parseCargoText("8 Kisten 120x80x100 250kg; 12 Kartons 60x40x40 12kg").length, 2);
   assert.strictEqual(parseCargoText("8 crates 120x80x100 250kg\n12 cartons 60x40x40 12kg").length, 2);
+  // VIER und mehr Positionen in EINER Zeile: drei Semikolons sahen fuer den Parser wie eine
+  // CSV-Zeile aus (die Weiche "ab drei Semikolons je Zeile"), und aus der ganzen Liste wurde
+  // EINE Position mit Zufallswerten -- gefunden am 26.11.26 beim Bau von /api/plan. Genau so
+  // schreibt ein Link, eine Excel-Formel oder ein KI-Assistent eine Liste.
+  const vier = parseCargoText("16 Kisten 30x45x52 57kg; 16 Kartons 31x45x52 58kg; 4 Fässer 60x60x90 200kg nicht stapelbar; 2 Maschinen 200x120x150 900kg");
+  assert.deepStrictEqual(vier.map((r) => [r.qty, r.name, r.l, r.w, r.h, r.weight, r.stackable]), [[16, "Kisten", 30, 45, 52, 57, true], [16, "Kartons", 31, 45, 52, 58, true], [4, "Fässer", 60, 60, 90, 200, false], [2, "Maschinen", 200, 120, 150, 900, true]]);
+  assert.strictEqual(parseCargoText(Array.from({ length: 12 }, (_, i) => (i + 1) + " boxes " + (40 + i) + "x30x20 5kg").join("; ")).length, 12);
+  assert.strictEqual(parseCargoText("5x 120x80x100;3x 60x40x40;2x 100x100x100;1x 200x100x100;7x 30x30x30").length, 5, "ohne Leerzeichen hinter dem Semikolon");
+  assert.deepStrictEqual(parseCargoText("11 Europaletten; 4 Industriepaletten; 3 Europaletten; 2 Industriepaletten").map((r) => [r.qty, r.l, r.w]), [[11, 120, 80], [4, 120, 100], [3, 120, 80], [2, 120, 100]], "Paletten ohne Masse, vier in einer Zeile");
+  // Eine echte Semikolon-CSV (aus einer .csv-Datei kopiert) bleibt eine Tabelle: die Masskette
+  // steht dort hoechstens EINMAL je Zeile
+  const csv = parseCargoText("Bezeichnung;Menge;Länge;Breite;Höhe;Gewicht\nPalette A;10;120;80;100;300\nKiste B;4;200;100;100;500");
+  assert.deepStrictEqual(csv.map((r) => [r.qty, r.name, r.l, r.w, r.h, r.weight]), [[10, "Palette A", 120, 80, 100, 300], [4, "Kiste B", 200, 100, 100, 500]]);
+  const csvKette = parseCargoText("Bezeichnung;Menge;Maße;Gewicht\nEuropalette;10;120x80x100;300\nKiste;4;200x100x100;500");
+  assert.deepStrictEqual(csvKette.map((r) => [r.qty, r.l, r.w, r.h, r.weight]), [[10, 120, 80, 100, 300], [4, 200, 100, 100, 500]], "eine CSV mit kombinierter Mass-Spalte");
   for (const s of Object.values(html)) assert.ok(/<b>(Ein Komma trennt nicht|A comma does not separate)<\/b>/.test(s) && s.includes("<code>%0A</code>"));
   // Die Beispiele der Tabelle, Zelle fuer Zelle
   for (const [t, soll] of [
@@ -122,9 +137,12 @@ test("ein Link bringt die Hoehengrenze mit in den Plan (stapelbar bis 180 cm)", 
   assert.ok(/stackH: num\(r\.stackH\) > 0 \? num\(r\.stackH\) : null/.test(app), "applyImport uebernimmt die Hoehengrenze nicht mehr");
 });
 
-test("ehrlich: keine Schnittstelle, kein Rueckkanal, die Ladung steht lesbar im Link", () => {
-  assert.ok(/ohne Schnittstelle/.test(html.de) && /<b>Kein Rückkanal:<\/b>/.test(html.de) && /<b>Der Link enthält die Ladung lesbar\.<\/b>/.test(html.de) && /keine VGM/.test(html.de));
-  assert.ok(/no API/.test(html.en) && /<b>No return channel:<\/b>/.test(html.en) && /<b>The link contains the cargo in readable form\.<\/b>/.test(html.en) && /not a VGM/.test(html.en));
+test("ehrlich: der Link gibt nichts zurueck (dafuer gibt es /api/plan), die Ladung steht lesbar im Link", () => {
+  // Bis 26.11.26 stand hier "ohne Schnittstelle" / "no API" -- seitdem gibt es /api/plan
+  // (test/plan-api.test.mjs). Der LINK selbst gibt weiterhin nichts zurueck, und das sagt die Seite.
+  assert.ok(/ohne Konto und ohne Schlüssel/.test(html.de) && /<b>Der Link selbst gibt nichts zurück:<\/b>/.test(html.de) && /<b>Der Link enthält die Ladung lesbar\.<\/b>/.test(html.de) && /keine VGM/.test(html.de));
+  assert.ok(/no account and no key/.test(html.en) && /<b>The link itself returns nothing:<\/b>/.test(html.en) && /<b>The link contains the cargo in readable form\.<\/b>/.test(html.en) && /not a VGM/.test(html.en));
+  assert.ok(!/ohne Schnittstelle|Kein Rückkanal/.test(html.de) && !/no API\b|No return channel/.test(html.en), "die Seite behauptet noch, es gebe keine Schnittstelle");
   // Die KI rechnet nicht -- der Rechner gibt die Antwort
   assert.ok(/<b>die Antwort gibt dann der Rechner<\/b>/.test(html.de) && /<b>the calculator then gives the answer<\/b>/.test(html.en));
   for (const [k, s] of Object.entries(html)) assert.ok(s.includes('href="/llms.txt"') && s.includes(k === "de" ? 'href="/datenschutz"' : 'href="/en/privacy"'), k);
@@ -156,9 +174,10 @@ test("llms.txt: stimmt mit dem Rechner ueberein, und jede genannte Seite gibt es
   const adressen = [...llms.matchAll(/https:\/\/containerload\.io(\/[^\s)<\]]*)?/g)].map((m) => (m[1] || "/").replace(/[.,]$/, ""));
   assert.ok(adressen.length >= 20);
   for (const a of adressen) {
-    if (a.startsWith("/app?")) continue;
+    if (a.startsWith("/app?") || a === "/api/plan" || a.startsWith("/api/plan?")) continue;   // der Rechner und die Schnittstelle (eine Function)
     const p = a.replace(/\/$/, "/index").replace(/^\//, "");
-    assert.ok(fs.existsSync(path.join(wurzel, (p || "index") + ".html")), `llms.txt nennt ${a} — die Seite gibt es nicht`);
+    const datei = /\.[a-z]{2,5}$/.test(p) ? p : (p || "index") + ".html";
+    assert.ok(fs.existsSync(path.join(wurzel, datei)), `llms.txt nennt ${a} — die Seite gibt es nicht`);
   }
   // Jede Sprache des Rechners mit ihrer Startseite
   for (const k of SPRACHEN) assert.ok(llms.includes(`${B}/${k}/`), `llms.txt: Startseite /${k}/ fehlt`);
@@ -172,8 +191,9 @@ test("llms.txt: stimmt mit dem Rechner ueberein, und jede genannte Seite gibt es
   assert.ok(llms.includes(`cont (optional): ${CONT.join(", ")}.`), "Container-Kuerzel");
   assert.ok(llms.includes(`fz picks the vehicle: ${FZ.join(", ")}.`), "Fahrzeug-Kuerzel");
   assert.ok(llms.includes(`lang (optional): ${SPRACHEN.join(", ")}.`), "Sprachen");
-  // Ehrlich: keine Schnittstelle, die Rechnung macht der Rechner, das Ergebnis ist eine Schaetzung
-  assert.ok(/There is no API and no result is returned as data/.test(llms) && /do not estimate the count yourself/.test(llms) && /geometric estimate/.test(llms) && /not a VGM/.test(llms));
+  // Ehrlich: die Rechnung macht der Rechner (als Seite oder ueber /api/plan), das Ergebnis ist eine Schaetzung
+  assert.ok(/To get the numbers yourself, use \/api\/plan/.test(llms) && /do not estimate the count yourself/.test(llms) && /geometric estimate/.test(llms) && /not a VGM/.test(llms));
+  assert.ok(!/There is no API/.test(llms), "llms.txt behauptet noch, es gebe keine Schnittstelle");
   assert.ok(/a comma does NOT separate positions/.test(llms));
   // robots.txt sperrt die Datei nicht
   assert.ok(!/Disallow:\s*\/llms/.test(lese("robots.txt")));

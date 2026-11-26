@@ -44,7 +44,7 @@
 <article class="wrap">
     <div class="eyebrow">Container-Wissen · Für Excel, ERP &amp; Assistenten</div>
     <h1>Ladung per Link übergeben: so öffnet ein Link den fertigen 3D-Plan</h1>
-    <div class="answer"><p class="lead" style="margin:0">Ein Link der Form <b>containerload.io/app?q=…</b> öffnet den 3D-Rechner mit <b>fertig eingetragener Ladung</b> — ohne Konto, ohne Schlüssel, ohne Schnittstelle. Die Ladung steht als Text im Link: eine Position je Zeile, so wie man sie in eine Anfrage schreibt.</p></div>
+    <div class="answer"><p class="lead" style="margin:0">Ein Link der Form <b>containerload.io/app?q=…</b> öffnet den 3D-Rechner mit <b>fertig eingetragener Ladung</b> — ohne Konto und ohne Schlüssel. Die Ladung steht als Text im Link: eine Position je Zeile, so wie man sie in eine Anfrage schreibt.</p></div>
 
     <h2>Der kürzeste Link</h2>
     <div class="formula" data-bsp="kurz">https://containerload.io/app?q=20 Europaletten 120x80x110 300kg</div>
@@ -95,14 +95,45 @@
     <h2>Aus ERP, TMS oder Shop</h2>
     <p>Jedes System, das eine Webadresse zusammensetzen kann, kann diesen Link erzeugen — im Angebot, in der Auftragsbestätigung, im Versandavis. Das Muster je Position ist <code>{Menge} {Bezeichnung} {L}x{B}x{H} {Gewicht}kg</code>, die Positionen mit „;“ verbunden, das Ganze als Webadresse kodiert. Der Empfänger sieht mit einem Klick, wie seine Ware im Container steht, und kann den Plan selbst weitergeben.</p>
 
+    <h2 id="api">Dasselbe als Daten: <code>/api/plan</code></h2>
+    <p>Der Link öffnet eine Seite für Menschen. Wer die <b>Zahlen</b> braucht — ein Programm, eine Tabelle, ein KI-Assistent —, tauscht im Link <code>/app</code> gegen <code>/api/plan</code>: dieselben Angaben, dieselbe Rechnung, die Antwort als JSON. Ohne Schlüssel und ohne Anmeldung.</p>
+    <div class="formula" data-api="de">https://containerload.io/api/plan?q=30 Europaletten 120x80x110 300kg nicht stapelbar&amp;cont=40hc&amp;lang=de</div>
+    <p>Die Antwort, gekürzt:</p>
+    <pre class="formula" data-api-antwort="de">{
+  "ok": true,
+  "summary": "30 Packstücke brauchen 2 Container: 40' HC (25) + 20' GP (5).",
+  "cargo": [
+    { "name": "Europaletten", "qty": 30, "length_cm": 120, "width_cm": 80, "height_cm": 110, "weight_kg": 300, "stackable": false, "rotatable": true }
+  ],
+  "plan": {
+    "units_needed": 2,
+    "pieces_loaded": 30,
+    "pieces_left": 0,
+    "units": [
+      { "no": 1, "type": "40' HC", "pieces": 25, "weight_kg": 7500, "volume_used_pct": 34.6 },
+      { "no": 2, "type": "20' GP", "pieces": 5, "weight_kg": 1500, "volume_used_pct": 15.9 }
+    ]
+  },
+  "plan_url": "https://containerload.io/app?q=30%20Europaletten%20120x80x110%20300kg%20nicht%20stapelbar&amp;cont=40hc"
+}</pre>
+    <ul>
+      <li><code>summary</code> — die Antwort in einem Satz (mit <code>lang=de</code> auf Deutsch, sonst Englisch).</li>
+      <li><code>cargo</code> — wie der Text gelesen wurde, in cm und kg. Zum Gegenprüfen, bevor jemand mit den Zahlen arbeitet.</li>
+      <li><code>plan</code> — der Container oder das Fahrzeug, wie viele Einheiten es braucht (<code>units_needed</code>), was je Einheit geladen ist (<code>units</code>) und was offen bleibt (<code>pieces_left</code>).</li>
+      <li><code>comparison</code> und <code>recommendation</code> — der Vergleich je Standardcontainer und der Vorschlag des Rechners (nur Seefracht).</li>
+      <li><code>plan_url</code> — der Link, der genau diese Rechnung im 3D-Rechner öffnet.</li>
+    </ul>
+    <p>Es rechnet <b>derselbe Packer wie im Rechner</b> — keine KI und keine Faustformel; was die Antwort nennt, zeigt <code>plan_url</code> im Bild. Aufgerufen wird mit GET (wie oben) oder mit POST und JSON (<code>{"q": "…", "cont": "40hc"}</code>). Unbekannte Kürzel bei <code>cont</code> und <code>fz</code> werden abgelehnt statt still ersetzt. Je Aufruf höchstens 6.000 Zeichen, 60 Positionen und 1.000 Packstücke — darüber rechnet der Browser über <code>plan_url</code>, der hat diese Grenze nicht. Für Programme steht die Beschreibung unter <a href="/openapi.json">/openapi.json</a>.</p>
+    <p>Anders als beim Link rechnet hier der Server: Die Ladung wird dorthin übertragen. Gespeichert wird sie von der Schnittstelle nicht; bei GET steht sie in der Adresse und damit, wie bei jedem Webaufruf, im Zugriffsprotokoll des Hosters (siehe <a href="/datenschutz">Datenschutz</a>) — bei POST nicht.</p>
+
     <h2>Für KI-Assistenten</h2>
-    <p>Ein Sprachmodell kann nicht verlässlich ausrechnen, wie viele Packstücke in einen Container passen. Es kann aber aus einer Beschreibung diesen Link bauen — und <b>die Antwort gibt dann der Rechner</b>: ein echter Packlauf, in 3D zu sehen und nachzuprüfen. Dieselbe Beschreibung in Kurzform für Assistenten steht unter <a href="/llms.txt">/llms.txt</a>.</p>
+    <p>Ein Sprachmodell kann nicht verlässlich ausrechnen, wie viele Packstücke in einen Container passen. Es kann aber <code>/api/plan</code> aufrufen oder aus einer Beschreibung den Link bauen — und <b>die Antwort gibt dann der Rechner</b>: ein echter Packlauf, in 3D zu sehen und nachzuprüfen. Dieselbe Beschreibung in Kurzform für Assistenten steht unter <a href="/llms.txt">/llms.txt</a>.</p>
 
     <h2>Grenzen</h2>
     <ul>
       <li><b>Länge:</b> Bis etwa 2.000 Zeichen funktioniert ein Link überall, auch in Mail und Chat. Längere Listen fügt man im Rechner ein und gibt dort über „Teilen“ einen kompakten Link weiter.</li>
       <li><b>Der Link enthält die Ladung lesbar.</b> Wer ihn bekommt, sieht sie — und wie jede Webadresse erreicht er beim Öffnen den Server (siehe <a href="/datenschutz">Datenschutz</a>).</li>
-      <li><b>Kein Rückkanal:</b> Der Link öffnet eine Seite. Ein Programm bekommt kein Ergebnis zurück; gerechnet wird im Browser dessen, der den Link öffnet.</li>
+      <li><b>Der Link selbst gibt nichts zurück:</b> Er öffnet eine Seite, gerechnet wird im Browser dessen, der ihn öffnet. Wer das Ergebnis als Daten braucht, nimmt <a href="#api"><code>/api/plan</code></a>.</li>
       <li><b>Zeilen ohne Maße</b> liest der Rechner nicht — außer bei Europaletten und Industriepaletten, deren Grundmaß feststeht.</li>
     </ul>
 

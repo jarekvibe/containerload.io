@@ -44,7 +44,7 @@
 <article class="wrap">
     <div class="eyebrow">Container Guide · For Excel, ERP &amp; assistants</div>
     <h1>Pass cargo by link: how one link opens the finished 3D plan</h1>
-    <div class="answer"><p class="lead" style="margin:0">A link of the form <b>containerload.io/app?q=…</b> opens the 3D calculator with the <b>cargo already entered</b> — no account, no key, no API. The cargo sits in the link as text: one position per line, the way you would write it in an enquiry.</p></div>
+    <div class="answer"><p class="lead" style="margin:0">A link of the form <b>containerload.io/app?q=…</b> opens the 3D calculator with the <b>cargo already entered</b> — no account and no key. The cargo sits in the link as text: one position per line, the way you would write it in an enquiry.</p></div>
 
     <h2>The shortest link</h2>
     <div class="formula" data-bsp="kurz">https://containerload.io/app?lang=en&amp;q=20 pallets 120x80x110 300kg</div>
@@ -95,14 +95,45 @@
     <h2>From an ERP, TMS or shop</h2>
     <p>Any system that can put a web address together can produce this link — in the quotation, the order confirmation, the shipping notice. The pattern per position is <code>{quantity} {name} {L}x{W}x{H} {weight}kg</code>, positions joined with “;”, the whole thing encoded as a web address. With one click the recipient sees how their goods sit in the container, and can pass the plan on.</p>
 
+    <h2 id="api">The same as data: <code>/api/plan</code></h2>
+    <p>The link opens a page for people. If you need the <b>numbers</b> — a program, a spreadsheet, an AI assistant — replace <code>/app</code> with <code>/api/plan</code> in the link: the same details, the same calculation, the answer as JSON. No key and no sign-up.</p>
+    <div class="formula" data-api="en">https://containerload.io/api/plan?q=30 euro pallets 120x80x110 300kg not stackable&amp;cont=40hc</div>
+    <p>The answer, shortened:</p>
+    <pre class="formula" data-api-antwort="en">{
+  "ok": true,
+  "summary": "30 pieces need 2 containers: 40' HC (25) + 20' GP (5).",
+  "cargo": [
+    { "name": "Euro pallets not", "qty": 30, "length_cm": 120, "width_cm": 80, "height_cm": 110, "weight_kg": 300, "stackable": false, "rotatable": true }
+  ],
+  "plan": {
+    "units_needed": 2,
+    "pieces_loaded": 30,
+    "pieces_left": 0,
+    "units": [
+      { "no": 1, "type": "40' HC", "pieces": 25, "weight_kg": 7500, "volume_used_pct": 34.6 },
+      { "no": 2, "type": "20' GP", "pieces": 5, "weight_kg": 1500, "volume_used_pct": 15.9 }
+    ]
+  },
+  "plan_url": "https://containerload.io/app?lang=en&amp;q=30%20euro%20pallets%20120x80x110%20300kg%20not%20stackable&amp;cont=40hc"
+}</pre>
+    <ul>
+      <li><code>summary</code> — the answer in one sentence (German with <code>lang=de</code>, otherwise English).</li>
+      <li><code>cargo</code> — how the text was read, in cm and kg. For checking before anyone works with the numbers.</li>
+      <li><code>plan</code> — the container or vehicle, how many units it takes (<code>units_needed</code>), what is loaded per unit (<code>units</code>) and what is left over (<code>pieces_left</code>).</li>
+      <li><code>comparison</code> and <code>recommendation</code> — the comparison per standard container and the calculator’s suggestion (sea freight only).</li>
+      <li><code>plan_url</code> — the link that opens exactly this calculation in the 3D calculator.</li>
+    </ul>
+    <p>It is <b>the same packer as in the calculator</b> — no AI and no rule of thumb; whatever the answer says, <code>plan_url</code> shows as a picture. Call it with GET (as above) or with POST and JSON (<code>{"q": "…", "cont": "40hc"}</code>). Unknown codes for <code>cont</code> and <code>fz</code> are rejected, not silently replaced. Per call at most 6,000 characters, 60 positions and 1,000 pieces — above that the browser does the work via <code>plan_url</code>, which has no such limit. A description for programs is at <a href="/openapi.json">/openapi.json</a>.</p>
+    <p>Unlike the link, this runs on the server: the cargo is sent there. The interface does not store it; with GET it sits in the address and therefore, as with any web request, in the hosting provider’s access log (see <a href="/en/privacy">Privacy</a>) — with POST it does not.</p>
+
     <h2>For AI assistants</h2>
-    <p>A language model cannot reliably work out how many packages fit into a container. But it can build this link from a description — and <b>the calculator then gives the answer</b>: a real packing run, visible in 3D and open to checking. The same description in short form for assistants is at <a href="/llms.txt">/llms.txt</a>.</p>
+    <p>A language model cannot reliably work out how many packages fit into a container. But it can call <code>/api/plan</code>, or build the link from a description — and <b>the calculator then gives the answer</b>: a real packing run, visible in 3D and open to checking. The same description in short form for assistants is at <a href="/llms.txt">/llms.txt</a>.</p>
 
     <h2>Limits</h2>
     <ul>
       <li><b>Length:</b> up to about 2,000 characters a link works everywhere, including mail and chat. Paste longer lists into the calculator and pass on a compact link from “Share”.</li>
       <li><b>The link contains the cargo in readable form.</b> Whoever receives it can see it — and like any web address it reaches the server when opened (see <a href="/en/privacy">Privacy</a>).</li>
-      <li><b>No return channel:</b> the link opens a page. A program gets no result back; the packing runs in the browser of whoever opens the link.</li>
+      <li><b>The link itself returns nothing:</b> it opens a page, and the packing runs in the browser of whoever opens it. If you need the result as data, use <a href="#api"><code>/api/plan</code></a>.</li>
       <li><b>Lines without dimensions</b> are not read — except euro pallets and industrial pallets, whose footprint is fixed.</li>
     </ul>
 
