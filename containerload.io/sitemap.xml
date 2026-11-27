@@ -407,17 +407,28 @@
   </url>
   <url>
     <loc>https://containerload.io/ratgeber/reefer-container-masse</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/reefer-container-masse"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/reefer-container-dimensions"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/contenedor-reefer-medidas"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/reefer-container-masse"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>
   <url>
     <loc>https://containerload.io/en/guide/reefer-container-dimensions</loc>
-    <lastmod>2026-10-26</lastmod>
+    <lastmod>2026-11-27</lastmod>
     <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/reefer-container-masse"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/reefer-container-dimensions"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/contenedor-reefer-medidas"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/reefer-container-masse"/>
+    <changefreq>monthly</changefreq><priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://containerload.io/es/guia/contenedor-reefer-medidas</loc>
+    <lastmod>2026-11-27</lastmod>
+    <xhtml:link rel="alternate" hreflang="de" href="https://containerload.io/ratgeber/reefer-container-masse"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://containerload.io/en/guide/reefer-container-dimensions"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://containerload.io/es/guia/contenedor-reefer-medidas"/>
     <xhtml:link rel="alternate" hreflang="x-default" href="https://containerload.io/ratgeber/reefer-container-masse"/>
     <changefreq>monthly</changefreq><priority>0.8</priority>
   </url>

@@ -236,6 +236,7 @@ export default {
     '/ratgeber/cbm-berechnen': '/es/guia/calcular-cubicaje-cbm',
     '/ratgeber/container-zuladung-gewicht': '/es/guia/peso-contenedor-carga-maxima',
     '/ratgeber/stauplan-container': '/es/guia/plan-de-estiba-contenedor',
+    '/ratgeber/reefer-container-masse': '/es/guia/contenedor-reefer-medidas',
     '/ratgeber/us-paletten-20-fuss-container': '/es/guia/pallets-48x40-contenedor-20-pies',
     '/ratgeber/us-paletten-40-fuss-container': '/es/guia/pallets-48x40-contenedor-40-pies'
   }

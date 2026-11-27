@@ -82,6 +82,8 @@ const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/container-zuladung-gewicht", "en/guide/container-payload-weight", "es/guia/peso-contenedor-carga-maxima"] },
   // Der Stauplan ("plan de estiba") -- die Seite, die das Werkzeug selbst beschreibt
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/stauplan-container", "en/guide/container-stowage-plan", "es/guia/plan-de-estiba-contenedor"] },
+  // Der Kuehlcontainer ("reefer") -- von Suedamerika faehrt Obst darin, auf Paletten 1,00 x 1,20 m
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/reefer-container-masse", "en/guide/reefer-container-dimensions", "es/guia/contenedor-reefer-medidas"] },
 ];
 const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
@@ -592,4 +594,91 @@ test("Sitemap: jede Fassung gelistet, jeder Block eines Netzes traegt alle seine
   }
   for (const W of Object.values(WELLEN)) assert.ok(sm.includes(`<loc>${B}/${W.ordner}/</loc>`), `Sitemap: Uebersicht ${W.ordner} fehlt`);
   assert.strictEqual((sm.match(/<loc>/g) || []).length, new Set(sm.match(/<loc>[^<]*<\/loc>/g)).size, "doppelte Adresse in der Sitemap");
+});
+
+test("ES: die Reefer-Seite -- Masse aus PRESETS, Palettenzahlen aus dem Packer, die Tuer-Aussage aus der echten Rechnung", async () => {
+  const f = "es/guia/contenedor-reefer-medidas.html";
+  const s = lese(f);
+  const text = s.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ");
+  const R20 = PRESETS["20' Reefer"], R40 = PRESETS["40' Reefer"], G20 = PRESETS["20' GP"], G40 = PRESETS["40' GP"];
+  const zahl = (C, l, w, dreh = true) => makeFloorPacker(l, w, dreh)(C.l, C.w).count;
+  const t1 = (kg) => (kg / 1000).toFixed(1).replace(".", ",");
+  const m2 = (cm) => (cm / 100).toFixed(2).replace(".", ",");
+
+  // Die Tabelle: Innenmasse, Tuer und Zuladung beider Reefer -- dieselben Werte wie im Rechner.
+  const zeile = (name, a, b) => s.includes(`<tr><td>${name}</td><td class="num">${a}</td><td class="num">${b}</td></tr>`);
+  assert.ok(zeile("Interior largo × ancho × alto", `${R20.l} × ${R20.w} × ${R20.h} cm`, `${R40.l} × ${R40.w} × ${R40.h} cm`), `${f}: Innenmasse`);
+  assert.ok(zeile("Puerta ancho × alto", `${R20.door.w} × ${R20.door.h} cm`, `${R40.door.w} × ${R40.door.h} cm`), `${f}: Tuer`);
+  assert.ok(zeile("Carga útil", `aprox. ${t1(R20.payload)} t`, `aprox. ${t1(R40.payload)} t`), `${f}: Zuladung`);
+  // Die Stellzahlen: drei Paletten, zwei Laengen -- aus dem Packer.
+  assert.ok(zeile("Pallets de 1,00 × 1,20 m por capa", zahl(R20, 120, 100), zahl(R40, 120, 100)), `${f}: Paletten 1,00 x 1,20`);
+  assert.ok(zeile("Europalets (1,20 × 0,80 m) por capa", zahl(R20, 120, 80), zahl(R40, 120, 80)), `${f}: Europaletten`);
+  assert.ok(zeile("Pallets de 48 × 40 pulgadas por capa", zahl(R20, 121.92, 101.6), zahl(R40, 121.92, 101.6)), `${f}: 48 x 40`);
+
+  // "20 und nicht 22": der Vergleich mit dem Trockencontainer, Reihe fuer Reihe nachgerechnet.
+  const n40 = zahl(R40, 120, 100), nGP = zahl(G40, 120, 100);
+  assert.deepStrictEqual([n40, nGP, zahl(R40, 120, 100, false)], [20, 22, 18]);
+  const quer = Math.floor(R40.l / 100), laengs = Math.floor(R40.l / 120);
+  assert.strictEqual(quer + laengs, n40);
+  assert.ok(text.includes(`caben ${nGP} pallets de 1,00 × 1,20 m por capa: ${Math.floor(G40.l / 100)} girados y ${Math.floor(G40.l / 120)} a lo largo`), `${f}: der Trockencontainer-Vergleich`);
+  assert.ok(text.includes(`${G40.l - R40.l} cm de largo (${R40.l} en lugar de ${G40.l} cm) y ${G40.w - R40.w} cm de ancho`), `${f}: was dem Reefer innen fehlt`);
+  assert.ok(text.includes(`${quer} girados (${quer} × 1,00 m = ${m2(quer * 100)} m de ${m2(R40.l)}) y ${laengs} a lo largo (${laengs} × 1,20 m = ${m2(laengs * 120)} m)`), `${f}: die zwei Reihen`);
+  assert.ok(text.includes(`ocupan ${m2(220)} m de los ${m2(R40.w)} m de ancho`) && 120 + 100 <= R40.w, `${f}: die Breite`);
+  assert.ok(text.includes(`solo caben ${zahl(R40, 120, 100, false)}`), `${f}: ohne Drehen`);
+  // Europaletten: 10 / 23 im Reefer, 11 / 25 im Trockencontainer, 8 / 18 ohne Drehen.
+  assert.ok(s.includes(`<a href="/es/guia/europalets-contenedor-20-pies">${zahl(G20, 120, 80)}</a> y <a href="/es/guia/europalets-contenedor-40-pies">${zahl(G40, 120, 80)}</a> europalets por capa`), `${f}: Europaletten im Trockencontainer`);
+  assert.ok(text.includes(`${zahl(R20, 120, 80)} en el de 20 pies y ${zahl(R40, 120, 80)} en el de 40`), `${f}: Europaletten im Reefer`);
+  assert.ok(text.includes(`son solo ${zahl(R20, 120, 80, false)} y ${zahl(R40, 120, 80, false)}`), `${f}: Europaletten ohne Drehen`);
+
+  // Die Draufsicht zeichnet genau die 20 Stellplaetze: 11 quer (gruen), 9 laengs (blau), dazu der Umriss.
+  const svg = s.match(/<figure class="stau">(<svg[\s\S]*?<\/svg>)/)[1];
+  assert.strictEqual((svg.match(/<rect /g) || []).length, n40 + 1, `${f}: Rechtecke der Draufsicht`);
+  assert.strictEqual((svg.match(/fill="#2FD8A0" fill-opacity/g) || []).length, quer, `${f}: quer`);
+  assert.strictEqual((svg.match(/fill="#2E8FFF" fill-opacity/g) || []).length, laengs, `${f}: laengs`);
+  assert.ok(text.includes(`Vista superior con ${R40.l} × ${R40.w} cm de medida interior`), `${f}: die Bildunterschrift nennt das Innenmass nicht`);
+
+  // Der Knopf: 20 Paletten, 2,00 m hoch, im 40-Fuss-Reefer -- gelesen vom Parser, bestaetigt von der Rechnung.
+  const knoepfe = [...s.matchAll(/href="(\/app\?lang=es&q=([^"&]+)&cont=40rf)"/g)];
+  assert.strictEqual(knoepfe.length, 2, `${f}: Knopf oben und Beispiel-Knopf`);
+  assert.strictEqual(knoepfe[0][1], knoepfe[1][1], `${f}: die beiden Knoepfe oeffnen Verschiedenes`);
+  const q = decodeURIComponent(knoepfe[0][2]);
+  assert.deepStrictEqual(parseCargoText(q).map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.stackable !== false]), [[n40, 120, 100, 200, 1000, false]], `${f}: das Beispiel liest sich anders`);
+  assert.ok(text.includes(`El ejemplo abre un reefer de 40 pies con ${n40} pallets de 1,00 × 1,20 m y 2,00 m de alto`), `${f}: der Satz zum Beispiel`);
+  const { planen } = await import("../../netlify/functions/lib/plan.mjs");
+  const b = planen({ q, cont: "40rf", lang: "es" }).body;
+  assert.deepStrictEqual([b.plan.container.code, b.plan.fits_in_one, b.plan.pieces_loaded, b.plan.pieces_left], ["40rf", true, n40, 0], `${f}: das Beispiel passt nicht in einen Reefer`);
+  assert.ok(!b.notes.some((n) => /door/i.test(n)), `${f}: das Beispiel geht nicht durch die Tuer`);
+  // Die Tuer-Aussage: 2,30 m stehen innen (242 cm), gehen aber nicht durch die Tuer (219 cm) -- und der Rechner sagt es.
+  assert.ok(text.replace(/ ([,.:;])/g, "$1").includes(`mide unos ${R40.door.w} × ${R40.door.h} cm, mientras que dentro hay ${R40.h} cm de altura. Un pallet de 2,30 m cabe dentro, pero no pasa por la puerta`), `${f}: die Tuer-Aussage`);
+  assert.ok(230 <= R40.h && 230 > R40.door.h);
+  const hoch = planen({ q: q.replace("x200 ", "x230 "), cont: "40rf", lang: "es" }).body;
+  assert.strictEqual(hoch.plan.pieces_loaded, n40);
+  assert.ok(hoch.notes.some((n) => /door/i.test(n)), "bei 2,30 m meldet die Rechnung die Tuer nicht -- die Seite behauptet es");
+
+  // Gewicht je Palette, aus der Zuladung gerechnet.
+  const nf = (x) => Math.round(x).toLocaleString("de-DE");
+  assert.ok(text.includes(`${n40} pallets pueden pesar de media ${nf(R40.payload / n40)} kg cada uno, y ${zahl(R40, 120, 80)} europalets, unos ${nf(R40.payload / zahl(R40, 120, 80))} kg`), `${f}: Gewicht je Palette`);
+  // Keine Strassengrenze einzelner Laender (unbelegt) -- nur der Hinweis, dass jedes Land seine hat.
+  assert.match(text, /cada país tiene el suyo/);
+  assert.ok(!/Per[uú]|M[eé]xico|Chile|Colombia|Ecuador|Argentina|Espa[nñ]a/.test(text), `${f}: nennt ein Land -- Grenzen einzelner Laender sind unbelegt`);
+  // Die Ehrlichkeitslinie.
+  assert.match(text, /valores orientativos \(cada serie de reefer es distinta\)/);
+  assert.match(text, /no incluye la sujeción de la carga ni el reparto del peso/);
+  assert.ok(lese("sprache/es.js").includes('ctAdjust: "Ajustar medidas"') && text.includes("«Ajustar medidas»"), `${f}: der Knopf im Rechner heisst anders als auf der Seite`);
+
+  // Das FAQ-Schema sagt dasselbe wie die Seite.
+  const ld = JSON.parse(s.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.strictEqual(ld.mainEntity.length, 3);
+  const alle = ld.mainEntity.map((e) => e.acceptedAnswer.text).join(" ");
+  for (const teil of [`${R20.l} × ${R20.w} × ${R20.h} cm`, `${R40.l} × ${R40.w} × ${R40.h} cm`, `${t1(R20.payload)} t`, `${t1(R40.payload)} t`,
+    `${n40} pallets de 1,00 × 1,20 m por capa (${quer} girados y ${laengs} a lo largo) o ${zahl(R40, 120, 80)} europalets`, `serían ${nGP} y ${zahl(G40, 120, 80)}`,
+    `${G40.l - R40.l} cm de largo y ${G40.w - R40.w} cm de ancho`, `${R40.door.w} × ${R40.door.h} cm`, `(${R40.h} cm)`]) {
+    assert.ok(alle.includes(teil), `${f}: das FAQ-Schema nennt nicht "${teil}"`);
+  }
+
+  // Verlinkt von der Uebersicht und von der Masse-Seite; die Startseiten-Tabelle kennt sie.
+  assert.ok(lese("es/guia/index.html").includes('href="/es/guia/contenedor-reefer-medidas"'), "die spanische Uebersicht verlinkt die Seite nicht");
+  assert.ok(lese("es/guia/medidas-contenedor.html").includes('href="/es/guia/contenedor-reefer-medidas"'), "die Masse-Seite verlinkt sie nicht");
+  const gen = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "sprachen", "es.mjs"), "utf8");
+  assert.ok(gen.includes("'/ratgeber/reefer-container-masse': '/es/guia/contenedor-reefer-medidas'"), "werkzeug/sprachen/es.mjs: guide-Eintrag fehlt");
 });
