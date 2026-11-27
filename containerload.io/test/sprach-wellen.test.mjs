@@ -84,6 +84,8 @@ const TEIL_CLUSTER = [
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/stauplan-container", "en/guide/container-stowage-plan", "es/guia/plan-de-estiba-contenedor"] },
   // Der Kuehlcontainer ("reefer") -- von Suedamerika faehrt Obst darin, auf Paletten 1,00 x 1,20 m
   { spalten: ["de", "en", "es"], seiten: ["ratgeber/reefer-container-masse", "en/guide/reefer-container-dimensions", "es/guia/contenedor-reefer-medidas"] },
+  // Die Palette 1,00 x 1,20 m -- das uebliche Mass in Suedamerika ("parihuela", "estiba"); deutsch die Industriepalette
+  { spalten: ["de", "en", "es"], seiten: ["ratgeber/industriepaletten-container", "en/guide/industrial-pallets-container", "es/guia/pallets-100x120-contenedor"] },
 ];
 const NETZE = [...CLUSTER.map((c) => ({ spalten: SPALTEN, seiten: c })), ...TEIL_CLUSTER];
 const spalte = (k) => SPALTEN.indexOf(k);
@@ -681,4 +683,125 @@ test("ES: die Reefer-Seite -- Masse aus PRESETS, Palettenzahlen aus dem Packer, 
   assert.ok(lese("es/guia/medidas-contenedor.html").includes('href="/es/guia/contenedor-reefer-medidas"'), "die Masse-Seite verlinkt sie nicht");
   const gen = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "sprachen", "es.mjs"), "utf8");
   assert.ok(gen.includes("'/ratgeber/reefer-container-masse': '/es/guia/contenedor-reefer-medidas'"), "werkzeug/sprachen/es.mjs: guide-Eintrag fehlt");
+});
+
+// ── Die Palette 1,00 x 1,20 m auf Spanisch ─────────────────────────────────────────────────
+// Dritte Fassung der Industriepaletten-Seiten (test/wissen-zahlen rechnet die deutsche und die
+// englische). Anlass: die meiste gemessene Auslandsnutzung kommt aus Suedamerika, und dort ist
+// 1,00 x 1,20 m das uebliche Mass. Der Kern der Seite: 9 und nicht 10 im 20-Fuss, 22 mit 3 cm
+// Rest im 40-Fuss -- beides Reihe fuer Reihe nachgerechnet.
+test("ES: die Seite zur Palette 1,00 x 1,20 m -- Packer, zwei Draufsichten, Knoepfe durch die echte Rechnung", async () => {
+  const f = "es/guia/pallets-100x120-contenedor.html";
+  const s = lese(f);
+  const text = s.replace(/<script[\s\S]*?<\/script>/g, " ").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/\s+/g, " ").replace(/ ([,.:;])/g, "$1");
+  const G20 = PRESETS["20' GP"], G40 = PRESETS["40' GP"], H40 = PRESETS["40' HC"], H45 = PRESETS["45' HC"];
+  const zahl = (C, l, w, dreh = true) => makeFloorPacker(l, w, dreh)(C.l, C.w).count;
+  const m2 = (cm) => (cm / 100).toFixed(2).replace(".", ",");
+  const n20 = zahl(G20, 120, 100), n40 = zahl(G40, 120, 100);
+  assert.deepStrictEqual([n20, zahl(G20, 120, 100, false), n40, zahl(G40, 120, 100, false)], [9, 8, 22, 20]);
+
+  // Die Antwort oben: beide Zahlen und ihre Verdopplung.
+  assert.ok(text.includes(`caben ${n20} pallets de 1,00 × 1,20 m por capa; en uno de 40 pies, ${n40} pallets. Si la carga se puede apilar en dos capas, ${2 * n20} y ${2 * n40}.`), `${f}: die Antwort`);
+  assert.ok(text.includes(`${G20.l} × ${G20.w} cm (20 pies) o ${G40.l} × ${G40.w} cm (40 pies): con esa base salen ${n20} y ${n40} huecos`), `${f}: Innenmasse im Text`);
+
+  // Die Tabelle: Innenmass aus PRESETS, Stellzahl mit und ohne Drehen aus dem Packer, zwei Lagen passen unter die Decke.
+  const zeilen = [...s.matchAll(/<tr><td>([^<]*)<\/td><td class="num">(\d+) × (\d+) cm<\/td><td class="num">(\d+)<\/td><td class="num">(\d+)<\/td><td class="num">(\d+) cm por pallet<\/td><\/tr>/g)];
+  assert.deepStrictEqual(zeilen.map((z) => z[1]), ["20′ estándar", "40′ estándar", "40′ high cube", "45′ high cube"], `${f}: Tabelle`);
+  [G20, G40, H40, H45].forEach((P, i) => {
+    const z = zeilen[i];
+    assert.deepStrictEqual([+z[2], +z[3], +z[4], +z[5]], [P.l, P.w, zahl(P, 120, 100), zahl(P, 120, 100, false)], `${f}: Tabellenzeile ${z[1]}`);
+    assert.ok(2 * +z[6] <= P.h, `${f}: zwei Lagen zu ${z[6]} cm passen nicht in ${P.h} cm`);
+  });
+  // Der Fliesstext nennt dieselben Hoehen wie die Tabelle (Standard und High Cube).
+  assert.ok(zeilen[0][6] === zeilen[1][6] && text.includes(`no pasa de unos ${zeilen[0][6]} cm y se puede apilar`), `${f}: die Hoehe der zweiten Lage (Standard) steht anders im Text`);
+  assert.ok(zeilen[2][6] === zeilen[3][6] && text.includes(`admite la segunda capa hasta unos ${zeilen[2][6]} cm por pallet`), `${f}: die Hoehe der zweiten Lage (High Cube) steht anders im Text`);
+
+  // "9 und nicht 10": fuenf laengs sind zu lang, zwei quer zu breit.
+  assert.ok(5 * 120 > G20.l && 2 * 120 > G20.w, "zehn passten doch");
+  assert.ok(text.includes(`medirían ${5 * 120} cm y el interior tiene ${G20.l} cm; y dos pallets girados, uno junto al otro, medirían ${2 * 120} cm en un ancho de ${G20.w} cm`), `${f}: warum nicht 10`);
+  assert.ok(text.includes(`Sin girar ninguno caben ${zahl(G20, 120, 100, false)}.`), `${f}: 20 Fuss ohne Drehen`);
+  // "22 mit 3 cm Rest": die zwei Reihen, Meter fuer Meter.
+  const quer = Math.floor(G40.l / 100), laengs = Math.floor(G40.l / 120);
+  assert.deepStrictEqual([quer, laengs, quer + laengs], [12, 10, n40]);
+  assert.ok(text.includes(`${quer} pallets girados junto a una pared (${quer} × 1,00 m = ${m2(quer * 100)} m de ${m2(G40.l)}) y ${laengs} a lo largo junto a la otra (${laengs} × 1,20 m = ${m2(laengs * 120)} m)`), `${f}: die zwei Reihen`);
+  assert.ok(text.includes(`ocupan ${m2(220)} m de los ${m2(G40.w)} m de ancho`) && 120 + 100 <= G40.w, `${f}: die Breite`);
+  assert.ok(text.includes(`solo caben ${zahl(G40, 120, 100, false)}`) && text.includes(`les sobran ${G40.l - quer * 100} cm en todo el largo`), `${f}: ohne Drehen / der knappe Rest`);
+
+  // Zwei Draufsichten, jede zeichnet genau ihre Stellplaetze (plus Umriss) -- laengs blau, quer gruen.
+  const svgs = [...s.matchAll(/<figure class="stau">(<svg[\s\S]*?<\/svg>)<figcaption>([\s\S]*?)<\/figcaption>/g)];
+  assert.strictEqual(svgs.length, 2, `${f}: zwei Draufsichten`);
+  for (const [i, [n, blau, gruen, C]] of [[n20, 8, 1, G20], [n40, laengs, quer, G40]].entries()) {
+    const svg = svgs[i][1];
+    assert.strictEqual((svg.match(/<rect /g) || []).length, n + 1, `${f}: Rechtecke der Draufsicht ${i + 1}`);
+    assert.strictEqual((svg.match(/fill="#2E8FFF" fill-opacity/g) || []).length, blau, `${f}: laengs in Draufsicht ${i + 1}`);
+    assert.strictEqual((svg.match(/fill="#2FD8A0" fill-opacity/g) || []).length, gruen, `${f}: quer in Draufsicht ${i + 1}`);
+    assert.ok(svgs[i][2].includes(`Vista superior con ${C.l}&nbsp;×&nbsp;${C.w}&nbsp;cm de medida interior`), `${f}: Bildunterschrift ${i + 1}`);
+  }
+
+  // Die Knoepfe: oben und Beispiel 40 Fuss sind derselbe Link; der dritte oeffnet den 20-Fuesser (Vorgabe des Links).
+  const knoepfe = [...s.matchAll(/href="(\/app\?lang=es&q=([^"&]+)(?:&cont=([a-z0-9]+))?)"/g)];
+  assert.strictEqual(knoepfe.length, 3, `${f}: drei Rechner-Knoepfe`);
+  assert.strictEqual(knoepfe[0][1], knoepfe[1][1], `${f}: Knopf oben und Beispiel-Knopf oeffnen Verschiedenes`);
+  const { planen } = await import("../../netlify/functions/lib/plan.mjs");
+  for (const [k, n, cont, code] of [[knoepfe[1], n40, "40gp", "40gp"], [knoepfe[2], n20, undefined, "20gp"]]) {
+    const q = decodeURIComponent(k[2]);
+    assert.strictEqual(k[3], cont, `${f}: der Knopf waehlt den falschen Container vor`);
+    assert.deepStrictEqual(parseCargoText(q).map((r) => [r.qty, r.l, r.w, r.h, r.weight, r.stackable !== false]), [[n, 120, 100, 150, 800, false]], `${f}: das Beispiel liest sich anders`);
+    const b = planen({ q, cont, lang: "es" }).body;
+    assert.deepStrictEqual([b.plan.container.code, b.plan.fits_in_one, b.plan.pieces_loaded, b.plan.pieces_left], [code, true, n, 0], `${f}: das Beispiel passt nicht in einen Container`);
+    // ... und ein Stueck mehr passt nicht mehr hinein: die Zahl der Seite ist die Grenze.
+    assert.strictEqual(planen({ q: q.replace(/^\d+/, String(n + 1)), cont, lang: "es" }).body.plan.fits_in_one, false, `${f}: ${n + 1} passen doch`);
+  }
+  assert.ok(text.includes("pallets de 1,00 × 1,20 m y 1,50 m de alto, de 800 kg cada uno, sin apilar"), `${f}: der Satz zum Beispiel`);
+  // Zwei Lagen, wie behauptet: die echte Rechnung stellt sie in EINEN Container.
+  for (const [n, h, cont] of [[2 * n40, 115, "40gp"], [2 * n40, 130, "40hc"], [2 * n20, 115, "20gp"]]) {
+    const b = planen({ q: `${n} pallets 120x100x${h} 500 kg`, cont, lang: "es" }).body;
+    assert.deepStrictEqual([b.plan.fits_in_one, b.plan.pieces_loaded], [true, n], `${f}: ${n} Paletten zu ${h} cm in ${cont}`);
+  }
+  assert.strictEqual(H40.h - G40.h, 31);
+  assert.ok(text.includes("31 cm más de altura"), `${f}: Mehrhoehe High Cube`);
+
+  // Gewicht je Palette, aus der Zuladung gerechnet -- abgerundet, nie mehr als der Container traegt.
+  const t1 = (kg) => (kg / 1000).toFixed(1).replace(".", ",");
+  const nf = (x) => Math.floor(x).toLocaleString("de-DE");
+  assert.ok(text.includes(`admite unas ${t1(G40.payload)} t de carga útil: ${n40} pallets pueden pesar de media hasta ${nf(G40.payload / n40)} kg cada uno, y ${2 * n40} en dos capas, unos ${Math.floor(G40.payload / (2 * n40) / 100) * 100} kg`), `${f}: Gewicht je Palette`);
+  assert.ok(text.includes(`El de 20 pies admite unas ${t1(G20.payload)} t`), `${f}: Zuladung 20 Fuss`);
+  assert.match(text, /cada país tiene el suyo/);
+
+  // Die anderen Paletten: verlinkt, mit den Zahlen aus dem Packer.
+  const R20 = PRESETS["20' Reefer"], R40 = PRESETS["40' Reefer"];
+  assert.ok(s.includes(`caben <a href="/es/guia/europalets-contenedor-20-pies">${zahl(G20, 120, 80)}</a> y <a href="/es/guia/europalets-contenedor-40-pies">${zahl(G40, 120, 80)}</a> por capa`), `${f}: Europaletten`);
+  assert.ok(s.includes(`son <a href="/es/guia/pallets-48x40-contenedor-20-pies">${zahl(G20, 121.92, 101.6)}</a> y <a href="/es/guia/pallets-48x40-contenedor-40-pies">${zahl(G40, 121.92, 101.6)}</a>`), `${f}: 48 x 40 Zoll`);
+  assert.strictEqual(n40 - zahl(G40, 121.92, 101.6), 2, "48 x 40 kostet im 40-Fuss nicht zwei Paletten");
+  assert.ok(text.includes("cuestan dos pallets en el contenedor de 40 pies"), `${f}: der Unterschied zu 48 x 40`);
+  assert.ok(text.includes(`caben ${zahl(R20, 120, 100)} y ${zahl(R40, 120, 100)} pallets de 1,00 × 1,20 m`), `${f}: Reefer`);
+
+  // Die Woerter der Laender (belegt: Angebote "parihuela 120 x 100" in Peru, "estiba 120 x 100" in Kolumbien) --
+  // aber keine Strassengrenze und keine Norm eines einzelnen Landes.
+  for (const w of ["parihuela", "estiba", "tarima"]) assert.ok(text.includes(w), `${f}: das Wort ${w} fehlt`);
+  assert.ok(!/NTC|ARLOG|INACAL|toneladas en carretera/i.test(text), `${f}: nennt eine Norm oder Grenze eines einzelnen Landes -- unbelegt`);
+  // Die Ehrlichkeitslinie.
+  assert.match(text, /valores geométricos orientativos/);
+  assert.match(text, /del reparto del peso y de la sujeción de la carga/);
+
+  // Das FAQ-Schema sagt dasselbe wie die Seite.
+  const ld = JSON.parse(s.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/)[1]);
+  assert.strictEqual(ld["@type"], "FAQPage");
+  assert.strictEqual(ld.mainEntity.length, 3);
+  assert.ok(new RegExp(`^${n20} pallets`).test(ld.mainEntity[0].acceptedAnswer.text) && new RegExp(`^${n40} pallets`).test(ld.mainEntity[1].acceptedAnswer.text), `${f}: die Antworten beginnen nicht mit der Zahl`);
+  const alle = ld.mainEntity.map((e) => e.acceptedAnswer.text).join(" ");
+  for (const teil of [`Sin girar ninguno caben ${zahl(G20, 120, 100, false)}`, `medirían ${5 * 120} cm y el interior tiene ${G20.l} cm`, `son ${2 * n20}.`,
+    `${quer} girados junto a una pared y ${laengs} a lo largo`, `solo ${G40.l - quer * 100} cm de margen`, `caben ${zahl(G40, 120, 100, false)}`, `En dos capas, ${2 * n40}.`,
+    `caben ${n20} por capa en un contenedor de 20 pies y ${n40} en uno de 40 pies`, `${zahl(G20, 121.92, 101.6)} y ${zahl(G40, 121.92, 101.6)}; con europalets (1,20 × 0,80 m), ${zahl(G20, 120, 80)} y ${zahl(G40, 120, 80)}`]) {
+    assert.ok(alle.includes(teil), `${f}: das FAQ-Schema nennt nicht "${teil}"`);
+  }
+  const titel = /<title>(.*?)<\/title>/.exec(s)[1];
+  assert.ok(titel.includes(`${n20} y ${n40}`), `${f}: der Titel nennt die Zahlen nicht`);
+
+  // Verlinkt von der Uebersicht und von den Nachbarseiten; die Startseiten-Tabelle kennt sie.
+  for (const g of ["es/guia/index.html", "es/guia/pallets-48x40-contenedor-40-pies.html", "es/guia/pallets-48x40-contenedor-20-pies.html", "es/guia/europalets-contenedor-40-pies.html", "es/guia/europalets-contenedor-20-pies.html", "es/guia/contenedor-reefer-medidas.html"]) {
+    assert.ok(lese(g).includes('href="/es/guia/pallets-100x120-contenedor"'), `${g} verlinkt die Seite nicht`);
+  }
+  const gen = fs.readFileSync(path.join(dir, "..", "..", "werkzeug", "sprachen", "es.mjs"), "utf8");
+  assert.ok(gen.includes("'/ratgeber/industriepaletten-container': '/es/guia/pallets-100x120-contenedor'"), "werkzeug/sprachen/es.mjs: guide-Eintrag fehlt");
 });
