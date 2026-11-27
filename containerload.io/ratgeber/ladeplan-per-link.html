@@ -128,6 +128,7 @@
 
     <h2>Für KI-Assistenten</h2>
     <p>Ein Sprachmodell kann nicht verlässlich ausrechnen, wie viele Packstücke in einen Container passen. Es kann aber <code>/api/plan</code> aufrufen oder aus einer Beschreibung den Link bauen — und <b>die Antwort gibt dann der Rechner</b>: ein echter Packlauf, in 3D zu sehen und nachzuprüfen. Dieselbe Beschreibung in Kurzform für Assistenten steht unter <a href="/llms.txt">/llms.txt</a>.</p>
+    <p><b>Als Werkzeug im Assistenten (MCP):</b> Wer einen Assistenten mit Connectoren nutzt, etwa Claude oder ChatGPT, trägt dort die Adresse <code>https://containerload.io/mcp</code> als Connector ein — ohne Schlüssel, ohne Konto. Der Assistent bekommt damit ein Werkzeug, <code>plan_load</code>: Er schickt die Ladung als Text und erhält dieselbe Antwort wie von <code>/api/plan</code>, samt <code>plan_url</code>. Auch hier rechnet der Server; die Ladung wird dorthin übertragen und nicht gespeichert.</p>
 
     <h2>Grenzen</h2>
     <ul>

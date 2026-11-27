@@ -128,6 +128,7 @@
 
     <h2>For AI assistants</h2>
     <p>A language model cannot reliably work out how many packages fit into a container. But it can call <code>/api/plan</code>, or build the link from a description — and <b>the calculator then gives the answer</b>: a real packing run, visible in 3D and open to checking. The same description in short form for assistants is at <a href="/llms.txt">/llms.txt</a>.</p>
+    <p><b>As a tool inside the assistant (MCP):</b> If your assistant supports connectors, as Claude and ChatGPT do, add the address <code>https://containerload.io/mcp</code> there as a connector — no key, no account. The assistant then has one tool, <code>plan_load</code>: it sends the cargo as text and receives the same answer as from <code>/api/plan</code>, including <code>plan_url</code>. Here, too, the server does the calculation; the cargo is sent there and not stored.</p>
 
     <h2>Limits</h2>
     <ul>
