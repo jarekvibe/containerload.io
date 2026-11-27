@@ -291,6 +291,27 @@ Gemessen über 200 zufällige Ketten: **kein einziger Fall braucht mehr Containe
 
 > **Die Falle, die fünf Testdateien auf einmal umgeworfen hat:** Beim Umbau wurde aus `return { chain, remainingBoxes: … }` ein `const out = { … }; return out;`. Fünf Test-Slices schneiden das Ende von `chainContainers` an genau dieser Zeichenkette ab — sie liefen ins Leere, und die halbe Kette war nicht mehr getestet. Die Zeile beginnt jetzt in **beiden** Ketten-Funktionen wieder wörtlich mit `return { chain, remainingBoxes`, mit einem Kommentar darüber.
 
+### Der größte Container nur, wenn er auch mehr trägt (27.11.26)
+Gemeldet mit Bild (Jarek, über einen geteilten Plan): **34 Stück zu je 10 t**, gewählt der 20′ GP. Jeder Container trägt zwei Stück, ein drittes wäre zu schwer — 17 Container, soweit richtig. Drei Dinge daran waren es nicht:
+
+1. **Die Kette stellte nach dem ersten 20-Füßer fünfzehn 40′ HC hin, jeden mit zwei Stück.** `autoFollow` kannte nur zwei Antworten: „der Rest passt in EINEN Container → den kleinsten davon" und sonst „den größten" (das Arbeitspferd 40′ HC). Der 40′ HC hat das größte Volumen, aber **nicht die größte Zuladung** (26.580 kg gegen 28.200 kg im 20′ GP).
+2. **Die Empfehlung nannte „16 × 40′ HC + 1 × 20′ GP"** — dieselbe Zahl Container wie 17 × 20′ GP, bei mehr als doppelt so viel gebuchtem Raum (`kombi` in `suggestContainer` hatte dieselbe Regel).
+3. **Die Zeile „Das Gewicht teilt die Sendung" fehlte.** Sie erschien erst ab 90 % der Zuladung; zwei Stück zu je 10 t sind 71 %. Genau der Satz, der die Frage beantwortet hätte — Jarek fand die Ursache selbst.
+
+**Seitdem fragen Kette und Empfehlung dieselbe Funktion: `kleinerReicht(stdOrder, gross, r, packen)`.** Hat der große Container geladen (`r`), sucht sie den kleinsten **kürzeren** Standard-Container, der **von jeder Sorte mindestens genauso viel** lädt. Regeln, die nicht kippen dürfen (`test/folgecontainer-gewicht.test.mjs`, 10 Tests):
+
+- **Kürzer, nicht bloß kleiner.** Ein 40′ GP anstelle des 40′ HC ist dieselbe Stellfläche und praktisch derselbe Preis — ohne diese Grenze riet das Empfehlungsbanner bei jeder Ladung, die keine 2,70 m braucht, vom gewählten High Cube ab (zwei bestehende Tests wurden beim ersten Anlauf rot). Ein 20-Füßer statt eines 40-Füßers ist wirklich weniger Equipment — und für schwere Ware ohnehin das, was gebucht wird.
+- **Die höhere Zuladung zählt mit:** bei 9 t je Stück trägt der 20′ GP drei, der 40′ HC zwei — 34 Stück brauchen 12 Container statt 16.
+- **Gepackt wird dafür nur, wenn die Stauung des großen Containers in den kürzeren hineinginge** (ihre Ausdehnung und ihr Gewicht). Füllt die Ladung den großen räumlich, kostet die Frage keinen Packlauf — der Arbeits-Deckel in `test/grossladung` (≤ 60 Packläufe) hält.
+- **Die neue Kette muss sich gegen die alte beweisen** (`bauen` → `bauenMit(…, klein)` zweimal, dann `ketteBesser`; in der Empfehlung `kombi` → `kombiMit`): nicht mehr offen, nicht mehr Container, weniger gebuchter Raum. Gebaut wird die zweite nur, wenn die erste überhaupt einen kürzeren Container gewählt hat. Der Test lädt `app.html` ein zweites Mal mit abgeschalteter Regel und vergleicht über 80 Zufallsladungen.
+- **Der erste Container bleibt die Wahl des Nutzers,** von Hand gewählte Folgecontainer ebenso. Wer den 40′ HC gewählt hat, sieht 1 × 40′ HC + 16 × 20′ GP — und das Banner „Es ginge auch mit 17 × 20′ GP".
+- **Die Landfracht kennt kein kleineres Fahrzeug** (`chainVehicles` unverändert).
+- **`kettenGrund`:** die Zuladung gilt als Grenze, wenn sie zu 90 % erreicht ist **oder schon das leichteste Stück, das draußen blieb, sie reißen würde.** Die Gegenprobe (derselbe Packlauf ohne Gewichtsdeckel lädt mehr) entscheidet weiterhin. `/api/plan` sagt dazu jetzt „in der ersten Einheit wäre noch Platz, ihre Zuladung lässt aber nichts mehr zu" — „ist an ihrer Zuladung" stimmte für 71 % nicht.
+
+**Gemessen** über 200 Zufallsladungen (je ein Viertel schwer bzw. sehr viele Stück): 1.390 → 1.371 Container, gebuchter Raum 96.488 → 71.475 m³, offen 322 → 287; anders gebaut wird 1 von 100 gewöhnlichen und 47 von 50 schweren Ladungen. Rechenzeit +25 % über alle (die schweren bauen zwei Ketten), der schlimmste Einzelfall 707 → 716 ms. `packCargo` selbst ist unberührt. Fünf Gegenproben gemacht (jede macht den Test rot). Im Browser: 25 Prüfungen (der gemeldete Plan in drei Sprachen und auf dem Telefon; mit dem 40′ HC vorn: Banner, „Übernehmen", danach 17 × 20′ GP).
+
+**Bekannt, nicht angefasst:** Auf einem 390 px breiten Telefon verdecken acht Container-Pillen bei einer so langen Kette den Sicherungs-Hinweis (war schon so; die Grund-Zeile schiebt sie eine Zeile tiefer). Und zwei Stück zu je 10 t stehen im Bild aufeinander — „frei stapelbar" ist die Angabe des Nutzers.
+
 ### Stufe 3: ordentlich stauen, solange es nichts kostet
 Gemeldet: *„die Ladung wird teilweise auch weird gestaut … Ich weiß, dass es schwierig ist umzusetzen, dass nach Logik gestaut wird, aber vielleicht kann man das probieren?"*
 

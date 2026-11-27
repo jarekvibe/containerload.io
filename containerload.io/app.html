@@ -2207,6 +2207,40 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (soll >= alle && sicherZuViel(Ct, types)) return false;
     return packCargo(Ct, types, opts).boxes >= soll;
   }
+  // Der groesste Container ist nur dann die richtige Wahl, wenn er auch MEHR traegt.
+  // Gemeldet mit Bild (27.11.26): 34 Stueck zu je 10 t. Jeder Container traegt zwei davon,
+  // ein drittes waere zu schwer -- und die Kette stellte fuenfzehn 40' HC hin, jeden mit zwei
+  // Stueck, die Empfehlung nannte "16 x 40' HC + 1 x 20' GP". Der 40' HC hat das groesste
+  // Volumen, aber NICHT die groesste Zuladung (26.580 kg gegen 28.200 kg im 20' GP): teilt
+  // das Gewicht die Sendung, ist der 20-Fuesser die bessere Wahl -- so bucht es auch die Praxis.
+  //
+  // r ist, was der grosse Container geladen hat. Gesucht wird der kleinste KUERZERE
+  // Standard-Container, der von jeder Sorte mindestens genauso viel laedt. Gepackt wird dafuer
+  // nur, wenn die Stauung des grossen (ihre Ausdehnung, ihr Gewicht) in den kuerzeren
+  // ueberhaupt hineinginge: fuellt die Ladung den grossen raeumlich, kostet die Frage nichts.
+  //
+  // Kuerzer, nicht bloss kleiner: ein 40' GP anstelle des 40' HC ist dieselbe Stellflaeche und
+  // in der Praxis derselbe Preis -- und das Empfehlungsbanner riete sonst bei jeder Ladung,
+  // die keine 2,70 m Hoehe braucht, vom gewaehlten High Cube ab. Ein 20-Fuesser statt eines
+  // 40-Fuessers ist dagegen wirklich weniger Equipment.
+  function kleinerReicht(stdOrder, gross, r, packen) {
+    if (!r || !r.boxes) return null;
+    let mx = 0, my = 0, mz = 0;
+    for (const b of r.placed) {
+      if (b.x + b.dx > mx) mx = b.x + b.dx;
+      if (b.y + b.dy > my) my = b.y + b.dy;
+      if (b.z + b.dz > mz) mz = b.z + b.dz;
+    }
+    for (const o of stdOrder) {
+      if (o === gross || o.vol >= gross.vol) break;
+      if (!(num(o.p.l) < num(gross.p.l) - 1)) continue;
+      const pay = num(o.p.payload) > 0 ? num(o.p.payload) : Infinity;
+      if (mx > num(o.p.l) + 1e-6 || my > num(o.p.h) + 1e-6 || mz > num(o.p.w) + 1e-6 || r.weight > pay + 1e-6) continue;
+      const k = packen(o.p);
+      if (k.boxes >= r.boxes && r.perType.every((t, i) => (k.perType[i] ? k.perType[i].loaded : 0) >= t.loaded)) return { o, r: k };
+    }
+    return null;
+  }
   function packCargo(Ct, types, opts = {}) {
     const CL = num(Ct.l), CW = num(Ct.w), CH = num(Ct.h);
     const pay = num(Ct.payload) > 0 ? num(Ct.payload) : Infinity;
@@ -2867,10 +2901,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Kette ein 20-Fuesser steht). Zwei widerspruechliche Zahlen nebeneinander sind
     // schlimmer als eine ungenaue.
     const OPT = { noHint: true, quick: true };
-    const kombi = (sortenrein) => {
+    const kombiMit = (sortenrein, klein) => {
       let rest = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
       const used = {};
-      let guard = 0, vol = 0, n = 0;
+      let guard = 0, vol = 0, n = 0, kleiner = false;
       while (guard++ < 80) {
         const tot = rest.reduce((s, t) => s + t.qty, 0);
         if (tot === 0) break;
@@ -2885,23 +2919,37 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           rest = rest.map((t) => ({ ...t, qty: 0 }));
           break;
         }
-        const r = sortenrein
-          ? packSortenrein(workhorse.p, rest, sortenReihenfolge(rest), null, OPT)
-          : packCargo(workhorse.p, rest, OPT);
+        const packen = (p) => sortenrein
+          ? packSortenrein(p, rest, sortenReihenfolge(rest), null, OPT)
+          : packCargo(p, rest, OPT);
+        let r = packen(workhorse.p), pick = workhorse;
         if (r.boxes === 0) break;
-        used[workhorse.name] = (used[workhorse.name] || 0) + 1;
-        vol += workhorse.vol; n++;
+        // Traegt ein kleinerer Container dasselbe (das Gewicht teilt, nicht der Platz),
+        // wird er genannt -- wie in der Kette (kleinerReicht).
+        const kl = klein ? kleinerReicht(stdOrder, workhorse, r, packen) : null;
+        if (kl) { pick = kl.o; r = kl.r; kleiner = true; }
+        used[pick.name] = (used[pick.name] || 0) + 1;
+        vol += pick.vol; n++;
         rest = rest.map((t, i) => ({ ...t, qty: t.qty - (r.perType[i] ? r.perType[i].loaded : 0) }));
       }
-      return { used, offen: rest.reduce((s, t) => s + t.qty, 0), n, vol };
+      return { used, offen: rest.reduce((s, t) => s + t.qty, 0), n, vol, kleiner };
+    };
+    // Dieselbe Rangfolge wie bei der Kette: was liegenbleibt, dann die Zahl der
+    // Container, dann das gebuchte Volumen.
+    const besser = (a, b) => a.offen < b.offen || (a.offen === b.offen && (a.n < b.n || (a.n === b.n && a.vol < b.vol)));
+    // Mit kleineren Folgecontainern wird nur empfohlen, was sich gegen die alte Regel
+    // ("sonst immer der groesste") beweist -- sie kann nie einen Container kosten.
+    const kombi = (sortenrein) => {
+      const neu = kombiMit(sortenrein, true);
+      if (!neu.kleiner) return neu;
+      const alt = kombiMit(sortenrein, false);
+      return besser(neu, alt) ? neu : alt;
     };
     let best = kombi(false);
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
     if (sorten > 1 && sorten <= SORTENREIN_MAX) {
       const rein = kombi(true);
-      // Dieselbe Rangfolge wie bei der Kette: was liegenbleibt, dann die Zahl der
-      // Container, dann das gebuchte Volumen.
-      if (rein.offen < best.offen || (rein.offen === best.offen && (rein.n < best.n || (rein.n === best.n && rein.vol < best.vol)))) best = rein;
+      if (besser(rein, best)) best = rein;
     }
     const combo = stdOrder.slice().reverse().filter((o) => best.used[o.name]).map((o) => ({ name: o.name, count: best.used[o.name] }));
     return { type: "multi", combo };
@@ -3292,7 +3340,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const pay = num(preset0 && preset0.payload);
     if (!(pay > 0)) return null;
     const kg = slotKg(chain[0].placed, cargo);
-    if (kg < pay * 0.9) return null; // die Zuladung war nicht die Grenze
+    // Die Zuladung ist die Grenze, wenn sie fast erreicht ist -- oder wenn schon das
+    // leichteste Stueck, das draussen blieb, sie reissen wuerde. Das zweite fehlte bis
+    // 27.11.26: zwei Stueck zu je 10 t sind 71 Prozent der Zuladung eines 20-Fuessers, ein
+    // drittes geht trotzdem nicht -- und genau dort stand keine Zeile (gemeldet mit Bild).
+    const drin = cargo.map(() => 0);
+    for (const b of chain[0].placed) if (drin[b.ti] != null) drin[b.ti]++;
+    let leicht = Infinity;
+    cargo.forEach((t, i) => {
+      const w = Math.max(0, num(t.weight));
+      if (Math.floor(num(t.qty)) - drin[i] > 0 && w > 0 && w < leicht) leicht = w;
+    });
+    const reisst = leicht < Infinity && kg + leicht > pay + 1e-6;
+    if (kg < pay * 0.9 && !reisst) return null; // die Zuladung war nicht die Grenze
     const ohne = packCargo({ ...preset0, payload: 0 }, cargo, { noHint: true, quick: true });
     if (ohne.boxes <= chain[0].placed.length) return null; // auch ohne Deckel nicht mehr: der Platz teilt
     return { kg, pay };
@@ -3382,8 +3442,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Special Equipment packt packKind, und ein Wellen-Lauf ueber packCargo
     // liesse Uebermass-Stuecke stillschweigend fallen (Grenze wie beim Ausgleich).
     const stopps = (container0.kind || "dry") === "dry" ? stoppWerte(cargo) : null;
-    const bauen = (sortenrein, ordentlich) => {
-      let erst = null, chain, remaining;
+    // klein: darf ein Folgecontainer kleiner ausfallen als der groesste, wenn er dasselbe
+    // traegt (kleinerReicht)? bauen() darunter laesst beide Ketten gegeneinander antreten.
+    const bauenMit = (sortenrein, ordentlich, klein) => {
+      let erst = null, chain, remaining, kleiner = false;
       const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
       // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
@@ -3420,8 +3482,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       while (nochMoeglich(remaining) > 0 && chain.length < MAXVIS) {
         const ov = overrides && overrides[slot];
         const manual = ov && PRESETS[ov];
-        const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
+        let pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
+        let rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
+        // Der groesste Container nur, wenn er auch mehr traegt: teilt das Gewicht die
+        // Sendung, laedt ein kleinerer dasselbe (siehe kleinerReicht).
+        if (klein && !manual && pick === workhorse && rr.boxes > 0) {
+          const s = slot, rest = remaining;
+          const kl = kleinerReicht(stdOrder, workhorse, rr, (p) => slotPacken(p, rest, s, pins, OPT, sortenrein));
+          if (kl) { pick = kl.o; rr = kl.r; kleiner = true; }
+        }
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -3429,7 +3498,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich, kleiner };
+    };
+    // Eine Kette mit kleineren Folgecontainern muss sich gegen die alte Regel ("sonst immer
+    // der groesste") beweisen: nicht mehr liegen lassen, nicht mehr Container, weniger
+    // gebuchter Raum (ketteBesser). Gebaut wird die zweite nur, wenn die erste ueberhaupt
+    // einen kleineren Container gewaehlt hat -- sonst sind beide dieselbe.
+    const bauen = (sortenrein, ordentlich) => {
+      const neu = bauenMit(sortenrein, ordentlich, true);
+      if (!neu || !neu.kleiner) return neu;
+      const alt = bauenMit(sortenrein, ordentlich, false);
+      return !alt || ketteBesser(neu, alt) ? neu : alt;
     };
     let erg = bauen(false);
     // Zuweisungen und Stopps koennen den ERSTEN Container leeren (alles auf spaetere
