@@ -16,7 +16,10 @@
 // keinen Ereignis-Strom, nichts, was sich ein Server merken muesste. Dafuer zwei
 // Abhaengigkeiten in die Functions zu holen, waere mehr Angriffsflaeche als Nutzen.
 //
-// ZWEI FASSUNGEN DES PROTOKOLLS werden bedient (Websuche 27.11.26, modelcontextprotocol.io):
+// ZWEI FASSUNGEN DES PROTOKOLLS werden bedient. Quelle fuer die neue: schema.ts und changelog
+// der Fassung 2026-07-28 im Repository der Spezifikation (gelesen am 27.11.26 vom Hauptzweig --
+// Feldnamen, Fehlercodes, _meta-Schluessel); der Text zum HTTP-Transport war nicht abrufbar,
+// was ihn betrifft (GET, Benachrichtigungen), stammt aus Zusammenfassungen einer Websuche.
 //   * bis 2025-11-25: der Assistent meldet sich mit "initialize" an und fragt dann
 //     tools/list und tools/call.
 //   * 2026-07-28 ("stateless"): keine Anmeldung mehr. Jede Anfrage traegt ihre Fassung selbst
@@ -162,8 +165,13 @@ export async function beantworte(msg, kopf = {}, deckel = async () => true) {
     if (kopf.name && m === "tools/call" && kopf.name !== p.name) return { http: 400, antwort: schlecht(id, CODE.kopf, "Header mismatch: Mcp-Name does not match the tool name of the request.") };
     if (version === NEU) neu = true;
   }
-  // Ergebnisse der neuen Fassung tragen resultType, Listen dazu, wie lange sie gelten und fuer wen.
-  const stempel = (result, liste) => (neu ? { ...result, resultType: "complete", ...(liste ? { ttlMs: LISTE_TTL_MS, cacheScope: "public" } : {}) } : result);
+  // Ergebnisse der neuen Fassung tragen resultType, Listen dazu, wie lange sie gelten und fuer wen --
+  // und jedes nennt in _meta, wer antwortet (schema.ts, ResultMetaObject: Server SOLLEN das in jeder
+  // Antwort tun; eine Anmeldung, die es einmal sagen koennte, gibt es in dieser Fassung nicht mehr).
+  const stempel = (result, liste) => (neu ? {
+    ...result, resultType: "complete", ...(liste ? { ttlMs: LISTE_TTL_MS, cacheScope: "public" } : {}),
+    _meta: { ...(istObjekt(result._meta) ? result._meta : {}), [META_SERVER]: SERVER },
+  } : result);
   const antwort = (result) => ({ http: 200, antwort: gut(id, result) });
 
   switch (m) {
@@ -175,7 +183,7 @@ export async function beantworte(msg, kopf = {}, deckel = async () => true) {
         instructions: ANLEITUNG,
       });
     case "server/discover":
-      return antwort(stempel({ supportedVersions: VERSIONEN, capabilities: { tools: {} }, instructions: ANLEITUNG, _meta: { [META_SERVER]: SERVER } }, true));
+      return antwort(stempel({ supportedVersions: VERSIONEN, capabilities: { tools: {} }, instructions: ANLEITUNG }, true));
     case "ping":
       return antwort(stempel({}));
     case "tools/list":

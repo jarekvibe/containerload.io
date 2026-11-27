@@ -6,7 +6,8 @@
 //      wie /api/plan und der Link /app?q= -- kein zweiter Rechner, keine KI.
 //   2. BEIDE FASSUNGEN DES PROTOKOLLS werden bedient: die Anmeldung mit "initialize" (bis
 //      2025-11-25) und die zustandslose Fassung 2026-07-28 (server/discover, Fassung je
-//      Anfrage, resultType). Quelle der Regeln: modelcontextprotocol.io, Websuche 27.11.26.
+//      Anfrage, resultType). Quelle der Regeln: schema.ts und changelog der Fassung 2026-07-28
+//      im Repository der Spezifikation (gelesen 27.11.26); zum HTTP-Transport eine Websuche.
 //   3. ZUSTANDSLOS UND SPARSAM: keine Sitzung, kein Strom, keine IP, derselbe Tagesdeckel
 //      wie /api/plan.
 //
@@ -70,7 +71,7 @@ test("alte Fassung: initialize handelt die Fassung aus, danach Liste und Aufruf 
   assert.deepStrictEqual(liste.body.result, { tools: [WERKZEUG] });
   const ruf = await rpc("tools/call", { name: "plan_load", arguments: { cargo: LADUNG } }, { "mcp-protocol-version": ALT[0] });
   assert.strictEqual(ruf.body.result.isError, false);
-  assert.ok(!("resultType" in ruf.body.result), "alte Clients bekommen die Felder der neuen Fassung nicht");
+  assert.ok(!("resultType" in ruf.body.result) && !("_meta" in ruf.body.result), "alte Clients bekommen die Felder der neuen Fassung nicht");
 });
 
 test("neue Fassung: server/discover statt Anmeldung, die Fassung reist in jeder Anfrage mit", async () => {
@@ -87,17 +88,25 @@ test("neue Fassung: server/discover statt Anmeldung, die Fassung reist in jeder 
   assert.deepStrictEqual(VERSIONEN.slice(1), ALT);
   // Liste: mit resultType und den Angaben zum Merken (ohne sie zeigen manche Clients keine Werkzeuge).
   const l = await rpc("tools/list", meta, { ...kopf, "mcp-method": "tools/list" });
-  assert.deepStrictEqual(l.body.result, { tools: [WERKZEUG], resultType: "complete", ttlMs: 3600000, cacheScope: "public" });
+  // Und JEDES Ergebnis nennt in _meta, wer antwortet -- eine Anmeldung, die es einmal sagt, gibt es nicht mehr.
+  const WER = { "io.modelcontextprotocol/serverInfo": SERVER };
+  assert.deepStrictEqual(l.body.result, { tools: [WERKZEUG], resultType: "complete", ttlMs: 3600000, cacheScope: "public", _meta: WER });
   // Aufruf ohne jede Anmeldung, die Kopfzeilen spiegeln Methode und Werkzeug.
   const c = await rpc("tools/call", { name: "plan_load", arguments: { cargo: LADUNG, container: "40hc" }, ...meta }, { ...kopf, "mcp-method": "tools/call", "mcp-name": "plan_load" });
   assert.strictEqual(c.status, 200);
   assert.strictEqual(c.body.result.resultType, "complete");
   assert.ok(!("ttlMs" in c.body.result), "ein Ergebnis ist keine Liste: es wird nicht gemerkt");
   assert.strictEqual(c.body.result.isError, false);
+  assert.deepStrictEqual(c.body.result._meta, WER);
   assert.strictEqual(c.kopf.get("mcp-session-id"), null);
   // Die Fassung steht nur in _meta (ohne Kopfzeile): gilt ebenso.
   const nurMeta = await rpc("ping", meta);
-  assert.deepStrictEqual(nurMeta.body.result, { resultType: "complete" });
+  assert.deepStrictEqual(nurMeta.body.result, { resultType: "complete", _meta: WER });
+  // Die leeren Listen (Ressourcen, Vorlagen) sind Listen wie die der Werkzeuge: mit Merk-Angaben.
+  for (const [methode, feld] of [["resources/list", "resources"], ["resources/templates/list", "resourceTemplates"], ["prompts/list", "prompts"]]) {
+    const r = await rpc(methode, meta, { ...kopf, "mcp-method": methode });
+    assert.deepStrictEqual(r.body.result, { [feld]: [], resultType: "complete", ttlMs: 3600000, cacheScope: "public", _meta: WER }, methode);
+  }
 });
 
 test("Kopfzeile und Nachricht muessen dasselbe sagen; eine unbekannte Fassung wird mit der Liste abgelehnt", async () => {
