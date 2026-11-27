@@ -1,0 +1,51 @@
+# Der Wächter: prüft stündlich von außen, ob containerload.io antwortet und ob dort der
+# Stand von main liegt (werkzeug/erreichbar.mjs). Schlägt er fehl, schickt GitHub dem
+# Inhaber des Repositories eine Mail ("Run failed: Seite erreichbar?").
+#
+# Anlass (26.11.26): rund achteinhalb Stunden Ausfall, und ein Merge ging nie live --
+# gemerkt hat es niemand, weil nichts nachsah.
+#
+# Bewusst nur zwei Auslöser: der Stundentakt und der Knopf "Run workflow". KEIN Lauf bei
+# Pull Requests oder Pushes -- ein Ausfall der Seite soll keinen Pull Request rot färben,
+# und direkt nach einem Merge ist der neue Stand noch nicht veröffentlicht.
+#
+# Erst der ZWEITE Befund zählt: findet die erste Prüfung etwas, wird fünf Minuten gewartet,
+# main neu geholt und noch einmal geprüft. Das fängt einen gerade laufenden Deploy und
+# einen einzelnen Netz-Aussetzer ab.
+name: Seite erreichbar?
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: erreichbar
+  cancel-in-progress: false
+
+jobs:
+  erreichbar:
+    name: containerload.io antwortet und zeigt den Stand von main
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Erste Prüfung
+        id: erste
+        continue-on-error: true
+        run: node werkzeug/erreichbar.mjs
+      - name: Zweite Prüfung nach fünf Minuten (nur wenn die erste etwas fand)
+        if: steps.erste.outcome == 'failure'
+        run: |
+          sleep 300
+          git fetch --depth 1 origin main
+          git checkout --force FETCH_HEAD
+          node werkzeug/erreichbar.mjs

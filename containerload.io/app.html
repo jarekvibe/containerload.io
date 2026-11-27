@@ -110,8 +110,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   <script>
   // Der Ladehinweis steht im Markup und damit fest auf Deutsch — sichtbar genau so lange,
   // bis React montiert. Bei ?lang=en war das die erste und einzige deutsche Zeile, die ein
-  // englischer Besucher zu sehen bekam. Vier Zeilen, dieselbe Vorrangfolge wie LANG weiter
-  // unten (Adresse vor gemerkter Wahl); die Sprachlogik selbst bleibt dort, wo sie war.
+  // englischer Besucher zu sehen bekam. Welche Sprache gilt, entscheidet CL_SPRACHE_WUNSCH
+  // gleich hier unten -- fuer diesen Hinweis, fuer den Lader und fuer den Rechner (LANG).
   //
   // SPRACHEN: Deutsch und Englisch stehen in dieser Datei. Jede weitere Sprache ist EINE Datei
   // sprache/<kuerzel>.js und EIN Eintrag in CL_SPRACHEN hier (Name fuer die Auswahl + der Satz
@@ -119,10 +119,43 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // weil der sein Woerterbuch beim Start einmal liest. document.write ist dafuer der eine Weg
   // ohne Build-Schritt, der die Reihenfolge haelt (gleiche Herkunft, eine kleine Datei).
   window.CL_SPRACHEN = { es: ["Espa\u00F1ol", "Cambiar la interfaz a espa\u00F1ol"], fr: ["Fran\u00e7ais", "Passer l\u2019interface en fran\u00e7ais"], zh: ["\u4e2d\u6587", "\u5207\u6362\u4e3a\u4e2d\u6587\u754c\u9762"], nl: ["Nederlands", "Schakel de interface naar het Nederlands"], pt: ["Portugu\u00eas", "Mudar a interface para portugu\u00eas"] };
+  // WELCHE SPRACHE? Eine Regel, an einer Stelle -- fuer den Ladehinweis, den Lader und den
+  // Rechner selbst (LANG liest das Ergebnis als CL_LANG_WUNSCH).
+  //
+  // Gewoehnlich entscheidet die ADRESSE, dann die gemerkte Sprache, NIE die Browsersprache:
+  // /app ist deutsch, /app?lang=en englisch -- fuer jeden Besucher und jede Suchmaschine.
+  //
+  // Die eine Ausnahme ist ein GETEILTER PLAN (?c= oder ?p= in der Adresse). Den oeffnet ein
+  // EMPFAENGER, und das lang= in seinem Link ist die Sprache des ABSENDERS (Jarek, 26.11.26:
+  // ein franzoesischer Verlader schickt den Plan seinem mexikanischen Kunden -- "bitte in der
+  // Sprache des Empfaengers"). Dort gilt:
+  //   1. die Sprache, die der Empfaenger hier SELBST gewaehlt hat (cl_lang mit "!" dahinter:
+  //      setLangTo im Rechner, die Sprachlinks der Startseite),
+  //   2. sonst die Sprache seines Browsers -- wenn der Rechner sie spricht,
+  //   3. sonst wie verschickt: lang= aus dem Link, dann die zuletzt gesehene Sprache.
+  // Nur die ERSTE Browsersprache zaehlt: Chrome und Firefox haengen jeder Liste von sich aus
+  // Englisch an, das ist keine Aussage des Nutzers -- wessen Sprache der Rechner nicht
+  // spricht, der bekommt den Plan wie bisher in der des Absenders. Im eingebetteten Rechner
+  // (iframe) bleibt es bei der Adresse: dort bestimmt die einbettende Seite. Die Teilen-Seite
+  // (share.html) fuehrt dieselbe Rangfolge und reicht ihr Ergebnis als lang= weiter; beide
+  // muessen gleich entscheiden (test/empfaenger-sprache.test.mjs).
+  window.CL_SPRACHE_WUNSCH = function (suche, gemerkt, browser, eingebettet) {
+    var zwei = function (s) { return String(s || "").toLowerCase().slice(0, 2); };
+    var kann = function (l) { return l === "de" || l === "en" || Object.prototype.hasOwnProperty.call(window.CL_SPRACHEN, l); };
+    var p = new URLSearchParams(suche || ""), roh = String(gemerkt || "").toLowerCase(), zuletzt = roh.slice(0, 2);
+    if (!eingebettet && (p.get("c") || p.get("p"))) {
+      if (roh.charAt(2) === "!" && kann(zuletzt)) return zuletzt;
+      if (kann(zwei(browser))) return zwei(browser);
+    }
+    return zwei(p.get("lang")) || zuletzt;
+  };
   (function () {
     try {
-      var q = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase().slice(0, 2);
-      var l = q || (window.localStorage.getItem("cl_lang") || "").toLowerCase().slice(0, 2);
+      var gemerkt = null, browser = "", eingebettet = false;
+      try { gemerkt = window.localStorage.getItem("cl_lang"); } catch (e) {}
+      try { browser = window.navigator.language; } catch (e) {}
+      try { eingebettet = window.self !== window.top; } catch (e) { eingebettet = true; }
+      var l = window.CL_SPRACHE_WUNSCH(window.location.search, gemerkt, browser, eingebettet);
       window.CL_LANG_WUNSCH = l;
       if (window.CL_SPRACHEN[l]) document.write('<script src="sprache/' + l + '.js"><\/script>');
     } catch (e) {}
@@ -1006,8 +1039,22 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Semikolon-CSV: wer aus einer .csv-Datei statt aus Excel kopiert, hat Semikolons
     // statt Tabs. Erst ab drei Semikolons in JEDER Zeile -- der Freitext benutzt das
     // Semikolon als Positions-Trenner ("120x80x100; 60x40x30"), und der hat nie drei.
+    //
+    // "Der hat nie drei" stimmte nicht: VIER Positionen in einer Zeile haben drei
+    // ("a; b; c; d") -- und genau so schreibt sie ein Link, eine Excel-Formel, ein
+    // KI-Assistent. Bis 26.11.26 wurde daraus EINE Tabellenzeile mit Zufallswerten (aus
+    // "16 Kisten 30x45x52 57kg; 16 ..." wurde eine Position mit 16 kg). Der Unterschied:
+    // in einer CSV-Zeile steht die Masskette hoechstens EINMAL (eine Zelle "120x80x100"),
+    // im Freitext in jeder Position. Zwei Ketten in einer Zeile -- oder lauter Paletten
+    // ohne Masse ("11 Europaletten; 5 Industriepaletten; ...") -- heisst: Freitext.
     const csvZeilen = text.split(/\r?\n/).filter((ln) => ln.trim());
-    if (csvZeilen.length && csvZeilen.every((ln) => (ln.match(/;/g) || []).length >= 3)) {
+    const MASSKETTE = /\d\s*(?:mm|cm|m|zoll|inch(?:es)?|["″])?\s*[x×\*]\s*\d+(?:[.,]\d+)?\s*(?:mm|cm|m|zoll|inch(?:es)?|["″])?\s*[x×\*\/]\s*\d/i;
+    const positionenZeile = (ln) => {
+      const t = ln.split(/[;；]/).filter((x) => x.trim());
+      return t.filter((x) => MASSKETTE.test(x)).length >= 2
+        || (t.length >= 2 && t.every((x) => /^\s*\d+\s*[^\d\s]/.test(x) && PALLET_PRESETS.some((pp) => pp.re.test(x))));
+    };
+    if (csvZeilen.length && csvZeilen.every((ln) => (ln.match(/;/g) || []).length >= 3) && !csvZeilen.some(positionenZeile)) {
       return fertig(parseTSV(text.replace(/;/g, "\t"), opts));
     }
     LAST_TSV_MAP = null;
@@ -3646,19 +3693,20 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       // hat, ist mit Englisch besser bedient als mit Deutsch. Alles Unbekannte bleibt Deutsch.
       var mehr = window.CL_SPRACHE || {}, gibt = window.CL_SPRACHEN || {};
       var wahl = (l) => l === "de" || l === "en" || mehr[l] ? l : gibt[l] ? "en" : "de";
-      // Vorrang: ?lang aus der URL. Clean URLs laufen jetzt ueber die explizite _redirects
-      // (Query-Strings bleiben dabei erhalten); der Fallback auf die im Browser gemerkte Wahl
-      // (localStorage.cl_lang, von der Landingpage gesetzt) und navigator.language bleibt trotzdem.
-      var p = (new URLSearchParams(window.location.search).get("lang") || "").toLowerCase().slice(0, 2);
-      if (p) return wahl(p);
-      var stored = (window.localStorage.getItem("cl_lang") || "").toLowerCase().slice(0, 2);
-      if (stored) return wahl(stored);
+      // WELCHE Sprache gewuenscht ist, entscheidet EINE Regel im Kopf der Seite
+      // (CL_SPRACHE_WUNSCH): Adresse vor gemerkter Sprache -- und bei einem geteilten Plan die
+      // Sprache des Empfaengers. Der Lader dort hat mit demselben Ergebnis die Sprachdatei
+      // geholt (CL_LANG_WUNSCH); hier wird nur noch geprueft, ob sie angekommen ist. Zwei
+      // Kopien derselben Rangfolge waeren frueher oder spaeter zwei Rangfolgen.
+      //
       // Frueher entschied hier die Browsersprache. Damit lieferte DIESELBE Adresse je nach
       // Besucher Deutsch oder Englisch — auch fuer Suchmaschinen, deren Renderer en-US
       // meldet. Google bot fuer /app deshalb "Diese Seite uebersetzen" an, fuer die
-      // statischen Ratgeber-Seiten nicht. Jetzt entscheidet die Adresse: /app ist deutsch,
-      // /app?lang=en ist englisch. Eine eigene Wahl wird ueber cl_lang weiterhin gemerkt.
-      return "de";
+      // statischen Ratgeber-Seiten nicht. Fuer /app und /app?lang=en gilt das weiter: die
+      // Adresse entscheidet. Nur ein geteilter Plan folgt dem Leser (seine kanonische Adresse
+      // bleibt /app).
+      var wunsch = window.CL_LANG_WUNSCH;
+      return wunsch ? wahl(wunsch) : "de";
     } catch (e) {
       return "de";
     }
@@ -3925,7 +3973,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impApplied: (n) => `${n} Position${n === 1 ? "" : "en"} \xFCbernommen`,
       shareBtn: "Teilen",
       shareTitle: "Plan teilen",
-      shareDesc: "Jeder mit diesem Link sieht genau diesen Ladeplan in 3D \u2014 ohne Login, direkt im Browser.",
+      shareDesc: "Jeder mit diesem Link sieht genau diesen Ladeplan in 3D \u2014 ohne Login, direkt im Browser und, wo m\xF6glich, in seiner Sprache.",
       shareCopy: "Link kopieren",
       shareCopied: "Kopiert \u2713",
       shareOpen: "Vorschau \xF6ffnen \u2197",
@@ -4431,7 +4479,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       impApplied: (n) => `${n} item${n === 1 ? "" : "s"} applied`,
       shareBtn: "Share",
       shareTitle: "Share plan",
-      shareDesc: "Anyone with this link sees this exact 3D load plan \u2014 no login, right in the browser.",
+      shareDesc: "Anyone with this link sees this exact 3D load plan \u2014 no login, right in the browser and, where possible, in their own language.",
       shareCopy: "Copy link",
       shareCopied: "Copied \u2713",
       shareOpen: "Open preview \u2197",
@@ -9539,8 +9587,13 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       return () => clearTimeout(t);
     }, [toast, toastAct]);
     useEffect(() => {
+      // Die zuletzt gesehene Sprache merken (die Startseite fuehrt damit auf ihre Sprachseite).
+      // Eine SELBST gewaehlte Sprache ("es!", siehe setLangTo) bleibt dabei stehen: sie ist die
+      // Aussage des Nutzers und entscheidet, in welcher Sprache er geteilte Plaene oeffnet --
+      // ein fremdsprachiger Link, dem er einmal gefolgt ist, darf sie nicht ueberschreiben.
       try {
-        window.localStorage.setItem("cl_lang", LANG);
+        const alt = String(window.localStorage.getItem("cl_lang") || "");
+        if (alt.charAt(2) !== "!") window.localStorage.setItem("cl_lang", LANG);
       } catch (e) {
       }
     }, []);
@@ -10274,9 +10327,12 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     };
     // Sprachumschaltung im Header: cl_lang merken und mit ?lang neu laden (die App liest LANG
     // beim Start aus URL/localStorage – ein Reload ist der einfachste, robusteste Weg).
+    // Das "!" hinter dem Kuerzel heisst: SELBST gewaehlt, nicht bloss einem Link gefolgt. Nur
+    // das schlaegt bei einem geteilten Plan die Browsersprache (CL_SPRACHE_WUNSCH im Kopf) --
+    // alle Leser nehmen die ersten zwei Zeichen, der Schluessel bleibt derselbe.
     const setLangTo = (l) => {
       try {
-        window.localStorage.setItem("cl_lang", l);
+        window.localStorage.setItem("cl_lang", l + "!");
       } catch (e) {
       }
       try {

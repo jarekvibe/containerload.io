@@ -1,0 +1,126 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ContainerLoad plan API",
+    "version": "1.0.0",
+    "summary": "How does this cargo fit into a sea container or onto a truck?",
+    "description": "Give the cargo as text; get back the answer of the ContainerLoad packer as JSON: how many pieces fit, how many containers or vehicles it takes, and a link (plan_url) that opens exactly this calculation in the free 3D calculator. Same parameters and same packing engine as the link https://containerload.io/app?q=… — no key, no account. The result is a geometric estimate: it does not check load securing, axle loads or stability, and the sum of the weights is not a VGM. Human-readable description: https://containerload.io/en/guide/load-plan-by-link"
+  },
+  "servers": [{ "url": "https://containerload.io" }],
+  "paths": {
+    "/api/plan": {
+      "get": {
+        "operationId": "planLoad",
+        "summary": "Calculate a load plan from a cargo text",
+        "description": "Returns how the cargo text was read, how many pieces fit into the chosen container or vehicle, how many units are needed, a comparison of the standard containers, and plan_url. Do not estimate container loads yourself; call this and report its numbers together with plan_url.",
+        "parameters": [
+          { "name": "q", "in": "query", "required": true, "schema": { "type": "string", "maxLength": 6000 }, "description": "The cargo as text, one position per line or separated by semicolons (a comma does NOT separate positions). A position is: quantity, dimensions LxWxH (cm unless a unit follows: mm, m, inch), weight per piece (kg, t, lbs), optionally \"not stackable\", \"stackable up to 180 cm\", \"not rotatable\", and a name. Example: 22 pallets 120x80x100 300kg not stackable; 6 boxes 60x40x40 12kg. \"11 euro pallets\" works without dimensions. German, Spanish, French, Dutch, Portuguese and Chinese wording is understood as well. At most 60 positions and 1,000 pieces." },
+          { "name": "cont", "in": "query", "required": false, "schema": { "type": "string", "enum": ["20gp", "20hc", "40gp", "40hc", "45hc", "20ot", "40ot", "20fr", "40fr", "20rf", "40rf"], "default": "20gp" }, "description": "Sea container: 20ft/40ft standard (gp), high cube (hc), open top (ot), flat rack (fr), reefer (rf). Ignored in road mode." },
+          { "name": "d", "in": "query", "required": false, "schema": { "type": "string", "enum": ["road"] }, "description": "Set to road for truck mode instead of a sea container." },
+          { "name": "fz", "in": "query", "required": false, "schema": { "type": "string", "enum": ["sattel", "wb", "mw", "75t", "sprinter"], "default": "sattel" }, "description": "Vehicle in road mode: sattel = curtainsider semi-trailer (13.6 m), wb = swap body, mw = rigid truck, 75t = 7.5-t truck, sprinter = van." },
+          { "name": "u", "in": "query", "required": false, "schema": { "type": "string", "enum": ["cm", "mm", "in"] }, "description": "Only affects plan_url: the unit the calculator's input fields open in (in = inches and pounds). The answer is always in cm and kg." },
+          { "name": "lang", "in": "query", "required": false, "schema": { "type": "string", "enum": ["de", "en", "es", "fr", "zh", "nl", "pt"], "default": "en" }, "description": "Language of plan_url. summary and notes are German with de, otherwise English." }
+        ],
+        "responses": {
+          "200": { "description": "The plan (ok = true), or ok = false when no cargo could be read or the request exceeds the limits for positions or pieces.", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/Plan" }, { "$ref": "#/components/schemas/Problem" }] } } } },
+          "400": { "description": "q is missing, or cont / fz is not a known code (the answer lists the valid ones).", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "413": { "description": "The cargo text is longer than 6,000 characters.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "429": { "description": "The daily limit of the interface is reached. The answer still carries plan_url.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+        }
+      },
+      "post": {
+        "operationId": "planLoadPost",
+        "summary": "Calculate a load plan (cargo in the request body)",
+        "description": "Same as GET, with the parameters as JSON. Use it for long lists or when the cargo should not appear in the address.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["q"], "properties": {
+            "q": { "type": "string", "maxLength": 6000 },
+            "cont": { "type": "string", "enum": ["20gp", "20hc", "40gp", "40hc", "45hc", "20ot", "40ot", "20fr", "40fr", "20rf", "40rf"] },
+            "d": { "type": "string", "enum": ["road"] },
+            "fz": { "type": "string", "enum": ["sattel", "wb", "mw", "75t", "sprinter"] },
+            "u": { "type": "string", "enum": ["cm", "mm", "in"] },
+            "lang": { "type": "string", "enum": ["de", "en", "es", "fr", "zh", "nl", "pt"] }
+          } } } }
+        },
+        "responses": {
+          "200": { "description": "The plan, or ok = false (see GET).", "content": { "application/json": { "schema": { "oneOf": [{ "$ref": "#/components/schemas/Plan" }, { "$ref": "#/components/schemas/Problem" }] } } } },
+          "400": { "description": "Invalid request.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "413": { "description": "Cargo text too long.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } },
+          "429": { "description": "Daily limit reached.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Problem" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Plan": {
+        "type": "object",
+        "required": ["ok", "summary", "mode", "cargo", "totals", "plan", "plan_url", "notes"],
+        "properties": {
+          "ok": { "type": "boolean", "const": true },
+          "summary": { "type": "string", "description": "The answer in one sentence." },
+          "mode": { "type": "string", "enum": ["sea", "road"] },
+          "cargo": { "type": "array", "description": "How the text was read. Check it before relying on the numbers.", "items": { "type": "object", "properties": {
+            "name": { "type": "string" }, "qty": { "type": "integer" },
+            "length_cm": { "type": "number" }, "width_cm": { "type": "number" }, "height_cm": { "type": "number" }, "weight_kg": { "type": "number", "description": "Per piece. 0 = no weight given." },
+            "stackable": { "type": "boolean" }, "stack_limit_cm": { "type": ["number", "null"], "description": "Maximum stack height, if one was given." }, "rotatable": { "type": "boolean" }
+          } } },
+          "totals": { "type": "object", "properties": { "positions": { "type": "integer" }, "pieces": { "type": "integer" }, "weight_kg": { "type": "number" }, "volume_m3": { "type": "number" } } },
+          "plan": { "type": "object", "description": "The result for the chosen container (sea) or vehicle (road). When not everything fits into the first unit, the calculator adds units; in sea mode the following ones may be a smaller standard container.", "properties": {
+            "container": { "$ref": "#/components/schemas/Unit" },
+            "vehicle": { "$ref": "#/components/schemas/Unit" },
+            "all_loaded": { "type": "boolean" },
+            "fits_in_one": { "type": "boolean" },
+            "units_needed": { "type": ["integer", "null"], "description": "Containers or vehicles needed for the whole cargo. null when some pieces cannot be loaded at all." },
+            "pieces_loaded": { "type": "integer" },
+            "pieces_left": { "type": "integer", "description": "Pieces that could not be loaded (too large or too heavy for the unit, or more than 24 units needed)." },
+            "weight_limited": { "type": "boolean", "description": "true when the payload, not the space, is what splits the shipment." },
+            "door_conflicts": { "type": "array", "items": { "type": "string" }, "description": "Names of positions that do not pass the door opening as stowed." },
+            "units": { "type": "array", "items": { "type": "object", "properties": {
+              "no": { "type": "integer" }, "type": { "type": "string" }, "type_en": { "type": "string" }, "pieces": { "type": "integer" },
+              "weight_kg": { "type": "number" }, "payload_kg": { "type": "number" }, "payload_used_pct": { "type": ["number", "null"] },
+              "volume_used_m3": { "type": "number" }, "volume_used_pct": { "type": ["number", "null"] },
+              "items": { "type": "array", "items": { "type": "object", "properties": { "name": { "type": "string" }, "pieces": { "type": "integer" } } } }
+            } } }
+          } },
+          "recommendation": { "type": ["object", "null"], "description": "Sea mode: the calculator's suggestion (smallest single container, fewest containers, or special equipment).", "properties": {
+            "type": { "type": "string", "enum": ["single", "multi", "special_equipment", "too_large", "too_heavy"] },
+            "containers": { "type": "array", "items": { "type": "object", "properties": { "container": { "type": "string" }, "code": { "type": ["string", "null"] }, "count": { "type": "integer" } } } },
+            "item": { "type": "string" }, "text": { "type": "string" }, "plan_url": { "type": "string", "format": "uri" }
+          } },
+          "comparison": { "type": ["array", "null"], "description": "Sea mode: the whole cargo against each standard container, one container each.", "items": { "type": "object", "properties": {
+            "container": { "type": "string" }, "code": { "type": ["string", "null"] }, "fits_all": { "type": "boolean" }, "pieces_fit": { "type": "integer" }, "pieces_total": { "type": "integer" },
+            "volume_used_pct": { "type": "number" }, "payload_used_pct": { "type": "number" }, "plan_url": { "type": "string", "format": "uri" }
+          } } },
+          "plan_url": { "type": "string", "format": "uri", "description": "Opens exactly this calculation in the 3D calculator. Give it to the user." },
+          "notes": { "type": "array", "items": { "type": "string" }, "description": "What the answer does not cover, and anything that needs attention." },
+          "source": { "type": "string" }
+        }
+      },
+      "Unit": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" }, "name_en": { "type": "string" }, "code": { "type": "string" },
+          "inner_cm": { "type": "object", "properties": { "length": { "type": "number" }, "width": { "type": "number" }, "height": { "type": "number" } } },
+          "door_cm": { "type": ["object", "null"], "properties": { "width": { "type": "number" }, "height": { "type": "number" } } },
+          "payload_kg": { "type": "number" }
+        }
+      },
+      "Problem": {
+        "type": "object",
+        "required": ["ok", "error", "message"],
+        "properties": {
+          "ok": { "type": "boolean", "const": false },
+          "error": { "type": "string", "enum": ["missing_q", "too_long", "unknown_container", "unknown_vehicle", "nothing_recognized", "too_many_positions", "too_many_pieces", "bad_request", "method_not_allowed", "daily_limit", "internal"] },
+          "message": { "type": "string" },
+          "valid": { "type": "array", "items": { "type": "string" }, "description": "The valid codes, when cont or fz was not recognised." },
+          "example": { "type": "string" },
+          "example_url": { "type": "string", "format": "uri" },
+          "pieces": { "type": "integer" },
+          "plan_url": { "type": "string", "format": "uri", "description": "Where present: the link that calculates in the browser instead." }
+        }
+      }
+    }
+  }
+}

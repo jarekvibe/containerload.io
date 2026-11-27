@@ -13,7 +13,7 @@ Home: https://containerload.io/ (German). Other languages: https://containerload
 
 ## Open a load plan by link
 
-There is no API and no result is returned as data. But you can give a user a link that opens the calculator with their cargo already entered; the packing runs in the user's browser, and the user sees the result in 3D.
+You can give a user a link that opens the calculator with their cargo already entered; the packing runs in the user's browser, and the user sees the result in 3D. To get the numbers yourself, use /api/plan (next section).
 
 Format: https://containerload.io/app?q=<cargo text>[&cont=<container>][&lang=<language>] (parameters in any order)
 
@@ -32,9 +32,35 @@ Examples:
 - https://containerload.io/app?lang=en&q=9%20pallets%2048x40x55%20inch%201100%20lbs&cont=20gp&u=in
 - https://containerload.io/app?lang=en&q=33%20euro%20pallets%20120x80x150%20400kg%20not%20stackable&d=road
 
-If a user asks whether cargo fits into a container, do not estimate the count yourself: build the link and let the calculator show it.
-
 Full description: https://containerload.io/en/guide/load-plan-by-link (German: https://containerload.io/ratgeber/ladeplan-per-link)
+
+## Get the numbers as data: /api/plan
+
+Replace /app with /api/plan in the link and you get the calculator's answer as JSON: the same parameters, the same packing engine, no key and no account.
+
+Format: https://containerload.io/api/plan?q=<cargo text>[&cont=<container>][&d=road&fz=<vehicle>][&lang=<language>]
+
+The answer contains:
+
+- summary: the answer in one sentence (German with lang=de, otherwise English).
+- cargo: how the text was read, in cm and kg. Check it before you rely on the numbers.
+- plan: the container or vehicle, units_needed, pieces_loaded, pieces_left, and per unit the pieces, weight and volume used.
+- comparison and recommendation (sea freight): the result for every standard container, and the calculator's suggestion.
+- plan_url: the link that opens exactly this calculation in 3D. Give it to the user.
+- notes: what the answer does not cover.
+
+Rules:
+
+- GET with URL-encoded parameters, or POST with JSON such as {"q": "30 euro pallets 120x80x110 300kg", "cont": "40hc"}.
+- Limits per request: 6,000 characters, 60 positions, 1,000 pieces. Above that, give the user plan_url: the browser has no such limit. A daily limit applies; when it is reached the answer is HTTP 429 and still carries plan_url.
+- Unknown values for cont or fz are rejected with HTTP 400 and the list of valid codes.
+- Machine-readable description (OpenAPI): https://containerload.io/openapi.json
+
+Example: https://containerload.io/api/plan?q=30%20euro%20pallets%20120x80x110%20300kg%20not%20stackable&cont=40hc
+
+Its answer begins: "30 pieces need 2 containers: 40' HC (25) + 20' GP (5)."
+
+If a user asks whether cargo fits into a container, do not estimate the count yourself. If you can fetch URLs, call /api/plan, report its numbers and give the user plan_url. If you cannot, build the /app link and let the calculator show it.
 
 ## Reference pages
 

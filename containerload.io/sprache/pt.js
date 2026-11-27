@@ -244,7 +244,7 @@
         impApplied: function (n) { return n + (n === 1 ? " item adicionado" : " itens adicionados"); },
         shareBtn: "Compartilhar",
         shareTitle: "Compartilhar o plano",
-        shareDesc: "Quem tiver este link vê este mesmo plano de carga em 3D — sem cadastro, direto no navegador.",
+        shareDesc: "Quem tiver este link vê este mesmo plano de carga em 3D — sem cadastro, direto no navegador e, quando possível, no idioma de quem abre.",
         shareCopy: "Copiar link",
         shareCopied: "Copiado ✓",
         shareOpen: "Abrir prévia ↗",

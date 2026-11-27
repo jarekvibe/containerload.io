@@ -127,6 +127,11 @@ function startseite(de, X) {
   meta('property="og:image:alt"', EN.meta_ot);
   meta('name="twitter:title"', EN.meta_ot);
   meta('name="twitter:description"', EN.meta_od);
+  // Das Vorschaubild der Sprache (og-<kuerzel>.png, erzeugt von werkzeug/teilen-bilder.mjs).
+  // Bis 27.11.26 trug jede Sprachseite og.png -- mit der deutschen Schlagzeile.
+  // (Dass es das Bild gibt, prueft test/vorschaubild-sprache.test.mjs.)
+  meta('property="og:image"', BASIS + '/og-' + K + '.png');
+  meta('name="twitter:image"', BASIS + '/og-' + K + '.png');
   meta('property="og:url"', BASIS + '/' + K + '/');
   s = ersetzeGenau(s, '<link rel="canonical" href="' + BASIS + '/" />', '<link rel="canonical" href="' + BASIS + '/' + K + '/" />');
 
@@ -139,6 +144,7 @@ function startseite(de, X) {
     o.browserRequirements = EN.ld_browser;
     o.description = EN.ld_d;
     o.featureList = EN.ld_features.split('|');
+    if (o.screenshot) o.screenshot = BASIS + '/og-' + K + '.png';
     return '<script type="application/ld+json">' + JSON.stringify(o) + '</script>';
   });
 

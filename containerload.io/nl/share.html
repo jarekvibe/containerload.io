@@ -79,9 +79,9 @@
     // Sprache: Der Rechner haengt beim Teilen &lang=… an, wenn der Absender nicht deutsch
     // arbeitet. Diese Seite spricht JEDE Sprache des Rechners -- sonst begruesst sie den
     // Empfaenger eines chinesischen Plans auf Deutsch (so war es bis 25.11.26: nur de/en).
-    // Der Query-String wandert unveraendert weiter nach /app, dort liest LANG dasselbe
-    // ?lang= wieder aus. Kommt eine Sprache im Rechner dazu (CL_SPRACHEN in app.html),
-    // gehoert sie auch hierher -- test/teilen-seite.test.mjs vergleicht beide Listen.
+    // Welche Sprache sie zeigt, steht weiter unten ("WELCHE SPRACHE?"). Kommt eine Sprache
+    // im Rechner dazu (CL_SPRACHEN in app.html), gehoert sie auch hierher --
+    // test/teilen-seite.test.mjs vergleicht beide Listen.
     //
     // Aus DIESER Datei entstehen die Sprachseiten /en/share, /es/share ... (werkzeug/
     // teilen-seiten.mjs): dieselbe Seite, aber Kopf und Text stehen schon im Markup in der
@@ -162,16 +162,40 @@
         alt: "Um plano de carga foi compartilhado com você – veja em 3D."
       }
     };
-    // Die Sprache der Seite selbst: leer auf /share (deutsch), das Kuerzel auf den erzeugten
-    // Sprachseiten. Der Link schlaegt sie, sie schlaegt die gemerkte Wahl.
+    // Deutsch steht im Markup von /share. Auf einer Sprachseite (/es/share ...) steht dort die
+    // Sprache der Seite -- oeffnet sie ein deutscher Empfaenger, braucht es die deutschen Texte
+    // hier noch einmal (test/teilen-seite.test.mjs vergleicht sie mit dem Markup).
+    var DEUTSCH = {
+      titel: "Stauplan ansehen — ContainerLoad",
+      ey: "Geteilter Stauplan",
+      h1: "Ein Ladeplan wurde<br>mit dir geteilt.",
+      p: "Du siehst gleich in 3D, wie die Ladung in den Container passt – interaktiv, ohne Login.",
+      go: "Stauplan öffnen →",
+      ns: 'Bitte JavaScript aktivieren oder den Button „Stauplan öffnen" klicken.'
+    };
+    // WELCHE SPRACHE? Der Link traegt die Sprache des ABSENDERS (lang=, und die Sprachseite
+    // selbst) -- gezeigt wird die des EMPFAENGERS, wo sie sich erkennen laesst (Jarek,
+    // 26.11.26: "bitte in der Sprache des Empfaengers"). Dieselbe Rangfolge wie im Rechner
+    // (CL_SPRACHE_WUNSCH im Kopf von app.html; test/empfaenger-sprache.test.mjs laesst beide
+    // gegeneinander laufen):
+    //   1. die Sprache, die der Empfaenger bei ContainerLoad SELBST gewaehlt hat
+    //      (cl_lang mit "!" dahinter),
+    //   2. sonst die Sprache seines Browsers -- wenn es sie hier gibt,
+    //   3. sonst wie verschickt: lang= aus dem Link, dann die Sprache dieser Seite, dann die
+    //      zuletzt gesehene.
+    // Die Vorschau-Karte bleibt in der Sprache des Absenders: sie steht fest im Kopf.
+    // SEITE: leer auf /share (deutsch), das Kuerzel auf den erzeugten Sprachseiten.
     var SEITE = "nl";
-    var k = "";
-    try {
-      k = (new URLSearchParams(search).get("lang") || "").toLowerCase().slice(0, 2);
-      if (!k) k = SEITE;
-      if (!k) k = (window.localStorage.getItem("cl_lang") || "").toLowerCase().slice(0, 2);
-    } catch (e) {}
-    var t = TEXTE[k];
+    var zwei = function (s) { return String(s || "").toLowerCase().slice(0, 2); };
+    var kann = function (l) { return l === "de" || Object.prototype.hasOwnProperty.call(TEXTE, l); };
+    var link = "", roh = "", browser = "";
+    try { link = zwei(new URLSearchParams(search).get("lang")); } catch (e) {}
+    try { roh = String(window.localStorage.getItem("cl_lang") || "").toLowerCase(); } catch (e) {}
+    try { browser = zwei(window.navigator.language); } catch (e) {}
+    if (!kann(link)) link = "";
+    var zuletzt = kann(roh.slice(0, 2)) ? roh.slice(0, 2) : "";
+    var k = roh.charAt(2) === "!" && zuletzt ? zuletzt : kann(browser) ? browser : link || SEITE || zuletzt;
+    var t = k === "de" ? (SEITE ? DEUTSCH : null) : TEXTE[k];
     if (t) {
       document.documentElement.lang = k;
       document.title = t.titel;
@@ -180,10 +204,17 @@
       var ns = document.getElementById("s-noscript");
       if (ns) ns.textContent = t.ns;
     }
+    // Die entschiedene Sprache reist als lang= weiter in den Rechner; alles andere in der
+    // Adresse bleibt Zeichen fuer Zeichen stehen (der Plan, die Einheit, die Kennung). Stimmt
+    // die Sprache des Links schon -- oder ist es ein deutscher Link fuer einen deutschen
+    // Leser --, wandert die Abfrage unveraendert weiter. Eine Sprachseite ohne ?lang= im Link
+    // (von Hand gekuerzt) haengt ihre Sprache an.
     var target = "/app" + search;
-    // Eine Sprachseite ohne ?lang= im Link (von Hand gekuerzt): der Rechner soll trotzdem in
-    // der Sprache der Seite aufgehen. Der Rechner selbst haengt ?lang= immer an.
-    if (SEITE && !/[?&]lang=/.test(search)) target += (search ? "&" : "?") + "lang=" + SEITE;
+    if (k && k !== (link || (SEITE ? "" : "de"))) {
+      target = /[?&]lang=/.test(search)
+        ? "/app" + search.replace(/([?&])lang=[^&]*/, "$1lang=" + k)
+        : target + (search ? "&" : "?") + "lang=" + k;
+    }
     var go = document.getElementById("go");
     if (go) go.setAttribute("href", target);
     // give the branded screen a brief moment, then forward into the tool

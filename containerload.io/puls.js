@@ -20,7 +20,7 @@
   var p = location.pathname;
   var art = /^\/app(\.html)?\/?$/.test(p) ? "rechner"
     : /^\/((en|es|fr|zh|nl|pt)\/)?(index\.html)?$/.test(p) ? "start"
-    : /^\/(ratgeber|en\/guide|nl\/gids|es\/guia|fr\/guide)(\/|$)/.test(p) ? "wissen"
+    : /^\/(ratgeber|en\/guide|nl\/gids|es\/guia|fr\/guide|pt\/guia)(\/|$)/.test(p) ? "wissen"
     : "sonst";
 
   var TAKT = 60000;        // ein Lebenszeichen je Minute

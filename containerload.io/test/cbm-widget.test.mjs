@@ -27,6 +27,8 @@ const SEITEN = {
   "en/guide/container-volume-cbm.html": "en",
   // Die spanische CBM-Seite ("cubicaje", 26.11.26): derselbe Rechner, spanisch beschriftet
   "es/guia/calcular-cubicaje-cbm.html": "es",
+  // Die portugiesische ("cubagem", gleicher Tag): derselbe Rechner, portugiesisch beschriftet
+  "pt/guia/calculo-cubagem-cbm.html": "pt",
 };
 const html = Object.fromEntries(Object.keys(SEITEN).map((p) => [p, fs.readFileSync(path.join(dir, "..", p), "utf8")]));
 
@@ -131,6 +133,23 @@ test("der Sprung in den 3D-Rechner traegt die Zeilen als ?q= -- und die Sprache"
   assert.deepStrictEqual(Object.keys(tEs), Object.keys(tEn), "dem spanischen Rechner fehlt eine Beschriftung");
   for (const [k, v] of Object.entries(tEs)) assert.ok(v && v !== tEn[k], `die Beschriftung "${k}" ist nicht uebersetzt`);
   assert.deepStrictEqual([tEs.l, tEs.stk1, tEs.wm], ["Largo (cm)", "bulto", "facturable (W/M)"]);
+  // Die portugiesische Seite: dasselbe -- Sprung in den portugiesischen Rechner, Zahlenformat
+  // pt-BR, jede Beschriftung uebersetzt und weder englisch noch spanisch stehengeblieben.
+  const pt = html["pt/guia/calculo-cubagem-cbm.html"];
+  assert.ok(pt.includes("encodeURIComponent(q) + '&lang=pt'"), "der portugiesische Sprung oeffnet keinen portugiesischen Rechner");
+  assert.ok(pt.includes("loc: function () { return 'pt-BR'; }"), "die portugiesische Seite schreibt Zahlen nicht portugiesisch");
+  const tPt = new Function("return " + /t: function \(\) \{ return (\{[^\n]*\}); \},\n/.exec(pt)[1])();
+  assert.deepStrictEqual(Object.keys(tPt), Object.keys(tEn), "dem portugiesischen Rechner fehlt eine Beschriftung");
+  // Das Packstueck heisst portugiesisch "item" -- dasselbe Wort wie im Englischen (siehe
+  // CLAUDE.md, "Portugiesisch"); "+ item" ist deshalb die eine Beschriftung, die gleich lautet.
+  const WIE_ENGLISCH = new Set(["plus"]);
+  for (const [k, v] of Object.entries(tPt)) assert.ok(v && (v !== tEn[k] || WIE_ENGLISCH.has(k)), `die Beschriftung "${k}" ist nicht uebersetzt`);
+  assert.deepStrictEqual([tPt.stk, tPt.stk1, tPt.plus], ["itens", "item", "+ item"]);
+  // Portugiesisch und Spanisch teilen Woerter ("Unidades") -- aber nicht fast alle: sonst steht
+  // dort die spanische Beschriftung.
+  const wieSpanisch = Object.keys(tPt).filter((k) => tPt[k] === tEs[k]);
+  assert.ok(wieSpanisch.length <= 2, "zu viele Beschriftungen wortgleich mit der spanischen Seite: " + wieSpanisch.join(", "));
+  assert.ok(/^Compr/.test(tPt.l) && /^Largura/.test(tPt.w) && /^Altura/.test(tPt.h), "Laenge, Breite, Hoehe heissen nicht portugiesisch: " + [tPt.l, tPt.w, tPt.h].join(" | "));
   assert.ok(html["index.html"].includes("(document.documentElement.lang === 'de' ? '' : '&lang=' + document.documentElement.lang)"),
     "die Startseite vergisst die Sprache");
 });

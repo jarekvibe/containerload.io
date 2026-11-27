@@ -25,7 +25,7 @@ export default {
     st_chip: '✓ P1: máx. 11 un. · não empilhável',
     rg_ey: 'Guia de contêineres',
     rg_h: 'Para consultar',
-    rg_p: 'Cada página leva direto à calculadora 3D. As páginas do guia estão em inglês.',
+    rg_p: 'Cada página leva direto à calculadora 3D.',
     rg0_h: 'Calculadora de paletes',
     rg0_p: 'Quantos paletes cabem em um contêiner ou caminhão?',
     rg7_h: 'Calculadora de metros lineares',
@@ -72,7 +72,7 @@ export default {
     cbm_ey: 'Ferramentas',
     cbm_h: 'Calcule os metros cúbicos.<br><span style="color:var(--dim)">Cole uma lista de itens.</span>',
     cbm_p: 'Vários itens, CBM e peso ao mesmo tempo. No LCL vale o maior dos dois.',
-    cbm_link: 'Como se calcula o CBM está explicado no guia de contêineres (em inglês).',
+    cbm_link: 'Como se calcula a cubagem (CBM) está explicado no guia de contêineres.',
     feat_ey: 'Também inclui',
     f1_h: 'Vista 3D',
     f1_p: 'Gire, aproxime, confira: peça por peça.',
@@ -220,5 +220,12 @@ export default {
     'layer': 'camada',
     'layers': 'camadas'
   },
-  guide: {}
+  guide: {
+    '/ratgeber/': '/pt/guia/',
+    '/ratgeber/europaletten-20-fuss-container': '/pt/guia/paletes-conteiner-20-pes',
+    '/ratgeber/europaletten-40-fuss-container': '/pt/guia/paletes-conteiner-40-pes',
+    '/ratgeber/container-volumen-cbm': '/pt/guia/metros-cubicos-conteiner',
+    '/ratgeber/container-masse-innenmasse': '/pt/guia/medidas-conteiner',
+    '/ratgeber/cbm-berechnen': '/pt/guia/calculo-cubagem-cbm'
+  }
 };

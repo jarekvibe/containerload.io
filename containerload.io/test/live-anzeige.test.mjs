@@ -179,7 +179,7 @@ test("die Art der Seite folgt aus dem Pfad -- und nichts vom Pfad geht mit", () 
   const art = (pfad) => { const r = lauf({ pfad }); r.vor(9000); return r.gesendet[0][1]; };
   for (const [p, a] of [["/", "start"], ["/index.html", "start"], ["/en/", "start"], ["/zh/", "start"], ["/nl/", "start"], ["/pt/", "start"], ["/fr/index.html", "start"],
     ["/app", "rechner"], ["/app.html", "rechner"],
-    ["/ratgeber/", "wissen"], ["/ratgeber/ibc-container", "wissen"], ["/en/guide/pallets-40ft-container", "wissen"], ["/nl/gids/cbm-container", "wissen"], ["/es/guia/", "wissen"], ["/fr/guide/volume-conteneur-m3", "wissen"],
+    ["/ratgeber/", "wissen"], ["/ratgeber/ibc-container", "wissen"], ["/en/guide/pallets-40ft-container", "wissen"], ["/nl/gids/cbm-container", "wissen"], ["/es/guia/", "wissen"], ["/pt/guia/", "wissen"], ["/pt/guia/paletes-conteiner-20-pes", "wissen"],["/fr/guide/volume-conteneur-m3", "wissen"],
     ["/irgendwas", "sonst"], ["/apple", "sonst"]]) assert.strictEqual(art(p), a, p);
   // Im Skript steht kein Weg, Adresse, Abfrage oder Verweis mitzuschicken.
   assert.ok(!/location\.(href|search|hash)|document\.(referrer|title|cookie)|navigator\.(userAgent|language)/.test(puls), "puls.js liest mehr als den Pfad");
@@ -228,7 +228,7 @@ test("ein Tab im Hintergrund oder ohne Regung ist kein Besucher", () => {
 test("Startseiten, Rechner und Wissensseiten tragen das Skript -- Rechtsseiten, Teilen und Admin nicht", () => {
   const ZEILE = '<script src="/puls.js" defer></script>';
   const mit = ["index.html", "app.html", "en/index.html", "es/index.html", "fr/index.html", "zh/index.html"];
-  for (const ordner of ["ratgeber", "en/guide", "nl/gids", "es/guia", "fr/guide"])
+  for (const ordner of ["ratgeber", "en/guide", "nl/gids", "es/guia", "fr/guide", "pt/guia"])
     for (const f of fs.readdirSync(path.join(dir, "..", ordner)).filter((x) => x.endsWith(".html"))) mit.push(ordner + "/" + f);
   assert.ok(mit.length > 60);
   for (const f of mit) assert.strictEqual(lies(f).split(ZEILE).length - 1, 1, `${f}: /puls.js nicht genau einmal`);

@@ -4,7 +4,8 @@
 <!--
   QUELLE der beiden Social-Vorschaubilder. Keine Seite des Produkts – nichts verlinkt hierher.
 
-  ?v=start  -> og.png        (Startseite und alle Wissens-/Guide-Seiten)
+  ?v=start  -> og.png        (deutsche Startseite und Wissensseiten, /app, Rechtsseiten)
+  ?v=start&lang=en|es|fr|zh|nl|pt -> og-<kuerzel>.png  (Startseite und Wissensseiten je Sprache)
   ?v=share  -> share-og.png  (geteilter Plan, share.html)
   ?v=share&lang=en|es|fr|zh -> share-og-<kuerzel>.png  (geteilter Plan je Sprache, <kuerzel>/share.html)
 
@@ -117,6 +118,46 @@
       e: "Veja em 3D como a carga cabe no cont\u00EAiner.",
       f: "sem cadastro"
     },
+    // Die Karte der Startseite und der Wissensseiten JE SPRACHE (seit 27.11.26, og-<kuerzel>.png).
+    // Die Schlagzeile ist der Satz, den die Startseite der Sprache als og:title traegt.
+    start_en: {
+      k: "3D load calculator",
+      h: 'Every load.<br><em>In the right container.</em>',
+      e: "Pallet-accurate planning \u2013 in seconds, in the browser.",
+      f: "ISO 668 \u00B7 free \u00B7 no account"
+    },
+    // Spanisch bricht anders um als die anderen: "En el contenedor adecuado." passt bei 60 px
+    // nicht in eine Zeile (die Spalte ist 640 px breit, daneben steht die Zeichnung).
+    start_es: {
+      k: "Calculadora de carga 3D",
+      h: 'Cada carga, en el<br><em>contenedor adecuado.</em>',
+      e: "C\u00E1lculo exacto al pal\u00E9: en segundos, en el navegador.",
+      f: "ISO 668 \u00B7 gratis \u00B7 sin cuenta"
+    },
+    start_fr: {
+      k: "Calculateur de chargement 3D",
+      h: 'Chaque chargement.<br><em>Dans le bon conteneur.</em>',
+      e: "\u00C0 la palette pr\u00E8s, en secondes, dans le navigateur.",
+      f: "ISO 668 \u00B7 gratuit \u00B7 sans compte"
+    },
+    start_zh: {
+      k: "3D \u88C5\u8F7D\u8BA1\u7B97\u5668",
+      h: '\u6BCF\u4E00\u7968\u8D27\uFF0C<br><em>\u90FD\u88C5\u8FDB\u5408\u9002\u7684\u96C6\u88C5\u7BB1\u3002</em>',
+      e: "\u7CBE\u786E\u5230\u6BCF\u4E2A\u6258\u76D8\uFF0C\u51E0\u79D2\u5B8C\u6210\uFF0C\u5728\u6D4F\u89C8\u5668\u4E2D\u5373\u53EF\u3002",
+      f: "ISO 668 \u00B7 \u514D\u8D39 \u00B7 \u65E0\u9700\u6CE8\u518C"
+    },
+    start_nl: {
+      k: "3D-laadcalculator",
+      h: 'Elke lading.<br><em>In de juiste container.</em>',
+      e: "Rekenen tot op de pallet \u2013 in seconden, in de browser.",
+      f: "ISO 668 \u00B7 gratis \u00B7 zonder account"
+    },
+    start_pt: {
+      k: "Calculadora de carga 3D",
+      h: 'Cada carga.<br><em>No cont\u00EAiner certo.</em>',
+      e: "C\u00E1lculo palete a palete, em segundos, no navegador.",
+      f: "ISO 668 \u00B7 gr\u00E1tis \u00B7 sem cadastro"
+    },
     start: {
       k: "3D-Ladungsrechner &nbsp;\u00B7&nbsp; 3D load calculator",
       h: 'Jede Ladung.<br><em>Im richtigen Container.</em>',
@@ -126,7 +167,7 @@
   };
   var Q = new URLSearchParams(location.search);
   var SPR = (Q.get("lang") || "").toLowerCase().slice(0, 2);
-  var t = Q.get("v") === "start" ? TXT.start : (TXT["share_" + SPR] || TXT.share);
+  var t = Q.get("v") === "start" ? (TXT["start_" + SPR] || TXT.start) : (TXT["share_" + SPR] || TXT.share);
   if (t !== TXT.start && t !== TXT.share) document.documentElement.lang = SPR;
   document.getElementById("kt").innerHTML = t.k;
   document.getElementById("h").innerHTML = t.h;

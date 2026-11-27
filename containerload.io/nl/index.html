@@ -11,21 +11,21 @@
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://containerload.io/nl/" />
 <meta property="og:site_name" content="ContainerLoad" />
-<meta property="og:image" content="https://containerload.io/og.png" />
+<meta property="og:image" content="https://containerload.io/og-nl.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta property="og:image:alt" content="ContainerLoad — Elke lading in de juiste container." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ContainerLoad — Elke lading in de juiste container." />
 <meta name="twitter:description" content="Past je lading? In welke container? ContainerLoad rekent het live uit in 3D." />
-<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="twitter:image" content="https://containerload.io/og-nl.png" />
 <meta name="theme-color" content="#0E1116" />
 <!-- Sprache: Die ADRESSE entscheidet, nicht die Browsereinstellung. / ist deutsch, /en/
      ist englisch -- eine eigene Datei, erzeugt von werkzeug/startseite-en.mjs aus dieser
      (nicht von Hand aendern, nach jeder Aenderung hier neu erzeugen). Beide zeigen per
      hreflang aufeinander; die alte Adresse /?lang=en leitet _redirects mit 301 um. -->
 <link rel="canonical" href="https://containerload.io/nl/" />
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ContainerLoad","alternateName":"ContainerLoad, 3D-laadcalculator","url":"https://containerload.io/nl/","applicationCategory":"BusinessApplication","applicationSubCategory":"Laadplanning","operatingSystem":"Web","browserRequirements":"JavaScript en WebGL","inLanguage":["de","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Gratis 3D-laadcalculator voor containers en vrachtwagens: op de pallet nauwkeurig, met containeradvies, laadmeters en het plan als link. In de browser, zonder account.","featureList":["3D-laadplan voor containers en vrachtwagens","Containeradvies en ketens van meerdere containers","Laadmeters en schatting van de aslasten voor de oplegger","Het plan delen als link, zonder account voor de ontvanger","Laadvoorstel als pdf met QR-code","Paklijsten lezen uit Excel, tekst of foto"],"screenshot":"https://containerload.io/og.png","publisher":{"@type":"Organization","name":"ContainerLoad","url":"https://containerload.io/"}}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"ContainerLoad","alternateName":"ContainerLoad, 3D-laadcalculator","url":"https://containerload.io/nl/","applicationCategory":"BusinessApplication","applicationSubCategory":"Laadplanning","operatingSystem":"Web","browserRequirements":"JavaScript en WebGL","inLanguage":["de","en"],"isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Gratis 3D-laadcalculator voor containers en vrachtwagens: op de pallet nauwkeurig, met containeradvies, laadmeters en het plan als link. In de browser, zonder account.","featureList":["3D-laadplan voor containers en vrachtwagens","Containeradvies en ketens van meerdere containers","Laadmeters en schatting van de aslasten voor de oplegger","Het plan delen als link, zonder account voor de ontvanger","Laadvoorstel als pdf met QR-code","Paklijsten lezen uit Excel, tekst of foto"],"screenshot":"https://containerload.io/og-nl.png","publisher":{"@type":"Organization","name":"ContainerLoad","url":"https://containerload.io/"}}</script>
 <link rel="alternate" hreflang="de" href="https://containerload.io/" />
 <link rel="alternate" hreflang="en" href="https://containerload.io/en/" />
 <link rel="alternate" hreflang="es" href="https://containerload.io/es/" />
@@ -997,7 +997,10 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
     '/ratgeber/containerhaefen':'/en/guide/container-ports'};
   var GUIDE_ZURUECK={}; for(var _g in GUIDE) GUIDE_ZURUECK[GUIDE[_g]]=_g;
 
-  function merken(lang){try{localStorage.setItem('cl_lang',lang);}catch(e){}}
+  // Das '!' heisst: SELBST gewaehlt (nicht bloss einem Link gefolgt) -- nur das schlaegt bei
+  // einem geteilten Plan die Browsersprache des Empfaengers (CL_SPRACHE_WUNSCH in app.html).
+  // Gelesen werden ueberall nur die ersten zwei Zeichen.
+  function merken(lang){try{localStorage.setItem('cl_lang',lang+'!');}catch(e){}}
   // Ein Klick auf einen Sprachlink merkt die Wahl -- navigiert wird ganz normal
   [].slice.call(document.querySelectorAll('a[data-lang]')).forEach(function(a){
     a.addEventListener('click',function(){ merken(a.getAttribute('data-lang')); });
@@ -1018,7 +1021,7 @@ document.querySelectorAll('a[href^="#"]').forEach(function(a){
   function kennt(l){l=String(l||'').toLowerCase().slice(0,2);return FREMD.indexOf(l)>=0?l:null;}
   function urlLang(){var m=/[?&]lang=([A-Za-z-]+)/.exec(location.search);return m?(kennt(m[1])||'de'):null;}
   var erzwungen=urlLang(), gemerkt=null;
-  try{var sv=localStorage.getItem('cl_lang'); if(sv==='de'||kennt(sv)) gemerkt=sv==='de'?'de':kennt(sv);}catch(e){}
+  try{var sv=String(localStorage.getItem('cl_lang')||'').toLowerCase().slice(0,2); if(sv==='de'||kennt(sv)) gemerkt=sv==='de'?'de':kennt(sv);}catch(e){}
   var ziel=erzwungen||gemerkt;
   if(SEITE==='de'&&ziel&&ziel!=='de'){ try{location.replace('/'+ziel+'/'+location.hash);}catch(e){} return; }
   // Netlify haengt beim 301 von /?lang=en die Abfrage an: /en/?lang=en. Auf der englischen
