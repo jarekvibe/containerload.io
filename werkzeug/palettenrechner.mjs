@@ -285,6 +285,8 @@ ${faq.map(([q, a]) => `    <p><b>${q}</b><br>${a}</p>`).join('\n')}`;
       ? '<a href="/ratgeber/stellplaetze-container">Stellplätze je Container</a><a href="/ratgeber/europaletten-20-fuss-container">Europaletten 20′</a><a href="/ratgeber/europaletten-40-fuss-container">Europaletten 40′</a><a href="/ratgeber/industriepaletten-container">Industriepaletten</a><a href="/ratgeber/us-paletten-40-fuss-container">US-Paletten 40′</a><a href="/ratgeber/lademeter-rechner">Lademeter-Rechner</a><a href="/ratgeber/lkw-beladen">LKW richtig beladen</a><a href="/ratgeber/container-masse-innenmasse">Container-Maße</a>'
       : '<a href="/en/guide/container-floor-positions">Floor positions per container</a><a href="/en/guide/euro-pallets-20ft-container">Euro pallets 20ft</a><a href="/en/guide/euro-pallets-40ft-container">Euro pallets 40ft</a><a href="/en/guide/pallets-20ft-container">Pallets in a 20ft</a><a href="/en/guide/pallets-40ft-container">Pallets in a 40ft</a><a href="/en/guide/industrial-pallets-container">Industrial pallets</a><a href="/en/guide/loading-metre-calculator">Loading metre calculator</a><a href="/en/guide/how-to-load-a-truck">How to load a truck</a><a href="/en/guide/container-internal-dimensions">Container dimensions</a>';
     const url = BASIS + T.pfad;
+    // Das Vorschaubild der Sprache (seit 27.11.26; die deutsche Seite behaelt og.png).
+    const bild = T.lang === 'de' ? 'og.png' : 'og-' + T.lang + '.png';
     out[sp] = `<!DOCTYPE html>
 <!-- Erzeugt von werkzeug/palettenrechner.mjs aus app.html -- nicht von Hand aendern. -->
 <html lang="${T.lang}">
@@ -304,11 +306,11 @@ ${faq.map(([q, a]) => `    <p><b>${q}</b><br>${a}</p>`).join('\n')}`;
 <meta property="og:description" content="${T.desc}" />
 <meta property="og:url" content="${url}" />
 <meta property="og:site_name" content="ContainerLoad" />
-<meta property="og:image" content="https://containerload.io/og.png" />
+<meta property="og:image" content="https://containerload.io/${bild}" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="${T.titel}" />
 <meta name="twitter:description" content="${T.desc}" />
-<meta name="twitter:image" content="https://containerload.io/og.png" />
+<meta name="twitter:image" content="https://containerload.io/${bild}" />
 <meta name="theme-color" content="#0E1116" />
 ${KOPF}
 <script type="application/ld+json">${JSON.stringify(ld)}</script>
