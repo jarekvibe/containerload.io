@@ -1312,13 +1312,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return solve;
   }
   // === KARTON AUF PALETTE (Vorstufe vor dem Container-/LKW-Rechner) ===
-  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie. tare = Leergewicht,
+  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie (EPAL). tare = Leergewicht,
   // payload = Tragfaehigkeit als Richtwert (real je Palettenqualitaet verschieden;
   // deshalb nur eine Deckelung mit ausgewiesenem Grund, keine Zusicherung).
   var PALLETS = {
     EUR: { l: 120, w: 80, h: 14.4, tare: 25, payload: 1500 },
-    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 }
+    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 },
+    // Die Paletten der Regionen (27.11.26). Diese Werte sind NACHGESCHLAGEN, nicht gerechnet --
+    // wer einen aendert, braucht eine Quelle (CLAUDE.md, "Karton auf Palette"):
+    //   US   48 x 40 Zoll ("GMA"), Holz: Hoehe 5,5-6 Zoll (140-150 mm), dynamische
+    //        Tragfaehigkeit 2.000-2.800 lb (900-1.270 kg), Leergewicht 42 lb (19 kg).
+    //   T11  1100 x 1100 mm, Japan und Korea: 144 mm (Zweiweg-Palette), 1 t; 19,8 kg
+    //        fuer die Kunststoff-Palette, wie sie in den Mietpools laeuft.
+    //   PBR  1000 x 1200 mm, Brasilien: Hoehe 137 mm, Tragfaehigkeit 1.200 kg, rund 27 kg
+    //        (Handbuch "Palete PBR-1, versao 2019" der ABRAS).
+    US: { l: 121.92, w: 101.6, h: 15, tare: 19, payload: 1000 },
+    T11: { l: 110, w: 110, h: 14.4, tare: 20, payload: 1000 },
+    PBR: { l: 120, w: 100, h: 13.7, tare: 27, payload: 1200 }
   };
+  // Die Kacheln im Paletten-Dialog, in dieser Reihenfolge -- SECHS, damit das Raster in
+  // ganzen Reihen aufgeht (drei Spalten, auf dem Telefon zwei). Die Unterzeile nennt das
+  // Mass, unter dem die Palette bekannt ist; "FREE" ist das freie Mass.
+  var PAL_WAHL = [["EUR", "120 \xD7 80"], ["IND", "120 \xD7 100"], ["US", "48 \xD7 40 in"], ["T11", "110 \xD7 110"], ["PBR", "100 \xD7 120"], ["FREE", null]];
+  // Was beim Oeffnen vorgewaehlt ist: wer in Zoll arbeitet, verlaedt in den USA; die
+  // portugiesische Oberflaeche ist die brasilianische. Sonst die Europalette, wie bisher.
+  function palVorwahl(lang, einheit) {
+    return einheit === "in" ? "US" : lang === "pt" ? "PBR" : "EUR";
+  }
   // Ein Kartontyp auf eine Palette. Bewusst NUR ein Typ: packCargo rechnet echte Lagen
   // ebenfalls nur im Einzeltyp-Pfad, und gemischte Kartons auf einer Palette sind die
   // Ausnahme. Rein geometrisch — kein Lagenverbund, keine Ladungssicherung.
@@ -4302,6 +4322,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palPallet: "Palette",
       palEUR: "Europalette",
       palIND: "Industriepalette",
+      palUS: "US-Palette",
+      palT11: "Asien-Palette",
+      palPBR: "PBR-Palette",
       palFree: "Freies Maß",
       palCarton: "Karton",
       close: "Schlie\xDFen",
@@ -4336,7 +4359,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palTotalH: "Bauhöhe",
       palPalWeight: "Gewicht",
       palCapHeight: "Die Bauhöhe begrenzt die Lagenzahl.",
-      palCapWeight: "Die Tragfähigkeit der Palette begrenzt die Lagenzahl (Richtwert 1.500 kg).",
+      palCapWeight: (kg) => `Die Tragfähigkeit der Palette begrenzt die Lagenzahl (Richtwert ${kg} kg).`,
       palCapLayers: "Die vorgegebene Lagenzahl begrenzt.",
       palCapFootprint: "Der Karton passt in keiner Ausrichtung auf diese Palette — Maße oder Überstand prüfen.",
       palOverWarn: (l, w) => "Überstand " + l + " cm längs, " + w + " cm quer — mit diesen Außenmaßen geht die Palette in die Ladung.",
@@ -4804,6 +4827,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palPallet: "Pallet",
       palEUR: "Euro pallet",
       palIND: "Industrial pallet",
+      palUS: "US pallet",
+      palT11: "Asia pallet",
+      palPBR: "PBR pallet",
       palFree: "Custom size",
       palCarton: "Carton",
       close: "Close",
@@ -4838,7 +4864,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palTotalH: "Height",
       palPalWeight: "Weight",
       palCapHeight: "Stack height limits the number of layers.",
-      palCapWeight: "Pallet capacity limits the number of layers (1,500 kg guide value).",
+      palCapWeight: (kg) => `Pallet capacity limits the number of layers (${kg} kg guide value).`,
       palCapLayers: "The layer limit you set is binding.",
       palCapFootprint: "The carton does not fit this pallet in any orientation — check dimensions or overhang.",
       palOverWarn: (l, w) => "Overhang " + l + " cm lengthwise, " + w + " cm crosswise — the pallet enters the load with these outer dimensions.",
@@ -12045,7 +12071,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.45, color: C.soft } }, comboBody),
                 recData.combo.type === "equip" ? /* @__PURE__ */ React.createElement("button", { onClick: () => { applyPreset(recData.combo.name); setRecOpen(false); }, className: "mt-3 px-3 py-2 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.recApply) : null) : null,
               /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, fontFamily: SANS, fontSize: FS.label, color: C.faint, letterSpacing: "0.04em" } }, T.recFoot)))));
-    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, planId, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
+    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, vorwahl: palVorwahl(LANG, unit), init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, planId, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
         // Die Frage sitzt dort, wo sonst der Hinweis steht: unten in der Mitte, ueber der
         // Fusszeile. Sie nimmt keinen Platz weg, sie kommt einmal, und sie geht mit einem
         // Klick wieder. Wenn gerade ein Hinweis steht, wartet sie -- zwei Kaesten
@@ -12267,8 +12293,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // init: der Eingabestand einer schon uebernommenen Palette. Ohne ihn faengt der Dialog
   // leer an (neue Palette), mit ihm steht wieder da, was man damals eingegeben hat — sonst
   // muss man die ganze Rechnung neu tippen, nur weil ein Karton 2 cm hoeher ist.
-  function PalletDialog({ container, preset, onApply, onClose, T, init }) {
-    const [palKey, setPalKey] = useState(init ? init.palKey : "EUR");
+  function PalletDialog({ container, preset, onApply, onClose, T, init, vorwahl }) {
+    const [palKey, setPalKey] = useState(init ? init.palKey : vorwahl || "EUR");
     const [pl, setPl] = useState(init ? init.pl : 120), [pw, setPw] = useState(init ? init.pw : 80);
     const [rows, setRows] = useState(init ? init.rows.map((r2) => ({ ...r2, id: uid() })) : [{ id: uid(), ...CARTON_DEFAULT }]);
     const [mode, setMode] = useState(init ? init.mode : "separate");
@@ -12279,7 +12305,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
 
     const pal = palKey === "FREE"
       ? { l: num(pl), w: num(pw), h: 14.4, tare: 25, payload: 1500 }
-      : PALLETS[palKey];
+      : PALLETS[palKey] || PALLETS.EUR;
     const opts = { maxTotalH: num(maxH), over: num(over), maxLayers: num(maxLay), mode };
     const ERG = palletizeMulti(pal, rows, opts);
     const builds = ERG.builds;
@@ -12399,10 +12425,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 16 } }, T.palDesc),
 
           /* @__PURE__ */ React.createElement(SectionTitle, null, T.palPallet),
-          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" } },
-            [["EUR", T.palEUR, "120 \xD7 80"], ["IND", T.palIND, "120 \xD7 100"], ["FREE", T.palFree, null]].map(([k, lbl, sub]) => {
+          /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3", style: { gap: 8, marginBottom: 12 } },
+            PAL_WAHL.map(([k, sub]) => {
               const on = palKey === k;
-              return /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => setPalKey(k), style: { flex: "1 1 30%", minWidth: 100, cursor: "pointer", textAlign: "left", padding: "8px 8px", borderRadius: R.s, background: on ? hexA(C.accent, 0.14) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.6) : C.fieldBorder}`, transition: ".18s" } },
+              const lbl = { EUR: T.palEUR, IND: T.palIND, US: T.palUS, T11: T.palT11, PBR: T.palPBR, FREE: T.palFree }[k];
+              return /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => setPalKey(k), "aria-pressed": on ? "true" : "false", style: { minWidth: 0, cursor: "pointer", textAlign: "left", padding: "8px 8px", borderRadius: R.s, background: on ? hexA(C.accent, 0.14) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.6) : C.fieldBorder}`, transition: ".18s" } },
                 /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, fontWeight: FW.bold, color: on ? C.text : C.dim } }, lbl),
                 sub ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: on ? C.accent : C.faint, marginTop: 4 } }, sub) : null);
             })),
@@ -12487,7 +12514,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               const tis = new Set(build.layers.map((l) => l.ti));
               if (tis.size !== 1) return null;
               const pt = ERG.perType.find((x) => x.ti === build.layers[0].ti);
-              const txt = pt && { height: T.palCapHeight, weight: T.palCapWeight, layers: T.palCapLayers }[pt.cap];
+              const txt = pt && { height: T.palCapHeight, weight: T.palCapWeight(fmtDE(pal.payload)), layers: T.palCapLayers }[pt.cap];
               return txt ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, marginTop: 8, lineHeight: 1.45 } }, txt) : null;
             })(),
             // Wie viel Ueberstand tatsaechlich gebraucht wird. Der zugelassene Ueberstand

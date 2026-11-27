@@ -1138,13 +1138,33 @@ const React = { createElement: () => null }, THREE = {}, window = {}, document =
     return solve;
   }
   // === KARTON AUF PALETTE (Vorstufe vor dem Container-/LKW-Rechner) ===
-  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie. tare = Leergewicht,
+  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie (EPAL). tare = Leergewicht,
   // payload = Tragfaehigkeit als Richtwert (real je Palettenqualitaet verschieden;
   // deshalb nur eine Deckelung mit ausgewiesenem Grund, keine Zusicherung).
   var PALLETS = {
     EUR: { l: 120, w: 80, h: 14.4, tare: 25, payload: 1500 },
-    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 }
+    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 },
+    // Die Paletten der Regionen (27.11.26). Diese Werte sind NACHGESCHLAGEN, nicht gerechnet --
+    // wer einen aendert, braucht eine Quelle (CLAUDE.md, "Karton auf Palette"):
+    //   US   48 x 40 Zoll ("GMA"), Holz: Hoehe 5,5-6 Zoll (140-150 mm), dynamische
+    //        Tragfaehigkeit 2.000-2.800 lb (900-1.270 kg), Leergewicht 42 lb (19 kg).
+    //   T11  1100 x 1100 mm, Japan und Korea: 144 mm (Zweiweg-Palette), 1 t; 19,8 kg
+    //        fuer die Kunststoff-Palette, wie sie in den Mietpools laeuft.
+    //   PBR  1000 x 1200 mm, Brasilien: Hoehe 137 mm, Tragfaehigkeit 1.200 kg, rund 27 kg
+    //        (Handbuch "Palete PBR-1, versao 2019" der ABRAS).
+    US: { l: 121.92, w: 101.6, h: 15, tare: 19, payload: 1000 },
+    T11: { l: 110, w: 110, h: 14.4, tare: 20, payload: 1000 },
+    PBR: { l: 120, w: 100, h: 13.7, tare: 27, payload: 1200 }
   };
+  // Die Kacheln im Paletten-Dialog, in dieser Reihenfolge -- SECHS, damit das Raster in
+  // ganzen Reihen aufgeht (drei Spalten, auf dem Telefon zwei). Die Unterzeile nennt das
+  // Mass, unter dem die Palette bekannt ist; "FREE" ist das freie Mass.
+  var PAL_WAHL = [["EUR", "120 \xD7 80"], ["IND", "120 \xD7 100"], ["US", "48 \xD7 40 in"], ["T11", "110 \xD7 110"], ["PBR", "100 \xD7 120"], ["FREE", null]];
+  // Was beim Oeffnen vorgewaehlt ist: wer in Zoll arbeitet, verlaedt in den USA; die
+  // portugiesische Oberflaeche ist die brasilianische. Sonst die Europalette, wie bisher.
+  function palVorwahl(lang, einheit) {
+    return einheit === "in" ? "US" : lang === "pt" ? "PBR" : "EUR";
+  }
   // Ein Kartontyp auf eine Palette. Bewusst NUR ein Typ: packCargo rechnet echte Lagen
   // ebenfalls nur im Einzeltyp-Pfad, und gemischte Kartons auf einer Palette sind die
   // Ausnahme. Rein geometrisch — kein Lagenverbund, keine Ladungssicherung.
