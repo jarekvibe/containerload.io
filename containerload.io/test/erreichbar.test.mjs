@@ -10,26 +10,29 @@ import assert from "node:assert/strict";
 import { readFileSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { pruefen, bericht, kern, BASIS, KENNUNG, SEITEN, STAND, PROBEN } from "../../werkzeug/erreichbar.mjs";
+import { pruefen, bericht, kern, mcpAnfrage, MCP_TAGESGRENZE, BASIS, KENNUNG, SEITEN, STAND, PROBEN } from "../../werkzeug/erreichbar.mjs";
 import { planen } from "../../netlify/functions/lib/plan.mjs";
+import { beantworte } from "../../netlify/functions/lib/mcp.mjs";
 
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const SEITE = path.join(HIER, "..");
 const WURZEL = path.join(SEITE, "..");
 const datei = (name) => readFileSync(path.join(SEITE, name));
 
-// Eine nachgestellte Seite: liefert, was im Repository liegt -- und /api/plan aus planen().
+// Eine nachgestellte Seite: liefert, was im Repository liegt -- /api/plan aus planen() und /mcp
+// aus derselben Function, die Netlify ausliefert (beantworte).
 // `anders(adresse, methode)` darf eine Antwort ersetzen ({ status, body } oder ein Fehler).
 function seite(anders = () => null) {
   const rufe = [];
   const fetchFn = async (adresse, opt = {}) => {
     const u = new URL(adresse);
-    rufe.push({ pfad: u.pathname, methode: opt.method || "GET", kennung: opt.headers && opt.headers["user-agent"] });
+    rufe.push({ pfad: u.pathname, methode: opt.method || "GET", kennung: opt.headers && opt.headers["user-agent"], koerper: opt.body || null, art: opt.headers && opt.headers["content-type"] });
     const ers = anders(u, opt.method || "GET", rufe.length);
     if (ers instanceof Error) throw ers;
     let status = 200, body = Buffer.alloc(0);
     if (ers) { status = ers.status; body = Buffer.from(ers.body || ""); }
     else if (u.pathname === "/api/plan") body = Buffer.from(JSON.stringify(planen(Object.fromEntries(u.searchParams)).body));
+    else if (u.pathname === "/mcp" && opt.method === "POST") body = Buffer.from(JSON.stringify((await beantworte(JSON.parse(opt.body))).antwort));
     else if (SEITEN[u.pathname]) body = datei(SEITEN[u.pathname]);
     else if (STAND.includes(u.pathname.slice(1))) body = datei(u.pathname.slice(1));
     else status = 404;
@@ -52,6 +55,11 @@ test("Alles gut: jede Seite antwortet, der Stand ist der von main, die Schnittst
   for (const p of Object.keys(SEITEN)) assert.ok(gefragt.has(p), p + " wurde nicht geprüft");
   for (const n of STAND) assert.ok(gefragt.has("/" + n), n + " wurde nicht verglichen");
   assert.equal(s.rufe.filter((r) => r.pfad === "/api/plan").length, PROBEN.length);
+  // Der MCP-Anschluss: genau EIN Werkzeug-Aufruf, als JSON per POST.
+  const mcp = s.rufe.filter((r) => r.pfad === "/mcp");
+  assert.equal(mcp.length, 1);
+  assert.deepEqual([mcp[0].methode, mcp[0].art], ["POST", "application/json"]);
+  assert.deepEqual(JSON.parse(mcp[0].koerper), mcpAnfrage(PROBEN[0]));
   // Seiten nur mit HEAD (app.html wiegt fast 1 MB und liefe sonst jede Stunde durch die Leitung).
   for (const r of s.rufe) if (SEITEN[r.pfad]) assert.equal(r.methode, "HEAD", r.pfad);
   // Und jeder Aufruf sagt, wer er ist.
@@ -68,7 +76,7 @@ test("Seite weg (der Fall vom 26.11.26): EIN Befund „nicht erreichbar“, kein
   assert.match(erg.befunde[0].text, /nicht erreichbar/);
   assert.match(erg.befunde[0].text, /Status 404/);
   // Ist alles weg, wird weder der Stand verglichen noch die Schnittstelle gerufen.
-  assert.ok(!s.rufe.some((r) => r.pfad === "/api/plan" || STAND.includes(r.pfad.slice(1))));
+  assert.ok(!s.rufe.some((r) => r.pfad === "/api/plan" || r.pfad === "/mcp" || STAND.includes(r.pfad.slice(1))));
 });
 
 test("Gar keine Antwort (Netz, DNS): gilt als Ausfall und nennt den Grund", async () => {
@@ -151,6 +159,49 @@ test("Schnittstelle: fehlt sie oder rechnet sie anders als main, ist das ein Bef
   assert.equal(erg.ok, true);
   assert.match(erg.notizen.join(" "), /Tagesgrenze/);
   assert.match(bericht(erg), /Hinweis: .*Tagesgrenze/);
+});
+
+test("MCP-Anschluss: fehlt er oder rechnet er anders als main, ist das ein Befund — die Tagesgrenze nicht", async () => {
+  // Fehlt (die Function wurde nicht mitveröffentlicht) -- im Browser ruft sie nichts auf, es fiele sonst niemandem auf.
+  let erg = await lauf(seite((u) => u.pathname === "/mcp" ? WEG : null));
+  assert.equal(erg.ok, false);
+  assert.deepEqual(erg.befunde.map((b) => b.art), ["mcp"]);
+  assert.match(erg.befunde[0].text, /\/mcp antwortet nicht mit 200 \(Status 404\)/);
+
+  // Rechnet anders: ein Stück weniger verladen.
+  const echt = async (opt) => (await beantworte(JSON.parse(opt))).antwort;
+  erg = await lauf(seite((u) => {
+    if (u.pathname !== "/mcp") return null;
+    const b = planen(PROBEN[0]).body;
+    const falsch = { ...b, plan: { ...b.plan, pieces_loaded: b.plan.pieces_loaded - 1 } };
+    return { status: 200, body: JSON.stringify({ jsonrpc: "2.0", id: 1, result: { content: [], structuredContent: falsch, isError: false } }) };
+  }));
+  assert.deepEqual(erg.befunde.map((b) => b.art), ["mcp"]);
+  assert.match(erg.befunde[0].text, /plan_load\) rechnet anders als main/);
+
+  // Keine Antwort im Format des Protokolls: eine Fehlerseite mit Status 200, ein Protokollfehler, ein leeres Ergebnis.
+  for (const body of ["<html>", JSON.stringify({ jsonrpc: "2.0", id: 1, error: { code: -32601, message: "Method not found" } }), JSON.stringify({ jsonrpc: "2.0", id: 1, result: {} })]) {
+    erg = await lauf(seite((u) => u.pathname === "/mcp" ? { status: 200, body } : null));
+    assert.deepEqual(erg.befunde.map((b) => b.art), ["mcp"], body.slice(0, 40));
+  }
+
+  // Tagesgrenze: so, wie die Function sie WIRKLICH meldet (Deckel zu) -- nicht prüfbar, aber kein Alarm.
+  const zu = (await beantworte(mcpAnfrage(PROBEN[0]), {}, async () => false)).antwort;
+  assert.equal(zu.result.isError, true);
+  assert.match(JSON.stringify(zu.result.content), MCP_TAGESGRENZE, "die Function meldet die Tagesgrenze mit anderem Wortlaut, als der Wächter erwartet");
+  erg = await lauf(seite((u) => u.pathname === "/mcp" ? { status: 200, body: JSON.stringify(zu) } : null));
+  assert.equal(erg.ok, true);
+  assert.match(erg.notizen.join(" "), /\/mcp: Tagesgrenze/);
+
+  // Ein anderer Fehler des Werkzeugs (isError ohne Tagesgrenze) ist dagegen ein Befund.
+  const kaputt = { jsonrpc: "2.0", id: 1, result: { content: [{ type: "text", text: "The calculation failed." }], isError: true } };
+  erg = await lauf(seite((u) => u.pathname === "/mcp" ? { status: 200, body: JSON.stringify(kaputt) } : null));
+  assert.deepEqual(erg.befunde.map((b) => b.art), ["mcp"]);
+
+  // Die Probe ist ein gültiger Aufruf: die echte Function beantwortet sie mit den Zahlen von main.
+  const gut = await echt(JSON.stringify(mcpAnfrage(PROBEN[0])));
+  assert.deepEqual(kern(gut.result.structuredContent), kern(planen(PROBEN[0]).body));
+  assert.equal(gut.result.isError, false);
 });
 
 test("Die Probe-Rechnungen ergeben auf main eine echte Antwort (sonst vergliche der Wächter null mit null)", () => {

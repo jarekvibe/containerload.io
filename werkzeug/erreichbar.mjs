@@ -5,13 +5,17 @@
 // Anlass (26.11.26): Die Seite war rund achteinhalb Stunden nicht erreichbar, und ein Merge
 // ging fuenfeinhalb Stunden nicht live -- gemerkt hat es niemand, weil nichts nachsah.
 //
-// Drei Fragen, in dieser Reihenfolge:
+// Vier Fragen, in dieser Reihenfolge:
 //   1. Antwortet die Seite?            SEITEN: nur der Status zaehlt (HEAD -- app.html wiegt 1 MB).
 //   2. Liegt dort der Stand von main?  STAND: Dateien, die Netlify Byte fuer Byte ausliefert,
 //                                      gegen die Fassung im Repository. Bewusst KEIN HTML:
 //                                      app.html traegt ein Formular, und Netlify schreibt
 //                                      solche Seiten beim Veroeffentlichen um.
 //   3. Rechnet die Schnittstelle wie main?  /api/plan gegen planen() aus demselben Stand.
+//   4. Und der Anschluss fuer KI-Assistenten?  Ein Werkzeug-Aufruf an /mcp (plan_load), dieselben
+//                                      Zahlen gegen planen(). Fehlt die Function nach einem
+//                                      Deploy, merkt es sonst niemand -- im Browser ruft sie
+//                                      nichts auf.
 //
 // Ohne Abhaengigkeiten (fetch von Node), und die Pruefung selbst ist eine reine Funktion von
 // `fetch` -- test/erreichbar.test.mjs stellt die Antworten nach.
@@ -57,14 +61,15 @@ const sha = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 // Ein Abruf mit Zeitgrenze und einem zweiten Versuch: ein einzelner Aussetzer im Netz des
 // Pruefrechners ist kein Ausfall der Seite.
-async function holen(fetchFn, adresse, { methode = "GET", versuche = 2, grenzeMs = 20000, pauseMs = 3000 } = {}) {
+async function holen(fetchFn, adresse, { methode = "GET", versuche = 2, grenzeMs = 20000, pauseMs = 3000, koerper = null } = {}) {
   let fehler = "";
   for (let i = 0; i < versuche; i++) {
     try {
       const a = await fetchFn(adresse, {
         method: methode,
         redirect: "follow",
-        headers: { "user-agent": KENNUNG, "cache-control": "no-cache" },
+        headers: { "user-agent": KENNUNG, "cache-control": "no-cache", ...(koerper ? { "content-type": "application/json", accept: "application/json, text/event-stream" } : {}) },
+        ...(koerper ? { body: koerper } : {}),
         signal: AbortSignal.timeout(grenzeMs),
       });
       if (a.status >= 500 && i + 1 < versuche) { fehler = "Status " + a.status; }
@@ -78,6 +83,15 @@ async function holen(fetchFn, adresse, { methode = "GET", versuche = 2, grenzeMs
 }
 
 const planAdresse = (p) => BASIS + "/api/plan?" + new URLSearchParams(p).toString();
+
+// Dieselbe Probe als Werkzeug-Aufruf ueber den MCP-Anschluss. Ohne Anmeldung: der Anschluss ist
+// zustandslos, ein Aufruf steht fuer sich (netlify/functions/lib/mcp.mjs).
+export const mcpAnfrage = (p) => ({
+  jsonrpc: "2.0", id: 1, method: "tools/call",
+  params: { name: "plan_load", arguments: { cargo: p.q, ...(p.cont ? { container: p.cont } : {}), ...(p.d === "road" ? { mode: "road" } : {}) } },
+});
+// So meldet der Anschluss die Tagesgrenze: als Ergebnis mit isError (der Test haelt den Wortlaut fest).
+export const MCP_TAGESGRENZE = /daily limit/i;
 
 // Was an einer Antwort der Schnittstelle zaehlt -- die Zahlen, nicht der Wortlaut.
 export const kern = (b) => b && b.ok === true && b.plan ? {
@@ -123,6 +137,28 @@ export async function pruefen({ fetch: fetchFn, dateien, planen, pauseMs = 3000 
     const soll = kern(planen(p).body);
     if (!live || JSON.stringify(live) !== JSON.stringify(soll)) {
       befunde.push({ art: "api", text: `/api/plan rechnet anders als main für „${p.q}“: live ${JSON.stringify(live)}, main ${JSON.stringify(soll)}.` });
+    }
+  }
+
+  // 4. Antwortet der MCP-Anschluss, und rechnet er wie main? Eine Probe genuegt: es ist dieselbe
+  //    Rechnung wie in Schritt 3, geprueft wird der Weg dorthin.
+  {
+    const p = PROBEN[0];
+    const a = await holen(fetchFn, BASIS + "/mcp", { ...opt, methode: "POST", koerper: JSON.stringify(mcpAnfrage(p)) });
+    if (a.status !== 200) {
+      befunde.push({ art: "mcp", text: `/mcp antwortet nicht mit 200 (${a.status ? "Status " + a.status : a.fehler || "keine Antwort"}).` });
+    } else {
+      let erg = null;
+      try { erg = JSON.parse(a.bytes.toString("utf8")).result || null; } catch (e) { erg = null; }
+      if (erg && erg.isError === true && MCP_TAGESGRENZE.test(JSON.stringify(erg.content || ""))) {
+        notizen.push("/mcp: Tagesgrenze erreicht — heute nicht prüfbar.");
+      } else {
+        const live = erg ? kern(erg.structuredContent) : null;
+        const soll = kern(planen(p).body);
+        if (!live || JSON.stringify(live) !== JSON.stringify(soll)) {
+          befunde.push({ art: "mcp", text: `/mcp (Werkzeug plan_load) rechnet anders als main für „${p.q}“: live ${JSON.stringify(live)}, main ${JSON.stringify(soll)}.` });
+        }
+      }
     }
   }
 

@@ -305,3 +305,17 @@ test("sparsam: keine IP, keine Kennung, nichts wird abgelegt -- und kein Paket a
   const pkg = JSON.parse(fs.readFileSync(path.join(dir, "..", "..", "package.json"), "utf8"));
   assert.ok(!Object.keys(pkg.dependencies).some((k) => /modelcontextprotocol|zod/.test(k)));
 });
+
+// Der Waechter (werkzeug/erreichbar.mjs) prueft den Anschluss von aussen mit EINEM Werkzeug-Aufruf.
+// Hier geht genau dieser Aufruf -- Kopfzeilen und Koerper wie im Waechter -- durch die echte
+// Function: sonst pruefte der Waechter spaeter etwas, das die Function gar nicht annimmt.
+test("der Wächter fragt wie ein Client: sein Aufruf kommt durch die Function und bringt die Zahlen von main", async () => {
+  const { mcpAnfrage, PROBEN, KENNUNG, kern } = await import("../../werkzeug/erreichbar.mjs");
+  const r = await post(mcpAnfrage(PROBEN[0]), { "user-agent": KENNUNG, "cache-control": "no-cache" });
+  assert.strictEqual(r.status, 200);
+  assert.match(r.headers.get("content-type") || "", /application\/json/);
+  const b = await r.json();
+  assert.strictEqual(b.result.isError, false);
+  assert.deepStrictEqual(kern(b.result.structuredContent), kern(planen(PROBEN[0]).body));
+  assert.ok(kern(b.result.structuredContent).loaded > 0);
+});
