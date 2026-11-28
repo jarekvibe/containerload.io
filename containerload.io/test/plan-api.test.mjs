@@ -497,13 +497,14 @@ test("openapi.json beschreibt, was die Schnittstelle nimmt und gibt", () => {
 
 test("die Datenschutzseite nennt die Schnittstelle -- deutsch und englisch, und nur was der Code haelt", () => {
   // Jareks Zusage (27.11.26, "Datenschutz ja"): ein Absatz in Abschnitt 2, in beiden Fassungen.
+  // Am selben Tag um die zweite Adresse ergaenzt ("Ja, /mcp ergaenzen"): derselbe Absatz gilt fuer den MCP-Anschluss.
   // Er steht ZWISCHEN den Ueberschriften 2 und 3 -- dort, wo die Seite sagt, was den Browser verlaesst.
   const abschnitt2 = (s) => s.slice(s.indexOf("<h2>2."), s.indexOf("<h2>3."));
   const de = abschnitt2(lese("datenschutz.html")), en = abschnitt2(lese("en/privacy.html"));
   for (const [s, saetze] of [
-    [de, ["/api/plan", "Nur dort rechnet ein Server dieser Website", "danach nicht gespeichert", "ohne IP-Adresse und ohne Inhalt",
+    [de, ["/api/plan und /mcp", "KI-Assistenten nutzen dafür die Adresse /mcp", "Nur dort rechnet ein Server dieser Website", "danach nicht gespeichert", "ohne IP-Adresse und ohne Inhalt",
       "in den Zugriffsdaten des Hosters", "Der Rechner im Browser nutzt diese Schnittstelle nicht", "Art. 6 Abs. 1 lit. f DSGVO"]],
-    [en, ["/api/plan", "Only there does a server of this website calculate", "is not stored afterwards", "without IP address and without content",
+    [en, ["/api/plan and /mcp", "AI assistants use the address /mcp for this", "Only there does a server of this website calculate", "is not stored afterwards", "without IP address and without content",
       "in the access data of the host", "The calculator in the browser does not use this interface", "Art. 6 (1) (f) GDPR"]],
   ]) {
     for (const satz of saetze) assert.ok(s.includes(satz), `Datenschutz: "${satz}" fehlt in Abschnitt 2`);
@@ -515,6 +516,12 @@ test("die Datenschutzseite nennt die Schnittstelle -- deutsch und englisch, und 
   // ... und der Rechner im Browser ruft die Schnittstelle nirgends auf.
   assert.ok(!app.includes("/api/plan"), "app.html ruft /api/plan auf -- die Datenschutzseite sagt das Gegenteil");
   assert.ok(!lese("index.html").includes("/api/plan"), "die Startseite ruft /api/plan auf");
+  // Dasselbe fuer den MCP-Anschluss: keine IP in der Function, kein Aufruf aus dem Browser.
+  for (const f of ["mcp.mjs", "lib/mcp.mjs"]) {
+    const q = fs.readFileSync(path.join(FN, f), "utf8").replace(/\/\/[^\n]*/g, "");
+    assert.ok(!/x-forwarded-for|x-nf-client-connection-ip|context\.ip|context\.geo|clientAddress/i.test(q), f + " liest eine IP oder ein Herkunftsland");
+  }
+  assert.ok(!/["'`]\/mcp["'`]/.test(app) && !/["'`]\/mcp["'`]/.test(lese("index.html")), "Rechner oder Startseite rufen /mcp auf");
 });
 
 console.log("plan-api: alle Tests gruen");

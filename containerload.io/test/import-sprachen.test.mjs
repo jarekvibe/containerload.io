@@ -285,6 +285,8 @@ test("Deutsch und Englisch: 39 Eingaben lesen genau wie vor dem Umbau", () => {
   // Aufgenommen mit dem Parser VOR den neuen Sprachen (Stand main, 26.11.26) -- nur Eingaben,
   // die alt und neu gleich lesen. Wer hier etwas aendert, aendert, was deutsche und englische
   // Nutzer seit jeher bekommen.
+  // EINE Eingabe ist seit 28.11.26 bewusst nachgezogen: "10 boxes ... not stackable" hiess
+  // vorher "Boxes not" (ein Rest der Verneinung im Namen) -- jetzt "Boxes". Sonst unveraendert.
   const alt = JSON.parse(lese("test/daten/import-de-en.json"));
   assert.strictEqual(alt.length, 39);
   for (const [t, soll] of alt) assert.deepStrictEqual(parseCargoText(t), soll, JSON.stringify(t).slice(0, 80));
@@ -304,4 +306,42 @@ test("die Regeln des Wort-Registers: kein Wort mit zwei Bedeutungen, kein Lookbe
   assert.ok(!/\(\?<[=!]/.test(app), "Lookbehind in app.html");
   // Die Stapel-Regel der Zeile und die der Excel-Zelle sind dieselbe
   assert.strictEqual((app.match(/IMPORT_WORT\.nichtStapelbar\.test\(/g) || []).length, 2);
+});
+
+// ── Englische Verneinungen: der Name bleibt sauber, und "unstackable" heisst nicht stapelbar ──
+// Gefunden am 28.11.26 beim ersten Aufruf ueber den MCP-Anschluss: "22 pallets ... not stackable"
+// (genau die Schreibweise, die Werkzeug-Beschreibung, /llms.txt und die Link-Format-Seiten
+// empfehlen) kam als Position "Pallets not" an -- gelesen wurde richtig, aber vom "not stackable"
+// blieb das "not" im Namen stehen (die Namens-Reinigung kannte nur "non-stackable"). Und
+// "unstackable" wurde als STAPELBAR gelesen. Der Schnappschuss oben hielt "Boxes not" sogar fest.
+test("Englisch: 'not stackable', 'unstackable', 'do not stack', 'not rotatable' -- gelesen UND aus dem Namen geraeumt", () => {
+  const eins = (t) => { const r = parseCargoText(t); assert.strictEqual(r.length, 1, t); return r[0]; };
+  const nichtStapelbar = [
+    "22 pallets 120x80x100 300kg not stackable", "22 pallets 120x80x100 300kg, not stackable", "22 pallets not stackable 120x80x100 300kg",
+    "22 pallets 120x80x100 300kg non-stackable", "22 pallets 120x80x100 300kg non stackable", "22 pallets 120x80x100 300kg unstackable",
+    "22 pallets 120x80x100 300kg do not stack", "22 pallets 120x80x100 300kg don't stack", "22 pallets 120x80x100 300kg no stacking",
+  ];
+  for (const t of nichtStapelbar) {
+    const r = eins(t);
+    assert.deepStrictEqual([r.qty, r.l, r.w, r.h, r.weight, r.stackable, r.name], [22, 120, 80, 100, 300, false, "Pallets"], t);
+  }
+  // Stapelbar bleibt stapelbar -- auch mit Hoehengrenze; der Name ist derselbe.
+  for (const [t, bis] of [["22 pallets 120x80x100 300kg stackable", null], ["22 pallets 120x80x100 300kg stackable up to 180 cm", 180], ["22 pallets 120x80x100 300kg", null]]) {
+    const r = eins(t);
+    assert.deepStrictEqual([r.stackable, r.stackH, r.name], [true, bis, "Pallets"], t);
+  }
+  // Nicht drehbar: gelesen und aus dem Namen geraeumt.
+  for (const t of ["8 crates 200x100x150 900kg not rotatable", "8 crates 200x100x150 900kg non-rotatable", "8 crates 200x100x150 900kg no rotation"]) {
+    const r = eins(t);
+    assert.deepStrictEqual([r.qty, r.rotatable, r.stackable, r.name], [8, false, true, "Crates"], t);
+  }
+  // Woerter, die nur so anfangen, bleiben, was sie sind (Regel 2: Verneinungen beginnen an einer Wortgrenze).
+  for (const [t, name] of [["12 knots 60x40x40 12kg", "Knots"], ["3 Notstromaggregate 200x100x150 900kg", "Notstromaggregate"], ["4 sun loungers 190x60x30 14kg", "sun loungers"], ["6 nonwoven rolls 150x40x40 20kg", "nonwoven Rolls"]]) {
+    const r = eins(t);
+    assert.strictEqual(r.stackable, true, t);
+    assert.strictEqual(r.name.toLowerCase(), name.toLowerCase(), t);
+  }
+  // Das Beispiel der Werkzeug-Beschreibung (MCP) liest sich sauber: zwei Positionen, keine Reste.
+  const bsp = parseCargoText("22 pallets 120x80x100 300kg not stackable; 6 boxes 60x40x40 12kg");
+  assert.deepStrictEqual(bsp.map((r) => [r.qty, r.name, r.stackable]), [[22, "Pallets", false], [6, "Boxes", true]]);
 });

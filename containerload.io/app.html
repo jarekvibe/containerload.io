@@ -781,8 +781,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   //      ein neues Zaehlwort endet an einer ("12 Futterkisten" sind keine "12 fut").
   //   3. Kein Lookbehind: aeltere Safari-Fassungen kennen es nicht, und die Seite bliebe stehen.
   var IMPORT_WORT = {
-    nichtStapelbar: /nicht\s*stapel|non[-\s]?stack|not\s*stack|keine?\s*stapel|\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apila|remonta)|\bsin\s+apilar|\b(?:non|pas)[-\s]?(?:gerb|empil)|\bniet[-\s]?stapel|\bonstapelbaar|\bn[aã]o\s+(?:(?:[eé]|s[aã]o|podem?\s+ser)\s+)?(?:empilh|remont|sobrepo)|不可堆|不能堆|禁止堆|不可叠|不能叠/i,
-    nichtDrehbar: /nicht\s*drehbar|not\s*rotat|no\s*rotat|\bno\s+(?:se\s+pueden?\s+)?(?:gira|rota)|\bsin\s+(?:gira|rota)|\bne\s+pas\s+(?:tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\brotation\s+interdite|\bniet[-\s]?draai|\bn[aã]o\s+(?:gir|rotac)|\bsem\s+gir|不可旋转|不能旋转|禁止旋转/i,
+    nichtStapelbar: /nicht\s*stapel|non[-\s]?stack|not\s*stack|\bun[-\s]?stackable|\bno[-\s]?stacking|don['’]?t\s+stack|keine?\s*stapel|\bno\s+(?:son\s+|es\s+|se\s+pueden?\s+)?(?:apila|remonta)|\bsin\s+apilar|\b(?:non|pas)[-\s]?(?:gerb|empil)|\bniet[-\s]?stapel|\bonstapelbaar|\bn[aã]o\s+(?:(?:[eé]|s[aã]o|podem?\s+ser)\s+)?(?:empilh|remont|sobrepo)|不可堆|不能堆|禁止堆|不可叠|不能叠/i,
+    nichtDrehbar: /nicht\s*drehbar|not\s*rotat|no\s*rotat|non[-\s]?rotat|\bno\s+(?:se\s+pueden?\s+)?(?:gira|rota)|\bsin\s+(?:gira|rota)|\bne\s+pas\s+(?:tourner|pivoter)|\b(?:sans|pas\s+de)\s+rotation|\brotation\s+interdite|\bniet[-\s]?draai|\bn[aã]o\s+(?:gir|rotac)|\bsem\s+gir|不可旋转|不能旋转|禁止旋转/i,
     // "stapelbar bis 180 cm" -- das Schluesselwort vor der Hoehe
     bis: "(?:bis|m[aá]x\\.?|maximal|maximaal|m[aá]ximo|up\\s*to|hasta|jusqu['’]?\\s*[àa]|\\btot|\\bat[eé]|限高|最高|不超过|至)",
     // Zaehlwoerter, die mit der Zahl verschwinden ("12 Stück") -- alt und neu getrennt, weil
@@ -1207,7 +1207,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       }
       let rotatable = true;
       if (IMPORT_WORT.nichtDrehbar.test(low)) rotatable = false;
-      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i, "")).replace(IMPORT_RE.gewicht, "").replace(IMPORT_RE.stk, "").replace(IMPORT_RE.ware, "$2").replace(IMPORT_RE.bisWeg, "").replace(/nicht\s*stapelbar|stapelbar|non[-\s]?stackable|stackable|nicht\s*drehbar/ig, "").replace(IMPORT_WORT.wortWeg, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/\b(?:m[aá]x\.?|m[aá]ximo|maximaal)\b/ig, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
+      let name = (dim4 ? line.replace(dim4[0], "") : line.replace(/(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)?\s*[x×\*\/]\s*(\d+(?:[.,]\d+)?)\s*(?:(mm|cm|m|zoll|inch(?:es)?|pulgadas?|pouces?|polegadas?)(?![a-zà-ÿ]))?/i, "")).replace(IMPORT_RE.gewicht, "").replace(IMPORT_RE.stk, "").replace(IMPORT_RE.ware, "$2").replace(IMPORT_RE.bisWeg, "").replace(/nicht\s*stapelbar|stapelbar|\b(?:do\s+not|don['’]?t)\s+stack\b|\bno[-\s]?stacking\b|(?:\b(?:non|not|un)[-\s]?)?stackable|nicht\s*drehbar|\b(?:not?|non)[-\s]?rotatable|\bno\s+rotation\b/ig, "").replace(IMPORT_WORT.wortWeg, "").replace(/\b(?:bis|max\.?|maximal|up\s*to)\b/ig, "").replace(/\b(?:m[aá]x\.?|m[aá]ximo|maximaal)\b/ig, "").replace(/^[\s,，、\-–|:：]+|[\s,，、\-–|:：]+$/g, "").replace(/^\s*\d+\s+/, "").replace(/\s+/g, " ").trim();
       if (dim2) name = name.replace(dim2[0], "").trim();
       // Fuellwoerter, die nach dem Herausschneiden von Gewicht und Menge uebrig bleiben
       // ("3 Kisten 1,2x0,8x1,1 m je 250 kg" -> "Kisten je"): weg damit.
@@ -1312,13 +1312,33 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     return solve;
   }
   // === KARTON AUF PALETTE (Vorstufe vor dem Container-/LKW-Rechner) ===
-  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie. tare = Leergewicht,
+  // Palettenhoehe 14,4 cm ist Norm fuer EUR wie Industrie (EPAL). tare = Leergewicht,
   // payload = Tragfaehigkeit als Richtwert (real je Palettenqualitaet verschieden;
   // deshalb nur eine Deckelung mit ausgewiesenem Grund, keine Zusicherung).
   var PALLETS = {
     EUR: { l: 120, w: 80, h: 14.4, tare: 25, payload: 1500 },
-    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 }
+    IND: { l: 120, w: 100, h: 14.4, tare: 30, payload: 1500 },
+    // Die Paletten der Regionen (27.11.26). Diese Werte sind NACHGESCHLAGEN, nicht gerechnet --
+    // wer einen aendert, braucht eine Quelle (CLAUDE.md, "Karton auf Palette"):
+    //   US   48 x 40 Zoll ("GMA"), Holz: Hoehe 5,5-6 Zoll (140-150 mm), dynamische
+    //        Tragfaehigkeit 2.000-2.800 lb (900-1.270 kg), Leergewicht 42 lb (19 kg).
+    //   T11  1100 x 1100 mm, Japan und Korea: 144 mm (Zweiweg-Palette), 1 t; 19,8 kg
+    //        fuer die Kunststoff-Palette, wie sie in den Mietpools laeuft.
+    //   PBR  1000 x 1200 mm, Brasilien: Hoehe 137 mm, Tragfaehigkeit 1.200 kg, rund 27 kg
+    //        (Handbuch "Palete PBR-1, versao 2019" der ABRAS).
+    US: { l: 121.92, w: 101.6, h: 15, tare: 19, payload: 1000 },
+    T11: { l: 110, w: 110, h: 14.4, tare: 20, payload: 1000 },
+    PBR: { l: 120, w: 100, h: 13.7, tare: 27, payload: 1200 }
   };
+  // Die Kacheln im Paletten-Dialog, in dieser Reihenfolge -- SECHS, damit das Raster in
+  // ganzen Reihen aufgeht (drei Spalten, auf dem Telefon zwei). Die Unterzeile nennt das
+  // Mass, unter dem die Palette bekannt ist; "FREE" ist das freie Mass.
+  var PAL_WAHL = [["EUR", "120 \xD7 80"], ["IND", "120 \xD7 100"], ["US", "48 \xD7 40 in"], ["T11", "110 \xD7 110"], ["PBR", "100 \xD7 120"], ["FREE", null]];
+  // Was beim Oeffnen vorgewaehlt ist: wer in Zoll arbeitet, verlaedt in den USA; die
+  // portugiesische Oberflaeche ist die brasilianische. Sonst die Europalette, wie bisher.
+  function palVorwahl(lang, einheit) {
+    return einheit === "in" ? "US" : lang === "pt" ? "PBR" : "EUR";
+  }
   // Ein Kartontyp auf eine Palette. Bewusst NUR ein Typ: packCargo rechnet echte Lagen
   // ebenfalls nur im Einzeltyp-Pfad, und gemischte Kartons auf einer Palette sind die
   // Ausnahme. Rein geometrisch — kein Lagenverbund, keine Ladungssicherung.
@@ -2207,6 +2227,40 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     if (soll >= alle && sicherZuViel(Ct, types)) return false;
     return packCargo(Ct, types, opts).boxes >= soll;
   }
+  // Der groesste Container ist nur dann die richtige Wahl, wenn er auch MEHR traegt.
+  // Gemeldet mit Bild (27.11.26): 34 Stueck zu je 10 t. Jeder Container traegt zwei davon,
+  // ein drittes waere zu schwer -- und die Kette stellte fuenfzehn 40' HC hin, jeden mit zwei
+  // Stueck, die Empfehlung nannte "16 x 40' HC + 1 x 20' GP". Der 40' HC hat das groesste
+  // Volumen, aber NICHT die groesste Zuladung (26.580 kg gegen 28.200 kg im 20' GP): teilt
+  // das Gewicht die Sendung, ist der 20-Fuesser die bessere Wahl -- so bucht es auch die Praxis.
+  //
+  // r ist, was der grosse Container geladen hat. Gesucht wird der kleinste KUERZERE
+  // Standard-Container, der von jeder Sorte mindestens genauso viel laedt. Gepackt wird dafuer
+  // nur, wenn die Stauung des grossen (ihre Ausdehnung, ihr Gewicht) in den kuerzeren
+  // ueberhaupt hineinginge: fuellt die Ladung den grossen raeumlich, kostet die Frage nichts.
+  //
+  // Kuerzer, nicht bloss kleiner: ein 40' GP anstelle des 40' HC ist dieselbe Stellflaeche und
+  // in der Praxis derselbe Preis -- und das Empfehlungsbanner riete sonst bei jeder Ladung,
+  // die keine 2,70 m Hoehe braucht, vom gewaehlten High Cube ab. Ein 20-Fuesser statt eines
+  // 40-Fuessers ist dagegen wirklich weniger Equipment.
+  function kleinerReicht(stdOrder, gross, r, packen) {
+    if (!r || !r.boxes) return null;
+    let mx = 0, my = 0, mz = 0;
+    for (const b of r.placed) {
+      if (b.x + b.dx > mx) mx = b.x + b.dx;
+      if (b.y + b.dy > my) my = b.y + b.dy;
+      if (b.z + b.dz > mz) mz = b.z + b.dz;
+    }
+    for (const o of stdOrder) {
+      if (o === gross || o.vol >= gross.vol) break;
+      if (!(num(o.p.l) < num(gross.p.l) - 1)) continue;
+      const pay = num(o.p.payload) > 0 ? num(o.p.payload) : Infinity;
+      if (mx > num(o.p.l) + 1e-6 || my > num(o.p.h) + 1e-6 || mz > num(o.p.w) + 1e-6 || r.weight > pay + 1e-6) continue;
+      const k = packen(o.p);
+      if (k.boxes >= r.boxes && r.perType.every((t, i) => (k.perType[i] ? k.perType[i].loaded : 0) >= t.loaded)) return { o, r: k };
+    }
+    return null;
+  }
   function packCargo(Ct, types, opts = {}) {
     const CL = num(Ct.l), CW = num(Ct.w), CH = num(Ct.h);
     const pay = num(Ct.payload) > 0 ? num(Ct.payload) : Infinity;
@@ -2867,10 +2921,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Kette ein 20-Fuesser steht). Zwei widerspruechliche Zahlen nebeneinander sind
     // schlimmer als eine ungenaue.
     const OPT = { noHint: true, quick: true };
-    const kombi = (sortenrein) => {
+    const kombiMit = (sortenrein, klein) => {
       let rest = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
       const used = {};
-      let guard = 0, vol = 0, n = 0;
+      let guard = 0, vol = 0, n = 0, kleiner = false;
       while (guard++ < 80) {
         const tot = rest.reduce((s, t) => s + t.qty, 0);
         if (tot === 0) break;
@@ -2885,23 +2939,37 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           rest = rest.map((t) => ({ ...t, qty: 0 }));
           break;
         }
-        const r = sortenrein
-          ? packSortenrein(workhorse.p, rest, sortenReihenfolge(rest), null, OPT)
-          : packCargo(workhorse.p, rest, OPT);
+        const packen = (p) => sortenrein
+          ? packSortenrein(p, rest, sortenReihenfolge(rest), null, OPT)
+          : packCargo(p, rest, OPT);
+        let r = packen(workhorse.p), pick = workhorse;
         if (r.boxes === 0) break;
-        used[workhorse.name] = (used[workhorse.name] || 0) + 1;
-        vol += workhorse.vol; n++;
+        // Traegt ein kleinerer Container dasselbe (das Gewicht teilt, nicht der Platz),
+        // wird er genannt -- wie in der Kette (kleinerReicht).
+        const kl = klein ? kleinerReicht(stdOrder, workhorse, r, packen) : null;
+        if (kl) { pick = kl.o; r = kl.r; kleiner = true; }
+        used[pick.name] = (used[pick.name] || 0) + 1;
+        vol += pick.vol; n++;
         rest = rest.map((t, i) => ({ ...t, qty: t.qty - (r.perType[i] ? r.perType[i].loaded : 0) }));
       }
-      return { used, offen: rest.reduce((s, t) => s + t.qty, 0), n, vol };
+      return { used, offen: rest.reduce((s, t) => s + t.qty, 0), n, vol, kleiner };
+    };
+    // Dieselbe Rangfolge wie bei der Kette: was liegenbleibt, dann die Zahl der
+    // Container, dann das gebuchte Volumen.
+    const besser = (a, b) => a.offen < b.offen || (a.offen === b.offen && (a.n < b.n || (a.n === b.n && a.vol < b.vol)));
+    // Mit kleineren Folgecontainern wird nur empfohlen, was sich gegen die alte Regel
+    // ("sonst immer der groesste") beweist -- sie kann nie einen Container kosten.
+    const kombi = (sortenrein) => {
+      const neu = kombiMit(sortenrein, true);
+      if (!neu.kleiner) return neu;
+      const alt = kombiMit(sortenrein, false);
+      return besser(neu, alt) ? neu : alt;
     };
     let best = kombi(false);
     const sorten = cargo.filter((t) => Math.floor(num(t.qty)) > 0 && num(t.l) > 0 && num(t.w) > 0 && num(t.h) > 0).length;
     if (sorten > 1 && sorten <= SORTENREIN_MAX) {
       const rein = kombi(true);
-      // Dieselbe Rangfolge wie bei der Kette: was liegenbleibt, dann die Zahl der
-      // Container, dann das gebuchte Volumen.
-      if (rein.offen < best.offen || (rein.offen === best.offen && (rein.n < best.n || (rein.n === best.n && rein.vol < best.vol)))) best = rein;
+      if (besser(rein, best)) best = rein;
     }
     const combo = stdOrder.slice().reverse().filter((o) => best.used[o.name]).map((o) => ({ name: o.name, count: best.used[o.name] }));
     return { type: "multi", combo };
@@ -3292,7 +3360,19 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     const pay = num(preset0 && preset0.payload);
     if (!(pay > 0)) return null;
     const kg = slotKg(chain[0].placed, cargo);
-    if (kg < pay * 0.9) return null; // die Zuladung war nicht die Grenze
+    // Die Zuladung ist die Grenze, wenn sie fast erreicht ist -- oder wenn schon das
+    // leichteste Stueck, das draussen blieb, sie reissen wuerde. Das zweite fehlte bis
+    // 27.11.26: zwei Stueck zu je 10 t sind 71 Prozent der Zuladung eines 20-Fuessers, ein
+    // drittes geht trotzdem nicht -- und genau dort stand keine Zeile (gemeldet mit Bild).
+    const drin = cargo.map(() => 0);
+    for (const b of chain[0].placed) if (drin[b.ti] != null) drin[b.ti]++;
+    let leicht = Infinity;
+    cargo.forEach((t, i) => {
+      const w = Math.max(0, num(t.weight));
+      if (Math.floor(num(t.qty)) - drin[i] > 0 && w > 0 && w < leicht) leicht = w;
+    });
+    const reisst = leicht < Infinity && kg + leicht > pay + 1e-6;
+    if (kg < pay * 0.9 && !reisst) return null; // die Zuladung war nicht die Grenze
     const ohne = packCargo({ ...preset0, payload: 0 }, cargo, { noHint: true, quick: true });
     if (ohne.boxes <= chain[0].placed.length) return null; // auch ohne Deckel nicht mehr: der Platz teilt
     return { kg, pay };
@@ -3382,8 +3462,10 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
     // Special Equipment packt packKind, und ein Wellen-Lauf ueber packCargo
     // liesse Uebermass-Stuecke stillschweigend fallen (Grenze wie beim Ausgleich).
     const stopps = (container0.kind || "dry") === "dry" ? stoppWerte(cargo) : null;
-    const bauen = (sortenrein, ordentlich) => {
-      let erst = null, chain, remaining;
+    // klein: darf ein Folgecontainer kleiner ausfallen als der groesste, wenn er dasselbe
+    // traegt (kleinerReicht)? bauen() darunter laesst beide Ketten gegeneinander antreten.
+    const bauenMit = (sortenrein, ordentlich, klein) => {
+      let erst = null, chain, remaining, kleiner = false;
       const OPT = { noHint: true, ordentlich };
       const start = cargo.map((t) => ({ ...t, qty: Math.max(0, Math.floor(num(t.qty))) }));
       // Der erste Container wird nur dann fertig aus slot0 uebernommen, wenn gierig UND
@@ -3420,8 +3502,15 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       while (nochMoeglich(remaining) > 0 && chain.length < MAXVIS) {
         const ov = overrides && overrides[slot];
         const manual = ov && PRESETS[ov];
-        const pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
-        const rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
+        let pick = manual ? { name: ov, p: applyCarrier(PRESETS[ov], carrier, ov) } : autoFollow(remaining, totRem);
+        let rr = slotPacken(pick.p, remaining, slot, pins, OPT, sortenrein);
+        // Der groesste Container nur, wenn er auch mehr traegt: teilt das Gewicht die
+        // Sendung, laedt ein kleinerer dasselbe (siehe kleinerReicht).
+        if (klein && !manual && pick === workhorse && rr.boxes > 0) {
+          const s = slot, rest = remaining;
+          const kl = kleinerReicht(stdOrder, workhorse, rr, (p) => slotPacken(p, rest, s, pins, OPT, sortenrein));
+          if (kl) { pick = kl.o; rr = kl.r; kleiner = true; }
+        }
         if (rr.boxes === 0 && !manual) break;
         chain.push({ name: pick.name, preset: pick.p, placed: rr.placed });
         if (rr.boxes === 0) break;
@@ -3429,7 +3518,17 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
         totRem = remaining.reduce((s, t) => s + t.qty, 0);
         slot++;
       }
-      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich };
+      return { chain, remaining, totRem, slot0: erst, sortenrein: !!sortenrein, ordentlich: !!ordentlich, kleiner };
+    };
+    // Eine Kette mit kleineren Folgecontainern muss sich gegen die alte Regel ("sonst immer
+    // der groesste") beweisen: nicht mehr liegen lassen, nicht mehr Container, weniger
+    // gebuchter Raum (ketteBesser). Gebaut wird die zweite nur, wenn die erste ueberhaupt
+    // einen kleineren Container gewaehlt hat -- sonst sind beide dieselbe.
+    const bauen = (sortenrein, ordentlich) => {
+      const neu = bauenMit(sortenrein, ordentlich, true);
+      if (!neu || !neu.kleiner) return neu;
+      const alt = bauenMit(sortenrein, ordentlich, false);
+      return !alt || ketteBesser(neu, alt) ? neu : alt;
     };
     let erg = bauen(false);
     // Zuweisungen und Stopps koennen den ERSTEN Container leeren (alles auf spaetere
@@ -4223,6 +4322,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palPallet: "Palette",
       palEUR: "Europalette",
       palIND: "Industriepalette",
+      palUS: "US-Palette",
+      palT11: "Asien-Palette",
+      palPBR: "PBR-Palette",
       palFree: "Freies Maß",
       palCarton: "Karton",
       close: "Schlie\xDFen",
@@ -4257,7 +4359,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palTotalH: "Bauhöhe",
       palPalWeight: "Gewicht",
       palCapHeight: "Die Bauhöhe begrenzt die Lagenzahl.",
-      palCapWeight: "Die Tragfähigkeit der Palette begrenzt die Lagenzahl (Richtwert 1.500 kg).",
+      palCapWeight: (kg) => `Die Tragfähigkeit der Palette begrenzt die Lagenzahl (Richtwert ${kg} kg).`,
       palCapLayers: "Die vorgegebene Lagenzahl begrenzt.",
       palCapFootprint: "Der Karton passt in keiner Ausrichtung auf diese Palette — Maße oder Überstand prüfen.",
       palOverWarn: (l, w) => "Überstand " + l + " cm längs, " + w + " cm quer — mit diesen Außenmaßen geht die Palette in die Ladung.",
@@ -4725,6 +4827,9 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palPallet: "Pallet",
       palEUR: "Euro pallet",
       palIND: "Industrial pallet",
+      palUS: "US pallet",
+      palT11: "Asia pallet",
+      palPBR: "PBR pallet",
       palFree: "Custom size",
       palCarton: "Carton",
       close: "Close",
@@ -4759,7 +4864,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
       palTotalH: "Height",
       palPalWeight: "Weight",
       palCapHeight: "Stack height limits the number of layers.",
-      palCapWeight: "Pallet capacity limits the number of layers (1,500 kg guide value).",
+      palCapWeight: (kg) => `Pallet capacity limits the number of layers (${kg} kg guide value).`,
       palCapLayers: "The layer limit you set is binding.",
       palCapFootprint: "The carton does not fit this pallet in any orientation — check dimensions or overhang.",
       palOverWarn: (l, w) => "Overhang " + l + " cm lengthwise, " + w + " cm crosswise — the pallet enters the load with these outer dimensions.",
@@ -11966,7 +12071,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
                 /* @__PURE__ */ React.createElement("div", { style: { fontSize: FS.small, lineHeight: 1.45, color: C.soft } }, comboBody),
                 recData.combo.type === "equip" ? /* @__PURE__ */ React.createElement("button", { onClick: () => { applyPreset(recData.combo.name); setRecOpen(false); }, className: "mt-3 px-3 py-2 rounded-lg transition hover:brightness-110", style: { background: C.accent, color: C.onAcc, fontSize: FS.small, fontWeight: FW.bold } }, T.recApply) : null) : null,
               /* @__PURE__ */ React.createElement("div", { style: { marginTop: 16, fontFamily: SANS, fontSize: FS.label, color: C.faint, letterSpacing: "0.04em" } }, T.recFoot)))));
-    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, planId, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
+    })(), palOpen && /* @__PURE__ */ React.createElement(PalletDialog, { key: palEdit || "neu", container, preset, T, vorwahl: palVorwahl(LANG, unit), init: palEdit ? (cargo.find((c) => c.grp === palEdit) || {}).palSrc : null, onClose: () => { setPalOpen(false); setPalEdit(null); }, onApply: applyPallets }), plansOpen && /* @__PURE__ */ React.createElement(PlansDialog, { plans, setPlans, preset, container, cargo, forceCentered, domain, applyPlan, planName, planId, onClose: () => setPlansOpen(false), setToast, T }), fbAsk && !toast && /* @__PURE__ */ React.createElement("div", { className: "fixed bottom-5 left-1/2 clrise", style: { transform: "translateX(-50%)", zIndex: 49 } },
         // Die Frage sitzt dort, wo sonst der Hinweis steht: unten in der Mitte, ueber der
         // Fusszeile. Sie nimmt keinen Platz weg, sie kommt einmal, und sie geht mit einem
         // Klick wieder. Wenn gerade ein Hinweis steht, wartet sie -- zwei Kaesten
@@ -12188,8 +12293,8 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
   // init: der Eingabestand einer schon uebernommenen Palette. Ohne ihn faengt der Dialog
   // leer an (neue Palette), mit ihm steht wieder da, was man damals eingegeben hat — sonst
   // muss man die ganze Rechnung neu tippen, nur weil ein Karton 2 cm hoeher ist.
-  function PalletDialog({ container, preset, onApply, onClose, T, init }) {
-    const [palKey, setPalKey] = useState(init ? init.palKey : "EUR");
+  function PalletDialog({ container, preset, onApply, onClose, T, init, vorwahl }) {
+    const [palKey, setPalKey] = useState(init ? init.palKey : vorwahl || "EUR");
     const [pl, setPl] = useState(init ? init.pl : 120), [pw, setPw] = useState(init ? init.pw : 80);
     const [rows, setRows] = useState(init ? init.rows.map((r2) => ({ ...r2, id: uid() })) : [{ id: uid(), ...CARTON_DEFAULT }]);
     const [mode, setMode] = useState(init ? init.mode : "separate");
@@ -12200,7 +12305,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
 
     const pal = palKey === "FREE"
       ? { l: num(pl), w: num(pw), h: 14.4, tare: 25, payload: 1500 }
-      : PALLETS[palKey];
+      : PALLETS[palKey] || PALLETS.EUR;
     const opts = { maxTotalH: num(maxH), over: num(over), maxLayers: num(maxLay), mode };
     const ERG = palletizeMulti(pal, rows, opts);
     const builds = ERG.builds;
@@ -12320,10 +12425,11 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
           /* @__PURE__ */ React.createElement("div", { style: { color: C.dim, fontSize: FS.body, lineHeight: 1.5, marginBottom: 16 } }, T.palDesc),
 
           /* @__PURE__ */ React.createElement(SectionTitle, null, T.palPallet),
-          /* @__PURE__ */ React.createElement("div", { style: { display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" } },
-            [["EUR", T.palEUR, "120 \xD7 80"], ["IND", T.palIND, "120 \xD7 100"], ["FREE", T.palFree, null]].map(([k, lbl, sub]) => {
+          /* @__PURE__ */ React.createElement("div", { className: "grid grid-cols-2 sm:grid-cols-3", style: { gap: 8, marginBottom: 12 } },
+            PAL_WAHL.map(([k, sub]) => {
               const on = palKey === k;
-              return /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => setPalKey(k), style: { flex: "1 1 30%", minWidth: 100, cursor: "pointer", textAlign: "left", padding: "8px 8px", borderRadius: R.s, background: on ? hexA(C.accent, 0.14) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.6) : C.fieldBorder}`, transition: ".18s" } },
+              const lbl = { EUR: T.palEUR, IND: T.palIND, US: T.palUS, T11: T.palT11, PBR: T.palPBR, FREE: T.palFree }[k];
+              return /* @__PURE__ */ React.createElement("button", { key: k, onClick: () => setPalKey(k), "aria-pressed": on ? "true" : "false", style: { minWidth: 0, cursor: "pointer", textAlign: "left", padding: "8px 8px", borderRadius: R.s, background: on ? hexA(C.accent, 0.14) : C.field, border: `1px solid ${on ? hexA(C.accent, 0.6) : C.fieldBorder}`, transition: ".18s" } },
                 /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.small, fontWeight: FW.bold, color: on ? C.text : C.dim } }, lbl),
                 sub ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: on ? C.accent : C.faint, marginTop: 4 } }, sub) : null);
             })),
@@ -12408,7 +12514,7 @@ var __QRLIB=(()=>{var or=(L,T)=>()=>{try{return T||L((T={exports:{}}).exports,T)
               const tis = new Set(build.layers.map((l) => l.ti));
               if (tis.size !== 1) return null;
               const pt = ERG.perType.find((x) => x.ti === build.layers[0].ti);
-              const txt = pt && { height: T.palCapHeight, weight: T.palCapWeight, layers: T.palCapLayers }[pt.cap];
+              const txt = pt && { height: T.palCapHeight, weight: T.palCapWeight(fmtDE(pal.payload)), layers: T.palCapLayers }[pt.cap];
               return txt ? /* @__PURE__ */ React.createElement("div", { style: { fontFamily: SANS, fontSize: FS.label, color: C.faint, marginTop: 8, lineHeight: 1.45 } }, txt) : null;
             })(),
             // Wie viel Ueberstand tatsaechlich gebraucht wird. Der zugelassene Ueberstand

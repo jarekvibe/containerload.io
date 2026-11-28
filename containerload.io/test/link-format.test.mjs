@@ -174,7 +174,7 @@ test("llms.txt: stimmt mit dem Rechner ueberein, und jede genannte Seite gibt es
   const adressen = [...llms.matchAll(/https:\/\/containerload\.io(\/[^\s)<\]]*)?/g)].map((m) => (m[1] || "/").replace(/[.,]$/, ""));
   assert.ok(adressen.length >= 20);
   for (const a of adressen) {
-    if (a.startsWith("/app?") || a === "/api/plan" || a.startsWith("/api/plan?")) continue;   // der Rechner und die Schnittstelle (eine Function)
+    if (a.startsWith("/app?") || a === "/api/plan" || a.startsWith("/api/plan?") || a === "/mcp") continue;   // der Rechner, die Schnittstelle und der MCP-Anschluss (Functions)
     const p = a.replace(/\/$/, "/index").replace(/^\//, "");
     const datei = /\.[a-z]{2,5}$/.test(p) ? p : (p || "index") + ".html";
     assert.ok(fs.existsSync(path.join(wurzel, datei)), `llms.txt nennt ${a} — die Seite gibt es nicht`);
